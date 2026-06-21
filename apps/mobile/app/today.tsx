@@ -9,22 +9,32 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { generateDailyInstances, supabase } from "../src/lib/supabase";
+import { getTodayLabel } from "../src/lib/schedule";
 import { useAuth } from "../src/providers/AuthProvider";
 import { useStore } from "../src/store";
 import { DailyInstance } from "../src/types/database";
-import { minutesToTime } from "@flexmax/ai";
+import { minutesToTime } from "../src/lib/time";
 
 export default function TodayScreen() {
   const { session, signOut } = useAuth();
   const { todayInstances, setTodayInstances } = useStore();
   const [loading, setLoading] = useState(true);
+  const [totalBlocks, setTotalBlocks] = useState(0);
   const today = new Date().toISOString().split("T")[0];
+  const todayLabel = getTodayLabel();
 
   useEffect(() => {
     if (!session?.user.id) return;
 
     const loadToday = async () => {
       await generateDailyInstances(today);
+
+      const { count } = await supabase
+        .from("schedule_blocks")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", session.user.id);
+
+      setTotalBlocks(count ?? 0);
 
       const { data, error } = await supabase
         .from("daily_schedule_instances")
@@ -71,7 +81,9 @@ export default function TodayScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Today</Text>
-        <Text style={styles.date}>{today}</Text>
+        <Text style={styles.date}>
+          {today} · {todayLabel}
+        </Text>
         <View style={styles.headerActions}>
           <TouchableOpacity onPress={() => router.push("/schedule-builder")}>
             <Text style={styles.link}>Edit schedule</Text>
@@ -89,7 +101,9 @@ export default function TodayScreen() {
         contentContainerStyle={styles.list}
         ListEmptyComponent={
           <Text style={styles.empty}>
-            No blocks scheduled for today. Add blocks in the schedule builder.
+            {totalBlocks > 0
+              ? `Nothing scheduled for ${todayLabel}. Your blocks may be set for other days — go to Edit schedule and tap ${todayLabel} on each block.`
+              : "No blocks yet. Add some in the schedule builder first."}
           </Text>
         }
       />

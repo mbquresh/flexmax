@@ -26,16 +26,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { setUser, setPsychologyProfile: setStorePsych, reset } = useStore();
 
   const loadUserData = async (userId: string) => {
-    const [profileResult, psychResult] = await Promise.all([
-      supabase.from("profiles").select("*").eq("id", userId).single(),
-      supabase
-        .from("psychology_profiles")
-        .select("*")
-        .eq("user_id", userId)
-        .maybeSingle(),
-    ]);
+    let profileResult = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
+      .single();
+
+    // Profile missing (migrations not run, or signed up before trigger existed)
+    if (profileResult.error?.code === "PGRST116") {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      const name =
+        user?.user_metadata?.name ??
+        user?.email?.split("@")[0] ??
+        "User";
+
+      profileResult = await supabase
+        .from("profiles")
+        .insert({ id: userId, name })
+        .select()
+        .single();
+    }
 
     if (profileResult.error) throw profileResult.error;
+
+    const psychResult = await supabase
+      .from("psychology_profiles")
+      .select("*")
+      .eq("user_id", userId)
+      .maybeSingle();
 
     setProfile(profileResult.data);
     setPsychologyProfile(psychResult.data);

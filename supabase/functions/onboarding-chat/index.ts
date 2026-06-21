@@ -52,6 +52,34 @@ serve(async (req) => {
 
     const { messages } = await req.json();
 
+    if (!ANTHROPIC_API_KEY) {
+      return new Response(
+        JSON.stringify({ error: "ANTHROPIC_API_KEY not set in Supabase secrets" }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Skip client seed message; system prompt covers the opening question
+    const apiMessages = (messages as Array<{ role: string; content: string }>)
+      .filter((m, i) => !(i === 0 && m.role === "assistant"))
+      .map((m) => ({
+        role: m.role === "assistant" ? "assistant" : "user",
+        content: m.content,
+      }));
+
+    if (!apiMessages.length || apiMessages[0].role !== "user") {
+      return new Response(
+        JSON.stringify({ error: "Invalid message format" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -63,11 +91,24 @@ serve(async (req) => {
         model: MODEL,
         max_tokens: 300,
         system: ONBOARDING_SYSTEM_PROMPT,
-        messages,
+        messages: apiMessages,
       }),
     });
 
     const data = await response.json();
+
+    if (!response.ok) {
+      return new Response(
+        JSON.stringify({
+          error: data.error?.message ?? "Anthropic API request failed",
+        }),
+        {
+          status: response.status,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
     const reply = data.content?.[0]?.text ?? "";
     const isComplete = reply.includes("That's everything I need");
 

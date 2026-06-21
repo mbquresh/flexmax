@@ -20,6 +20,7 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { supabase } from "../lib/supabase";
+import { getDemoReply, saveDemoProfile } from "../lib/mockOnboarding";
 import { useAuth } from "../providers/AuthProvider";
 import { useStore } from "../store";
 
@@ -39,6 +40,7 @@ export default function OnboardingScreen() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
+  const [demoMode, setDemoMode] = useState(false);
   const listRef = useRef<FlatList>(null);
   const { session, refreshProfile } = useAuth();
   const { setPsychologyProfile } = useStore();
@@ -49,42 +51,77 @@ export default function OnboardingScreen() {
     setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
   }, [messages]);
 
+  const finishOnboarding = async (finalMessages: Message[]) => {
+    setIsComplete(true);
+    if (!userId) return;
+
+    try {
+      if (demoMode) {
+        const profile = await saveDemoProfile(userId, finalMessages);
+        setPsychologyProfile(profile);
+        await refreshProfile();
+        return;
+      }
+
+      await extractAndSaveProfile(finalMessages);
+    } catch (err) {
+      console.error("Profile save error:", err);
+    }
+  };
+
   const sendMessage = async () => {
     if (!input.trim() || loading) return;
 
     const userMessage: Message = { role: "user", content: input.trim() };
     const updatedMessages = [...messages, userMessage];
+    const userTurnCount = updatedMessages.filter((m) => m.role === "user").length;
     setMessages(updatedMessages);
     setInput("");
     setLoading(true);
 
     try {
-      // Call our Supabase edge function (which holds the API key)
+      if (demoMode) {
+        const { reply, isComplete: done } = getDemoReply(userTurnCount);
+        const finalMessages = [
+          ...updatedMessages,
+          { role: "assistant" as const, content: reply },
+        ];
+        setMessages(finalMessages);
+        if (done) await finishOnboarding(finalMessages);
+        return;
+      }
+
       const { data, error } = await supabase.functions.invoke("onboarding-chat", {
         body: { messages: updatedMessages },
       });
 
       if (error) throw error;
+      if (data?.error) throw new Error(String(data.error));
+      if (!data?.reply) throw new Error("AI backend not set up yet");
 
       const { reply, isComplete: done } = data;
-      const aiMessage: Message = { role: "assistant", content: reply };
-      const finalMessages = [...updatedMessages, aiMessage];
+      const finalMessages = [
+        ...updatedMessages,
+        { role: "assistant" as const, content: reply },
+      ];
       setMessages(finalMessages);
 
-      if (done) {
-        setIsComplete(true);
-        // Extract psychology profile
-        await extractAndSaveProfile(finalMessages);
-      }
+      if (done) await finishOnboarding(finalMessages);
     } catch (err) {
       console.error("Onboarding error:", err);
-      setMessages((prev) => [
-        ...prev,
+      setDemoMode(true);
+
+      const { reply, isComplete: done } = getDemoReply(userTurnCount);
+      const finalMessages = [
+        ...updatedMessages,
         {
-          role: "assistant",
-          content: "Something went wrong — mind trying that again?",
+          role: "assistant" as const,
+          content: `Using demo mode for now (real AI needs Anthropic credits).\n\n${reply}`,
         },
-      ]);
+      ];
+      setMessages(finalMessages);
+
+      if (done) await finishOnboarding(finalMessages);
     } finally {
       setLoading(false);
     }
@@ -140,7 +177,9 @@ export default function OnboardingScreen() {
     >
       <View style={styles.header}>
         <Text style={styles.headerTitle}>FlexMax</Text>
-        <Text style={styles.headerSub}>Understanding how you work</Text>
+        <Text style={styles.headerSub}>
+          {demoMode ? "Demo mode — no Anthropic key needed" : "Understanding how you work"}
+        </Text>
       </View>
 
       <FlatList
