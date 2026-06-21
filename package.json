@@ -1,0 +1,15 @@
+{
+  "name": "flexmax",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/mobile",
+    "packages/ai"
+  ],
+  "scripts": {
+    "mobile": "yarn workspace @flexmax/mobile start",
+    "ai": "yarn workspace @flexmax/ai build",
+    "typecheck": "yarn workspace @flexmax/ai build && yarn workspace @flexmax/mobile exec tsc --noEmit",
+    "postinstall": "yarn workspace @flexmax/ai build"
+  }
+}
