@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FlexMax — App Mockup</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0a0a0d; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 2rem; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  h1 { font-size: 13px; color: #534AB7; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 1.5rem; text-align: center; }
+  .fm-root { display: flex; gap: 20px; padding: 1.5rem; background: #111115; border-radius: 20px; justify-content: center; flex-wrap: wrap; border: 0.5px solid #2a2a2a; }
+  .fm-phone-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .fm-screen { width: 200px; background: #0f0f12; border-radius: 28px; padding: 0; overflow: hidden; border: 1.5px solid #2a2a2a; box-shadow: 0 0 0 6px #1a1a1a; }
+  .fm-notch { height: 32px; background: #0f0f12; display: flex; align-items: center; justify-content: center; padding-top: 6px; }
+  .fm-notch-pill { width: 72px; height: 20px; background: #1a1a1a; border-radius: 20px; display: flex; align-items: center; justify-content: center; }
+  .fm-notch-cam { width: 8px; height: 8px; border-radius: 50%; background: #333; }
+  .fm-body { padding: 12px 11px 16px; min-height: 420px; }
+  .fm-label { font-size: 11px; color: #888; text-align: center; font-weight: 500; letter-spacing: 0.04em; }
+  .fm-step { font-size: 10px; color: #534AB7; background: #2d2250; padding: 2px 8px; border-radius: 20px; text-align: center; width: fit-content; margin: 0 auto 4px; font-weight: 500; }
+  .fm-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+  .fm-greeting { font-size: 12px; font-weight: 500; color: #f0f0f0; }
+  .fm-sub { font-size: 9px; color: #555; margin-top: 2px; }
+  .fm-avatar { width: 26px; height: 26px; border-radius: 50%; background: #2d2250; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 500; color: #AFA9EC; }
+  .fm-logo { font-size: 13px; font-weight: 500; color: #AFA9EC; letter-spacing: -0.02em; }
+  .fm-logo span { color: #534AB7; }
+  .fm-block { border-radius: 9px; padding: 8px 9px; margin-bottom: 5px; position: relative; }
+  .fm-block-time { font-size: 8px; font-weight: 500; margin-bottom: 2px; }
+  .fm-block-name { font-size: 10px; font-weight: 500; }
+  .fm-block-task { font-size: 8px; margin-top: 2px; opacity: 0.65; }
+  .fm-drag { position: absolute; right: 7px; top: 50%; transform: translateY(-50%); font-size: 12px; opacity: 0.25; color: #fff; }
+  .fm-block-done { position: absolute; right: 7px; top: 7px; width: 14px; height: 14px; border-radius: 50%; background: #5DCAA5; display: flex; align-items: center; justify-content: center; }
+  .b-purple { background: #1e1830; } .b-purple .fm-block-time { color: #AFA9EC; } .b-purple .fm-block-name { color: #EEEDFE; }
+  .b-teal { background: #0b2a20; } .b-teal .fm-block-time { color: #5DCAA5; } .b-teal .fm-block-name { color: #E1F5EE; }
+  .b-amber { background: #221808; } .b-amber .fm-block-time { color: #EF9F27; } .b-amber .fm-block-name { color: #FAEEDA; }
+  .b-coral { background: #22100a; } .b-coral .fm-block-time { color: #F0997B; } .b-coral .fm-block-name { color: #FAECE7; }
+  .b-gray { background: #191919; } .b-gray .fm-block-time { color: #666; } .b-gray .fm-block-name { color: #aaa; }
+  .fm-now-bar { display: flex; align-items: center; gap: 5px; margin: 7px 0; }
+  .fm-now-line { flex: 1; height: 0.5px; background: #5DCAA5; }
+  .fm-now-dot { width: 5px; height: 5px; border-radius: 50%; background: #5DCAA5; flex-shrink: 0; }
+  .fm-now-time { font-size: 8px; color: #5DCAA5; font-weight: 500; white-space: nowrap; }
+  .chat-wrap { display: flex; flex-direction: column; gap: 7px; }
+  .chat-ai { background: #1a1a22; border-radius: 9px 9px 9px 2px; padding: 7px 9px; font-size: 9.5px; color: #c8c8c8; line-height: 1.55; }
+  .chat-ai-label { font-size: 8px; color: #534AB7; margin-bottom: 4px; font-weight: 500; display: flex; align-items: center; gap: 4px; }
+  .chat-user { background: #2d2250; border-radius: 9px 9px 2px 9px; padding: 7px 9px; font-size: 9.5px; color: #EEEDFE; line-height: 1.55; margin-left: 16px; }
+  .chat-typing { display: flex; align-items: center; gap: 3px; padding: 8px 10px; background: #1a1a22; border-radius: 9px 9px 9px 2px; width: fit-content; }
+  .chat-dot { width: 4px; height: 4px; border-radius: 50%; background: #534AB7; animation: pulse 1.2s infinite; }
+  .chat-dot:nth-child(2) { animation-delay: 0.2s; }
+  .chat-dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes pulse { 0%, 80%, 100% { opacity: 0.3; } 40% { opacity: 1; } }
+  .chat-input-bar { display: flex; gap: 5px; margin-top: 10px; align-items: center; }
+  .chat-input { flex: 1; background: #1a1a1a; border: 0.5px solid #2a2a2a; border-radius: 14px; padding: 5px 9px; font-size: 9px; color: #666; }
+  .chat-send { width: 24px; height: 24px; border-radius: 50%; background: #534AB7; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .fm-psych { background: #1a1a22; border-radius: 9px; padding: 8px 9px; margin-bottom: 6px; }
+  .fm-psych-label { font-size: 8px; color: #555; margin-bottom: 5px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; }
+  .fm-tag { display: inline-block; font-size: 8px; padding: 2px 7px; border-radius: 10px; margin: 2px 2px 2px 0; font-weight: 500; }
+  .tag-purple { background: #2d2250; color: #AFA9EC; }
+  .tag-coral { background: #2a130a; color: #F0997B; }
+  .tag-teal { background: #0b2a20; color: #5DCAA5; }
+  .tag-amber { background: #221808; color: #EF9F27; }
+  .fm-ai-card { background: #1a1a22; border-radius: 9px; padding: 8px 9px; margin-bottom: 6px; border-left: 2px solid #534AB7; }
+  .fm-ai-card-head { font-size: 9px; font-weight: 500; color: #AFA9EC; margin-bottom: 4px; display: flex; align-items: center; gap: 4px; }
+  .fm-ai-card-body { font-size: 8.5px; color: #888; line-height: 1.5; }
+  .fm-ai-card-actions { display: flex; gap: 5px; margin-top: 7px; }
+  .fm-btn-sm { font-size: 8px; padding: 3px 9px; border-radius: 10px; border: none; cursor: pointer; font-weight: 500; transition: opacity 0.15s; }
+  .fm-btn-sm:hover { opacity: 0.8; }
+  .fm-btn-primary { background: #534AB7; color: #EEEDFE; }
+  .fm-btn-ghost { background: #1e1e1e; color: #666; border: 0.5px solid #2a2a2a; }
+  .fm-btn-teal { background: #0b2a20; color: #5DCAA5; }
+  .fm-btn-coral { background: #2a130a; color: #F0997B; }
+  .fm-reflect { background: #1a1a22; border-radius: 9px; padding: 8px 9px; border-left: 2px solid #D85A30; margin-bottom: 6px; }
+  .fm-reflect-head { font-size: 9px; font-weight: 500; color: #F0997B; margin-bottom: 4px; }
+  .fm-reflect-q { font-size: 8.5px; color: #888; margin-bottom: 5px; line-height: 1.4; }
+  .fm-reflect-input { width: 100%; background: #141414; border: 0.5px solid #2a2a2a; border-radius: 5px; padding: 5px 7px; font-size: 8.5px; color: #aaa; box-sizing: border-box; min-height: 32px; resize: none; font-family: inherit; }
+  .fm-reschedule { background: #0b2a20; border-radius: 9px; padding: 8px 9px; margin-top: 4px; }
+  .fm-reschedule-head { font-size: 8px; color: #5DCAA5; font-weight: 500; margin-bottom: 6px; display: flex; align-items: center; gap: 4px; }
+  .fm-progress { height: 3px; background: #1e1e1e; border-radius: 3px; margin-top: 10px; overflow: hidden; }
+  .fm-progress-bar { height: 100%; background: #534AB7; border-radius: 3px; }
+  .fm-stat-row { display: flex; gap: 5px; margin-bottom: 6px; }
+  .fm-stat { flex: 1; background: #1a1a22; border-radius: 8px; padding: 7px 8px; text-align: center; }
+  .fm-stat-num { font-size: 16px; font-weight: 500; color: #EEEDFE; }
+  .fm-stat-label { font-size: 7.5px; color: #555; margin-top: 1px; }
+  .fm-streak { background: #221808; border-radius: 8px; padding: 7px 9px; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; }
+  .fm-streak-left { font-size: 9px; color: #EF9F27; font-weight: 500; }
+  .fm-streak-days { display: flex; gap: 3px; }
+  .fm-day { width: 14px; height: 14px; border-radius: 3px; font-size: 7px; display: flex; align-items: center; justify-content: center; font-weight: 500; }
+  .fm-day-done { background: #EF9F27; color: #221808; }
+  .fm-day-today { background: #2c1f08; color: #EF9F27; border: 0.5px solid #EF9F27; }
+  .fm-day-empty { background: #1a1a1a; color: #333; }
+  .fm-footer { margin-top: 1.5rem; font-size: 11px; color: #333; text-align: center; }
+  .fm-footer a { color: #534AB7; text-decoration: none; }
+</style>
+</head>
+<body>
+
+<h1>FlexMax — UI Mockup · v1 Work in Progress</h1>
+
+<div class="fm-root">
+
+  <div class="fm-phone-wrap">
+    <div class="fm-screen">
+      <div class="fm-notch"><div class="fm-notch-pill"><div class="fm-notch-cam"></div></div></div>
+      <div class="fm-body">
+        <div class="fm-top">
+          <div class="fm-logo">Flex<span>Max</span></div>
+          <div style="font-size:8px;color:#534AB7;background:#1e1830;padding:2px 7px;border-radius:10px;font-weight:500;">Step 1 of 4</div>
+        </div>
+        <div class="fm-progress" style="margin-bottom:12px;"><div class="fm-progress-bar" style="width:25%;"></div></div>
+        <div class="chat-wrap">
+          <div class="chat-ai">
+            <div class="chat-ai-label"><i class="ti ti-brain" style="font-size:10px;"></i> FlexMax AI</div>
+            Hey — before we build your schedule, I want to understand how you actually work. What's one thing you keep putting off, even though you know it matters?
+          </div>
+          <div class="chat-user">Honestly, working out. I always push it to "later" and later never comes.</div>
+          <div class="chat-ai">
+            <div class="chat-ai-label"><i class="ti ti-brain" style="font-size:10px;"></i> FlexMax AI</div>
+            Classic avoidance loop. What time of day do you actually have energy — not what you wish were true, but what's real?
+          </div>
+          <div class="chat-user">Mornings, if I don't check my phone first.</div>
+          <div class="chat-ai">
+            <div class="chat-ai-label"><i class="ti ti-brain" style="font-size:10px;"></i> FlexMax AI</div>
+            Got it. Phone-first kills morning momentum. We'll lock your first block before it gets a chance.
+          </div>
+          <div class="chat-typing">
+            <div class="chat-dot"></div><div class="chat-dot"></div><div class="chat-dot"></div>
+          </div>
+        </div>
+        <div class="chat-input-bar">
+          <div class="chat-input">Type your answer...</div>
+          <div class="chat-send"><i class="ti ti-arrow-up" style="font-size:11px;color:#fff;"></i></div>
+        </div>
+      </div>
+    </div>
+    <div class="fm-step">1 / onboarding</div>
+    <div class="fm-label">AI learns your psychology</div>
+  </div>
+
+  <div class="fm-phone-wrap">
+    <div class="fm-screen">
+      <div class="fm-notch"><div class="fm-notch-pill"><div class="fm-notch-cam"></div></div></div>
+      <div class="fm-body">
+        <div class="fm-top">
+          <div><div class="fm-greeting">Your profile</div><div class="fm-sub">Built from your answers</div></div>
+          <div class="fm-avatar">MQ</div>
+        </div>
+        <div class="fm-psych">
+          <div class="fm-psych-label">Peak energy window</div>
+          <div class="fm-tag tag-teal">Morning (6–10 AM)</div>
+          <div class="fm-tag" style="background:#1e1e1e;color:#666;">Drops after lunch</div>
+        </div>
+        <div class="fm-psych">
+          <div class="fm-psych-label">Known sabotage patterns</div>
+          <div class="fm-tag tag-coral">Phone-first mornings</div>
+          <div class="fm-tag tag-coral">Vague task blocks</div>
+          <div class="fm-tag tag-amber">Open-ended evenings</div>
+        </div>
+        <div class="fm-psych">
+          <div class="fm-psych-label">What motivates you</div>
+          <div class="fm-tag tag-purple">Visible progress</div>
+          <div class="fm-tag tag-teal">Short win cycles</div>
+        </div>
+        <div class="fm-psych">
+          <div class="fm-psych-label">AI scheduling rules</div>
+          <div style="font-size:8.5px;color:#888;line-height:1.6;">• Hard tasks before 11 AM<br>• No phone block on wake-up<br>• 15-min buffers between deep work<br>• Wind-down locked at 9 PM</div>
+        </div>
+        <div style="margin-top:8px;">
+          <button class="fm-btn-sm fm-btn-primary" style="width:100%;font-size:9px;padding:6px;">Build my schedule →</button>
+        </div>
+      </div>
+    </div>
+    <div class="fm-step">2 / profile</div>
+    <div class="fm-label">Psychology profile summary</div>
+  </div>
+
+  <div class="fm-phone-wrap">
+    <div class="fm-screen">
+      <div class="fm-notch"><div class="fm-notch-pill"><div class="fm-notch-cam"></div></div></div>
+      <div class="fm-body">
+        <div class="fm-top">
+          <div><div class="fm-greeting">Thursday</div><div class="fm-sub">Jun 19 · 5 blocks · 92% aligned</div></div>
+          <div class="fm-avatar">MQ</div>
+        </div>
+        <div class="fm-block b-gray">
+          <div class="fm-block-time">5:30 AM — 6:00 AM</div>
+          <div class="fm-block-name">No-phone wake-up</div>
+          <div class="fm-block-done"><i class="ti ti-check" style="font-size:8px;color:#0b2a20;"></i></div>
+        </div>
+        <div class="fm-block b-teal">
+          <div class="fm-block-time">6:00 AM — 7:00 AM</div>
+          <div class="fm-block-name">Workout</div>
+          <div class="fm-block-task">Chest + 20 min run</div>
+          <div class="fm-block-done"><i class="ti ti-check" style="font-size:8px;color:#0b2a20;"></i></div>
+        </div>
+        <div class="fm-now-bar">
+          <div class="fm-now-dot"></div>
+          <div class="fm-now-time">now · 9:14 AM</div>
+          <div class="fm-now-line"></div>
+        </div>
+        <div class="fm-block b-purple">
+          <div class="fm-block-time">9:00 AM — 1:00 PM</div>
+          <div class="fm-block-name">Deep work</div>
+          <div class="fm-block-task">FlexMax — schedule engine</div>
+          <div class="fm-drag">⠿</div>
+        </div>
+        <div class="fm-block b-amber">
+          <div class="fm-block-time">2:00 PM — 3:00 PM</div>
+          <div class="fm-block-name">Admin + messages</div>
+          <div class="fm-block-task">Email, GitHub issues</div>
+          <div class="fm-drag">⠿</div>
+        </div>
+        <div class="fm-block b-coral">
+          <div class="fm-block-time">9:00 PM — 9:30 PM</div>
+          <div class="fm-block-name">Wind-down</div>
+          <div class="fm-block-task">No screens after this</div>
+          <div class="fm-drag">⠿</div>
+        </div>
+      </div>
+    </div>
+    <div class="fm-step">3 / schedule</div>
+    <div class="fm-label">Daily schedule · drag to adjust</div>
+  </div>
+
+  <div class="fm-phone-wrap">
+    <div class="fm-screen">
+      <div class="fm-notch"><div class="fm-notch-pill"><div class="fm-notch-cam"></div></div></div>
+      <div class="fm-body">
+        <div class="fm-top">
+          <div><div class="fm-greeting">Check in</div><div class="fm-sub">Deep work · 9AM–1PM done</div></div>
+        </div>
+        <div class="fm-ai-card">
+          <div class="fm-ai-card-head"><i class="ti ti-brain" style="font-size:10px;"></i> How was the session?</div>
+          <div class="fm-ai-card-body">You had 4 hours for the FlexMax schedule engine. Did you stay in the zone, or did distractions creep in?</div>
+          <div class="fm-ai-card-actions">
+            <button class="fm-btn-sm fm-btn-teal">Crushed it</button>
+            <button class="fm-btn-sm fm-btn-ghost">Partly</button>
+            <button class="fm-btn-sm fm-btn-coral">Lost focus</button>
+          </div>
+        </div>
+        <div class="fm-ai-card" style="border-left-color:#EF9F27;">
+          <div class="fm-ai-card-head" style="color:#EF9F27;"><i class="ti ti-clock" style="font-size:10px;"></i> 18 mins idle detected</div>
+          <div class="fm-ai-card-body">You haven't interacted with work apps in a while. Still on task, or did you drift?</div>
+          <div class="fm-ai-card-actions">
+            <button class="fm-btn-sm fm-btn-primary">Still on it</button>
+            <button class="fm-btn-sm fm-btn-ghost">I drifted</button>
+          </div>
+        </div>
+        <div class="fm-ai-card" style="border-left-color:#5DCAA5;">
+          <div class="fm-ai-card-head" style="color:#5DCAA5;"><i class="ti ti-moon" style="font-size:10px;"></i> Tonight's wind-down</div>
+          <div class="fm-ai-card-body">9 PM block is empty. Naming it makes it real — what's the plan?</div>
+          <div class="fm-ai-card-actions">
+            <button class="fm-btn-sm fm-btn-primary">Fill in</button>
+          </div>
+        </div>
+        <div class="fm-streak">
+          <div class="fm-streak-left"><i class="ti ti-flame" style="font-size:11px;vertical-align:-1px;"></i> 4-day streak</div>
+          <div class="fm-streak-days">
+            <div class="fm-day fm-day-done">M</div>
+            <div class="fm-day fm-day-done">T</div>
+            <div class="fm-day fm-day-done">W</div>
+            <div class="fm-day fm-day-today">T</div>
+            <div class="fm-day fm-day-empty">F</div>
+            <div class="fm-day fm-day-empty">S</div>
+            <div class="fm-day fm-day-empty">S</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="fm-step">4 / accountability</div>
+    <div class="fm-label">Smart check-ins + streak</div>
+  </div>
+
+  <div class="fm-phone-wrap">
+    <div class="fm-screen">
+      <div class="fm-notch"><div class="fm-notch-pill"><div class="fm-notch-cam"></div></div></div>
+      <div class="fm-body">
+        <div class="fm-top">
+          <div><div class="fm-greeting">Missed block</div><div class="fm-sub">Workout · 6AM–7AM</div></div>
+          <div style="font-size:8px;color:#F0997B;background:#2a130a;padding:2px 7px;border-radius:10px;font-weight:500;">no judgment</div>
+        </div>
+        <div class="fm-reflect">
+          <div class="fm-reflect-head"><i class="ti ti-alert-triangle" style="font-size:10px;vertical-align:-1px;margin-right:3px;"></i> What got in the way?</div>
+          <div class="fm-reflect-q">Be honest — this helps me learn your patterns.</div>
+          <textarea class="fm-reflect-input" placeholder="Was tired, hit snooze twice..."></textarea>
+        </div>
+        <div class="fm-reflect" style="border-left-color:#534AB7;">
+          <div class="fm-reflect-head" style="color:#AFA9EC;"><i class="ti ti-bulb" style="font-size:10px;vertical-align:-1px;margin-right:3px;"></i> One thing to change?</div>
+          <div class="fm-reflect-q">Small adjustments compound. What would help next time?</div>
+          <textarea class="fm-reflect-input" placeholder="Lay out gym clothes the night before..."></textarea>
+        </div>
+        <div class="fm-reschedule">
+          <div class="fm-reschedule-head"><i class="ti ti-calendar" style="font-size:10px;"></i> Best recovery slot found</div>
+          <div class="fm-block b-teal" style="margin-bottom:6px;">
+            <div class="fm-block-time">12:30 PM — 1:30 PM</div>
+            <div class="fm-block-name">Workout (rescheduled)</div>
+          </div>
+          <div class="fm-ai-card-actions">
+            <button class="fm-btn-sm fm-btn-teal">Use this slot</button>
+            <button class="fm-btn-sm fm-btn-ghost">Skip today</button>
+          </div>
+        </div>
+        <div class="fm-stat-row" style="margin-top:8px;">
+          <div class="fm-stat"><div class="fm-stat-num" style="color:#EF9F27;">4</div><div class="fm-stat-label">day streak</div></div>
+          <div class="fm-stat"><div class="fm-stat-num" style="color:#5DCAA5;">87%</div><div class="fm-stat-label">completion</div></div>
+          <div class="fm-stat"><div class="fm-stat-num" style="color:#AFA9EC;">12</div><div class="fm-stat-label">blocks done</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="fm-step">5 / recovery</div>
+    <div class="fm-label">Missed block · reflect + reschedule</div>
+  </div>
+
+</div>
+
+<div class="fm-footer">
+  FlexMax · <a href="https://github.com/mbquresh/flexmax">github.com/mbquresh/flexmax</a> · v1 work in progress
+</div>
+
+</body>
+</html>
