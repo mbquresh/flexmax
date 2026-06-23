@@ -30,8 +30,9 @@ import { useStore } from "../src/store";
 import { BlockCategory, ScheduleBlock } from "../src/types/database";
 import { minutesToTime } from "../src/lib/time";
 import { TimeField } from "../src/components/TimeField";
+import { RequireAuth } from "../src/components/RequireAuth";
 
-export default function ScheduleBuilderScreen() {
+function ScheduleBuilderScreenContent() {
   const { session } = useAuth();
   const { blocks, setBlocks } = useStore();
   const [loading, setLoading] = useState(true);
@@ -44,9 +45,13 @@ export default function ScheduleBuilderScreen() {
   const [startTime, setStartTime] = useState("9:00 AM");
   const [endTime, setEndTime] = useState("10:00 AM");
   const [selectedDays, setSelectedDays] = useState<number[]>(ALL_DAYS);
+  const [addOpen, setAddOpen] = useState(false);
 
   const loadBlocks = async () => {
-    if (!session?.user.id) return;
+    if (!session.user.id) {
+      setLoading(false);
+      return;
+    }
 
     setLoading(true);
     setError(null);
@@ -71,7 +76,7 @@ export default function ScheduleBuilderScreen() {
 
   useEffect(() => {
     loadBlocks();
-  }, [session?.user.id]);
+  }, [session.user.id]);
 
   const showError = (message: string) => {
     setError(message);
@@ -111,7 +116,7 @@ export default function ScheduleBuilderScreen() {
   };
 
   const handleAddBlock = async (preset?: (typeof BLOCK_PRESETS)[number]) => {
-    if (!session?.user.id || !templateId) return;
+    if (!templateId) return;
     Keyboard.dismiss();
 
     const blockName = preset?.name ?? name.trim();
@@ -145,6 +150,7 @@ export default function ScheduleBuilderScreen() {
       setBlocks([...blocks, created].sort((a, b) => a.start_minutes - b.start_minutes));
       if (!preset) {
         setName("");
+        setAddOpen(false);
       }
     } catch (err) {
       showError(err instanceof Error ? err.message : "Could not add block");
@@ -165,6 +171,77 @@ export default function ScheduleBuilderScreen() {
       setSaving(false);
     }
   };
+
+  const renderAddForm = () => (
+    <View style={styles.addSection}>
+      {!addOpen ? (
+        <TouchableOpacity style={styles.addToggle} onPress={() => setAddOpen(true)}>
+          <Text style={styles.addToggleText}>+ Add custom block</Text>
+        </TouchableOpacity>
+      ) : (
+        <View style={styles.form}>
+          <View style={styles.formHeader}>
+            <Text style={styles.sectionTitle}>Custom block</Text>
+            <TouchableOpacity onPress={() => setAddOpen(false)} hitSlop={8}>
+              <Text style={styles.collapseText}>Hide</Text>
+            </TouchableOpacity>
+          </View>
+          <TextInput
+            style={styles.input}
+            placeholder="Block name (e.g. Deep work)"
+            placeholderTextColor="#555"
+            value={name}
+            onChangeText={setName}
+          />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow}>
+            {CATEGORY_OPTIONS.map((opt) => (
+              <TouchableOpacity
+                key={opt.value}
+                style={[styles.chip, category === opt.value && styles.chipActive]}
+                onPress={() => setCategory(opt.value)}
+              >
+                <Text style={[styles.chipText, category === opt.value && styles.chipTextActive]}>
+                  {opt.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+          <Text style={styles.fieldLabel}>Repeat on</Text>
+          <View style={styles.dayRow}>
+            {WEEKDAYS.map((day) => {
+              const active = selectedDays.includes(day.value);
+              return (
+                <TouchableOpacity
+                  key={day.value}
+                  style={[styles.dayChip, active && styles.dayChipActive]}
+                  onPress={() => toggleDay(day.value)}
+                >
+                  <Text style={[styles.dayChipText, active && styles.dayChipTextActive]}>
+                    {day.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          <View style={styles.timeStack}>
+            <TimeField label="Start" value={startTime} onChange={setStartTime} />
+            <TimeField label="End" value={endTime} onChange={setEndTime} />
+          </View>
+          <TouchableOpacity
+            style={[styles.addBtn, saving && styles.btnDisabled]}
+            onPress={() => handleAddBlock()}
+            disabled={saving}
+          >
+            {saving ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.addBtnText}>Add block</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      )}
+    </View>
+  );
 
   const renderBlock = ({ item }: { item: ScheduleBlock }) => (
     <View style={styles.blockCard}>
@@ -241,76 +318,31 @@ export default function ScheduleBuilderScreen() {
         }
         ListEmptyComponent={
           <Text style={styles.empty}>
-            Tap a quick-add button above, or create your own block below.
+            Tap a quick-add button above, or add a custom block below.
           </Text>
         }
-      />
-
-      <View style={styles.form}>
-        <Text style={styles.sectionTitle}>Add a block</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Block name (e.g. Deep work)"
-          placeholderTextColor="#555"
-          value={name}
-          onChangeText={setName}
-        />
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow}>
-          {CATEGORY_OPTIONS.map((opt) => (
+        ListFooterComponent={
+          <>
+            {renderAddForm()}
             <TouchableOpacity
-              key={opt.value}
-              style={[styles.chip, category === opt.value && styles.chipActive]}
-              onPress={() => setCategory(opt.value)}
+              style={[styles.primaryBtn, blocks.length === 0 && styles.btnDisabled]}
+              onPress={() => router.replace("/today")}
+              disabled={blocks.length === 0}
             >
-              <Text style={[styles.chipText, category === opt.value && styles.chipTextActive]}>
-                {opt.label}
-              </Text>
+              <Text style={styles.primaryBtnText}>Continue to today →</Text>
             </TouchableOpacity>
-          ))}
-        </ScrollView>
-        <Text style={styles.fieldLabel}>Repeat on</Text>
-        <View style={styles.dayRow}>
-          {WEEKDAYS.map((day) => {
-            const active = selectedDays.includes(day.value);
-            return (
-              <TouchableOpacity
-                key={day.value}
-                style={[styles.dayChip, active && styles.dayChipActive]}
-                onPress={() => toggleDay(day.value)}
-              >
-                <Text style={[styles.dayChipText, active && styles.dayChipTextActive]}>
-                  {day.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-        <View style={styles.timeRow}>
-          <TimeField label="Start" value={startTime} onChange={setStartTime} />
-          <Text style={styles.timeSep}>to</Text>
-          <TimeField label="End" value={endTime} onChange={setEndTime} />
-        </View>
-        <TouchableOpacity
-          style={[styles.addBtn, saving && styles.btnDisabled]}
-          onPress={() => handleAddBlock()}
-          disabled={saving}
-        >
-          {saving ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.addBtnText}>+ Add block</Text>
-          )}
-        </TouchableOpacity>
-      </View>
-
-      <TouchableOpacity
-        style={[styles.primaryBtn, blocks.length === 0 && styles.btnDisabled]}
-        onPress={() => router.replace("/today")}
-        disabled={blocks.length === 0}
-      >
-        <Text style={styles.primaryBtnText}>Continue to today →</Text>
-      </TouchableOpacity>
+          </>
+        }
+      />
     </View>
+  );
+}
+
+export default function ScheduleBuilderScreen() {
+  return (
+    <RequireAuth>
+      <ScheduleBuilderScreenContent />
+    </RequireAuth>
   );
 }
 
@@ -336,7 +368,7 @@ const styles = StyleSheet.create({
     color: "#ffb4b4",
     fontSize: 14,
   },
-  list: { paddingHorizontal: 16, paddingBottom: 8, flexGrow: 0 },
+  list: { paddingHorizontal: 16, paddingBottom: 32 },
   section: { marginBottom: 16 },
   sectionTitle: { color: "#888", fontSize: 13, marginBottom: 10, fontWeight: "600" },
   presetChip: {
@@ -371,12 +403,30 @@ const styles = StyleSheet.create({
   dayChipTextActive: { color: "#EEEDFE" },
   fieldLabel: { color: "#888", fontSize: 13, fontWeight: "600" },
   empty: { color: "#666", textAlign: "center", marginVertical: 24, lineHeight: 22 },
-  form: {
-    borderTopWidth: 0.5,
-    borderTopColor: "#222",
-    padding: 16,
-    gap: 10,
+  addSection: { marginTop: 8, marginBottom: 12 },
+  addToggle: {
+    borderRadius: 12,
+    borderWidth: 0.5,
+    borderColor: "#333",
+    paddingVertical: 14,
+    alignItems: "center",
+    backgroundColor: "#1a1a1a",
   },
+  addToggleText: { color: "#AFA9EC", fontSize: 15, fontWeight: "500" },
+  form: {
+    borderRadius: 12,
+    borderWidth: 0.5,
+    borderColor: "#2a2a2a",
+    padding: 14,
+    gap: 10,
+    backgroundColor: "#141418",
+  },
+  formHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  collapseText: { color: "#666", fontSize: 13 },
   input: {
     backgroundColor: "#1a1a1a",
     borderWidth: 0.5,
@@ -400,18 +450,15 @@ const styles = StyleSheet.create({
   chipActive: { backgroundColor: "#534AB7", borderColor: "#534AB7" },
   chipText: { color: "#888", fontSize: 13 },
   chipTextActive: { color: "#EEEDFE" },
-  timeRow: { flexDirection: "row", alignItems: "flex-end", gap: 8 },
-  timeSep: { color: "#666", paddingBottom: 14 },
+  timeStack: { gap: 10 },
   addBtn: {
-    backgroundColor: "#3d3580",
+    backgroundColor: "#534AB7",
     borderRadius: 12,
-    paddingVertical: 14,
+    paddingVertical: 12,
     alignItems: "center",
   },
   addBtnText: { color: "#EEEDFE", fontSize: 15, fontWeight: "600" },
   primaryBtn: {
-    marginHorizontal: 16,
-    marginBottom: 32,
     backgroundColor: "#534AB7",
     borderRadius: 12,
     paddingVertical: 16,

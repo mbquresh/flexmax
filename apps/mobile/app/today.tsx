@@ -14,8 +14,9 @@ import { useAuth } from "../src/providers/AuthProvider";
 import { useStore } from "../src/store";
 import { DailyInstance } from "../src/types/database";
 import { minutesToTime } from "../src/lib/time";
+import { RequireAuth } from "../src/components/RequireAuth";
 
-export default function TodayScreen() {
+function TodayScreenContent() {
   const { session, signOut } = useAuth();
   const { todayInstances, setTodayInstances } = useStore();
   const [loading, setLoading] = useState(true);
@@ -24,7 +25,10 @@ export default function TodayScreen() {
   const todayLabel = getTodayLabel();
 
   useEffect(() => {
-    if (!session?.user.id) return;
+    if (!session.user.id) return;
+
+    let cancelled = false;
+    setLoading(true);
 
     const loadToday = async () => {
       await generateDailyInstances(today);
@@ -45,14 +49,17 @@ export default function TodayScreen() {
 
       if (error) {
         console.error(error);
-      } else {
+      } else if (!cancelled) {
         setTodayInstances(data ?? []);
       }
-      setLoading(false);
+      if (!cancelled) setLoading(false);
     };
 
     loadToday();
-  }, [session?.user.id, today]);
+    return () => {
+      cancelled = true;
+    };
+  }, [session.user.id, today]);
 
   const renderInstance = ({ item }: { item: DailyInstance }) => (
     <View style={styles.card}>
@@ -88,7 +95,12 @@ export default function TodayScreen() {
           <TouchableOpacity onPress={() => router.push("/schedule-builder")}>
             <Text style={styles.link}>Edit schedule</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => signOut()}>
+          <TouchableOpacity
+            onPress={async () => {
+              await signOut();
+              router.replace("/sign-in");
+            }}
+          >
             <Text style={styles.link}>Sign out</Text>
           </TouchableOpacity>
         </View>
@@ -108,6 +120,14 @@ export default function TodayScreen() {
         }
       />
     </View>
+  );
+}
+
+export default function TodayScreen() {
+  return (
+    <RequireAuth>
+      <TodayScreenContent />
+    </RequireAuth>
   );
 }
 

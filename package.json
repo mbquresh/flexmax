@@ -8,6 +8,7 @@
   ],
   "scripts": {
     "mobile": "yarn workspace @flexmax/mobile start",
+    "mobile:native": "./scripts/start-mobile-native.sh",
     "ai": "yarn workspace @flexmax/ai build",
     "typecheck": "yarn workspace @flexmax/ai build && yarn workspace @flexmax/mobile exec tsc --noEmit",
     "postinstall": "yarn workspace @flexmax/ai build"
