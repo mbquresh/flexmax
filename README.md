@@ -73,7 +73,7 @@ yarn mobile
 ## v1 scope (Jun 21)
 
 - [x] Repo structure
-- [ ] AI onboarding chat (5–8 turns, saves psychology profile)
+- [x] AI onboarding chat (5–8 turns, saves psychology profile)
 - [ ] Schedule builder with draggable time blocks
 - [ ] AI schedule review + suggestions
 - [ ] Supabase schema + auth
