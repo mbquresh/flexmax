@@ -14,8 +14,8 @@ FlexMax is not a calendar app. It's a behavioral accountability system built aro
 
 **Core loop:**
 1. AI onboarding learns your psychology (goals, tendencies, sabotage patterns)
-2. You build a schedule with draggable time blocks
-3. AI reviews and suggests improvements based on your profile
+2. You build a weekly schedule with draggable time blocks (quick-add presets + custom blocks)
+3. AI coaching tips guide how you set up blocks — no auto-generated schedule
 4. Each night, you fill in what you'll actually do in each block
 5. Smart notifications hold you accountable through the day
 6. Missed blocks trigger reflection + intelligent rescheduling
@@ -50,7 +50,7 @@ flex_max/
 
 ## Status
 
-**Work in progress** — v1 scaffold. Auth, onboarding, and schedule views are wired; block editing and notifications are next.
+**Work in progress** — v1 core loop is live: auth, AI onboarding, manual schedule builder (with tips), and Today view. Drag-to-shift is still on the roadmap; AI schedule review is out of scope for now. Accountability features (notifications, check-ins, missed-block recovery) are next for v1.1.
 
 ## Getting started
 
@@ -73,10 +73,14 @@ yarn mobile
 ## v1 scope (Jun 21)
 
 - [x] Repo structure
-- [x] AI onboarding chat (5–8 turns, saves psychology profile)
-- [ ] Schedule builder with draggable time blocks
-- [ ] AI schedule review + suggestions
-- [ ] Supabase schema + auth
+- [x] Supabase schema + auth
+- [x] AI onboarding chat (4-turn intake, saves psychology profile)
+- [x] Schedule builder (add/delete blocks, quick-add presets, day toggles)
+- [x] AI schedule tips (profile-aware coaching on first visit)
+- [x] Today view (daily instances from template blocks)
+- [ ] Schedule builder — drag to shift blocks
+
+**Deferred (not building for v1):** AI schedule review screen.
 
 ## v1.1 scope (Jun 28)
 

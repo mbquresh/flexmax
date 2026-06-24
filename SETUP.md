@@ -135,12 +135,15 @@ add a one-off block, or reschedule a missed block to a different time, all witho
 
 ## v1 checklist (Jun 21)
 
-- [ ] Auth (Supabase email/password)
-- [ ] Onboarding chat screen
-- [ ] Psychology profile extraction + save
-- [ ] Schedule builder (add/edit/delete blocks, drag to shift)
-- [ ] AI schedule review screen
-- [ ] Today view with block status
+- [x] Auth (Supabase email/password)
+- [x] Onboarding chat screen
+- [x] Psychology profile extraction + save
+- [x] Schedule builder (add/delete blocks, quick-add, day toggles)
+- [x] AI schedule tips on first visit (`generate-schedule-tips`)
+- [x] Today view with block status
+- [ ] Schedule builder — drag to shift blocks
+
+**Deferred (not building for v1):** AI schedule review screen.
 
 ## v1.1 checklist (Jun 28)
 
