@@ -9,29 +9,12 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { extractPsychologyProfile } from "../_shared/ai.ts";
+import { PROFILE_EXTRACTION_PROMPT } from "../_shared/prompts.ts";
 import { corsHeaders, getAuthenticatedUser } from "../_shared/auth.ts";
 
-const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY")!;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-const EXTRACTION_PROMPT = `
-Analyze this FlexMax onboarding conversation and extract a structured psychology profile.
-Return ONLY valid JSON, no markdown, no explanation.
-
-Schema:
-{
-  "peak_energy_times": string[],
-  "avoidance_patterns": string[],
-  "motivation_style": "intrinsic" | "accountability" | "streaks" | "external",
-  "sabotage_triggers": string[],
-  "goals": string[],
-  "accountability_tone": "firm" | "gentle" | "data-driven",
-  "raw_ai_summary": string
-}
-
-Conversation:
-`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -48,30 +31,10 @@ serve(async (req) => {
     }
 
     const { messages } = await req.json();
-
-    const transcript = messages
-      .map((m: { role: string; content: string }) =>
-        `${m.role === "user" ? "User" : "AI"}: ${m.content}`
-      )
-      .join("\n\n");
-
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-6",
-        max_tokens: 800,
-        messages: [{ role: "user", content: EXTRACTION_PROMPT + transcript }],
-      }),
-    });
-
-    const data = await response.json();
-    const raw = data.content?.[0]?.text ?? "{}";
-    const profile = JSON.parse(raw.replace(/```json|```/g, "").trim());
+    const { profile, provider } = await extractPsychologyProfile(
+      messages,
+      PROFILE_EXTRACTION_PROMPT
+    );
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
@@ -80,7 +43,13 @@ serve(async (req) => {
       .upsert({
         user_id: user.id,
         onboarding_messages: messages,
-        ...profile,
+        peak_energy_times: profile.peak_energy_times ?? null,
+        avoidance_patterns: profile.avoidance_patterns ?? null,
+        motivation_style: profile.motivation_style ?? null,
+        sabotage_triggers: profile.sabotage_triggers ?? null,
+        goals: profile.goals ?? null,
+        accountability_tone: profile.accountability_tone ?? null,
+        raw_ai_summary: profile.raw_ai_summary ?? null,
         completed_at: new Date().toISOString(),
       })
       .select()
@@ -88,7 +57,7 @@ serve(async (req) => {
 
     if (error) throw error;
 
-    return new Response(JSON.stringify({ profile: saved }), {
+    return new Response(JSON.stringify({ profile: saved, provider }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {

@@ -5,29 +5,23 @@ interface Message {
   content: string;
 }
 
-const DEMO_QUESTIONS = [
-  "Got it — that helps. What time of day do you actually have energy, not what you wish were true?",
-  "When you've failed to stick to a routine before, what usually goes wrong?",
-  "Do you do better when someone's checking on you, or does that make you rebel?",
-  "What's one part of your day that almost always goes well, no matter what?",
-  "That's everything I need. Let's build your schedule.",
-];
+const CLOSING = "That's everything I need. Let's build your schedule.";
 
-export function getDemoReply(userTurnCount: number): {
+const DEMO_REPLIES: Record<number, string> = {
+  1: "Got it. When do you actually have energy during the day — morning, afternoon, or evening?",
+  2: "Noted. When you've tried to stick to a routine before, what usually gets in the way?",
+  3: "Makes sense. Does having someone or something check on you help you stay on track, or does it backfire?",
+  4: CLOSING,
+};
+
+export function getDemoReply(turnCount: number): {
   reply: string;
   isComplete: boolean;
 } {
-  if (userTurnCount >= DEMO_QUESTIONS.length) {
-    return {
-      reply: "That's everything I need. Let's build your schedule.",
-      isComplete: true,
-    };
-  }
-
-  const reply = DEMO_QUESTIONS[userTurnCount - 1];
+  const reply = DEMO_REPLIES[turnCount] ?? CLOSING;
   return {
     reply,
-    isComplete: reply.includes("That's everything I need"),
+    isComplete: reply.includes(CLOSING),
   };
 }
 
@@ -50,7 +44,7 @@ export async function saveDemoProfile(userId: string, messages: Message[]) {
       goals: [userMessages[0]?.slice(0, 80) ?? "build a consistent routine"],
       accountability_tone: "gentle",
       raw_ai_summary:
-        "Demo profile saved locally. Connect Anthropic later for a fully personalized AI profile.",
+        "Demo profile saved locally. Deploy edge functions for real AI extraction.",
       completed_at: new Date().toISOString(),
     })
     .select()

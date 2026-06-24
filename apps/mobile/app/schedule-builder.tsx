@@ -25,20 +25,25 @@ import {
   updateBlockDays,
   WEEKDAYS,
 } from "../src/lib/schedule";
+import { loadScheduleTips } from "../src/lib/scheduleTips";
 import { useAuth } from "../src/providers/AuthProvider";
 import { useStore } from "../src/store";
 import { BlockCategory, ScheduleBlock } from "../src/types/database";
 import { minutesToTime } from "../src/lib/time";
 import { TimeField } from "../src/components/TimeField";
+
 import { RequireAuth } from "../src/components/RequireAuth";
 
 function ScheduleBuilderScreenContent() {
-  const { session } = useAuth();
+  const { session, psychologyProfile, refreshProfile } = useAuth();
   const { blocks, setBlocks } = useStore();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [templateId, setTemplateId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [tips, setTips] = useState<string[]>([]);
+  const [tipsLoading, setTipsLoading] = useState(false);
+  const [tipsDismissed, setTipsDismissed] = useState(false);
 
   const [name, setName] = useState("");
   const [category, setCategory] = useState<BlockCategory>("deep_work");
@@ -74,9 +79,33 @@ function ScheduleBuilderScreenContent() {
     }
   };
 
+  const loadTips = async () => {
+    if (!psychologyProfile?.completed_at) return;
+
+    if (psychologyProfile.schedule_tips?.length) {
+      setTips(psychologyProfile.schedule_tips);
+      return;
+    }
+
+    setTipsLoading(true);
+    try {
+      const loaded = await loadScheduleTips(psychologyProfile);
+      setTips(loaded);
+      await refreshProfile();
+    } catch (err) {
+      console.error("Could not load schedule tips:", err);
+    } finally {
+      setTipsLoading(false);
+    }
+  };
+
   useEffect(() => {
     loadBlocks();
   }, [session.user.id]);
+
+  useEffect(() => {
+    loadTips();
+  }, [psychologyProfile?.completed_at, psychologyProfile?.schedule_tips?.length]);
 
   const showError = (message: string) => {
     setError(message);
@@ -170,6 +199,37 @@ function ScheduleBuilderScreenContent() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const renderTipsCard = () => {
+    if (tipsDismissed || !psychologyProfile?.completed_at) return null;
+
+    if (tipsLoading) {
+      return (
+        <View style={styles.tipsCard}>
+          <ActivityIndicator color="#534AB7" />
+        </View>
+      );
+    }
+
+    if (!tips.length) return null;
+
+    return (
+      <View style={styles.tipsCard}>
+        <Text style={styles.tipsTitle}>
+          Building your schedule — a few things to keep in mind.
+        </Text>
+        {tips.map((tip) => (
+          <View key={tip} style={styles.tipRow}>
+            <Text style={styles.tipBullet}>•</Text>
+            <Text style={styles.tipText}>{tip}</Text>
+          </View>
+        ))}
+        <TouchableOpacity style={styles.tipsDismissBtn} onPress={() => setTipsDismissed(true)}>
+          <Text style={styles.tipsDismissText}>Got it</Text>
+        </TouchableOpacity>
+      </View>
+    );
   };
 
   const renderAddForm = () => (
@@ -292,6 +352,8 @@ function ScheduleBuilderScreenContent() {
         </Text>
       </View>
 
+      {renderTipsCard()}
+
       {error ? <Text style={styles.errorBox}>{error}</Text> : null}
 
       <FlatList
@@ -368,6 +430,30 @@ const styles = StyleSheet.create({
     color: "#ffb4b4",
     fontSize: 14,
   },
+  tipsCard: {
+    marginHorizontal: 20,
+    marginBottom: 12,
+    backgroundColor: "#1e1830",
+    borderColor: "#534AB7",
+    borderWidth: 0.5,
+    borderRadius: 10,
+    padding: 14,
+    gap: 8,
+  },
+  tipsTitle: { color: "#AFA9EC", fontSize: 14, fontWeight: "600", lineHeight: 20 },
+  tipRow: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
+  tipBullet: { color: "#534AB7", fontSize: 14, lineHeight: 20 },
+  tipText: { flex: 1, color: "#888", fontSize: 13, lineHeight: 20 },
+  tipsDismissBtn: {
+    alignSelf: "flex-start",
+    marginTop: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 0.5,
+    borderColor: "#534AB7",
+  },
+  tipsDismissText: { color: "#AFA9EC", fontSize: 13, fontWeight: "600" },
   list: { paddingHorizontal: 16, paddingBottom: 32 },
   section: { marginBottom: 16 },
   sectionTitle: { color: "#888", fontSize: 13, marginBottom: 10, fontWeight: "600" },
@@ -402,7 +488,13 @@ const styles = StyleSheet.create({
   dayChipText: { color: "#666", fontSize: 12, fontWeight: "600" },
   dayChipTextActive: { color: "#EEEDFE" },
   fieldLabel: { color: "#888", fontSize: 13, fontWeight: "600" },
-  empty: { color: "#666", textAlign: "center", marginVertical: 24, lineHeight: 22 },
+  empty: {
+    color: "#666",
+    textAlign: "center",
+    lineHeight: 22,
+    marginVertical: 24,
+    paddingHorizontal: 8,
+  },
   addSection: { marginTop: 8, marginBottom: 12 },
   addToggle: {
     borderRadius: 12,

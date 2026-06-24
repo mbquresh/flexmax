@@ -182,3 +182,7 @@ create policy "own profile" on public.profiles
   for all
   using (auth.uid() = id)
   with check (auth.uid() = id);
+
+-- Migration 003
+alter table public.psychology_profiles
+  add column if not exists schedule_tips text[];

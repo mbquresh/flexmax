@@ -17,10 +17,11 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { router } from "expo-router";
 import { supabase } from "../lib/supabase";
-import { getDemoReply, saveDemoProfile } from "../lib/mockOnboarding";
+import { saveDemoProfile } from "../lib/mockOnboarding";
 import { useAuth } from "../providers/AuthProvider";
 import { useStore } from "../store";
 
@@ -35,12 +36,19 @@ const INITIAL_MESSAGE: Message = {
     "Hey — before we build your schedule, I want to understand how you actually work.\n\nWhat's one thing you keep putting off, even though you know it matters?",
 };
 
+const PROVIDER_LABELS: Record<string, string> = {
+  demo: "Demo mode — scripted replies",
+  gemini: "Powered by Gemini (dev)",
+  anthropic: "Powered by Claude",
+  offline: "Offline demo — deploy edge functions for real AI",
+};
+
 export default function OnboardingScreen() {
   const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
-  const [demoMode, setDemoMode] = useState(false);
+  const [aiProvider, setAiProvider] = useState<string>("anthropic");
   const listRef = useRef<FlatList>(null);
   const { session, refreshProfile } = useAuth();
   const { setPsychologyProfile } = useStore();
@@ -56,7 +64,7 @@ export default function OnboardingScreen() {
     if (!userId) return;
 
     try {
-      if (demoMode) {
+      if (aiProvider === "offline") {
         const profile = await saveDemoProfile(userId, finalMessages);
         setPsychologyProfile(profile);
         await refreshProfile();
@@ -74,23 +82,11 @@ export default function OnboardingScreen() {
 
     const userMessage: Message = { role: "user", content: input.trim() };
     const updatedMessages = [...messages, userMessage];
-    const userTurnCount = updatedMessages.filter((m) => m.role === "user").length;
     setMessages(updatedMessages);
     setInput("");
     setLoading(true);
 
     try {
-      if (demoMode) {
-        const { reply, isComplete: done } = getDemoReply(userTurnCount);
-        const finalMessages = [
-          ...updatedMessages,
-          { role: "assistant" as const, content: reply },
-        ];
-        setMessages(finalMessages);
-        if (done) await finishOnboarding(finalMessages);
-        return;
-      }
-
       const { data, error } = await supabase.functions.invoke("onboarding-chat", {
         body: { messages: updatedMessages },
       });
@@ -98,6 +94,8 @@ export default function OnboardingScreen() {
       if (error) throw error;
       if (data?.error) throw new Error(String(data.error));
       if (!data?.reply) throw new Error("AI backend not set up yet");
+
+      if (data.provider) setAiProvider(String(data.provider));
 
       const { reply, isComplete: done } = data;
       const finalMessages = [
@@ -108,20 +106,11 @@ export default function OnboardingScreen() {
 
       if (done) await finishOnboarding(finalMessages);
     } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
       console.error("Onboarding error:", err);
-      setDemoMode(true);
-
-      const { reply, isComplete: done } = getDemoReply(userTurnCount);
-      const finalMessages = [
-        ...updatedMessages,
-        {
-          role: "assistant" as const,
-          content: `Using demo mode for now (real AI needs Anthropic credits).\n\n${reply}`,
-        },
-      ];
-      setMessages(finalMessages);
-
-      if (done) await finishOnboarding(finalMessages);
+      if (Platform.OS !== "web") {
+        Alert.alert("Something went wrong", message);
+      }
     } finally {
       setLoading(false);
     }
@@ -137,6 +126,8 @@ export default function OnboardingScreen() {
       );
 
       if (error) throw error;
+      if (data?.error) throw new Error(String(data.error));
+      if (data?.provider) setAiProvider(String(data.provider));
       setPsychologyProfile(data.profile);
       await refreshProfile();
     } catch (err) {
@@ -178,7 +169,7 @@ export default function OnboardingScreen() {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>FlexMax</Text>
         <Text style={styles.headerSub}>
-          {demoMode ? "Demo mode — no Anthropic key needed" : "Understanding how you work"}
+          {PROVIDER_LABELS[aiProvider] ?? "Understanding how you work"}
         </Text>
       </View>
 
@@ -194,7 +185,7 @@ export default function OnboardingScreen() {
       {isComplete ? (
         <View style={styles.completeBox}>
           <Text style={styles.completeText}>
-            Profile built. Let's design your schedule.
+            Profile built. We'll share a few tips tailored to your answers as you build your schedule.
           </Text>
           <TouchableOpacity
             style={styles.completeBtn}

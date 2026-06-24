@@ -38,6 +38,7 @@ export interface PsychologyProfile {
   accountability_tone: string | null;
   raw_ai_summary: string | null;
   completed_at: string | null;
+  schedule_tips: string[] | null;
 }
 
 export interface ScheduleTemplate {
