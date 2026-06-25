@@ -78,7 +78,7 @@ yarn mobile
 - [x] Schedule builder (add/delete blocks, quick-add presets, day toggles)
 - [x] AI schedule tips (profile-aware coaching on first visit)
 - [x] Today view (daily instances from template blocks)
-- [ ] Schedule builder — drag to shift blocks
+- [x] Schedule builder — drag to shift blocks
 
 **Deferred (not building for v1):** AI schedule review screen.
 
