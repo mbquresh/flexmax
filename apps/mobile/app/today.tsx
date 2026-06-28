@@ -130,61 +130,61 @@ function DraggableInstanceCard({
   }));
 
   return (
-    <GestureDetector gesture={panGesture}>
-      <Animated.View
-        style={[styles.card, animatedCardStyle]}
-        onLayout={(e) => {
-          const { y, height } = e.nativeEvent.layout;
-          onCardLayout(item.id, y, height);
-        }}
+    <Animated.View
+      style={[styles.card, animatedCardStyle]}
+      onLayout={(e) => {
+        const { y, height } = e.nativeEvent.layout;
+        onCardLayout(item.id, y, height);
+      }}
+    >
+      <Pressable
+        style={styles.cardInner}
+        onLongPress={onLongPress}
+        delayLongPress={450}
       >
-        <Pressable
-          style={styles.cardInner}
-          onLongPress={onLongPress}
-          delayLongPress={450}
-        >
-          <View style={styles.dragHandle}>
+        <GestureDetector gesture={panGesture}>
+          <View style={styles.dragHandle} hitSlop={12}>
             <Text style={styles.dragLines}>≡</Text>
           </View>
-          <View
-            style={[styles.statusBar, { backgroundColor: getStatusColor(item.status) }]}
-          />
-          <View style={styles.cardBody}>
-            <View style={styles.cardMain}>
-              <Text style={styles.blockName}>{item.block?.name ?? "Block"}</Text>
-              <Text style={styles.meta}>
-                {minutesToTime(item.start_minutes)} – {minutesToTime(item.end_minutes)}
-              </Text>
-              <TouchableOpacity onPress={onOpenTaskDetail} hitSlop={8}>
-                {item.task_detail ? (
-                  <Text style={styles.task}>{item.task_detail}</Text>
-                ) : (
-                  <Text style={styles.taskAdd}>Add task →</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-
-            <TouchableOpacity
-              style={[
-                styles.actionCircle,
-                isDone && styles.actionCircleDone,
-                isMissed && styles.actionCircleMissed,
-              ]}
-              onPress={onActionPress}
-              disabled={item.status === "skipped" || saving}
-              hitSlop={8}
-            >
-              {isDone ? (
-                <Text style={styles.actionCircleCheck}>✓</Text>
-              ) : isMissed ? (
-                <Text style={styles.actionCircleMissedIcon}>!</Text>
-              ) : null}
+        </GestureDetector>
+        <View
+          style={[styles.statusBar, { backgroundColor: getStatusColor(item.status) }]}
+        />
+        <View style={styles.cardBody}>
+          <View style={styles.cardMain}>
+            <Text style={styles.blockName}>{item.block?.name ?? "Block"}</Text>
+            <Text style={styles.meta}>
+              {minutesToTime(item.start_minutes)} – {minutesToTime(item.end_minutes)}
+            </Text>
+            <TouchableOpacity onPress={onOpenTaskDetail} hitSlop={8}>
+              {item.task_detail ? (
+                <Text style={styles.task}>{item.task_detail}</Text>
+              ) : (
+                <Text style={styles.taskAdd}>Add task →</Text>
+              )}
             </TouchableOpacity>
           </View>
-        </Pressable>
-        <Animated.View style={flashStyle} pointerEvents="none" />
-      </Animated.View>
-    </GestureDetector>
+
+          <TouchableOpacity
+            style={[
+              styles.actionCircle,
+              isDone && styles.actionCircleDone,
+              isMissed && styles.actionCircleMissed,
+            ]}
+            onPress={onActionPress}
+            disabled={item.status === "skipped" || saving}
+            hitSlop={8}
+          >
+            {isDone ? (
+              <Text style={styles.actionCircleCheck}>✓</Text>
+            ) : isMissed ? (
+              <Text style={styles.actionCircleMissedIcon}>!</Text>
+            ) : null}
+          </TouchableOpacity>
+        </View>
+      </Pressable>
+      <Animated.View style={flashStyle} pointerEvents="none" />
+    </Animated.View>
   );
 }
 
@@ -441,15 +441,21 @@ function TodayScreenContent() {
   };
 
   const showUndoActions = (item: DailyInstance) => {
+    const isMissed = item.status === "missed";
+    const iosOption = isMissed ? "Undo — mark as pending" : "Undo completion";
+
     if (Platform.OS === "ios") {
       ActionSheetIOS.showActionSheetWithOptions(
         {
-          options: ["Undo completion", "Cancel"],
+          options: [iosOption, "Cancel"],
           cancelButtonIndex: 1,
           destructiveButtonIndex: 0,
         },
         (buttonIndex) => {
-          if (buttonIndex === 0) handleUndoCompletion(item.id);
+          if (buttonIndex === 0) {
+            if (isMissed) handleUndoMissed(item.id);
+            else handleUndoCompletion(item.id);
+          }
         }
       );
       return;
@@ -461,13 +467,8 @@ function TodayScreenContent() {
   const handleActionPress = (item: DailyInstance) => {
     if (item.status === "skipped") return;
 
-    if (item.status === "completed") {
+    if (item.status === "completed" || item.status === "missed") {
       showUndoActions(item);
-      return;
-    }
-
-    if (item.status === "missed") {
-      Alert.alert("Missed block", "Recovery flow coming soon");
       return;
     }
 
@@ -490,6 +491,27 @@ function TodayScreenContent() {
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Could not undo completion";
+      if (Platform.OS === "web") console.error(message);
+      else Alert.alert("Error", message);
+    } finally {
+      setSaving(false);
+      setUndoInstance(null);
+    }
+  };
+
+  const handleUndoMissed = async (instanceId: string) => {
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("daily_schedule_instances")
+        .update({ status: "pending" })
+        .eq("id", instanceId);
+
+      if (error) throw error;
+
+      updateInstance(instanceId, { status: "pending" });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Could not undo missed";
       if (Platform.OS === "web") console.error(message);
       else Alert.alert("Error", message);
     } finally {
@@ -746,10 +768,16 @@ function TodayScreenContent() {
           <Pressable style={styles.undoSheet} onPress={(e) => e.stopPropagation()}>
             <TouchableOpacity
               style={styles.undoOption}
-              onPress={() => undoInstance && handleUndoCompletion(undoInstance.id)}
+              onPress={() => {
+                if (!undoInstance) return;
+                if (undoInstance.status === "missed") handleUndoMissed(undoInstance.id);
+                else handleUndoCompletion(undoInstance.id);
+              }}
               disabled={saving}
             >
-              <Text style={styles.undoOptionDestructive}>Undo completion</Text>
+              <Text style={styles.undoOptionDestructive}>
+                {undoInstance?.status === "missed" ? "Undo missed" : "Undo completion"}
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.undoOption, styles.undoOptionLast]}

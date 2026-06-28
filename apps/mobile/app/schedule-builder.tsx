@@ -29,7 +29,7 @@ import { loadScheduleTips } from "../src/lib/scheduleTips";
 import { useAuth } from "../src/providers/AuthProvider";
 import { useStore } from "../src/store";
 import { BlockCategory, ScheduleBlock } from "../src/types/database";
-import { minutesToTime } from "../src/lib/time";
+import { minutesToTime, timeToMinutes } from "../src/lib/time";
 import { TimeField } from "../src/components/TimeField";
 
 import { RequireAuth } from "../src/components/RequireAuth";
@@ -51,6 +51,12 @@ function ScheduleBuilderScreenContent() {
   const [endTime, setEndTime] = useState("10:00 AM");
   const [selectedDays, setSelectedDays] = useState<number[]>(ALL_DAYS);
   const [addOpen, setAddOpen] = useState(false);
+  const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editCategory, setEditCategory] = useState<BlockCategory>("deep_work");
+  const [editStartTime, setEditStartTime] = useState("9:00 AM");
+  const [editEndTime, setEditEndTime] = useState("10:00 AM");
+  const [editSelectedDays, setEditSelectedDays] = useState<number[]>(ALL_DAYS);
 
   const loadBlocks = async () => {
     if (!session.user.id) {
@@ -116,6 +122,66 @@ function ScheduleBuilderScreenContent() {
     setSelectedDays((prev) =>
       prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day].sort((a, b) => a - b)
     );
+  };
+
+  const toggleEditDay = (day: number) => {
+    setEditSelectedDays((prev) =>
+      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day].sort((a, b) => a - b)
+    );
+  };
+
+  const openEditBlock = (block: ScheduleBlock) => {
+    setEditingBlockId(block.id);
+    setEditName(block.name);
+    setEditCategory(block.category);
+    setEditStartTime(minutesToTime(block.start_minutes));
+    setEditEndTime(minutesToTime(block.end_minutes));
+    setEditSelectedDays([...block.days_of_week]);
+  };
+
+  const cancelEdit = () => {
+    setEditingBlockId(null);
+  };
+
+  const handleSaveEdit = async (blockId: string) => {
+    if (!editName.trim()) {
+      showError("Give the block a name.");
+      return;
+    }
+    if (!editSelectedDays.length) {
+      showError("Pick at least one day for this block.");
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+    try {
+      const { data, error } = await supabase
+        .from("schedule_blocks")
+        .update({
+          name: editName.trim(),
+          category: editCategory,
+          days_of_week: editSelectedDays,
+          start_minutes: timeToMinutes(editStartTime),
+          end_minutes: timeToMinutes(editEndTime),
+        })
+        .eq("id", blockId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setBlocks(
+        blocks
+          .map((b) => (b.id === blockId ? data : b))
+          .sort((a, b) => a.start_minutes - b.start_minutes)
+      );
+      setEditingBlockId(null);
+    } catch (err) {
+      showError(err instanceof Error ? err.message : "Could not save block");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleToggleBlockDay = async (block: ScheduleBlock, day: number) => {
@@ -194,6 +260,7 @@ function ScheduleBuilderScreenContent() {
     try {
       await deleteScheduleBlock(blockId);
       setBlocks(blocks.filter((b) => b.id !== blockId));
+      if (editingBlockId === blockId) setEditingBlockId(null);
     } catch (err) {
       showError(err instanceof Error ? err.message : "Could not delete block");
     } finally {
@@ -307,9 +374,14 @@ function ScheduleBuilderScreenContent() {
     <View style={styles.blockCard}>
       <View style={styles.blockHeader}>
         <Text style={styles.blockName}>{item.name}</Text>
-        <TouchableOpacity onPress={() => handleDeleteBlock(item.id)}>
-          <Text style={styles.deleteText}>Remove</Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <TouchableOpacity onPress={() => openEditBlock(item)} disabled={saving}>
+            <Text style={styles.deleteText}>Edit</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => handleDeleteBlock(item.id)} disabled={saving}>
+            <Text style={styles.deleteText}>Remove</Text>
+          </TouchableOpacity>
+        </View>
       </View>
       <Text style={styles.blockMeta}>
         {minutesToTime(item.start_minutes)} – {minutesToTime(item.end_minutes)} ·{" "}
@@ -332,6 +404,69 @@ function ScheduleBuilderScreenContent() {
           );
         })}
       </View>
+
+      {editingBlockId === item.id ? (
+        <View style={[styles.form, { marginTop: 12 }]}>
+          <Text style={styles.sectionTitle}>Edit block</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Block name (e.g. Deep work)"
+            placeholderTextColor="#555"
+            value={editName}
+            onChangeText={setEditName}
+          />
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow}>
+            {CATEGORY_OPTIONS.map((opt) => (
+              <TouchableOpacity
+                key={opt.value}
+                style={[styles.chip, editCategory === opt.value && styles.chipActive]}
+                onPress={() => setEditCategory(opt.value)}
+              >
+                <Text
+                  style={[styles.chipText, editCategory === opt.value && styles.chipTextActive]}
+                >
+                  {opt.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+          <Text style={styles.fieldLabel}>Repeat on</Text>
+          <View style={styles.dayRow}>
+            {WEEKDAYS.map((day) => {
+              const active = editSelectedDays.includes(day.value);
+              return (
+                <TouchableOpacity
+                  key={day.value}
+                  style={[styles.dayChip, active && styles.dayChipActive]}
+                  onPress={() => toggleEditDay(day.value)}
+                >
+                  <Text style={[styles.dayChipText, active && styles.dayChipTextActive]}>
+                    {day.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          <View style={styles.timeStack}>
+            <TimeField label="Start" value={editStartTime} onChange={setEditStartTime} />
+            <TimeField label="End" value={editEndTime} onChange={setEditEndTime} />
+          </View>
+          <TouchableOpacity
+            style={[styles.addBtn, saving && styles.btnDisabled]}
+            onPress={() => handleSaveEdit(item.id)}
+            disabled={saving}
+          >
+            {saving ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.addBtnText}>Save changes</Text>
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity onPress={cancelEdit} disabled={saving}>
+            <Text style={styles.collapseText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
     </View>
   );
 
