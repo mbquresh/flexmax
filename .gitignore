@@ -8,3 +8,7 @@ build/
 .DS_Store
 *.log
 *.zip
+file_list.txt
+flexmax_snapshot.txt
+supabase/.temp/
+package-lock.json
