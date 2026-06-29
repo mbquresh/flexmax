@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { Session } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
+import { registerPushToken, unregisterPushToken } from "../lib/notifications";
 import { useStore } from "../store";
 import { Profile, PsychologyProfile } from "../types/database";
 
@@ -61,6 +62,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setPsychologyProfile(psychResult.data);
     setUser(userId, profileResult.data);
     if (psychResult.data) setStorePsych(psychResult.data);
+
+    registerPushToken(userId).catch(console.error);
   };
 
   const refreshProfile = async () => {
@@ -115,6 +118,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
+    if (session?.user.id) {
+      await unregisterPushToken(session.user.id).catch(console.error);
+    }
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
   };
