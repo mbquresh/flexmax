@@ -84,9 +84,9 @@ yarn mobile
 
 ## v1.1 scope (Jun 28)
 
-- [ ] Nightly task-fill notifications
+- [x] Nightly task-fill notifications
 - [ ] Post-block accountability check-ins
-- [ ] Missed block recovery flow (reflect + reschedule)
+- [x] Missed block recovery flow (reflect + reschedule)
 - [ ] Basic activity idle detection
 
 ## Name
