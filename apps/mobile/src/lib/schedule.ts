@@ -1,5 +1,5 @@
 import { supabase } from "./supabase";
-import { BlockCategory, ScheduleBlock } from "../types/database";
+import { BlockCategory, DailyInstance, ScheduleBlock } from "../types/database";
 import { timeToMinutes } from "./time";
 
 export const WEEKDAYS = [
@@ -137,6 +137,33 @@ export const BLOCK_PRESETS = [
     endTime: "10:30 PM",
   },
 ];
+
+export function findRescheduleSlot(
+  missedInstance: DailyInstance,
+  allInstances: DailyInstance[]
+): { start_minutes: number; end_minutes: number } | null {
+  const duration = missedInstance.end_minutes - missedInstance.start_minutes;
+  const nowMinutes = new Date().getHours() * 60 + new Date().getMinutes();
+  const bufferMinutes = nowMinutes + 30;
+
+  const occupied = allInstances
+    .filter((i) => i.id !== missedInstance.id && i.status !== "skipped")
+    .map((i) => ({ start: i.start_minutes, end: i.end_minutes }))
+    .sort((a, b) => a.start - b.start);
+
+  const candidates = [bufferMinutes, ...occupied.map((o) => o.end)];
+
+  for (const start of candidates) {
+    if (start < bufferMinutes) continue;
+    const end = start + duration;
+    if (end > 1440) continue;
+
+    const conflicts = occupied.some((o) => start < o.end && end > o.start);
+    if (!conflicts) return { start_minutes: start, end_minutes: end };
+  }
+
+  return null;
+}
 
 export const CATEGORY_OPTIONS: { value: BlockCategory; label: string }[] = [
   { value: "deep_work", label: "Deep work" },

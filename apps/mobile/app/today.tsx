@@ -27,7 +27,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { router } from "expo-router";
 import { generateDailyInstances, supabase } from "../src/lib/supabase";
-import { getTodayLabel } from "../src/lib/schedule";
+import { findRescheduleSlot, getTodayLabel } from "../src/lib/schedule";
 import { useAuth } from "../src/providers/AuthProvider";
 import { useStore } from "../src/store";
 import {
@@ -189,12 +189,26 @@ function DraggableInstanceCard({
 }
 
 function TodayScreenContent() {
-  const { session, signOut } = useAuth();
+  const { session, signOut, psychologyProfile } = useAuth();
   const { todayInstances, setTodayInstances, updateInstance } = useStore();
   const [loading, setLoading] = useState(true);
   const [totalBlocks, setTotalBlocks] = useState(0);
   const [checkInInstance, setCheckInInstance] = useState<DailyInstance | null>(null);
   const [undoInstance, setUndoInstance] = useState<DailyInstance | null>(null);
+  const [recoveryInstance, setRecoveryInstance] = useState<DailyInstance | null>(null);
+  const [recoveryAI, setRecoveryAI] = useState<{
+    acknowledgment: string;
+    reflection_prompt_why: string;
+    reflection_prompt_improve: string;
+    pattern_note: string | null;
+  } | null>(null);
+  const [recoveryLoading, setRecoveryLoading] = useState(false);
+  const [reflectionWhy, setReflectionWhy] = useState("");
+  const [reflectionImprove, setReflectionImprove] = useState("");
+  const [rescheduleSlot, setRescheduleSlot] = useState<{
+    start_minutes: number;
+    end_minutes: number;
+  } | null>(null);
   const [activeTaskDetailInstance, setActiveTaskDetailInstance] =
     useState<DailyInstance | null>(null);
   const [taskDetailDraft, setTaskDetailDraft] = useState("");
@@ -520,20 +534,148 @@ function TodayScreenContent() {
     }
   };
 
-  const handleLongPress = async (item: DailyInstance) => {
-    if (item.status !== "pending" && item.status !== "active") return;
+  const handleMarkMissed = async (instance: DailyInstance) => {
+    if (instance.status !== "pending" && instance.status !== "active") return;
 
     setSaving(true);
     try {
       const { error } = await supabase
         .from("daily_schedule_instances")
         .update({ status: "missed" })
-        .eq("id", item.id);
+        .eq("id", instance.id);
 
       if (error) throw error;
-      updateInstance(item.id, { status: "missed" });
+      updateInstance(instance.id, { status: "missed" });
+
+      const slot = findRescheduleSlot(
+        { ...instance, status: "missed" },
+        useStore.getState().todayInstances
+      );
+      setRescheduleSlot(slot);
+
+      const { count } = await supabase
+        .from("daily_schedule_instances")
+        .select("*", { count: "exact", head: true })
+        .eq("block_id", instance.block_id)
+        .eq("status", "missed");
+
+      setRecoveryInstance(instance);
+      setReflectionWhy("");
+      setReflectionImprove("");
+      setRecoveryLoading(true);
+      setRecoveryAI(null);
+
+      try {
+        const { data, error: fnError } = await supabase.functions.invoke(
+          "missed-block-recovery",
+          {
+            body: {
+              blockName: instance.block?.name ?? "this block",
+              missCount: count ?? 1,
+              psychologyProfile,
+            },
+          }
+        );
+        if (fnError) throw fnError;
+        setRecoveryAI(data);
+      } catch (err) {
+        console.error("Recovery AI error:", err);
+        setRecoveryAI({
+          acknowledgment: "One miss doesn't break anything — let's figure out what happened.",
+          reflection_prompt_why: "What got in the way?",
+          reflection_prompt_improve: "What's one thing you'd change next time?",
+          pattern_note: null,
+        });
+      } finally {
+        setRecoveryLoading(false);
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Could not mark missed";
+      if (Platform.OS === "web") console.error(message);
+      else Alert.alert("Error", message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const closeRecovery = () => {
+    setRecoveryInstance(null);
+    setRecoveryAI(null);
+    setRescheduleSlot(null);
+    setReflectionWhy("");
+    setReflectionImprove("");
+  };
+
+  const handleSaveRecovery = async () => {
+    if (!recoveryInstance) return;
+
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("daily_schedule_instances")
+        .update({
+          reflection_why: reflectionWhy.trim() || null,
+          reflection_improve: reflectionImprove.trim() || null,
+        })
+        .eq("id", recoveryInstance.id);
+
+      if (error) throw error;
+
+      updateInstance(recoveryInstance.id, {
+        reflection_why: reflectionWhy.trim() || null,
+        reflection_improve: reflectionImprove.trim() || null,
+      });
+
+      closeRecovery();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Could not save reflection";
+      if (Platform.OS === "web") console.error(message);
+      else Alert.alert("Error", message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleReschedule = async () => {
+    if (!recoveryInstance || !rescheduleSlot) return;
+
+    setSaving(true);
+    try {
+      const { data, error } = await supabase
+        .from("daily_schedule_instances")
+        .insert({
+          user_id: recoveryInstance.user_id,
+          block_id: recoveryInstance.block_id,
+          date: recoveryInstance.date,
+          start_minutes: rescheduleSlot.start_minutes,
+          end_minutes: rescheduleSlot.end_minutes,
+          status: "pending",
+          task_detail: recoveryInstance.task_detail,
+        })
+        .select("*, block:schedule_blocks(*)")
+        .single();
+
+      if (error) throw error;
+
+      await supabase
+        .from("daily_schedule_instances")
+        .update({ rescheduled_to_id: data.id })
+        .eq("id", recoveryInstance.id);
+
+      updateInstance(recoveryInstance.id, { rescheduled_to_id: data.id });
+      setTodayInstances(
+        [...useStore.getState().todayInstances, data].sort(
+          (a, b) => a.start_minutes - b.start_minutes
+        )
+      );
+
+      showToast(
+        `${recoveryInstance.block?.name ?? "Block"} rescheduled to ${minutesToTime(rescheduleSlot.start_minutes)}`
+      );
+      closeRecovery();
+    } catch (err) {
+      console.error(err);
+      const message = err instanceof Error ? err.message : "Could not reschedule";
       if (Platform.OS === "web") console.error(message);
       else Alert.alert("Error", message);
     } finally {
@@ -644,7 +786,7 @@ function TodayScreenContent() {
               key={item.id}
               item={item}
               saving={saving}
-              onLongPress={() => handleLongPress(item)}
+              onLongPress={() => handleMarkMissed(item)}
               onActionPress={() => handleActionPress(item)}
               onOpenTaskDetail={() => openTaskDetail(item)}
               onCardLayout={handleCardLayout}
@@ -655,6 +797,94 @@ function TodayScreenContent() {
           ))
         )}
       </ScrollView>
+
+      <Modal
+        visible={!!recoveryInstance}
+        transparent
+        animationType="slide"
+        onRequestClose={closeRecovery}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.modalOverlay}
+        >
+          <View style={styles.recoverySheet}>
+            <View style={styles.sheetHandle} />
+            <Text style={styles.recoveryTitle}>
+              {recoveryInstance?.block?.name ?? "Block"} — missed
+            </Text>
+
+            {recoveryLoading ? (
+              <ActivityIndicator color="#534AB7" style={{ marginVertical: 16 }} />
+            ) : (
+              <>
+                <Text style={styles.recoveryAck}>{recoveryAI?.acknowledgment}</Text>
+                {recoveryAI?.pattern_note ? (
+                  <View style={styles.patternNote}>
+                    <Text style={styles.patternNoteText}>{recoveryAI.pattern_note}</Text>
+                  </View>
+                ) : null}
+              </>
+            )}
+
+            <Text style={styles.reflectionLabel}>
+              {recoveryAI?.reflection_prompt_why ?? "What got in the way?"}
+            </Text>
+            <TextInput
+              style={styles.reflectionInput}
+              value={reflectionWhy}
+              onChangeText={setReflectionWhy}
+              placeholder="Be honest..."
+              placeholderTextColor="#555"
+              multiline
+            />
+
+            <Text style={styles.reflectionLabel}>
+              {recoveryAI?.reflection_prompt_improve ?? "One thing you'd change next time?"}
+            </Text>
+            <TextInput
+              style={styles.reflectionInput}
+              value={reflectionImprove}
+              onChangeText={setReflectionImprove}
+              placeholder="Even something small..."
+              placeholderTextColor="#555"
+              multiline
+            />
+
+            {rescheduleSlot ? (
+              <View style={styles.rescheduleBox}>
+                <Text style={styles.rescheduleLabel}>Available slot today</Text>
+                <Text style={styles.rescheduleTime}>
+                  {minutesToTime(rescheduleSlot.start_minutes)} —{" "}
+                  {minutesToTime(rescheduleSlot.end_minutes)}
+                </Text>
+                <TouchableOpacity
+                  style={styles.rescheduleBtn}
+                  onPress={handleReschedule}
+                  disabled={saving}
+                >
+                  <Text style={styles.rescheduleBtnText}>Reschedule to this slot</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <Text style={styles.noSlot}>No open slots remaining today.</Text>
+            )}
+
+            <View style={styles.recoveryActions}>
+              <TouchableOpacity
+                style={[styles.saveBtn, saving && styles.btnDisabled]}
+                onPress={handleSaveRecovery}
+                disabled={saving}
+              >
+                <Text style={styles.saveBtnText}>Save reflection</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={closeRecovery} disabled={saving}>
+                <Text style={styles.skipText}>Skip</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
 
       {toastMessage ? (
         <Animated.View style={[styles.toast, toastAnimatedStyle]} pointerEvents="none">
@@ -989,4 +1219,68 @@ const styles = StyleSheet.create({
   undoOptionLast: { borderBottomWidth: 0 },
   undoOptionDestructive: { color: "#F0997B", fontSize: 16, fontWeight: "600" },
   undoOptionCancel: { color: "#888", fontSize: 16, fontWeight: "500" },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.6)",
+  },
+  recoverySheet: {
+    backgroundColor: "#1a1a1a",
+    borderRadius: 20,
+    padding: 20,
+    paddingBottom: 40,
+    gap: 12,
+  },
+  recoveryTitle: { color: "#F0997B", fontSize: 17, fontWeight: "600" },
+  recoveryAck: { color: "#d0d0d0", fontSize: 14, lineHeight: 22 },
+  patternNote: {
+    backgroundColor: "#2a1f1f",
+    borderLeftWidth: 2,
+    borderLeftColor: "#F0997B",
+    borderRadius: 8,
+    padding: 12,
+  },
+  patternNoteText: { color: "#F0997B", fontSize: 13, lineHeight: 20 },
+  reflectionLabel: { color: "#888", fontSize: 13, fontWeight: "600" },
+  reflectionInput: {
+    backgroundColor: "#0f0f12",
+    borderWidth: 0.5,
+    borderColor: "#333",
+    borderRadius: 10,
+    padding: 12,
+    color: "#f0f0f0",
+    fontSize: 14,
+    minHeight: 60,
+  },
+  rescheduleBox: {
+    backgroundColor: "#0f2218",
+    borderRadius: 10,
+    padding: 14,
+    gap: 6,
+  },
+  rescheduleLabel: { color: "#5DCAA5", fontSize: 12, fontWeight: "600" },
+  rescheduleTime: { color: "#f0f0f0", fontSize: 15, fontWeight: "600" },
+  rescheduleBtn: {
+    backgroundColor: "#5DCAA5",
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: "center",
+    marginTop: 4,
+  },
+  rescheduleBtnText: { color: "#0f0f12", fontSize: 14, fontWeight: "600" },
+  noSlot: { color: "#555", fontSize: 13, fontStyle: "italic" },
+  recoveryActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 4,
+  },
+  saveBtn: {
+    backgroundColor: "#534AB7",
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+  },
+  saveBtnText: { color: "#EEEDFE", fontSize: 15, fontWeight: "600" },
+  skipText: { color: "#555", fontSize: 14 },
 });

@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",
+    "@expo/ngrok": "^4.1.0",
     "@flexmax/ai": "*",
     "@opentelemetry/api": "^1.9.1",
     "@supabase/supabase-js": "^2.39.0",
