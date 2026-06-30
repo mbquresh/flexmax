@@ -356,67 +356,51 @@ function TodayScreenContent() {
   );
 
   const handleSwap = async (instanceA: DailyInstance, instanceB: DailyInstance) => {
-    const aStart = instanceA.start_minutes;
-    const aEnd = instanceA.end_minutes;
+    const durationA = instanceA.end_minutes - instanceA.start_minutes;
+    const durationB = instanceB.end_minutes - instanceB.start_minutes;
 
-    setSaving(true);
-    try {
-      const { error: errorA } = await supabase
-        .from("daily_schedule_instances")
-        .update({
-          start_minutes: instanceB.start_minutes,
-          end_minutes: instanceB.end_minutes,
-        })
-        .eq("id", instanceA.id);
+    const [earlier, later] =
+      instanceA.start_minutes < instanceB.start_minutes
+        ? [instanceA, instanceB]
+        : [instanceB, instanceA];
 
-      if (errorA) throw errorA;
+    const earlierDuration = earlier.end_minutes - earlier.start_minutes;
+    const laterDuration = later.end_minutes - later.start_minutes;
 
-      const { error: errorB } = await supabase
-        .from("daily_schedule_instances")
-        .update({ start_minutes: aStart, end_minutes: aEnd })
-        .eq("id", instanceB.id);
+    const newLaterStart = earlier.start_minutes;
+    const newLaterEnd = newLaterStart + laterDuration;
+    const newEarlierStart = newLaterEnd;
+    const newEarlierEnd = newEarlierStart + earlierDuration;
 
-      if (errorB) throw errorB;
+    await supabase
+      .from("daily_schedule_instances")
+      .update({ start_minutes: newLaterStart, end_minutes: newLaterEnd })
+      .eq("id", later.id);
 
-      updateInstance(instanceA.id, {
-        start_minutes: instanceB.start_minutes,
-        end_minutes: instanceB.end_minutes,
-      });
-      updateInstance(instanceB.id, {
-        start_minutes: aStart,
-        end_minutes: aEnd,
-      });
+    await supabase
+      .from("daily_schedule_instances")
+      .update({ start_minutes: newEarlierStart, end_minutes: newEarlierEnd })
+      .eq("id", earlier.id);
 
-      setTodayInstances(
-        [...useStore.getState().todayInstances]
-          .map((inst) => {
-            if (inst.id === instanceA.id) {
-              return {
-                ...inst,
-                start_minutes: instanceB.start_minutes,
-                end_minutes: instanceB.end_minutes,
-              };
-            }
-            if (inst.id === instanceB.id) {
-              return { ...inst, start_minutes: aStart, end_minutes: aEnd };
-            }
-            return inst;
-          })
-          .sort((a, b) => a.start_minutes - b.start_minutes)
-      );
+    const updated = todayInstances
+      .map((inst) => {
+        if (inst.id === later.id) {
+          return { ...inst, start_minutes: newLaterStart, end_minutes: newLaterEnd };
+        }
+        if (inst.id === earlier.id) {
+          return { ...inst, start_minutes: newEarlierStart, end_minutes: newEarlierEnd };
+        }
+        return inst;
+      })
+      .sort((a, b) => a.start_minutes - b.start_minutes);
 
-      showToast(
-        `${instanceA.block?.name ?? "Block"} swapped with ${instanceB.block?.name ?? "block"}`
-      );
-      triggerFlash(instanceA.id);
-      triggerFlash(instanceB.id);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Could not swap blocks";
-      if (Platform.OS === "web") console.error(message);
-      else Alert.alert("Error", message);
-    } finally {
-      setSaving(false);
-    }
+    setTodayInstances(updated);
+
+    showToast(
+      `${later.block?.name ?? "Block"} swapped with ${earlier.block?.name ?? "block"}`
+    );
+    triggerFlash(earlier.id);
+    triggerFlash(later.id);
   };
 
   const handleDragEnd = async (draggedId: string, translationY: number) => {
@@ -639,48 +623,45 @@ function TodayScreenContent() {
   const handleReschedule = async () => {
     if (!recoveryInstance || !rescheduleSlot) return;
 
-    setSaving(true);
-    try {
-      const { data, error } = await supabase
-        .from("daily_schedule_instances")
-        .insert({
-          user_id: recoveryInstance.user_id,
-          block_id: recoveryInstance.block_id,
-          date: recoveryInstance.date,
-          start_minutes: rescheduleSlot.start_minutes,
-          end_minutes: rescheduleSlot.end_minutes,
-          status: "pending",
-          task_detail: recoveryInstance.task_detail,
-        })
-        .select("*, block:schedule_blocks(*)")
-        .single();
+    const { error } = await supabase
+      .from("daily_schedule_instances")
+      .update({
+        start_minutes: rescheduleSlot.start_minutes,
+        end_minutes: rescheduleSlot.end_minutes,
+        status: "pending",
+        rescheduled_to_id: null,
+      })
+      .eq("id", recoveryInstance.id);
 
-      if (error) throw error;
-
-      await supabase
-        .from("daily_schedule_instances")
-        .update({ rescheduled_to_id: data.id })
-        .eq("id", recoveryInstance.id);
-
-      updateInstance(recoveryInstance.id, { rescheduled_to_id: data.id });
-      setTodayInstances(
-        [...useStore.getState().todayInstances, data].sort(
-          (a, b) => a.start_minutes - b.start_minutes
-        )
-      );
-
-      showToast(
-        `${recoveryInstance.block?.name ?? "Block"} rescheduled to ${minutesToTime(rescheduleSlot.start_minutes)}`
-      );
-      closeRecovery();
-    } catch (err) {
-      console.error(err);
-      const message = err instanceof Error ? err.message : "Could not reschedule";
-      if (Platform.OS === "web") console.error(message);
-      else Alert.alert("Error", message);
-    } finally {
-      setSaving(false);
+    if (error) {
+      console.error("Reschedule error:", error);
+      return;
     }
+
+    const updated = {
+      ...recoveryInstance,
+      start_minutes: rescheduleSlot.start_minutes,
+      end_minutes: rescheduleSlot.end_minutes,
+      status: "pending" as const,
+    };
+
+    updateInstance(recoveryInstance.id, {
+      start_minutes: rescheduleSlot.start_minutes,
+      end_minutes: rescheduleSlot.end_minutes,
+      status: "pending",
+    });
+
+    setTodayInstances(
+      todayInstances
+        .map((i) => (i.id === recoveryInstance.id ? updated : i))
+        .sort((a, b) => a.start_minutes - b.start_minutes)
+    );
+
+    showToast(
+      `${recoveryInstance.block?.name ?? "Block"} rescheduled to ${minutesToTime(rescheduleSlot.start_minutes)}`
+    );
+    setRecoveryInstance(null);
+    setRecoveryAI(null);
   };
 
   const handleCheckIn = async (rating: CompletionRating) => {

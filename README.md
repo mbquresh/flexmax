@@ -16,9 +16,9 @@ FlexMax is not a calendar app. It's a behavioral accountability system built aro
 1. AI onboarding learns your psychology (goals, tendencies, sabotage patterns)
 2. You build a weekly schedule with draggable time blocks (quick-add presets + custom blocks)
 3. AI coaching tips guide how you set up blocks — no auto-generated schedule
-4. Each night, you fill in what you'll actually do in each block
+4. Each night, you fill in what you'll actually do in each block (nightly push notification)
 5. Smart notifications hold you accountable through the day
-6. Missed blocks trigger reflection + intelligent rescheduling
+6. Missed blocks trigger AI reflection + in-place rescheduling
 
 ## Repo structure
 
@@ -50,7 +50,7 @@ flex_max/
 
 ## Status
 
-**Work in progress** — v1 core loop is live: auth, AI onboarding, manual schedule builder (with tips), and Today view. Drag-to-shift is still on the roadmap; AI schedule review is out of scope for now. Accountability features (notifications, check-ins, missed-block recovery) are next for v1.1.
+**Work in progress** — v1 core loop is live: auth, AI onboarding, schedule builder (with tips), and Today view with check-ins, drag-to-swap, and missed-block recovery. Nightly fill-in push notifications run via pg_cron. Idle detection is still open for v1.1.
 
 ## Getting started
 
@@ -77,7 +77,7 @@ yarn mobile
 - [x] AI onboarding chat (4-turn intake, saves psychology profile)
 - [x] Schedule builder (add/delete blocks, quick-add presets, day toggles)
 - [x] AI schedule tips (profile-aware coaching on first visit)
-- [x] Today view (daily instances from template blocks)
+- [x] Today view (daily instances, check-ins, drag-to-swap blocks, missed-block recovery)
 - [x] Schedule builder — drag to shift blocks
 
 **Deferred (not building for v1):** AI schedule review screen.
@@ -85,8 +85,8 @@ yarn mobile
 ## v1.1 scope (Jun 28)
 
 - [x] Nightly task-fill notifications
-- [ ] Post-block accountability check-ins
-- [x] Missed block recovery flow (reflect + reschedule)
+- [x] Post-block accountability check-ins
+- [x] Missed block recovery flow (AI reflection + in-place reschedule)
 - [ ] Basic activity idle detection
 
 ## Name
