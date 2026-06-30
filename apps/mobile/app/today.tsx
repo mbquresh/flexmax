@@ -15,6 +15,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActionSheetIOS,
+  AppState,
 } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
@@ -55,6 +56,14 @@ const RATING_OPTIONS: { value: CompletionRating; label: string }[] = [
 
 function getStatusColor(status: BlockStatus): string {
   return STATUS_COLORS[status] ?? STATUS_COLORS.pending;
+}
+
+function getLocalDateString(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 interface DraggableInstanceCardProps {
@@ -189,6 +198,11 @@ function DraggableInstanceCard({
 }
 
 function TodayScreenContent() {
+  console.log("DEBUG raw Date():", new Date().toString());
+  console.log("DEBUG getLocalDateString():", getLocalDateString());
+  console.log("DEBUG Date().getDate():", new Date().getDate());
+  console.log("DEBUG Date().getMonth():", new Date().getMonth());
+
   const { session, signOut, psychologyProfile } = useAuth();
   const { todayInstances, setTodayInstances, updateInstance } = useStore();
   const [loading, setLoading] = useState(true);
@@ -221,21 +235,25 @@ function TodayScreenContent() {
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cardPositions = useRef<Record<string, { y: number; height: number }>>({});
   const flashTriggers = useRef<Record<string, () => void>>({});
-  const today = new Date().toISOString().split("T")[0];
+  const [displayDate, setDisplayDate] = useState(getLocalDateString());
+  const currentDateRef = useRef(getLocalDateString());
   const todayLabel = getTodayLabel();
 
   const sortedInstances = [...todayInstances].sort(
     (a, b) => a.start_minutes - b.start_minutes
   );
 
-  useEffect(() => {
-    if (!session?.user.id) return;
+  const loadToday = useCallback(
+    async (dateOverride?: string) => {
+      console.log("loadToday called with date:", dateOverride ?? getLocalDateString());
+      if (!session?.user.id) return;
 
-    let cancelled = false;
-    setLoading(true);
+      const targetDate = dateOverride ?? getLocalDateString();
+      setDisplayDate(targetDate);
+      currentDateRef.current = targetDate;
+      setLoading(true);
 
-    const loadToday = async () => {
-      await generateDailyInstances(today);
+      await generateDailyInstances(targetDate);
 
       const { count } = await supabase
         .from("schedule_blocks")
@@ -248,22 +266,44 @@ function TodayScreenContent() {
         .from("daily_schedule_instances")
         .select("*, block:schedule_blocks(*)")
         .eq("user_id", session.user.id)
-        .eq("date", today)
+        .eq("date", targetDate)
         .order("start_minutes");
 
       if (error) {
         console.error(error);
-      } else if (!cancelled) {
+      } else {
         setTodayInstances(data ?? []);
       }
-      if (!cancelled) setLoading(false);
-    };
+      setLoading(false);
+    },
+    [session?.user.id, setTodayInstances]
+  );
 
+  useEffect(() => {
     loadToday();
-    return () => {
-      cancelled = true;
-    };
-  }, [session?.user.id, today, setTodayInstances]);
+  }, [session?.user.id, loadToday]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (nextState) => {
+      console.log(
+        "AppState changed to:",
+        nextState,
+        "currentDateRef:",
+        currentDateRef.current,
+        "freshDate:",
+        getLocalDateString()
+      );
+      if (nextState === "active") {
+        const freshDate = getLocalDateString();
+        if (freshDate !== currentDateRef.current) {
+          currentDateRef.current = freshDate;
+          loadToday(freshDate);
+        }
+      }
+    });
+
+    return () => subscription.remove();
+  }, [loadToday]);
 
   useEffect(() => {
     return () => {
@@ -733,7 +773,7 @@ function TodayScreenContent() {
       <View style={styles.header}>
         <Text style={styles.title}>Today</Text>
         <Text style={styles.date}>
-          {today} · {todayLabel}
+          {displayDate} · {todayLabel}
         </Text>
         <View style={styles.headerActions}>
           <TouchableOpacity onPress={() => router.push("/schedule-builder")}>
