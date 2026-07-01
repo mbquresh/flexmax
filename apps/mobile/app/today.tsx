@@ -28,6 +28,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { router } from "expo-router";
 import { generateDailyInstances, supabase } from "../src/lib/supabase";
+import { scheduleTodayBlockNotifications } from "../src/lib/blockNotifications";
 import { findRescheduleSlot, getTodayLabel } from "../src/lib/schedule";
 import { useAuth } from "../src/providers/AuthProvider";
 import { useStore } from "../src/store";
@@ -273,6 +274,9 @@ function TodayScreenContent() {
         console.error(error);
       } else {
         setTodayInstances(data ?? []);
+        if (data?.length) {
+          scheduleTodayBlockNotifications(data, targetDate).catch(console.error);
+        }
       }
       setLoading(false);
     },
