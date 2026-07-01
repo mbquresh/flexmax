@@ -81,49 +81,63 @@ export interface DailyInstance {
 }
 
 // Supabase Database type (for the typed client)
-type EmptyRelationships = [];
-
 export interface Database {
   public: {
     Tables: {
       profiles: {
-        Row: Profile;
-        Insert: Partial<Profile>;
+        Row: Profile & Record<string, unknown>;
+        Insert: Partial<Profile> & { id: string };
         Update: Partial<Profile>;
-        Relationships: EmptyRelationships;
+        Relationships: [];
       };
       psychology_profiles: {
-        Row: PsychologyProfile;
-        Insert: Partial<PsychologyProfile>;
+        Row: PsychologyProfile & Record<string, unknown>;
+        Insert: Partial<PsychologyProfile> & { user_id: string };
         Update: Partial<PsychologyProfile>;
-        Relationships: EmptyRelationships;
+        Relationships: [];
       };
       schedule_templates: {
-        Row: ScheduleTemplate;
-        Insert: Partial<ScheduleTemplate>;
+        Row: ScheduleTemplate & Record<string, unknown>;
+        Insert: Partial<ScheduleTemplate> & { user_id: string };
         Update: Partial<ScheduleTemplate>;
-        Relationships: EmptyRelationships;
+        Relationships: [];
       };
       schedule_blocks: {
-        Row: ScheduleBlock;
-        Insert: Partial<ScheduleBlock>;
+        Row: ScheduleBlock & Record<string, unknown>;
+        Insert: Partial<ScheduleBlock> & {
+          user_id: string;
+          template_id: string;
+          name: string;
+          start_minutes: number;
+          end_minutes: number;
+        };
         Update: Partial<ScheduleBlock>;
-        Relationships: EmptyRelationships;
+        Relationships: [];
       };
       daily_schedule_instances: {
-        Row: DailyInstance;
-        Insert: Partial<DailyInstance>;
+        Row: DailyInstance & Record<string, unknown>;
+        Insert: Partial<DailyInstance> & {
+          user_id: string;
+          block_id: string;
+          date: string;
+          start_minutes: number;
+          end_minutes: number;
+        };
         Update: Partial<DailyInstance>;
-        Relationships: EmptyRelationships;
+        Relationships: [];
+      };
+      push_tokens: {
+        Row: { id: string; user_id: string; token: string; platform: string; created_at: string };
+        Insert: { user_id: string; token: string; platform: string };
+        Update: Partial<{ user_id: string; token: string; platform: string }>;
+        Relationships: [];
       };
     };
-    Views: {
-      [_ in never]: never;
-    };
+    Views: { [_ in never]: never };
     Functions: {
       generate_daily_instances: {
         Args: { target_date: string };
-        Returns: Record<string, never>;
+        Returns: undefined;
       };
     };
   };

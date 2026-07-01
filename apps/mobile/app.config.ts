@@ -1,6 +1,6 @@
 import { ExpoConfig, ConfigContext } from "expo/config";
 
-export default ({ config }: ConfigContext): ExpoConfig => ({
+export default ({ config }: ConfigContext): ExpoConfig & { eas?: { projectId: string } } => ({
   ...config,
   name: "FlexMax",
   slug: "flexmax",

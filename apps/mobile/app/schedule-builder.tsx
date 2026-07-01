@@ -36,6 +36,8 @@ import { RequireAuth } from "../src/components/RequireAuth";
 
 function ScheduleBuilderScreenContent() {
   const { session, psychologyProfile, refreshProfile } = useAuth();
+  if (!session) return null;
+
   const { blocks, setBlocks } = useStore();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -286,12 +288,18 @@ function ScheduleBuilderScreenContent() {
         <Text style={styles.tipsTitle}>
           Building your schedule — a few things to keep in mind.
         </Text>
-        {tips.map((tip) => (
-          <View key={tip} style={styles.tipRow}>
-            <Text style={styles.tipBullet}>•</Text>
-            <Text style={styles.tipText}>{tip}</Text>
-          </View>
-        ))}
+        <ScrollView
+          style={{ maxHeight: 200 }}
+          showsVerticalScrollIndicator={false}
+          nestedScrollEnabled={true}
+        >
+          {tips.map((tip) => (
+            <View key={tip} style={styles.tipRow}>
+              <Text style={styles.tipBullet}>•</Text>
+              <Text style={styles.tipText}>{tip}</Text>
+            </View>
+          ))}
+        </ScrollView>
         <TouchableOpacity style={styles.tipsDismissBtn} onPress={() => setTipsDismissed(true)}>
           <Text style={styles.tipsDismissText}>Got it</Text>
         </TouchableOpacity>
@@ -496,6 +504,7 @@ function ScheduleBuilderScreenContent() {
         keyExtractor={(item) => item.id}
         renderItem={renderBlock}
         contentContainerStyle={styles.list}
+        nestedScrollEnabled={true}
         ListHeaderComponent={
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Quick add</Text>
