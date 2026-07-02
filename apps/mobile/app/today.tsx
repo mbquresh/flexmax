@@ -40,14 +40,15 @@ import {
 import { minutesToTime, getLocalDateString } from "../src/lib/time";
 import { fetchTodayStats, TodayStats } from "../src/lib/stats";
 import { RequireAuth } from "../src/components/RequireAuth";
+import { colors, spacing, radii, typography } from "../src/theme";
 
 const STATUS_COLORS: Record<BlockStatus, string> = {
-  pending: "#C4C4C4",
-  active: "#C4C4C4",
-  completed: "#5DCAA5",
-  missed: "#D9694A",
-  skipped: "#999999",
-  rescheduled: "#999999",
+  pending: colors.border,
+  active: colors.border,
+  completed: colors.success,
+  missed: colors.danger,
+  skipped: colors.textPlaceholder,
+  rescheduled: colors.textPlaceholder,
 };
 
 const RATING_OPTIONS: { value: CompletionRating; label: string }[] = [
@@ -138,7 +139,7 @@ function DraggableInstanceCard({
     left: 0,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: "#EF9F27",
+    borderColor: colors.streak,
   }));
 
   return (
@@ -759,7 +760,7 @@ function TodayScreenContent() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#3B6EA5" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -890,7 +891,7 @@ function TodayScreenContent() {
             </Text>
 
             {recoveryLoading ? (
-              <ActivityIndicator color="#3B6EA5" style={{ marginVertical: 16 }} />
+              <ActivityIndicator color={colors.primary} style={{ marginVertical: 16 }} />
             ) : (
               <>
                 <Text style={styles.recoveryAck}>{recoveryAI?.acknowledgment}</Text>
@@ -910,7 +911,7 @@ function TodayScreenContent() {
               value={reflectionWhy}
               onChangeText={setReflectionWhy}
               placeholder="Be honest..."
-              placeholderTextColor="#999999"
+              placeholderTextColor={colors.textPlaceholder}
               multiline
             />
 
@@ -922,7 +923,7 @@ function TodayScreenContent() {
               value={reflectionImprove}
               onChangeText={setReflectionImprove}
               placeholder="Even something small..."
-              placeholderTextColor="#999999"
+              placeholderTextColor={colors.textPlaceholder}
               multiline
             />
 
@@ -1006,7 +1007,7 @@ function TodayScreenContent() {
               </View>
 
               {saving ? (
-                <ActivityIndicator color="#3B6EA5" style={styles.sheetSaving} />
+                <ActivityIndicator color={colors.primary} style={styles.sheetSaving} />
               ) : null}
             </RNAnimated.View>
           </Pressable>
@@ -1041,7 +1042,7 @@ function TodayScreenContent() {
               value={taskDetailDraft}
               onChangeText={setTaskDetailDraft}
               placeholder="e.g. Chest day + 20 min run"
-              placeholderTextColor="#999999"
+              placeholderTextColor={colors.textPlaceholder}
               autoFocus
               multiline
               numberOfLines={3}
@@ -1054,7 +1055,7 @@ function TodayScreenContent() {
               disabled={saving}
             >
               {saving ? (
-                <ActivityIndicator color="#FFFFFF" />
+                <ActivityIndicator color={colors.onPrimary} />
               ) : (
                 <Text style={styles.taskSaveBtnText}>Save</Text>
               )}
@@ -1106,14 +1107,14 @@ export default function TodayScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#DCDCDC", position: "relative" },
+  container: { flex: 1, backgroundColor: colors.background, position: "relative" },
   centered: {
     flex: 1,
-    backgroundColor: "#DCDCDC",
+    backgroundColor: colors.background,
     alignItems: "center",
     justifyContent: "center",
   },
-  header: { paddingTop: 60, paddingHorizontal: 20, paddingBottom: 16 },
+  header: { paddingTop: 60, paddingHorizontal: spacing.xl, paddingBottom: spacing.lg },
   headerTop: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -1122,41 +1123,39 @@ const styles = StyleSheet.create({
   avatar: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: "#2C4A6E",
+    borderRadius: radii.round,
+    backgroundColor: colors.primaryDeep,
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarText: { color: "#3B6EA5", fontSize: 15, fontWeight: "600" },
-  title: { fontSize: 28, fontWeight: "700", color: "#1E1E1E" },
-  date: { fontSize: 14, color: "#666666", marginTop: 4 },
-  headerActions: { flexDirection: "row", gap: 16, marginTop: 12 },
-  link: { color: "#3B6EA5", fontSize: 14 },
+  avatarText: { color: colors.primary, ...typography.bodyBold },
+  title: { fontSize: 28, fontWeight: "700", color: colors.text },
+  date: { fontSize: 14, color: colors.textMuted, marginTop: spacing.xs },
+  headerActions: { flexDirection: "row", gap: spacing.lg, marginTop: spacing.md },
+  link: { color: colors.primary, fontSize: 14 },
   streakContainer: {
-    marginHorizontal: 20,
-    marginTop: 12,
-    marginBottom: 4,
-    backgroundColor: "#FBEFD9",
-    borderRadius: 14,
+    marginHorizontal: spacing.xl,
+    marginTop: spacing.md,
+    marginBottom: spacing.xs,
+    backgroundColor: colors.streakHousing,
+    borderRadius: radii.xl,
     padding: 14,
     borderWidth: 0.5,
-    borderColor: "#F0D9A8",
+    borderColor: colors.streakBorder,
   },
   streakHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   streakLabel: {
-    color: "#EF9F27",
-    fontSize: 13,
-    fontWeight: "600",
+    color: colors.streak,
+    ...typography.smallBold,
   },
   streakSub: {
-    color: "#B07A28",
-    fontSize: 12,
-    fontWeight: "500",
+    color: colors.streakMuted,
+    ...typography.caption,
   },
   weekStrip: {
     flexDirection: "row",
@@ -1166,39 +1165,39 @@ const styles = StyleSheet.create({
   daySquare: {
     flex: 1,
     aspectRatio: 1,
-    borderRadius: 8,
-    backgroundColor: "#F0D9A8",
+    borderRadius: radii.sm,
+    backgroundColor: colors.streakBorder,
     alignItems: "center",
     justifyContent: "center",
   },
   daySquareDone: {
-    backgroundColor: "#EF9F27",
+    backgroundColor: colors.streak,
   },
   daySquareToday: {
-    backgroundColor: "#F0D9A8",
+    backgroundColor: colors.streakBorder,
     borderWidth: 1.5,
-    borderColor: "#EF9F27",
+    borderColor: colors.streak,
   },
   daySquareFuture: {
-    backgroundColor: "#F5E4C8",
+    backgroundColor: colors.streakSquare,
   },
   daySquareLetter: {
-    color: "#B07A28",
+    color: colors.streakMuted,
     fontSize: 13,
     fontWeight: "700",
   },
   daySquareLetterDone: {
-    color: "#1E1E1E",
+    color: colors.text,
   },
   daySquareLetterFuture: {
-    color: "#B07A28",
+    color: colors.streakMuted,
   },
-  list: { padding: 16, paddingBottom: 100 },
+  list: { padding: spacing.lg, paddingBottom: 100 },
   scroll: { flex: 1 },
   scrollContent: { flexGrow: 1 },
   card: {
-    backgroundColor: "#EDEDED",
-    borderRadius: 12,
+    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
     marginBottom: 10,
     position: "relative",
   },
@@ -1206,7 +1205,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "stretch",
     overflow: "hidden",
-    borderRadius: 12,
+    borderRadius: radii.lg,
   },
   dragHandle: {
     width: 28,
@@ -1214,55 +1213,55 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: 14,
   },
-  dragLines: { color: "#AAAAAA", fontSize: 18, lineHeight: 20 },
+  dragLines: { color: colors.textDisabled, fontSize: 18, lineHeight: 20 },
   statusBar: { width: 4 },
   cardBody: {
     flex: 1,
     flexDirection: "row",
     alignItems: "flex-start",
     padding: 14,
-    paddingLeft: 8,
-    gap: 12,
+    paddingLeft: spacing.sm,
+    gap: spacing.md,
   },
   cardMain: { flex: 1 },
-  blockName: { color: "#1E1E1E", fontSize: 16, fontWeight: "600" },
-  meta: { color: "#666666", fontSize: 13, marginTop: 4 },
-  task: { color: "#333333", fontSize: 14, marginTop: 8 },
-  taskAdd: { color: "#3B6EA5", fontSize: 13, marginTop: 8, fontWeight: "500" },
+  blockName: { color: colors.text, fontSize: 16, fontWeight: "600" },
+  meta: { color: colors.textMuted, fontSize: 13, marginTop: spacing.xs },
+  task: { color: colors.textSecondary, fontSize: 14, marginTop: spacing.sm },
+  taskAdd: { color: colors.primary, fontSize: 13, marginTop: spacing.sm, fontWeight: "500" },
   actionCircle: {
     width: 32,
     height: 32,
-    borderRadius: 16,
+    borderRadius: radii.pill,
     borderWidth: 1.5,
-    borderColor: "#3B6EA5",
+    borderColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 2,
   },
   actionCircleDone: {
-    borderColor: "#5DCAA5",
-    backgroundColor: "#5DCAA5",
+    borderColor: colors.success,
+    backgroundColor: colors.success,
   },
   actionCircleMissed: {
-    borderColor: "#D9694A",
+    borderColor: colors.danger,
     backgroundColor: "transparent",
   },
-  actionCircleCheck: { color: "#1E1E1E", fontSize: 16, fontWeight: "700" },
-  actionCircleMissedIcon: { color: "#D9694A", fontSize: 16, fontWeight: "700" },
-  empty: { color: "#888888", textAlign: "center", marginTop: 40, lineHeight: 22 },
+  actionCircleCheck: { color: colors.text, fontSize: 16, fontWeight: "700" },
+  actionCircleMissedIcon: { color: colors.danger, fontSize: 16, fontWeight: "700" },
+  empty: { color: colors.textFaint, textAlign: "center", marginTop: 40, lineHeight: 22 },
   toast: {
     position: "absolute",
     bottom: 40,
-    left: 20,
-    right: 20,
-    backgroundColor: "#EDEDED",
-    borderRadius: 12,
+    left: spacing.xl,
+    right: spacing.xl,
+    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
     paddingVertical: 14,
-    paddingHorizontal: 16,
+    paddingHorizontal: spacing.lg,
     borderLeftWidth: 3,
-    borderLeftColor: "#EF9F27",
+    borderLeftColor: colors.streak,
   },
-  toastText: { color: "#1E1E1E", fontSize: 14 },
+  toastText: { color: colors.text, fontSize: 14 },
   overlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.55)",
@@ -1272,10 +1271,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   sheet: {
-    backgroundColor: "#EDEDED",
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    paddingHorizontal: 20,
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radii.pill,
+    borderTopRightRadius: radii.pill,
+    paddingHorizontal: spacing.xl,
     paddingBottom: Platform.OS === "ios" ? 36 : 24,
     paddingTop: 10,
   },
@@ -1284,155 +1283,155 @@ const styles = StyleSheet.create({
     width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: "#AAAAAA",
-    marginBottom: 16,
+    backgroundColor: colors.textDisabled,
+    marginBottom: spacing.lg,
   },
   sheetTitle: {
-    color: "#1E1E1E",
+    color: colors.text,
     fontSize: 18,
     fontWeight: "600",
   },
-  sheetTime: { color: "#666666", fontSize: 14, marginBottom: 20, marginTop: 6 },
-  ratingRow: { flexDirection: "row", gap: 8 },
+  sheetTime: { color: colors.textMuted, fontSize: 14, marginBottom: spacing.xl, marginTop: 6 },
+  ratingRow: { flexDirection: "row", gap: spacing.sm },
   ratingBtn: {
     flex: 1,
-    backgroundColor: "#EDEDED",
+    backgroundColor: colors.surface,
     borderWidth: 0.5,
-    borderColor: "#C4C4C4",
-    borderRadius: 10,
+    borderColor: colors.border,
+    borderRadius: radii.md,
     paddingVertical: 14,
     paddingHorizontal: 6,
     alignItems: "center",
   },
   ratingBtnActive: {
-    backgroundColor: "#3B6EA5",
-    borderColor: "#3B6EA5",
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
   ratingBtnText: {
-    color: "#FFFFFF",
+    color: colors.onPrimary,
     fontSize: 12,
     fontWeight: "600",
     textAlign: "center",
   },
-  sheetSaving: { marginTop: 16 },
+  sheetSaving: { marginTop: spacing.lg },
   taskSheet: {
-    backgroundColor: "#EDEDED",
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    paddingHorizontal: 20,
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radii.pill,
+    borderTopRightRadius: radii.pill,
+    paddingHorizontal: spacing.xl,
     paddingBottom: Platform.OS === "ios" ? 36 : 24,
-    paddingTop: 16,
+    paddingTop: spacing.lg,
   },
   taskSheetHeader: {
     flexDirection: "row",
     alignItems: "flex-start",
     justifyContent: "space-between",
-    marginBottom: 16,
-    gap: 12,
+    marginBottom: spacing.lg,
+    gap: spacing.md,
   },
   taskSheetHeaderText: { flex: 1 },
-  taskSheetSubtitle: { color: "#666666", fontSize: 14, marginTop: 4 },
-  taskSheetClose: { color: "#666666", fontSize: 20, lineHeight: 22 },
+  taskSheetSubtitle: { color: colors.textMuted, fontSize: 14, marginTop: spacing.xs },
+  taskSheetClose: { color: colors.textMuted, fontSize: 20, lineHeight: 22 },
   taskDetailInput: {
-    backgroundColor: "#EDEDED",
+    backgroundColor: colors.surface,
     borderWidth: 0.5,
-    borderColor: "#C4C4C4",
-    borderRadius: 10,
+    borderColor: colors.border,
+    borderRadius: radii.md,
     paddingHorizontal: 14,
-    paddingVertical: 12,
-    color: "#1E1E1E",
+    paddingVertical: spacing.md,
+    color: colors.text,
     fontSize: 15,
     minHeight: 88,
     maxHeight: 88,
   },
   taskSaveBtn: {
-    marginTop: 16,
-    backgroundColor: "#3B6EA5",
-    borderRadius: 12,
+    marginTop: spacing.lg,
+    backgroundColor: colors.primary,
+    borderRadius: radii.lg,
     paddingVertical: 14,
     alignItems: "center",
   },
-  taskSaveBtnText: { color: "#FFFFFF", fontSize: 15, fontWeight: "600" },
+  taskSaveBtnText: { color: colors.onPrimary, ...typography.bodyBold },
   btnDisabled: { opacity: 0.5 },
   undoSheet: {
-    backgroundColor: "#EDEDED",
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radii.pill,
+    borderTopRightRadius: radii.pill,
     marginTop: "auto",
     paddingBottom: Platform.OS === "ios" ? 36 : 24,
   },
   undoOption: {
     paddingVertical: 18,
-    paddingHorizontal: 20,
+    paddingHorizontal: spacing.xl,
     borderBottomWidth: 0.5,
-    borderBottomColor: "#C4C4C4",
+    borderBottomColor: colors.border,
     alignItems: "center",
   },
   undoOptionLast: { borderBottomWidth: 0 },
-  undoOptionDestructive: { color: "#D9694A", fontSize: 16, fontWeight: "600" },
-  undoOptionCancel: { color: "#666666", fontSize: 16, fontWeight: "500" },
+  undoOptionDestructive: { color: colors.danger, fontSize: 16, fontWeight: "600" },
+  undoOptionCancel: { color: colors.textMuted, fontSize: 16, fontWeight: "500" },
   modalOverlay: {
     flex: 1,
     justifyContent: "flex-end",
     backgroundColor: "rgba(0,0,0,0.6)",
   },
   recoverySheet: {
-    backgroundColor: "#EDEDED",
-    borderRadius: 20,
-    padding: 20,
+    backgroundColor: colors.surface,
+    borderRadius: radii.round,
+    padding: spacing.xl,
     paddingBottom: 40,
-    gap: 12,
+    gap: spacing.md,
   },
-  recoveryTitle: { color: "#D9694A", fontSize: 17, fontWeight: "600" },
-  recoveryAck: { color: "#333333", fontSize: 14, lineHeight: 22 },
+  recoveryTitle: { color: colors.danger, ...typography.heading },
+  recoveryAck: { color: colors.textSecondary, fontSize: 14, lineHeight: 22 },
   patternNote: {
-    backgroundColor: "#F8E5E0",
+    backgroundColor: colors.dangerTint,
     borderLeftWidth: 2,
-    borderLeftColor: "#D9694A",
-    borderRadius: 8,
-    padding: 12,
+    borderLeftColor: colors.danger,
+    borderRadius: radii.sm,
+    padding: spacing.md,
   },
-  patternNoteText: { color: "#D9694A", fontSize: 13, lineHeight: 20 },
-  reflectionLabel: { color: "#666666", fontSize: 13, fontWeight: "600" },
+  patternNoteText: { color: colors.danger, fontSize: 13, lineHeight: 20 },
+  reflectionLabel: { color: colors.textMuted, ...typography.smallBold },
   reflectionInput: {
-    backgroundColor: "#EDEDED",
+    backgroundColor: colors.surface,
     borderWidth: 0.5,
-    borderColor: "#C4C4C4",
-    borderRadius: 10,
-    padding: 12,
-    color: "#1E1E1E",
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    padding: spacing.md,
+    color: colors.text,
     fontSize: 14,
     minHeight: 60,
   },
   rescheduleBox: {
-    backgroundColor: "#DFF3EA",
-    borderRadius: 10,
+    backgroundColor: colors.successTint,
+    borderRadius: radii.md,
     padding: 14,
     gap: 6,
   },
-  rescheduleLabel: { color: "#5DCAA5", fontSize: 12, fontWeight: "600" },
-  rescheduleTime: { color: "#1E1E1E", fontSize: 15, fontWeight: "600" },
+  rescheduleLabel: { color: colors.success, fontSize: 12, fontWeight: "600" },
+  rescheduleTime: { color: colors.text, ...typography.bodyBold },
   rescheduleBtn: {
-    backgroundColor: "#5DCAA5",
-    borderRadius: 8,
+    backgroundColor: colors.success,
+    borderRadius: radii.sm,
     paddingVertical: 10,
     alignItems: "center",
-    marginTop: 4,
+    marginTop: spacing.xs,
   },
-  rescheduleBtnText: { color: "#1E1E1E", fontSize: 14, fontWeight: "600" },
-  noSlot: { color: "#999999", fontSize: 13, fontStyle: "italic" },
+  rescheduleBtnText: { color: colors.text, fontSize: 14, fontWeight: "600" },
+  noSlot: { color: colors.textPlaceholder, fontSize: 13, fontStyle: "italic" },
   recoveryActions: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginTop: 4,
+    marginTop: spacing.xs,
   },
   saveBtn: {
-    backgroundColor: "#3B6EA5",
-    borderRadius: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
+    backgroundColor: colors.primary,
+    borderRadius: radii.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xxl,
   },
-  saveBtnText: { color: "#FFFFFF", fontSize: 15, fontWeight: "600" },
-  skipText: { color: "#999999", fontSize: 14 },
+  saveBtnText: { color: colors.onPrimary, ...typography.bodyBold },
+  skipText: { color: colors.textPlaceholder, fontSize: 14 },
 });

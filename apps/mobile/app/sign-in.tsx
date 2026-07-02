@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { useAuth } from "../src/providers/AuthProvider";
+import { colors, spacing, radii } from "../src/theme";
 
 export default function SignInScreen() {
   const { signIn, signUp, session, loading: authLoading } = useAuth();
@@ -95,7 +96,7 @@ export default function SignInScreen() {
           <TextInput
             style={styles.input}
             placeholder="Name"
-            placeholderTextColor="#999999"
+            placeholderTextColor={colors.textPlaceholder}
             value={name}
             onChangeText={setName}
             autoCapitalize="words"
@@ -105,7 +106,7 @@ export default function SignInScreen() {
         <TextInput
           style={styles.input}
           placeholder="Email"
-          placeholderTextColor="#999999"
+          placeholderTextColor={colors.textPlaceholder}
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
@@ -116,7 +117,7 @@ export default function SignInScreen() {
         <TextInput
           style={styles.input}
           placeholder="Password"
-          placeholderTextColor="#999999"
+          placeholderTextColor={colors.textPlaceholder}
           value={password}
           onChangeText={setPassword}
           secureTextEntry
@@ -130,7 +131,7 @@ export default function SignInScreen() {
           disabled={loading}
         >
           {loading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={colors.onPrimary} />
           ) : (
             <Text style={styles.buttonText}>
               {mode === "sign-in" ? "Sign in" : "Sign up"}
@@ -157,39 +158,39 @@ export default function SignInScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#DCDCDC" },
+  container: { flex: 1, backgroundColor: colors.background },
   scrollContent: { flexGrow: 1, justifyContent: "center" },
-  inner: { padding: 24, gap: 12 },
-  title: { fontSize: 32, fontWeight: "700", color: "#1E1E1E", marginBottom: 4 },
-  subtitle: { fontSize: 15, color: "#666666", marginBottom: 24 },
+  inner: { padding: spacing.xxl, gap: spacing.md },
+  title: { fontSize: 32, fontWeight: "700", color: colors.text, marginBottom: spacing.xs },
+  subtitle: { fontSize: 15, color: colors.textMuted, marginBottom: spacing.xxl },
   errorBox: {
-    backgroundColor: "#F8E0E0",
-    borderColor: "#DD9999",
+    backgroundColor: colors.errorTint,
+    borderColor: colors.errorBorder,
     borderWidth: 1,
-    borderRadius: 10,
-    padding: 12,
-    color: "#B03030",
+    borderRadius: radii.md,
+    padding: spacing.md,
+    color: colors.error,
     fontSize: 14,
     lineHeight: 20,
   },
   input: {
-    backgroundColor: "#EDEDED",
+    backgroundColor: colors.surface,
     borderWidth: 0.5,
-    borderColor: "#C4C4C4",
-    borderRadius: 12,
-    paddingHorizontal: 16,
+    borderColor: colors.border,
+    borderRadius: radii.lg,
+    paddingHorizontal: spacing.lg,
     paddingVertical: 14,
-    color: "#1E1E1E",
+    color: colors.text,
     fontSize: 16,
   },
   button: {
-    backgroundColor: "#3B6EA5",
-    borderRadius: 12,
-    paddingVertical: 16,
+    backgroundColor: colors.primary,
+    borderRadius: radii.lg,
+    paddingVertical: spacing.lg,
     alignItems: "center",
-    marginTop: 8,
+    marginTop: spacing.sm,
   },
   buttonDisabled: { opacity: 0.6 },
-  buttonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "600" },
-  toggle: { color: "#666666", textAlign: "center", marginTop: 16, fontSize: 14 },
+  buttonText: { color: colors.onPrimary, fontSize: 16, fontWeight: "600" },
+  toggle: { color: colors.textMuted, textAlign: "center", marginTop: spacing.lg, fontSize: 14 },
 });

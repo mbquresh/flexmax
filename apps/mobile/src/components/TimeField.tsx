@@ -7,6 +7,7 @@ import {
   partsToTime,
   timeToParts,
 } from "../lib/time";
+import { colors, spacing, radii, typography } from "../theme";
 
 interface TimeFieldProps {
   label: string;
@@ -100,30 +101,30 @@ export function TimeField({ label, value, onChange }: TimeFieldProps) {
 
 const styles = StyleSheet.create({
   wrap: { width: "100%" },
-  label: { color: "#666666", fontSize: 12, marginBottom: 6, fontWeight: "600" },
-  row: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 4 },
+  label: { color: colors.textMuted, fontSize: 12, marginBottom: 6, fontWeight: "600" },
+  row: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: spacing.xs },
   part: {
     width: 40,
-    backgroundColor: "#EDEDED",
+    backgroundColor: colors.surface,
     borderWidth: 0.5,
-    borderColor: "#C4C4C4",
-    borderRadius: 10,
-    paddingVertical: 8,
-    color: "#1E1E1E",
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    paddingVertical: spacing.sm,
+    color: colors.text,
     fontSize: 16,
     textAlign: "center",
   },
-  colon: { color: "#666666", fontSize: 16, paddingHorizontal: 2 },
-  periodRow: { flexDirection: "row", marginLeft: 4, gap: 4 },
+  colon: { color: colors.textMuted, fontSize: 16, paddingHorizontal: 2 },
+  periodRow: { flexDirection: "row", marginLeft: spacing.xs, gap: spacing.xs },
   periodBtn: {
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: "#EDEDED",
+    borderRadius: radii.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.surface,
     borderWidth: 0.5,
-    borderColor: "#C4C4C4",
+    borderColor: colors.border,
   },
-  periodBtnActive: { backgroundColor: "#3B6EA5", borderColor: "#3B6EA5" },
-  periodText: { color: "#666666", fontSize: 13, fontWeight: "600" },
-  periodTextActive: { color: "#FFFFFF" },
+  periodBtnActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  periodText: { color: colors.textMuted, ...typography.smallBold },
+  periodTextActive: { color: colors.onPrimary },
 });

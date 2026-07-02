@@ -2,6 +2,7 @@ import React from "react";
 import { Redirect } from "expo-router";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { useAuth } from "../providers/AuthProvider";
+import { colors } from "../theme";
 
 export function RequireAuth({ children }: { children: React.ReactNode }) {
   const { session, loading } = useAuth();
@@ -9,7 +10,7 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#3B6EA5" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -24,7 +25,7 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
 const styles = StyleSheet.create({
   centered: {
     flex: 1,
-    backgroundColor: "#DCDCDC",
+    backgroundColor: colors.background,
     alignItems: "center",
     justifyContent: "center",
   },

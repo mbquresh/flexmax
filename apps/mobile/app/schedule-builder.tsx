@@ -33,6 +33,7 @@ import { minutesToTime, timeToMinutes } from "../src/lib/time";
 import { TimeField } from "../src/components/TimeField";
 
 import { RequireAuth } from "../src/components/RequireAuth";
+import { colors, spacing, radii, typography } from "../src/theme";
 
 function ScheduleBuilderScreenContent() {
   const { session, psychologyProfile, refreshProfile } = useAuth();
@@ -276,7 +277,7 @@ function ScheduleBuilderScreenContent() {
     if (tipsLoading) {
       return (
         <View style={styles.tipsCard}>
-          <ActivityIndicator color="#3B6EA5" />
+          <ActivityIndicator color={colors.primary} />
         </View>
       );
     }
@@ -324,7 +325,7 @@ function ScheduleBuilderScreenContent() {
           <TextInput
             style={styles.input}
             placeholder="Block name (e.g. Deep work)"
-            placeholderTextColor="#999999"
+            placeholderTextColor={colors.textPlaceholder}
             value={name}
             onChangeText={setName}
           />
@@ -368,7 +369,7 @@ function ScheduleBuilderScreenContent() {
             disabled={saving}
           >
             {saving ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={colors.onPrimary} />
             ) : (
               <Text style={styles.addBtnText}>Add block</Text>
             )}
@@ -419,7 +420,7 @@ function ScheduleBuilderScreenContent() {
           <TextInput
             style={styles.input}
             placeholder="Block name (e.g. Deep work)"
-            placeholderTextColor="#999999"
+            placeholderTextColor={colors.textPlaceholder}
             value={editName}
             onChangeText={setEditName}
           />
@@ -465,7 +466,7 @@ function ScheduleBuilderScreenContent() {
             disabled={saving}
           >
             {saving ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={colors.onPrimary} />
             ) : (
               <Text style={styles.addBtnText}>Save changes</Text>
             )}
@@ -481,7 +482,7 @@ function ScheduleBuilderScreenContent() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#3B6EA5" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
@@ -556,153 +557,153 @@ export default function ScheduleBuilderScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#DCDCDC" },
+  container: { flex: 1, backgroundColor: colors.background },
   centered: {
     flex: 1,
-    backgroundColor: "#DCDCDC",
+    backgroundColor: colors.background,
     alignItems: "center",
     justifyContent: "center",
   },
-  header: { paddingTop: 60, paddingHorizontal: 20, paddingBottom: 12 },
-  title: { fontSize: 24, fontWeight: "600", color: "#1E1E1E" },
-  subtitle: { fontSize: 14, color: "#666666", marginTop: 6 },
+  header: { paddingTop: 60, paddingHorizontal: spacing.xl, paddingBottom: spacing.md },
+  title: { fontSize: 24, fontWeight: "600", color: colors.text },
+  subtitle: { fontSize: 14, color: colors.textMuted, marginTop: 6 },
   errorBox: {
-    marginHorizontal: 20,
-    marginBottom: 8,
-    backgroundColor: "#F8E0E0",
-    borderColor: "#DD9999",
+    marginHorizontal: spacing.xl,
+    marginBottom: spacing.sm,
+    backgroundColor: colors.errorTint,
+    borderColor: colors.errorBorder,
     borderWidth: 1,
-    borderRadius: 10,
-    padding: 12,
-    color: "#B03030",
+    borderRadius: radii.md,
+    padding: spacing.md,
+    color: colors.error,
     fontSize: 14,
   },
   tipsCard: {
-    marginHorizontal: 20,
-    marginBottom: 12,
-    backgroundColor: "#DCE6F2",
-    borderColor: "#3B6EA5",
+    marginHorizontal: spacing.xl,
+    marginBottom: spacing.md,
+    backgroundColor: colors.primaryTint,
+    borderColor: colors.primary,
     borderWidth: 0.5,
-    borderRadius: 10,
+    borderRadius: radii.md,
     padding: 14,
-    gap: 8,
+    gap: spacing.sm,
   },
-  tipsTitle: { color: "#3B6EA5", fontSize: 14, fontWeight: "600", lineHeight: 20 },
-  tipRow: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
-  tipBullet: { color: "#3B6EA5", fontSize: 14, lineHeight: 20 },
-  tipText: { flex: 1, color: "#666666", fontSize: 13, lineHeight: 20 },
+  tipsTitle: { color: colors.primary, fontSize: 14, fontWeight: "600", lineHeight: 20 },
+  tipRow: { flexDirection: "row", alignItems: "flex-start", gap: spacing.sm },
+  tipBullet: { color: colors.primary, fontSize: 14, lineHeight: 20 },
+  tipText: { flex: 1, color: colors.textMuted, fontSize: 13, lineHeight: 20 },
   tipsDismissBtn: {
     alignSelf: "flex-start",
-    marginTop: 4,
+    marginTop: spacing.xs,
     paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 8,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.sm,
     borderWidth: 0.5,
-    borderColor: "#3B6EA5",
+    borderColor: colors.primary,
   },
-  tipsDismissText: { color: "#3B6EA5", fontSize: 13, fontWeight: "600" },
-  list: { paddingHorizontal: 16, paddingBottom: 32 },
-  section: { marginBottom: 16 },
-  sectionTitle: { color: "#666666", fontSize: 13, marginBottom: 10, fontWeight: "600" },
+  tipsDismissText: { color: colors.primary, ...typography.smallBold },
+  list: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxxl },
+  section: { marginBottom: spacing.lg },
+  sectionTitle: { color: colors.textMuted, ...typography.smallBold, marginBottom: 10 },
   presetChip: {
-    backgroundColor: "#2C4A6E",
-    borderRadius: 20,
+    backgroundColor: colors.primaryDeep,
+    borderRadius: radii.round,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    marginRight: 8,
+    marginRight: spacing.sm,
   },
-  presetText: { color: "#FFFFFF", fontSize: 14 },
+  presetText: { color: colors.onPrimary, fontSize: 14 },
   blockCard: {
-    backgroundColor: "#EDEDED",
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
+    padding: spacing.lg,
     marginBottom: 10,
   },
   blockHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  blockName: { color: "#1E1E1E", fontSize: 16, fontWeight: "600" },
-  deleteText: { color: "#666666", fontSize: 13 },
-  blockMeta: { color: "#666666", fontSize: 13, marginTop: 4, marginBottom: 10 },
+  blockName: { color: colors.text, fontSize: 16, fontWeight: "600" },
+  deleteText: { color: colors.textMuted, fontSize: 13 },
+  blockMeta: { color: colors.textMuted, fontSize: 13, marginTop: spacing.xs, marginBottom: 10 },
   dayRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
   dayChip: {
-    borderRadius: 8,
-    paddingHorizontal: 8,
+    borderRadius: radii.sm,
+    paddingHorizontal: spacing.sm,
     paddingVertical: 6,
-    backgroundColor: "#EDEDED",
+    backgroundColor: colors.surface,
     borderWidth: 0.5,
-    borderColor: "#C4C4C4",
+    borderColor: colors.border,
   },
-  dayChipActive: { backgroundColor: "#3B6EA5", borderColor: "#3B6EA5" },
-  dayChipText: { color: "#888888", fontSize: 12, fontWeight: "600" },
-  dayChipTextActive: { color: "#FFFFFF" },
-  fieldLabel: { color: "#666666", fontSize: 13, fontWeight: "600" },
+  dayChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  dayChipText: { color: colors.textFaint, fontSize: 12, fontWeight: "600" },
+  dayChipTextActive: { color: colors.onPrimary },
+  fieldLabel: { color: colors.textMuted, ...typography.smallBold },
   empty: {
-    color: "#888888",
+    color: colors.textFaint,
     textAlign: "center",
     lineHeight: 22,
-    marginVertical: 24,
-    paddingHorizontal: 8,
+    marginVertical: spacing.xxl,
+    paddingHorizontal: spacing.sm,
   },
-  addSection: { marginTop: 8, marginBottom: 12 },
+  addSection: { marginTop: spacing.sm, marginBottom: spacing.md },
   addToggle: {
-    borderRadius: 12,
+    borderRadius: radii.lg,
     borderWidth: 0.5,
-    borderColor: "#C4C4C4",
+    borderColor: colors.border,
     paddingVertical: 14,
     alignItems: "center",
-    backgroundColor: "#EDEDED",
+    backgroundColor: colors.surface,
   },
-  addToggleText: { color: "#3B6EA5", fontSize: 15, fontWeight: "500" },
+  addToggleText: { color: colors.primary, fontSize: 15, fontWeight: "500" },
   form: {
-    borderRadius: 12,
+    borderRadius: radii.lg,
     borderWidth: 0.5,
-    borderColor: "#C4C4C4",
+    borderColor: colors.border,
     padding: 14,
     gap: 10,
-    backgroundColor: "#E4E4E4",
+    backgroundColor: colors.surfaceNested,
   },
   formHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-  collapseText: { color: "#888888", fontSize: 13 },
+  collapseText: { color: colors.textFaint, fontSize: 13 },
   input: {
-    backgroundColor: "#EDEDED",
+    backgroundColor: colors.surface,
     borderWidth: 0.5,
-    borderColor: "#C4C4C4",
-    borderRadius: 12,
+    borderColor: colors.border,
+    borderRadius: radii.lg,
     paddingHorizontal: 14,
-    paddingVertical: 12,
-    color: "#1E1E1E",
+    paddingVertical: spacing.md,
+    color: colors.text,
     fontSize: 15,
   },
   chipRow: { flexGrow: 0 },
   chip: {
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginRight: 8,
-    backgroundColor: "#EDEDED",
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginRight: spacing.sm,
+    backgroundColor: colors.surface,
     borderWidth: 0.5,
-    borderColor: "#C4C4C4",
+    borderColor: colors.border,
   },
-  chipActive: { backgroundColor: "#3B6EA5", borderColor: "#3B6EA5" },
-  chipText: { color: "#666666", fontSize: 13 },
-  chipTextActive: { color: "#FFFFFF" },
+  chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  chipText: { color: colors.textMuted, fontSize: 13 },
+  chipTextActive: { color: colors.onPrimary },
   timeStack: { gap: 10 },
   addBtn: {
-    backgroundColor: "#3B6EA5",
-    borderRadius: 12,
-    paddingVertical: 12,
+    backgroundColor: colors.primary,
+    borderRadius: radii.lg,
+    paddingVertical: spacing.md,
     alignItems: "center",
   },
-  addBtnText: { color: "#FFFFFF", fontSize: 15, fontWeight: "600" },
+  addBtnText: { color: colors.onPrimary, ...typography.bodyBold },
   primaryBtn: {
-    backgroundColor: "#3B6EA5",
-    borderRadius: 12,
-    paddingVertical: 16,
+    backgroundColor: colors.primary,
+    borderRadius: radii.lg,
+    paddingVertical: spacing.lg,
     alignItems: "center",
   },
-  primaryBtnText: { color: "#FFFFFF", fontSize: 16, fontWeight: "600" },
+  primaryBtnText: { color: colors.onPrimary, fontSize: 16, fontWeight: "600" },
   btnDisabled: { opacity: 0.5 },
 });

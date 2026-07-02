@@ -24,6 +24,7 @@ import { supabase } from "../lib/supabase";
 import { saveDemoProfile } from "../lib/mockOnboarding";
 import { useAuth } from "../providers/AuthProvider";
 import { useStore } from "../store";
+import { colors, spacing, radii } from "../theme";
 
 interface Message {
   role: "user" | "assistant";
@@ -202,7 +203,7 @@ export default function OnboardingScreen() {
             value={input}
             onChangeText={setInput}
             placeholder="Type your answer..."
-            placeholderTextColor="#999999"
+            placeholderTextColor={colors.textPlaceholder}
             multiline
             onSubmitEditing={sendMessage}
             returnKeyType="send"
@@ -214,7 +215,7 @@ export default function OnboardingScreen() {
             disabled={!input.trim() || loading}
           >
             {loading ? (
-              <ActivityIndicator size="small" color="#fff" />
+              <ActivityIndicator size="small" color={colors.onPrimary} />
             ) : (
               <Text style={styles.sendIcon}>→</Text>
             )}
@@ -226,71 +227,71 @@ export default function OnboardingScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#DCDCDC" },
+  container: { flex: 1, backgroundColor: colors.background },
   header: {
     paddingTop: 60,
-    paddingHorizontal: 20,
-    paddingBottom: 16,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.lg,
     borderBottomWidth: 0.5,
-    borderBottomColor: "#CCCCCC",
+    borderBottomColor: colors.borderLight,
   },
-  headerTitle: { fontSize: 20, fontWeight: "600", color: "#1E1E1E" },
-  headerSub: { fontSize: 13, color: "#888888", marginTop: 2 },
-  messageList: { padding: 16, paddingBottom: 8 },
-  messageWrapper: { marginBottom: 12 },
+  headerTitle: { fontSize: 20, fontWeight: "600", color: colors.text },
+  headerSub: { fontSize: 13, color: colors.textFaint, marginTop: 2 },
+  messageList: { padding: spacing.lg, paddingBottom: spacing.sm },
+  messageWrapper: { marginBottom: spacing.md },
   aiWrapper: { alignItems: "flex-start" },
   userWrapper: { alignItems: "flex-end" },
-  bubble: { maxWidth: "82%", borderRadius: 14, padding: 12 },
-  aiBubble: { backgroundColor: "#EDEDED", borderBottomLeftRadius: 2 },
-  userBubble: { backgroundColor: "#2C4A6E", borderBottomRightRadius: 2 },
+  bubble: { maxWidth: "82%", borderRadius: radii.xl, padding: spacing.md },
+  aiBubble: { backgroundColor: colors.surface, borderBottomLeftRadius: 2 },
+  userBubble: { backgroundColor: colors.primaryDeep, borderBottomRightRadius: 2 },
   bubbleText: { fontSize: 15, lineHeight: 22 },
-  aiText: { color: "#333333" },
-  userText: { color: "#FFFFFF" },
+  aiText: { color: colors.textSecondary },
+  userText: { color: colors.onPrimary },
   inputRow: {
     flexDirection: "row",
     alignItems: "flex-end",
-    padding: 12,
+    padding: spacing.md,
     paddingBottom: 28,
     borderTopWidth: 0.5,
-    borderTopColor: "#EDEDED",
+    borderTopColor: colors.surface,
     gap: 10,
   },
   input: {
     flex: 1,
-    backgroundColor: "#EDEDED",
+    backgroundColor: colors.surface,
     borderWidth: 0.5,
-    borderColor: "#C4C4C4",
-    borderRadius: 20,
-    paddingHorizontal: 16,
+    borderColor: colors.border,
+    borderRadius: radii.round,
+    paddingHorizontal: spacing.lg,
     paddingVertical: 10,
-    color: "#1E1E1E",
+    color: colors.text,
     fontSize: 15,
     maxHeight: 100,
   },
   sendBtn: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: "#3B6EA5",
+    borderRadius: radii.round,
+    backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
   },
-  sendBtnDisabled: { backgroundColor: "#A8C0DC" },
-  sendIcon: { color: "#fff", fontSize: 18 },
+  sendBtnDisabled: { backgroundColor: colors.primaryDisabled },
+  sendIcon: { color: colors.onPrimary, fontSize: 18 },
   completeBox: {
-    padding: 20,
+    padding: spacing.xl,
     paddingBottom: 40,
     borderTopWidth: 0.5,
-    borderTopColor: "#EDEDED",
+    borderTopColor: colors.surface,
     alignItems: "center",
-    gap: 12,
+    gap: spacing.md,
   },
-  completeText: { color: "#666666", fontSize: 14, textAlign: "center" },
+  completeText: { color: colors.textMuted, fontSize: 14, textAlign: "center" },
   completeBtn: {
-    backgroundColor: "#3B6EA5",
-    paddingHorizontal: 24,
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.xxl,
     paddingVertical: 14,
-    borderRadius: 12,
+    borderRadius: radii.lg,
   },
-  completeBtnText: { color: "#FFFFFF", fontSize: 16, fontWeight: "600" },
+  completeBtnText: { color: colors.onPrimary, fontSize: 16, fontWeight: "600" },
 });
