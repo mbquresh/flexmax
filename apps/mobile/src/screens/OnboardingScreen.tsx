@@ -166,13 +166,6 @@ export default function OnboardingScreen() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={88}
     >
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>FlexMax</Text>
-        <Text style={styles.headerSub}>
-          {PROVIDER_LABELS[aiProvider] ?? "Understanding how you work"}
-        </Text>
-      </View>
-
       <FlatList
         ref={listRef}
         data={messages}
@@ -180,6 +173,14 @@ export default function OnboardingScreen() {
         renderItem={renderMessage}
         contentContainerStyle={styles.messageList}
         showsVerticalScrollIndicator={false}
+        ListHeaderComponent={
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>FlexMax</Text>
+            <Text style={styles.headerSub}>
+              {PROVIDER_LABELS[aiProvider] ?? "Understanding how you work"}
+            </Text>
+          </View>
+        }
       />
 
       {isComplete ? (
@@ -201,7 +202,7 @@ export default function OnboardingScreen() {
             value={input}
             onChangeText={setInput}
             placeholder="Type your answer..."
-            placeholderTextColor="#555"
+            placeholderTextColor="#999999"
             multiline
             onSubmitEditing={sendMessage}
             returnKeyType="send"
@@ -225,44 +226,44 @@ export default function OnboardingScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0f0f12" },
+  container: { flex: 1, backgroundColor: "#DCDCDC" },
   header: {
     paddingTop: 60,
     paddingHorizontal: 20,
     paddingBottom: 16,
     borderBottomWidth: 0.5,
-    borderBottomColor: "#222",
+    borderBottomColor: "#CCCCCC",
   },
-  headerTitle: { fontSize: 20, fontWeight: "600", color: "#f0f0f0" },
-  headerSub: { fontSize: 13, color: "#666", marginTop: 2 },
+  headerTitle: { fontSize: 20, fontWeight: "600", color: "#1E1E1E" },
+  headerSub: { fontSize: 13, color: "#888888", marginTop: 2 },
   messageList: { padding: 16, paddingBottom: 8 },
   messageWrapper: { marginBottom: 12 },
   aiWrapper: { alignItems: "flex-start" },
   userWrapper: { alignItems: "flex-end" },
   bubble: { maxWidth: "82%", borderRadius: 14, padding: 12 },
-  aiBubble: { backgroundColor: "#1e1e28", borderBottomLeftRadius: 2 },
-  userBubble: { backgroundColor: "#2d2250", borderBottomRightRadius: 2 },
+  aiBubble: { backgroundColor: "#EDEDED", borderBottomLeftRadius: 2 },
+  userBubble: { backgroundColor: "#2C4A6E", borderBottomRightRadius: 2 },
   bubbleText: { fontSize: 15, lineHeight: 22 },
-  aiText: { color: "#d0d0d0" },
-  userText: { color: "#EEEDFE" },
+  aiText: { color: "#333333" },
+  userText: { color: "#FFFFFF" },
   inputRow: {
     flexDirection: "row",
     alignItems: "flex-end",
     padding: 12,
     paddingBottom: 28,
     borderTopWidth: 0.5,
-    borderTopColor: "#1e1e1e",
+    borderTopColor: "#EDEDED",
     gap: 10,
   },
   input: {
     flex: 1,
-    backgroundColor: "#1a1a1a",
+    backgroundColor: "#EDEDED",
     borderWidth: 0.5,
-    borderColor: "#333",
+    borderColor: "#C4C4C4",
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 10,
-    color: "#f0f0f0",
+    color: "#1E1E1E",
     fontSize: 15,
     maxHeight: 100,
   },
@@ -270,26 +271,26 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#534AB7",
+    backgroundColor: "#3B6EA5",
     alignItems: "center",
     justifyContent: "center",
   },
-  sendBtnDisabled: { backgroundColor: "#2a2640" },
+  sendBtnDisabled: { backgroundColor: "#A8C0DC" },
   sendIcon: { color: "#fff", fontSize: 18 },
   completeBox: {
     padding: 20,
     paddingBottom: 40,
     borderTopWidth: 0.5,
-    borderTopColor: "#1e1e1e",
+    borderTopColor: "#EDEDED",
     alignItems: "center",
     gap: 12,
   },
-  completeText: { color: "#888", fontSize: 14, textAlign: "center" },
+  completeText: { color: "#666666", fontSize: 14, textAlign: "center" },
   completeBtn: {
-    backgroundColor: "#534AB7",
+    backgroundColor: "#3B6EA5",
     paddingHorizontal: 24,
     paddingVertical: 14,
     borderRadius: 12,
   },
-  completeBtnText: { color: "#EEEDFE", fontSize: 16, fontWeight: "600" },
+  completeBtnText: { color: "#FFFFFF", fontSize: 16, fontWeight: "600" },
 });

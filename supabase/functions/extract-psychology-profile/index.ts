@@ -40,18 +40,24 @@ serve(async (req) => {
 
     const { data: saved, error } = await supabase
       .from("psychology_profiles")
-      .upsert({
-        user_id: user.id,
-        onboarding_messages: messages,
-        peak_energy_times: profile.peak_energy_times ?? null,
-        avoidance_patterns: profile.avoidance_patterns ?? null,
-        motivation_style: profile.motivation_style ?? null,
-        sabotage_triggers: profile.sabotage_triggers ?? null,
-        goals: profile.goals ?? null,
-        accountability_tone: profile.accountability_tone ?? null,
-        raw_ai_summary: profile.raw_ai_summary ?? null,
-        completed_at: new Date().toISOString(),
-      })
+      .upsert(
+        {
+          user_id: user.id,
+          onboarding_messages: messages,
+          peak_energy_times: profile.peak_energy_times ?? null,
+          avoidance_patterns: profile.avoidance_patterns ?? null,
+          motivation_style: profile.motivation_style ?? null,
+          sabotage_triggers: profile.sabotage_triggers ?? null,
+          goals: profile.goals ?? null,
+          accountability_tone: profile.accountability_tone ?? null,
+          raw_ai_summary: profile.raw_ai_summary ?? null,
+          completed_at: new Date().toISOString(),
+          schedule_tips: null,
+        },
+        {
+          onConflict: "user_id",
+        }
+      )
       .select()
       .single();
 
@@ -61,9 +67,21 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: String(err) }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    const errorMessage =
+      err instanceof Error
+        ? err.message
+        : typeof err === "object"
+        ? JSON.stringify(err)
+        : String(err);
+
+    console.error("Extract error:", errorMessage, err);
+
+    return new Response(
+      JSON.stringify({ error: errorMessage, stack: err instanceof Error ? err.stack : undefined }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
   }
 });

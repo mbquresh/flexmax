@@ -102,3 +102,11 @@ export function clampMinute(value: number): number {
   if (Number.isNaN(value)) return 0;
   return Math.min(59, Math.max(0, Math.round(value)));
 }
+
+export function getLocalDateString(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}

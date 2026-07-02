@@ -9,6 +9,7 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
+  ScrollView,
 } from "react-native";
 import { router } from "expo-router";
 import { useAuth } from "../src/providers/AuthProvider";
@@ -75,7 +76,12 @@ export default function SignInScreen() {
       style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <View style={styles.inner}>
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.inner}>
         <Text style={styles.title}>FlexMax</Text>
         <Text style={styles.subtitle}>
           {mode === "sign-in" ? "Welcome back" : "Create your account"}
@@ -89,7 +95,7 @@ export default function SignInScreen() {
           <TextInput
             style={styles.input}
             placeholder="Name"
-            placeholderTextColor="#555"
+            placeholderTextColor="#999999"
             value={name}
             onChangeText={setName}
             autoCapitalize="words"
@@ -99,7 +105,7 @@ export default function SignInScreen() {
         <TextInput
           style={styles.input}
           placeholder="Email"
-          placeholderTextColor="#555"
+          placeholderTextColor="#999999"
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
@@ -110,7 +116,7 @@ export default function SignInScreen() {
         <TextInput
           style={styles.input}
           placeholder="Password"
-          placeholderTextColor="#555"
+          placeholderTextColor="#999999"
           value={password}
           onChangeText={setPassword}
           secureTextEntry
@@ -144,44 +150,46 @@ export default function SignInScreen() {
               : "Already have an account? Sign in"}
           </Text>
         </TouchableOpacity>
-      </View>
+        </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0f0f12" },
-  inner: { flex: 1, justifyContent: "center", padding: 24, gap: 12 },
-  title: { fontSize: 32, fontWeight: "700", color: "#f0f0f0", marginBottom: 4 },
-  subtitle: { fontSize: 15, color: "#888", marginBottom: 24 },
+  container: { flex: 1, backgroundColor: "#DCDCDC" },
+  scrollContent: { flexGrow: 1, justifyContent: "center" },
+  inner: { padding: 24, gap: 12 },
+  title: { fontSize: 32, fontWeight: "700", color: "#1E1E1E", marginBottom: 4 },
+  subtitle: { fontSize: 15, color: "#666666", marginBottom: 24 },
   errorBox: {
-    backgroundColor: "#3a1f1f",
-    borderColor: "#7a3030",
+    backgroundColor: "#F8E0E0",
+    borderColor: "#DD9999",
     borderWidth: 1,
     borderRadius: 10,
     padding: 12,
-    color: "#ffb4b4",
+    color: "#B03030",
     fontSize: 14,
     lineHeight: 20,
   },
   input: {
-    backgroundColor: "#1a1a1a",
+    backgroundColor: "#EDEDED",
     borderWidth: 0.5,
-    borderColor: "#333",
+    borderColor: "#C4C4C4",
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    color: "#f0f0f0",
+    color: "#1E1E1E",
     fontSize: 16,
   },
   button: {
-    backgroundColor: "#534AB7",
+    backgroundColor: "#3B6EA5",
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: "center",
     marginTop: 8,
   },
   buttonDisabled: { opacity: 0.6 },
-  buttonText: { color: "#EEEDFE", fontSize: 16, fontWeight: "600" },
-  toggle: { color: "#888", textAlign: "center", marginTop: 16, fontSize: 14 },
+  buttonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "600" },
+  toggle: { color: "#666666", textAlign: "center", marginTop: 16, fontSize: 14 },
 });

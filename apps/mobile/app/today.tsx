@@ -37,16 +37,17 @@ import {
   CompletionRating,
   DailyInstance,
 } from "../src/types/database";
-import { minutesToTime } from "../src/lib/time";
+import { minutesToTime, getLocalDateString } from "../src/lib/time";
+import { fetchTodayStats, TodayStats } from "../src/lib/stats";
 import { RequireAuth } from "../src/components/RequireAuth";
 
 const STATUS_COLORS: Record<BlockStatus, string> = {
-  pending: "#333",
-  active: "#333",
+  pending: "#C4C4C4",
+  active: "#C4C4C4",
   completed: "#5DCAA5",
-  missed: "#F0997B",
-  skipped: "#555",
-  rescheduled: "#555",
+  missed: "#D9694A",
+  skipped: "#999999",
+  rescheduled: "#999999",
 };
 
 const RATING_OPTIONS: { value: CompletionRating; label: string }[] = [
@@ -59,12 +60,13 @@ function getStatusColor(status: BlockStatus): string {
   return STATUS_COLORS[status] ?? STATUS_COLORS.pending;
 }
 
-function getLocalDateString(): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+function getInitials(name: string): string {
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
 }
 
 interface DraggableInstanceCardProps {
@@ -199,12 +201,7 @@ function DraggableInstanceCard({
 }
 
 function TodayScreenContent() {
-  console.log("DEBUG raw Date():", new Date().toString());
-  console.log("DEBUG getLocalDateString():", getLocalDateString());
-  console.log("DEBUG Date().getDate():", new Date().getDate());
-  console.log("DEBUG Date().getMonth():", new Date().getMonth());
-
-  const { session, signOut, psychologyProfile } = useAuth();
+  const { session, signOut, psychologyProfile, profile } = useAuth();
   const { todayInstances, setTodayInstances, updateInstance } = useStore();
   const [loading, setLoading] = useState(true);
   const [totalBlocks, setTotalBlocks] = useState(0);
@@ -238,6 +235,7 @@ function TodayScreenContent() {
   const flashTriggers = useRef<Record<string, () => void>>({});
   const [displayDate, setDisplayDate] = useState(getLocalDateString());
   const currentDateRef = useRef(getLocalDateString());
+  const [stats, setStats] = useState<TodayStats | null>(null);
   const todayLabel = getTodayLabel();
 
   const sortedInstances = [...todayInstances].sort(
@@ -246,7 +244,6 @@ function TodayScreenContent() {
 
   const loadToday = useCallback(
     async (dateOverride?: string) => {
-      console.log("loadToday called with date:", dateOverride ?? getLocalDateString());
       if (!session?.user.id) return;
 
       const targetDate = dateOverride ?? getLocalDateString();
@@ -277,6 +274,9 @@ function TodayScreenContent() {
         if (data?.length) {
           scheduleTodayBlockNotifications(data, targetDate).catch(console.error);
         }
+        fetchTodayStats(session.user.id)
+          .then(setStats)
+          .catch(console.error);
       }
       setLoading(false);
     },
@@ -289,14 +289,6 @@ function TodayScreenContent() {
 
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (nextState) => {
-      console.log(
-        "AppState changed to:",
-        nextState,
-        "currentDateRef:",
-        currentDateRef.current,
-        "freshDate:",
-        getLocalDateString()
-      );
       if (nextState === "active") {
         const freshDate = getLocalDateString();
         if (freshDate !== currentDateRef.current) {
@@ -767,60 +759,118 @@ function TodayScreenContent() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#534AB7" />
+        <ActivityIndicator size="large" color="#3B6EA5" />
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Today</Text>
-        <Text style={styles.date}>
-          {displayDate} · {todayLabel}
-        </Text>
-        <View style={styles.headerActions}>
-          <TouchableOpacity onPress={() => router.push("/schedule-builder")}>
-            <Text style={styles.link}>Edit schedule</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={async () => {
-              await signOut();
-              router.replace("/sign-in");
-            }}
-          >
-            <Text style={styles.link}>Sign out</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
       <ScrollView
-        contentContainerStyle={styles.list}
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {sortedInstances.length === 0 ? (
-          <Text style={styles.empty}>
-            {totalBlocks > 0
-              ? `Nothing scheduled for ${todayLabel}. Your blocks may be set for other days — go to Edit schedule and tap ${todayLabel} on each block.`
-              : "No blocks yet. Add some in the schedule builder first."}
-          </Text>
-        ) : (
-          sortedInstances.map((item) => (
-            <DraggableInstanceCard
-              key={item.id}
-              item={item}
-              saving={saving}
-              onLongPress={() => handleMarkMissed(item)}
-              onActionPress={() => handleActionPress(item)}
-              onOpenTaskDetail={() => openTaskDetail(item)}
-              onCardLayout={handleCardLayout}
-              onDragEnd={handleDragEnd}
-              registerFlashTrigger={registerFlashTrigger}
-              unregisterFlashTrigger={unregisterFlashTrigger}
-            />
-          ))
-        )}
+        <View style={styles.header}>
+          <View style={styles.headerTop}>
+            <View>
+              <Text style={styles.title}>Today</Text>
+              <Text style={styles.date}>
+                {displayDate} · {todayLabel}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.avatar}
+              onPress={() => router.push("/account")}
+            >
+              <Text style={styles.avatarText}>
+                {getInitials(profile?.name ?? "U")}
+              </Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.headerActions}>
+            <TouchableOpacity onPress={() => router.push("/schedule-builder")}>
+              <Text style={styles.link}>Edit schedule</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={async () => {
+                await signOut();
+                router.replace("/sign-in");
+              }}
+            >
+              <Text style={styles.link}>Sign out</Text>
+            </TouchableOpacity>
+          </View>
+          {stats ? (
+            <View style={styles.streakContainer}>
+              <View style={styles.streakHeader}>
+                <Text style={styles.streakLabel}>
+                  {stats.streak > 0
+                    ? `🔥 ${stats.streak}-day streak`
+                    : "Start your streak today"}
+                </Text>
+                <Text style={styles.streakSub}>{stats.completionRate}% this week</Text>
+              </View>
+              <View style={styles.weekStrip}>
+                {["M", "T", "W", "T", "F", "S", "S"].map((day, i) => {
+                  const todayIndex =
+                    new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;
+                  const isToday = i === todayIndex;
+                  const isDone = stats.weekDayCompletions[i];
+                  const isFuture = i > todayIndex;
+
+                  return (
+                    <View
+                      key={i}
+                      style={[
+                        styles.daySquare,
+                        isDone && styles.daySquareDone,
+                        isToday && !isDone && styles.daySquareToday,
+                        isFuture && styles.daySquareFuture,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.daySquareLetter,
+                          isDone && styles.daySquareLetterDone,
+                          isFuture && styles.daySquareLetterFuture,
+                        ]}
+                      >
+                        {day}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
+            </View>
+          ) : null}
+        </View>
+
+        <View style={styles.list}>
+          {sortedInstances.length === 0 ? (
+            <Text style={styles.empty}>
+              {totalBlocks > 0
+                ? `Nothing scheduled for ${todayLabel}. Your blocks may be set for other days — go to Edit schedule and tap ${todayLabel} on each block.`
+                : "No blocks yet. Add some in the schedule builder first."}
+            </Text>
+          ) : (
+            sortedInstances.map((item) => (
+              <DraggableInstanceCard
+                key={item.id}
+                item={item}
+                saving={saving}
+                onLongPress={() => handleMarkMissed(item)}
+                onActionPress={() => handleActionPress(item)}
+                onOpenTaskDetail={() => openTaskDetail(item)}
+                onCardLayout={handleCardLayout}
+                onDragEnd={handleDragEnd}
+                registerFlashTrigger={registerFlashTrigger}
+                unregisterFlashTrigger={unregisterFlashTrigger}
+              />
+            ))
+          )}
+        </View>
       </ScrollView>
 
       <Modal
@@ -840,7 +890,7 @@ function TodayScreenContent() {
             </Text>
 
             {recoveryLoading ? (
-              <ActivityIndicator color="#534AB7" style={{ marginVertical: 16 }} />
+              <ActivityIndicator color="#3B6EA5" style={{ marginVertical: 16 }} />
             ) : (
               <>
                 <Text style={styles.recoveryAck}>{recoveryAI?.acknowledgment}</Text>
@@ -860,7 +910,7 @@ function TodayScreenContent() {
               value={reflectionWhy}
               onChangeText={setReflectionWhy}
               placeholder="Be honest..."
-              placeholderTextColor="#555"
+              placeholderTextColor="#999999"
               multiline
             />
 
@@ -872,7 +922,7 @@ function TodayScreenContent() {
               value={reflectionImprove}
               onChangeText={setReflectionImprove}
               placeholder="Even something small..."
-              placeholderTextColor="#555"
+              placeholderTextColor="#999999"
               multiline
             />
 
@@ -956,7 +1006,7 @@ function TodayScreenContent() {
               </View>
 
               {saving ? (
-                <ActivityIndicator color="#534AB7" style={styles.sheetSaving} />
+                <ActivityIndicator color="#3B6EA5" style={styles.sheetSaving} />
               ) : null}
             </RNAnimated.View>
           </Pressable>
@@ -991,7 +1041,7 @@ function TodayScreenContent() {
               value={taskDetailDraft}
               onChangeText={setTaskDetailDraft}
               placeholder="e.g. Chest day + 20 min run"
-              placeholderTextColor="#555"
+              placeholderTextColor="#999999"
               autoFocus
               multiline
               numberOfLines={3}
@@ -1004,7 +1054,7 @@ function TodayScreenContent() {
               disabled={saving}
             >
               {saving ? (
-                <ActivityIndicator color="#EEEDFE" />
+                <ActivityIndicator color="#FFFFFF" />
               ) : (
                 <Text style={styles.taskSaveBtnText}>Save</Text>
               )}
@@ -1056,21 +1106,98 @@ export default function TodayScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0f0f12", position: "relative" },
+  container: { flex: 1, backgroundColor: "#DCDCDC", position: "relative" },
   centered: {
     flex: 1,
-    backgroundColor: "#0f0f12",
+    backgroundColor: "#DCDCDC",
     alignItems: "center",
     justifyContent: "center",
   },
   header: { paddingTop: 60, paddingHorizontal: 20, paddingBottom: 16 },
-  title: { fontSize: 28, fontWeight: "700", color: "#f0f0f0" },
-  date: { fontSize: 14, color: "#888", marginTop: 4 },
+  headerTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#2C4A6E",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarText: { color: "#3B6EA5", fontSize: 15, fontWeight: "600" },
+  title: { fontSize: 28, fontWeight: "700", color: "#1E1E1E" },
+  date: { fontSize: 14, color: "#666666", marginTop: 4 },
   headerActions: { flexDirection: "row", gap: 16, marginTop: 12 },
-  link: { color: "#534AB7", fontSize: 14 },
-  list: { padding: 16, flexGrow: 1, paddingBottom: 100 },
+  link: { color: "#3B6EA5", fontSize: 14 },
+  streakContainer: {
+    marginHorizontal: 20,
+    marginTop: 12,
+    marginBottom: 4,
+    backgroundColor: "#FBEFD9",
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 0.5,
+    borderColor: "#F0D9A8",
+  },
+  streakHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  streakLabel: {
+    color: "#EF9F27",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  streakSub: {
+    color: "#B07A28",
+    fontSize: 12,
+    fontWeight: "500",
+  },
+  weekStrip: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 6,
+  },
+  daySquare: {
+    flex: 1,
+    aspectRatio: 1,
+    borderRadius: 8,
+    backgroundColor: "#F0D9A8",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  daySquareDone: {
+    backgroundColor: "#EF9F27",
+  },
+  daySquareToday: {
+    backgroundColor: "#F0D9A8",
+    borderWidth: 1.5,
+    borderColor: "#EF9F27",
+  },
+  daySquareFuture: {
+    backgroundColor: "#F5E4C8",
+  },
+  daySquareLetter: {
+    color: "#B07A28",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  daySquareLetterDone: {
+    color: "#1E1E1E",
+  },
+  daySquareLetterFuture: {
+    color: "#B07A28",
+  },
+  list: { padding: 16, paddingBottom: 100 },
+  scroll: { flex: 1 },
+  scrollContent: { flexGrow: 1 },
   card: {
-    backgroundColor: "#1e1e28",
+    backgroundColor: "#EDEDED",
     borderRadius: 12,
     marginBottom: 10,
     position: "relative",
@@ -1087,7 +1214,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: 14,
   },
-  dragLines: { color: "#444", fontSize: 18, lineHeight: 20 },
+  dragLines: { color: "#AAAAAA", fontSize: 18, lineHeight: 20 },
   statusBar: { width: 4 },
   cardBody: {
     flex: 1,
@@ -1098,16 +1225,16 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   cardMain: { flex: 1 },
-  blockName: { color: "#f0f0f0", fontSize: 16, fontWeight: "600" },
-  meta: { color: "#888", fontSize: 13, marginTop: 4 },
-  task: { color: "#d0d0d0", fontSize: 14, marginTop: 8 },
-  taskAdd: { color: "#534AB7", fontSize: 13, marginTop: 8, fontWeight: "500" },
+  blockName: { color: "#1E1E1E", fontSize: 16, fontWeight: "600" },
+  meta: { color: "#666666", fontSize: 13, marginTop: 4 },
+  task: { color: "#333333", fontSize: 14, marginTop: 8 },
+  taskAdd: { color: "#3B6EA5", fontSize: 13, marginTop: 8, fontWeight: "500" },
   actionCircle: {
     width: 32,
     height: 32,
     borderRadius: 16,
     borderWidth: 1.5,
-    borderColor: "#534AB7",
+    borderColor: "#3B6EA5",
     alignItems: "center",
     justifyContent: "center",
     marginTop: 2,
@@ -1117,25 +1244,25 @@ const styles = StyleSheet.create({
     backgroundColor: "#5DCAA5",
   },
   actionCircleMissed: {
-    borderColor: "#F0997B",
+    borderColor: "#D9694A",
     backgroundColor: "transparent",
   },
-  actionCircleCheck: { color: "#0f0f12", fontSize: 16, fontWeight: "700" },
-  actionCircleMissedIcon: { color: "#F0997B", fontSize: 16, fontWeight: "700" },
-  empty: { color: "#666", textAlign: "center", marginTop: 40, lineHeight: 22 },
+  actionCircleCheck: { color: "#1E1E1E", fontSize: 16, fontWeight: "700" },
+  actionCircleMissedIcon: { color: "#D9694A", fontSize: 16, fontWeight: "700" },
+  empty: { color: "#888888", textAlign: "center", marginTop: 40, lineHeight: 22 },
   toast: {
     position: "absolute",
     bottom: 40,
     left: 20,
     right: 20,
-    backgroundColor: "#1e1e28",
+    backgroundColor: "#EDEDED",
     borderRadius: 12,
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderLeftWidth: 3,
     borderLeftColor: "#EF9F27",
   },
-  toastText: { color: "#f0f0f0", fontSize: 14 },
+  toastText: { color: "#1E1E1E", fontSize: 14 },
   overlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.55)",
@@ -1145,7 +1272,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   sheet: {
-    backgroundColor: "#1a1a1a",
+    backgroundColor: "#EDEDED",
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     paddingHorizontal: 20,
@@ -1157,39 +1284,39 @@ const styles = StyleSheet.create({
     width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: "#444",
+    backgroundColor: "#AAAAAA",
     marginBottom: 16,
   },
   sheetTitle: {
-    color: "#f0f0f0",
+    color: "#1E1E1E",
     fontSize: 18,
     fontWeight: "600",
   },
-  sheetTime: { color: "#888", fontSize: 14, marginBottom: 20, marginTop: 6 },
+  sheetTime: { color: "#666666", fontSize: 14, marginBottom: 20, marginTop: 6 },
   ratingRow: { flexDirection: "row", gap: 8 },
   ratingBtn: {
     flex: 1,
-    backgroundColor: "#1e1e28",
+    backgroundColor: "#EDEDED",
     borderWidth: 0.5,
-    borderColor: "#333",
+    borderColor: "#C4C4C4",
     borderRadius: 10,
     paddingVertical: 14,
     paddingHorizontal: 6,
     alignItems: "center",
   },
   ratingBtnActive: {
-    backgroundColor: "#534AB7",
-    borderColor: "#534AB7",
+    backgroundColor: "#3B6EA5",
+    borderColor: "#3B6EA5",
   },
   ratingBtnText: {
-    color: "#EEEDFE",
+    color: "#FFFFFF",
     fontSize: 12,
     fontWeight: "600",
     textAlign: "center",
   },
   sheetSaving: { marginTop: 16 },
   taskSheet: {
-    backgroundColor: "#1a1a1a",
+    backgroundColor: "#EDEDED",
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     paddingHorizontal: 20,
@@ -1204,31 +1331,31 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   taskSheetHeaderText: { flex: 1 },
-  taskSheetSubtitle: { color: "#888", fontSize: 14, marginTop: 4 },
-  taskSheetClose: { color: "#888", fontSize: 20, lineHeight: 22 },
+  taskSheetSubtitle: { color: "#666666", fontSize: 14, marginTop: 4 },
+  taskSheetClose: { color: "#666666", fontSize: 20, lineHeight: 22 },
   taskDetailInput: {
-    backgroundColor: "#1a1a1a",
+    backgroundColor: "#EDEDED",
     borderWidth: 0.5,
-    borderColor: "#333",
+    borderColor: "#C4C4C4",
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    color: "#f0f0f0",
+    color: "#1E1E1E",
     fontSize: 15,
     minHeight: 88,
     maxHeight: 88,
   },
   taskSaveBtn: {
     marginTop: 16,
-    backgroundColor: "#534AB7",
+    backgroundColor: "#3B6EA5",
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: "center",
   },
-  taskSaveBtnText: { color: "#EEEDFE", fontSize: 15, fontWeight: "600" },
+  taskSaveBtnText: { color: "#FFFFFF", fontSize: 15, fontWeight: "600" },
   btnDisabled: { opacity: 0.5 },
   undoSheet: {
-    backgroundColor: "#1a1a1a",
+    backgroundColor: "#EDEDED",
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     marginTop: "auto",
@@ -1238,53 +1365,53 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
     paddingHorizontal: 20,
     borderBottomWidth: 0.5,
-    borderBottomColor: "#2a2a2a",
+    borderBottomColor: "#C4C4C4",
     alignItems: "center",
   },
   undoOptionLast: { borderBottomWidth: 0 },
-  undoOptionDestructive: { color: "#F0997B", fontSize: 16, fontWeight: "600" },
-  undoOptionCancel: { color: "#888", fontSize: 16, fontWeight: "500" },
+  undoOptionDestructive: { color: "#D9694A", fontSize: 16, fontWeight: "600" },
+  undoOptionCancel: { color: "#666666", fontSize: 16, fontWeight: "500" },
   modalOverlay: {
     flex: 1,
     justifyContent: "flex-end",
     backgroundColor: "rgba(0,0,0,0.6)",
   },
   recoverySheet: {
-    backgroundColor: "#1a1a1a",
+    backgroundColor: "#EDEDED",
     borderRadius: 20,
     padding: 20,
     paddingBottom: 40,
     gap: 12,
   },
-  recoveryTitle: { color: "#F0997B", fontSize: 17, fontWeight: "600" },
-  recoveryAck: { color: "#d0d0d0", fontSize: 14, lineHeight: 22 },
+  recoveryTitle: { color: "#D9694A", fontSize: 17, fontWeight: "600" },
+  recoveryAck: { color: "#333333", fontSize: 14, lineHeight: 22 },
   patternNote: {
-    backgroundColor: "#2a1f1f",
+    backgroundColor: "#F8E5E0",
     borderLeftWidth: 2,
-    borderLeftColor: "#F0997B",
+    borderLeftColor: "#D9694A",
     borderRadius: 8,
     padding: 12,
   },
-  patternNoteText: { color: "#F0997B", fontSize: 13, lineHeight: 20 },
-  reflectionLabel: { color: "#888", fontSize: 13, fontWeight: "600" },
+  patternNoteText: { color: "#D9694A", fontSize: 13, lineHeight: 20 },
+  reflectionLabel: { color: "#666666", fontSize: 13, fontWeight: "600" },
   reflectionInput: {
-    backgroundColor: "#0f0f12",
+    backgroundColor: "#EDEDED",
     borderWidth: 0.5,
-    borderColor: "#333",
+    borderColor: "#C4C4C4",
     borderRadius: 10,
     padding: 12,
-    color: "#f0f0f0",
+    color: "#1E1E1E",
     fontSize: 14,
     minHeight: 60,
   },
   rescheduleBox: {
-    backgroundColor: "#0f2218",
+    backgroundColor: "#DFF3EA",
     borderRadius: 10,
     padding: 14,
     gap: 6,
   },
   rescheduleLabel: { color: "#5DCAA5", fontSize: 12, fontWeight: "600" },
-  rescheduleTime: { color: "#f0f0f0", fontSize: 15, fontWeight: "600" },
+  rescheduleTime: { color: "#1E1E1E", fontSize: 15, fontWeight: "600" },
   rescheduleBtn: {
     backgroundColor: "#5DCAA5",
     borderRadius: 8,
@@ -1292,8 +1419,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 4,
   },
-  rescheduleBtnText: { color: "#0f0f12", fontSize: 14, fontWeight: "600" },
-  noSlot: { color: "#555", fontSize: 13, fontStyle: "italic" },
+  rescheduleBtnText: { color: "#1E1E1E", fontSize: 14, fontWeight: "600" },
+  noSlot: { color: "#999999", fontSize: 13, fontStyle: "italic" },
   recoveryActions: {
     flexDirection: "row",
     alignItems: "center",
@@ -1301,11 +1428,11 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   saveBtn: {
-    backgroundColor: "#534AB7",
+    backgroundColor: "#3B6EA5",
     borderRadius: 10,
     paddingVertical: 12,
     paddingHorizontal: 24,
   },
-  saveBtnText: { color: "#EEEDFE", fontSize: 15, fontWeight: "600" },
-  skipText: { color: "#555", fontSize: 14 },
+  saveBtnText: { color: "#FFFFFF", fontSize: 15, fontWeight: "600" },
+  skipText: { color: "#999999", fontSize: 14 },
 });

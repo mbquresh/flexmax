@@ -276,7 +276,7 @@ function ScheduleBuilderScreenContent() {
     if (tipsLoading) {
       return (
         <View style={styles.tipsCard}>
-          <ActivityIndicator color="#534AB7" />
+          <ActivityIndicator color="#3B6EA5" />
         </View>
       );
     }
@@ -324,7 +324,7 @@ function ScheduleBuilderScreenContent() {
           <TextInput
             style={styles.input}
             placeholder="Block name (e.g. Deep work)"
-            placeholderTextColor="#555"
+            placeholderTextColor="#999999"
             value={name}
             onChangeText={setName}
           />
@@ -419,7 +419,7 @@ function ScheduleBuilderScreenContent() {
           <TextInput
             style={styles.input}
             placeholder="Block name (e.g. Deep work)"
-            placeholderTextColor="#555"
+            placeholderTextColor="#999999"
             value={editName}
             onChangeText={setEditName}
           />
@@ -481,46 +481,49 @@ function ScheduleBuilderScreenContent() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#534AB7" />
+        <ActivityIndicator size="large" color="#3B6EA5" />
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Build your schedule</Text>
-        <Text style={styles.subtitle}>
-          Tap the day letters on each block to control when it repeats.
-        </Text>
-      </View>
-
-      {renderTipsCard()}
-
-      {error ? <Text style={styles.errorBox}>{error}</Text> : null}
-
       <FlatList
         data={blocks}
         keyExtractor={(item) => item.id}
         renderItem={renderBlock}
         contentContainerStyle={styles.list}
         nestedScrollEnabled={true}
+        showsVerticalScrollIndicator={false}
         ListHeaderComponent={
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Quick add</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {BLOCK_PRESETS.map((preset) => (
-                <TouchableOpacity
-                  key={preset.name}
-                  style={styles.presetChip}
-                  onPress={() => handleAddBlock(preset)}
-                  disabled={saving}
-                >
-                  <Text style={styles.presetText}>{preset.name}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
+          <>
+            <View style={styles.header}>
+              <Text style={styles.title}>Build your schedule</Text>
+              <Text style={styles.subtitle}>
+                Tap the day letters on each block to control when it repeats.
+              </Text>
+            </View>
+
+            {renderTipsCard()}
+
+            {error ? <Text style={styles.errorBox}>{error}</Text> : null}
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Quick add</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {BLOCK_PRESETS.map((preset) => (
+                  <TouchableOpacity
+                    key={preset.name}
+                    style={styles.presetChip}
+                    onPress={() => handleAddBlock(preset)}
+                    disabled={saving}
+                  >
+                    <Text style={styles.presetText}>{preset.name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </>
         }
         ListEmptyComponent={
           <Text style={styles.empty}>
@@ -553,41 +556,41 @@ export default function ScheduleBuilderScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0f0f12" },
+  container: { flex: 1, backgroundColor: "#DCDCDC" },
   centered: {
     flex: 1,
-    backgroundColor: "#0f0f12",
+    backgroundColor: "#DCDCDC",
     alignItems: "center",
     justifyContent: "center",
   },
   header: { paddingTop: 60, paddingHorizontal: 20, paddingBottom: 12 },
-  title: { fontSize: 24, fontWeight: "600", color: "#f0f0f0" },
-  subtitle: { fontSize: 14, color: "#888", marginTop: 6 },
+  title: { fontSize: 24, fontWeight: "600", color: "#1E1E1E" },
+  subtitle: { fontSize: 14, color: "#666666", marginTop: 6 },
   errorBox: {
     marginHorizontal: 20,
     marginBottom: 8,
-    backgroundColor: "#3a1f1f",
-    borderColor: "#7a3030",
+    backgroundColor: "#F8E0E0",
+    borderColor: "#DD9999",
     borderWidth: 1,
     borderRadius: 10,
     padding: 12,
-    color: "#ffb4b4",
+    color: "#B03030",
     fontSize: 14,
   },
   tipsCard: {
     marginHorizontal: 20,
     marginBottom: 12,
-    backgroundColor: "#1e1830",
-    borderColor: "#534AB7",
+    backgroundColor: "#DCE6F2",
+    borderColor: "#3B6EA5",
     borderWidth: 0.5,
     borderRadius: 10,
     padding: 14,
     gap: 8,
   },
-  tipsTitle: { color: "#AFA9EC", fontSize: 14, fontWeight: "600", lineHeight: 20 },
+  tipsTitle: { color: "#3B6EA5", fontSize: 14, fontWeight: "600", lineHeight: 20 },
   tipRow: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
-  tipBullet: { color: "#534AB7", fontSize: 14, lineHeight: 20 },
-  tipText: { flex: 1, color: "#888", fontSize: 13, lineHeight: 20 },
+  tipBullet: { color: "#3B6EA5", fontSize: 14, lineHeight: 20 },
+  tipText: { flex: 1, color: "#666666", fontSize: 13, lineHeight: 20 },
   tipsDismissBtn: {
     alignSelf: "flex-start",
     marginTop: 4,
@@ -595,45 +598,45 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 8,
     borderWidth: 0.5,
-    borderColor: "#534AB7",
+    borderColor: "#3B6EA5",
   },
-  tipsDismissText: { color: "#AFA9EC", fontSize: 13, fontWeight: "600" },
+  tipsDismissText: { color: "#3B6EA5", fontSize: 13, fontWeight: "600" },
   list: { paddingHorizontal: 16, paddingBottom: 32 },
   section: { marginBottom: 16 },
-  sectionTitle: { color: "#888", fontSize: 13, marginBottom: 10, fontWeight: "600" },
+  sectionTitle: { color: "#666666", fontSize: 13, marginBottom: 10, fontWeight: "600" },
   presetChip: {
-    backgroundColor: "#2d2250",
+    backgroundColor: "#2C4A6E",
     borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 10,
     marginRight: 8,
   },
-  presetText: { color: "#EEEDFE", fontSize: 14 },
+  presetText: { color: "#FFFFFF", fontSize: 14 },
   blockCard: {
-    backgroundColor: "#1e1e28",
+    backgroundColor: "#EDEDED",
     borderRadius: 12,
     padding: 16,
     marginBottom: 10,
   },
   blockHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  blockName: { color: "#f0f0f0", fontSize: 16, fontWeight: "600" },
-  deleteText: { color: "#888", fontSize: 13 },
-  blockMeta: { color: "#888", fontSize: 13, marginTop: 4, marginBottom: 10 },
+  blockName: { color: "#1E1E1E", fontSize: 16, fontWeight: "600" },
+  deleteText: { color: "#666666", fontSize: 13 },
+  blockMeta: { color: "#666666", fontSize: 13, marginTop: 4, marginBottom: 10 },
   dayRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
   dayChip: {
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 6,
-    backgroundColor: "#1a1a1a",
+    backgroundColor: "#EDEDED",
     borderWidth: 0.5,
-    borderColor: "#333",
+    borderColor: "#C4C4C4",
   },
-  dayChipActive: { backgroundColor: "#534AB7", borderColor: "#534AB7" },
-  dayChipText: { color: "#666", fontSize: 12, fontWeight: "600" },
-  dayChipTextActive: { color: "#EEEDFE" },
-  fieldLabel: { color: "#888", fontSize: 13, fontWeight: "600" },
+  dayChipActive: { backgroundColor: "#3B6EA5", borderColor: "#3B6EA5" },
+  dayChipText: { color: "#888888", fontSize: 12, fontWeight: "600" },
+  dayChipTextActive: { color: "#FFFFFF" },
+  fieldLabel: { color: "#666666", fontSize: 13, fontWeight: "600" },
   empty: {
-    color: "#666",
+    color: "#888888",
     textAlign: "center",
     lineHeight: 22,
     marginVertical: 24,
@@ -643,34 +646,34 @@ const styles = StyleSheet.create({
   addToggle: {
     borderRadius: 12,
     borderWidth: 0.5,
-    borderColor: "#333",
+    borderColor: "#C4C4C4",
     paddingVertical: 14,
     alignItems: "center",
-    backgroundColor: "#1a1a1a",
+    backgroundColor: "#EDEDED",
   },
-  addToggleText: { color: "#AFA9EC", fontSize: 15, fontWeight: "500" },
+  addToggleText: { color: "#3B6EA5", fontSize: 15, fontWeight: "500" },
   form: {
     borderRadius: 12,
     borderWidth: 0.5,
-    borderColor: "#2a2a2a",
+    borderColor: "#C4C4C4",
     padding: 14,
     gap: 10,
-    backgroundColor: "#141418",
+    backgroundColor: "#E4E4E4",
   },
   formHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-  collapseText: { color: "#666", fontSize: 13 },
+  collapseText: { color: "#888888", fontSize: 13 },
   input: {
-    backgroundColor: "#1a1a1a",
+    backgroundColor: "#EDEDED",
     borderWidth: 0.5,
-    borderColor: "#333",
+    borderColor: "#C4C4C4",
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    color: "#f0f0f0",
+    color: "#1E1E1E",
     fontSize: 15,
   },
   chipRow: { flexGrow: 0 },
@@ -679,27 +682,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     marginRight: 8,
-    backgroundColor: "#1a1a1a",
+    backgroundColor: "#EDEDED",
     borderWidth: 0.5,
-    borderColor: "#333",
+    borderColor: "#C4C4C4",
   },
-  chipActive: { backgroundColor: "#534AB7", borderColor: "#534AB7" },
-  chipText: { color: "#888", fontSize: 13 },
-  chipTextActive: { color: "#EEEDFE" },
+  chipActive: { backgroundColor: "#3B6EA5", borderColor: "#3B6EA5" },
+  chipText: { color: "#666666", fontSize: 13 },
+  chipTextActive: { color: "#FFFFFF" },
   timeStack: { gap: 10 },
   addBtn: {
-    backgroundColor: "#534AB7",
+    backgroundColor: "#3B6EA5",
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: "center",
   },
-  addBtnText: { color: "#EEEDFE", fontSize: 15, fontWeight: "600" },
+  addBtnText: { color: "#FFFFFF", fontSize: 15, fontWeight: "600" },
   primaryBtn: {
-    backgroundColor: "#534AB7",
+    backgroundColor: "#3B6EA5",
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: "center",
   },
-  primaryBtnText: { color: "#EEEDFE", fontSize: 16, fontWeight: "600" },
+  primaryBtnText: { color: "#FFFFFF", fontSize: 16, fontWeight: "600" },
   btnDisabled: { opacity: 0.5 },
 });

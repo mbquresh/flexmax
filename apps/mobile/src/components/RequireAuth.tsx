@@ -9,7 +9,7 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#534AB7" />
+        <ActivityIndicator size="large" color="#3B6EA5" />
       </View>
     );
   }
@@ -24,7 +24,7 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
 const styles = StyleSheet.create({
   centered: {
     flex: 1,
-    backgroundColor: "#0f0f12",
+    backgroundColor: "#DCDCDC",
     alignItems: "center",
     justifyContent: "center",
   },
