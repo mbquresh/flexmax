@@ -3,10 +3,11 @@ import { Stack, router } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import * as Notifications from "expo-notifications";
 import { AuthProvider } from "../src/providers/AuthProvider";
+import { colors } from "../src/theme";
 
 export default function RootLayout() {
-  const notificationListener = useRef<Notifications.EventSubscription>();
-  const responseListener = useRef<Notifications.EventSubscription>();
+  const notificationListener = useRef<Notifications.Subscription | null>(null);
+  const responseListener = useRef<Notifications.Subscription | null>(null);
 
   useEffect(() => {
     responseListener.current = Notifications.addNotificationResponseReceivedListener(
@@ -31,7 +32,7 @@ export default function RootLayout() {
         <Stack
           screenOptions={{
             headerShown: false,
-            contentStyle: { backgroundColor: "#DCDCDC" },
+            contentStyle: { backgroundColor: colors.background },
           }}
         />
       </AuthProvider>
