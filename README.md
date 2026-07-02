@@ -42,7 +42,7 @@ flex_max/
 
 ## Tech stack
 
-- **Mobile**: Expo (React Native) — push notifications, future background monitoring
+- **Mobile**: Expo (React Native) — push notifications, cross-platform mobile
 - **Backend**: Supabase — auth, Postgres, realtime, edge functions
 - **AI**: Anthropic Claude API (claude-sonnet-4-6)
 - **State**: Zustand
@@ -50,7 +50,19 @@ flex_max/
 
 ## Status
 
-**Work in progress** — v1 core loop is live: auth, AI onboarding, schedule builder (with tips), and Today view with check-ins, drag-to-swap, and missed-block recovery. Nightly fill-in push notifications run via pg_cron. Idle detection is still open for v1.1.
+Work in progress. **v1 and v1.1 are complete**, v1.2 in progress.
+
+**Live now:**
+- AI onboarding (Claude-powered psychology profile extraction)
+- Schedule builder with AI coaching tips, quick-add presets, custom blocks, day toggles, inline editing
+- Today view: check-ins with completion ratings, drag-to-swap blocks, task detail entry, undo, missed-block recovery
+- Missed block recovery: AI reflection prompts + in-place rescheduling
+- Weekly streak tracking + completion rate
+- Account screen: psychology profile summary, editable name, redo onboarding
+- Push token registration
+- Nightly fill-in push notifications (pg_cron)
+- Post-block check-in notifications (local device scheduling)
+- Light grey + blue theme
 
 ## Getting started
 
@@ -70,24 +82,34 @@ npx supabase db push
 yarn mobile
 ```
 
-## v1 scope (Jun 21)
+## Roadmap
 
-- [x] Repo structure
-- [x] Supabase schema + auth
-- [x] AI onboarding chat (4-turn intake, saves psychology profile)
-- [x] Schedule builder (add/delete blocks, quick-add presets, day toggles)
-- [x] AI schedule tips (profile-aware coaching on first visit)
-- [x] Today view (daily instances, check-ins, drag-to-swap blocks, missed-block recovery)
-- [x] Schedule builder — drag to shift blocks
+### v1 — complete
+- Repo structure, Supabase schema + auth
+- AI onboarding chat (4-turn intake → psychology profile)
+- Schedule builder (blocks, presets, day toggles, inline editing)
+- AI schedule tips (profile-aware coaching)
+- Today view (daily instances, check-ins, drag-to-swap, missed-block recovery)
 
-**Deferred (not building for v1):** AI schedule review screen.
+### v1.1 — complete
+- Nightly task-fill notifications (pg_cron)
+- Post-block accountability check-ins (local scheduling)
+- Missed block recovery flow (AI reflection + in-place reschedule)
 
-## v1.1 scope (Jun 28)
+### v1.2 — in progress
+- Weekly streak + completion rate (done)
+- Account screen + psychology profile summary (done)
+- Light grey + blue theme (done)
+- App icon
 
-- [x] Nightly task-fill notifications
-- [x] Post-block accountability check-ins
-- [x] Missed block recovery flow (AI reflection + in-place reschedule)
-- [ ] Basic activity idle detection
+### v2 — planned
+- Behavioral learning: psychology profile evolves from actual completion patterns
+- Activity idle detection (requires native build)
+- Light/dark theme toggle
+- Morning brief
+- EAS build for reliable background notifications + TestFlight
+
+**Deferred:** AI schedule review screen (replaced by coaching tips), idle detection (native-only, moved to v2).
 
 ## Name
 
