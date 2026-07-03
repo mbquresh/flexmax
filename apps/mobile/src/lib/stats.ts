@@ -35,7 +35,10 @@ export async function fetchTodayStats(userId: string): Promise<TodayStats> {
 
   const total =
     weekInstances?.filter(
-      (i) => i.status !== "skipped" && i.status !== "rescheduled"
+      (i) =>
+        i.status !== "skipped" &&
+        i.status !== "rescheduled" &&
+        i.status !== "removed"
     ).length ?? 0;
 
   const completed =

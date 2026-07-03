@@ -9,6 +9,8 @@ import {
   Pressable,
   Modal,
   Alert,
+  TextInput,
+  KeyboardAvoidingView,
   Animated as RNAnimated,
   Keyboard,
   Platform,
@@ -60,6 +62,8 @@ function TodayScreenContent() {
   const [activeTaskDetailInstance, setActiveTaskDetailInstance] =
     useState<DailyInstance | null>(null);
   const [taskDetailDraft, setTaskDetailDraft] = useState("");
+  const [removeInstance, setRemoveInstance] = useState<DailyInstance | null>(null);
+  const [removeReason, setRemoveReason] = useState("");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const checkInSlideAnim = useRef(new RNAnimated.Value(400)).current;
@@ -205,7 +209,8 @@ function TodayScreenContent() {
         (inst) =>
           inst.id !== instanceA.id &&
           inst.id !== instanceB.id &&
-          inst.status !== "skipped"
+          inst.status !== "skipped" &&
+          inst.status !== "removed"
       );
       const overlaps = (start: number, end: number, other: DailyInstance) =>
         start < other.end_minutes && end > other.start_minutes;
@@ -254,6 +259,28 @@ function TodayScreenContent() {
     );
     triggerFlash(instanceA.id);
     triggerFlash(instanceB.id);
+  };
+
+  const handleRemove = async () => {
+    if (!removeInstance) return;
+    try {
+      const { error } = await supabase
+        .from("daily_schedule_instances")
+        .update({ status: "removed", removed_reason: removeReason.trim() || null })
+        .eq("id", removeInstance.id);
+      if (error) throw error;
+      updateInstance(removeInstance.id, {
+        status: "removed",
+        removed_reason: removeReason.trim() || null,
+      });
+      setTodayInstances(instances.filter((i) => i.id !== removeInstance.id));
+      showToast(`${removeInstance.block?.name ?? "Block"} removed from today`);
+    } catch (err) {
+      handleError(err, "handleRemove", "Could not remove the block");
+    } finally {
+      setRemoveInstance(null);
+      setRemoveReason("");
+    }
   };
 
   const closeCheckIn = () => {
@@ -611,6 +638,7 @@ function TodayScreenContent() {
                 onUndo={showUndoActions}
                 onTaskDetail={openTaskDetail}
                 onSwap={handleSwap}
+                onRemoveRequest={setRemoveInstance}
                 onLayout={handleCardLayout}
                 registerFlashTrigger={registerFlashTrigger}
                 unregisterFlashTrigger={unregisterFlashTrigger}
@@ -691,6 +719,57 @@ function TodayScreenContent() {
           </Pressable>
         </Pressable>
       </Modal>
+
+      <Modal
+        visible={!!removeInstance}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          setRemoveInstance(null);
+          setRemoveReason("");
+        }}
+      >
+        <KeyboardAvoidingView
+          style={styles.overlay}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
+          <Pressable
+            style={styles.overlayDismiss}
+            onPress={() => {
+              setRemoveInstance(null);
+              setRemoveReason("");
+            }}
+          />
+          <Pressable style={styles.removeSheet} onPress={(e) => e.stopPropagation()}>
+            <Text style={styles.removeTitle}>
+              Remove "{removeInstance?.block?.name ?? "Block"}" from today?
+            </Text>
+            <Text style={styles.removeBody}>
+              This frees up the time. It won't affect your schedule on other days.
+            </Text>
+            <Text style={styles.removeLabel}>Reason (optional)</Text>
+            <TextInput
+              style={styles.removeInput}
+              value={removeReason}
+              onChangeText={setRemoveReason}
+              placeholder="e.g. something came up"
+              placeholderTextColor={colors.textPlaceholder}
+              multiline
+            />
+            <TouchableOpacity style={styles.removeConfirmBtn} onPress={handleRemove}>
+              <Text style={styles.removeConfirmText}>Remove</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => {
+                setRemoveInstance(null);
+                setRemoveReason("");
+              }}
+            >
+              <Text style={styles.removeCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -753,6 +832,9 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.55)",
     justifyContent: "flex-end",
   },
+  overlayDismiss: {
+    flex: 1,
+  },
   undoSheet: {
     backgroundColor: colors.surface,
     borderTopLeftRadius: radii.pill,
@@ -770,4 +852,42 @@ const styles = StyleSheet.create({
   undoOptionLast: { borderBottomWidth: 0 },
   undoOptionDestructive: { color: colors.danger, fontSize: 16, fontWeight: "600" },
   undoOptionCancel: { color: colors.textMuted, fontSize: 16, fontWeight: "500" },
+  removeSheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radii.pill,
+    borderTopRightRadius: radii.pill,
+    marginTop: "auto",
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.lg,
+    paddingBottom: Platform.OS === "ios" ? 36 : 24,
+    gap: spacing.md,
+  },
+  removeTitle: { color: colors.text, ...typography.heading },
+  removeBody: { color: colors.textMuted, fontSize: 14, lineHeight: 22 },
+  removeLabel: { color: colors.textMuted, ...typography.smallBold },
+  removeInput: {
+    backgroundColor: colors.surface,
+    borderWidth: 0.5,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    paddingHorizontal: 14,
+    paddingVertical: spacing.md,
+    color: colors.text,
+    fontSize: 14,
+    minHeight: 60,
+  },
+  removeConfirmBtn: {
+    backgroundColor: colors.danger,
+    borderRadius: radii.lg,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+  removeConfirmText: { color: colors.onPrimary, ...typography.bodyBold },
+  removeCancelText: {
+    color: colors.textMuted,
+    fontSize: 16,
+    fontWeight: "500",
+    textAlign: "center",
+    paddingVertical: spacing.sm,
+  },
 });

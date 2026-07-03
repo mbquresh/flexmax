@@ -1,11 +1,5 @@
 import React, { useCallback, useEffect } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Pressable,
-} from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Pressable } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   runOnJS,
@@ -20,6 +14,10 @@ import { minutesToTime } from "../lib/time";
 import { useStore } from "../store";
 import { colors, spacing, radii } from "../theme";
 
+const ACTION_BUTTON_WIDTH = 80;
+const REVEAL_WIDTH_PENDING = 160;
+const REVEAL_WIDTH_SINGLE = 80;
+
 const STATUS_COLORS: Record<BlockStatus, string> = {
   pending: colors.border,
   active: colors.border,
@@ -27,6 +25,7 @@ const STATUS_COLORS: Record<BlockStatus, string> = {
   missed: colors.danger,
   skipped: colors.textPlaceholder,
   rescheduled: colors.textPlaceholder,
+  removed: colors.textPlaceholder,
 };
 
 function getStatusColor(status: BlockStatus): string {
@@ -46,6 +45,7 @@ interface BlockCardProps {
   onUndo: (instance: DailyInstance) => void;
   onTaskDetail: (instance: DailyInstance) => void;
   onSwap: (dragged: DailyInstance, target: DailyInstance) => void;
+  onRemoveRequest: (instance: DailyInstance) => void;
   onLayout: (id: string, y: number, height: number) => void;
   registerFlashTrigger: (id: string, trigger: () => void) => void;
   unregisterFlashTrigger: (id: string) => void;
@@ -60,15 +60,22 @@ export function BlockCard({
   onUndo,
   onTaskDetail,
   onSwap,
+  onRemoveRequest,
   onLayout,
   registerFlashTrigger,
   unregisterFlashTrigger,
 }: BlockCardProps) {
   const translateY = useSharedValue(0);
+  const translateX = useSharedValue(0);
+  const scale = useSharedValue(1);
+  const isDragging = useSharedValue(0);
+  const isOpen = useSharedValue(0);
   const flashOpacity = useSharedValue(0);
   const isDone = instance.status === "completed";
   const isMissed = instance.status === "missed";
   const isFixed = isInstanceFixed(instance);
+  const isPending = instance.status === "pending";
+  const revealWidth = isPending ? REVEAL_WIDTH_PENDING : REVEAL_WIDTH_SINGLE;
 
   const triggerFlash = () => {
     flashOpacity.value = withRepeat(
@@ -99,6 +106,7 @@ export function BlockCard({
       for (const inst of instances) {
         if (inst.id === draggedId) continue;
         if (isInstanceFixed(inst)) continue;
+        if (inst.status === "removed") continue;
         const pos = cardPositions.current[inst.id];
         if (!pos) continue;
         if (draggedCenterY >= pos.y && draggedCenterY <= pos.y + pos.height) {
@@ -123,8 +131,13 @@ export function BlockCard({
     [findSwapTarget, onSwap]
   );
 
-  const handleActionPress = () => {
-    if (instance.status === "skipped") return;
+  const closeSwipe = () => {
+    isOpen.value = 0;
+    translateX.value = withTiming(0, { duration: 150 });
+  };
+
+  const onCardPress = () => {
+    if (instance.status === "skipped" || saving) return;
 
     if (instance.status === "completed" || instance.status === "missed") {
       onUndo(instance);
@@ -134,21 +147,53 @@ export function BlockCard({
     onCheckIn(instance);
   };
 
-  const panGesture = Gesture.Pan()
+  const handleActionPress = () => {
+    onCardPress();
+  };
+
+  const dragGesture = Gesture.Pan()
     .enabled(!isFixed)
-    .activeOffsetY([-10, 10])
+    .onStart(() => {
+      isDragging.value = 1;
+      scale.value = withTiming(1.03, { duration: 120 });
+    })
     .onUpdate((e) => {
       translateY.value = e.translationY;
     })
     .onEnd((e) => {
+      isDragging.value = 0;
+      scale.value = withTiming(1, { duration: 120 });
       translateY.value = withTiming(0, { duration: 150 });
       runOnJS(handleDragEnd)(instance.id, e.translationY);
+    })
+    .onFinalize(() => {
+      isDragging.value = 0;
+      scale.value = withTiming(1, { duration: 120 });
     });
 
-  const animatedCardStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }],
-    zIndex: translateY.value !== 0 ? 20 : 1,
-    elevation: translateY.value !== 0 ? 8 : 0,
+  const swipeGesture = Gesture.Pan()
+    .enabled(!isFixed)
+    .activeOffsetX([-15, 15])
+    .failOffsetY([-8, 8])
+    .maxPointers(1)
+    .onUpdate((e) => {
+      const base = isOpen.value ? -revealWidth : 0;
+      translateX.value = Math.max(-revealWidth, Math.min(0, base + e.translationX));
+    })
+    .onEnd(() => {
+      const shouldOpen = translateX.value < -revealWidth / 2;
+      isOpen.value = shouldOpen ? 1 : 0;
+      translateX.value = withTiming(shouldOpen ? -revealWidth : 0, { duration: 150 });
+    });
+
+  const wrapperAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }, { scale: scale.value }],
+    zIndex: isDragging.value ? 100 : 1,
+    elevation: isDragging.value ? 8 : 0,
+  }));
+
+  const slideAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
   }));
 
   const flashStyle = useAnimatedStyle(() => ({
@@ -165,99 +210,168 @@ export function BlockCard({
 
   return (
     <Animated.View
-      style={[styles.card, isFixed && styles.cardFixed, animatedCardStyle]}
+      style={[styles.cardWrapper, wrapperAnimatedStyle]}
       onLayout={(e) => {
         const { y, height } = e.nativeEvent.layout;
         onLayout(instance.id, y, height);
       }}
     >
-      <Pressable
-        style={styles.cardInner}
-        onLongPress={() => onMarkMissed(instance)}
-        delayLongPress={450}
+      <View style={styles.actionsBehind}>
+        {isPending && (
+          <TouchableOpacity
+            style={[styles.actionBtn, styles.missedBtn, styles.actionBtnLeftRounded]}
+            onPress={() => {
+              closeSwipe();
+              onMarkMissed(instance);
+            }}
+            activeOpacity={0.85}
+          >
+            <Text style={[styles.actionText, styles.missedBtnText]}>Missed</Text>
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity
+          style={[
+            styles.actionBtn,
+            styles.removeBtn,
+            !isPending && styles.actionBtnLeftRounded,
+          ]}
+          onPress={() => {
+            closeSwipe();
+            onRemoveRequest(instance);
+          }}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.actionText}>Remove</Text>
+        </TouchableOpacity>
+      </View>
+
+      <Animated.View
+        style={[styles.slidingRow, isFixed && styles.slidingRowFixed, slideAnimatedStyle]}
       >
-        {isFixed ? (
-          <View style={[styles.dragHandle, styles.dragHandleFixed]}>
-            <Text style={styles.dragLinesFixed}>🔒</Text>
-          </View>
-        ) : (
-          <GestureDetector gesture={panGesture}>
-            <View style={styles.dragHandle} hitSlop={12}>
-              <Text style={styles.dragLines}>≡</Text>
+        {!isFixed ? (
+          <GestureDetector gesture={dragGesture}>
+            <View style={styles.dragHandleZone} hitSlop={8}>
+              <Text style={styles.dragHandleText}>⠿</Text>
             </View>
           </GestureDetector>
-        )}
-        <View
-          style={[styles.statusBar, { backgroundColor: getStatusColor(instance.status) }]}
-        />
-        <View style={styles.cardBody}>
-          <View style={styles.cardMain}>
-            <View style={styles.blockNameRow}>
-              <Text style={styles.blockName}>{instance.block?.name ?? "Block"}</Text>
-              {isFixed ? <Text style={styles.lockIcon}>🔒</Text> : null}
-            </View>
-            <Text style={styles.meta}>
-              {minutesToTime(instance.start_minutes)} – {minutesToTime(instance.end_minutes)}
-            </Text>
-            <TouchableOpacity onPress={() => onTaskDetail(instance)} hitSlop={8}>
-              {instance.task_detail ? (
-                <Text style={styles.task}>{instance.task_detail}</Text>
-              ) : (
-                <Text style={styles.taskAdd}>Add task →</Text>
-              )}
-            </TouchableOpacity>
+        ) : (
+          <View style={styles.dragHandleZone}>
+            <Text style={styles.lockIcon}>🔒</Text>
           </View>
+        )}
 
-          <TouchableOpacity
-            style={[
-              styles.actionCircle,
-              isDone && styles.actionCircleDone,
-              isMissed && styles.actionCircleMissed,
-            ]}
-            onPress={handleActionPress}
-            disabled={instance.status === "skipped" || saving}
-            hitSlop={8}
-          >
-            {isDone ? (
-              <Text style={styles.actionCircleCheck}>✓</Text>
-            ) : isMissed ? (
-              <Text style={styles.actionCircleMissedIcon}>!</Text>
-            ) : null}
-          </TouchableOpacity>
-        </View>
-      </Pressable>
-      <Animated.View style={flashStyle} pointerEvents="none" />
+        <GestureDetector gesture={swipeGesture}>
+          <Pressable style={styles.cardBody} onPress={onCardPress}>
+            <View
+              style={[styles.statusBar, { backgroundColor: getStatusColor(instance.status) }]}
+            />
+            <View style={styles.cardMain}>
+              <View style={styles.blockNameRow}>
+                <Text style={styles.blockName}>{instance.block?.name ?? "Block"}</Text>
+                {isFixed ? <Text style={styles.lockIcon}>🔒</Text> : null}
+              </View>
+              <Text style={styles.meta}>
+                {minutesToTime(instance.start_minutes)} – {minutesToTime(instance.end_minutes)}
+              </Text>
+              <TouchableOpacity onPress={() => onTaskDetail(instance)} hitSlop={8}>
+                {instance.task_detail ? (
+                  <Text style={styles.task}>{instance.task_detail}</Text>
+                ) : (
+                  <Text style={styles.taskAdd}>Add task →</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              style={[
+                styles.actionCircle,
+                isDone && styles.actionCircleDone,
+                isMissed && styles.actionCircleMissed,
+              ]}
+              onPress={handleActionPress}
+              disabled={instance.status === "skipped" || saving}
+              hitSlop={8}
+            >
+              {isDone ? (
+                <Text style={styles.actionCircleCheck}>✓</Text>
+              ) : isMissed ? (
+                <Text style={styles.actionCircleMissedIcon}>!</Text>
+              ) : null}
+            </TouchableOpacity>
+
+            <Animated.View style={flashStyle} pointerEvents="none" />
+          </Pressable>
+        </GestureDetector>
+      </Animated.View>
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.lg,
+  cardWrapper: {
     marginBottom: 10,
     position: "relative",
+    overflow: "hidden",
+    borderRadius: radii.lg,
   },
-  cardFixed: {
+  actionsBehind: {
+    position: "absolute",
+    right: 0,
+    top: 0,
+    bottom: 0,
+    flexDirection: "row",
+  },
+  actionBtn: {
+    width: ACTION_BUTTON_WIDTH,
+    height: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  missedBtn: {
+    backgroundColor: colors.dangerTint,
+  },
+  actionBtnLeftRounded: {
+    borderTopLeftRadius: radii.lg,
+    borderBottomLeftRadius: radii.lg,
+  },
+  missedBtnText: {
+    color: colors.danger,
+  },
+  removeBtn: {
+    backgroundColor: colors.danger,
+  },
+  actionText: {
+    color: colors.onPrimary,
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  slidingRow: {
+    flexDirection: "row",
+    alignItems: "stretch",
+    backgroundColor: colors.surface,
+    borderRadius: radii.lg,
+  },
+  slidingRowFixed: {
     backgroundColor: colors.surfaceDim,
     borderLeftWidth: 3,
     borderLeftColor: colors.textMuted,
   },
-  cardInner: {
-    flexDirection: "row",
-    alignItems: "stretch",
-    overflow: "hidden",
-    borderRadius: radii.lg,
-  },
-  dragHandle: {
+  dragHandleZone: {
     width: 28,
+    alignSelf: "stretch",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 14,
+    borderRightWidth: 1,
+    borderRightColor: colors.border,
   },
-  dragLines: { color: colors.textDisabled, fontSize: 18, lineHeight: 20 },
-  dragHandleFixed: { opacity: 0.5 },
-  dragLinesFixed: { fontSize: 14, lineHeight: 20 },
+  dragHandleText: {
+    color: colors.textDisabled,
+    fontSize: 18,
+    lineHeight: 18,
+    textAlignVertical: "center",
+    includeFontPadding: false,
+    marginTop: 6,
+  },
   statusBar: { width: 4 },
   cardBody: {
     flex: 1,
@@ -266,6 +380,7 @@ const styles = StyleSheet.create({
     padding: 14,
     paddingLeft: spacing.sm,
     gap: spacing.md,
+    borderRadius: radii.lg,
   },
   cardMain: { flex: 1 },
   blockNameRow: { flexDirection: "row", alignItems: "center", gap: spacing.xs },

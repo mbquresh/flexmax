@@ -15,7 +15,8 @@ export type BlockStatus =
   | "completed"
   | "missed"
   | "skipped"
-  | "rescheduled";
+  | "rescheduled"
+  | "removed";
 
 export type CompletionRating = "crushed" | "partial" | "pulled_away";
 
@@ -78,6 +79,7 @@ export interface DailyInstance {
   reflection_improve: string | null;
   rescheduled_to_id: string | null;
   is_fixed: boolean;
+  removed_reason: string | null;
   // Joined from schedule_blocks
   block?: ScheduleBlock;
 }

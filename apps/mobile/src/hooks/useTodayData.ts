@@ -38,6 +38,7 @@ export function useTodayData(userId: string | undefined) {
         .select("*, block:schedule_blocks(*)")
         .eq("user_id", userId)
         .eq("date", targetDate)
+        .neq("status", "removed")
         .order("start_minutes");
 
       if (error) {

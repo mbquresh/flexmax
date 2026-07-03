@@ -214,3 +214,7 @@ begin
   on conflict (block_id, date) do nothing;
 end;
 $$ language plpgsql security definer;
+
+-- Migration 005: block removal from today
+alter table public.daily_schedule_instances
+  add column if not exists removed_reason text;
