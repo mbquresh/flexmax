@@ -4,6 +4,7 @@ import { generateDailyInstances, supabase } from "../lib/supabase";
 import { scheduleTodayBlockNotifications } from "../lib/blockNotifications";
 import { fetchTodayStats, TodayStats } from "../lib/stats";
 import { getLocalDateString } from "../lib/time";
+import { handleError } from "../lib/errors";
 import { useStore } from "../store";
 
 export function useTodayData(userId: string | undefined) {
@@ -40,15 +41,17 @@ export function useTodayData(userId: string | undefined) {
         .order("start_minutes");
 
       if (error) {
-        console.error(error);
+        handleError(error, "loadToday");
       } else {
         setTodayInstances(data ?? []);
         if (data?.length) {
-          scheduleTodayBlockNotifications(data, targetDate).catch(console.error);
+          scheduleTodayBlockNotifications(data, targetDate).catch((err) =>
+            handleError(err, "scheduleBlockNotifications")
+          );
         }
         fetchTodayStats(userId)
           .then(setStats)
-          .catch(console.error);
+          .catch((err) => handleError(err, "fetchTodayStats"));
       }
       setLoading(false);
     },

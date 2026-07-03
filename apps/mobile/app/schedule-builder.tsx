@@ -31,6 +31,7 @@ import { useStore } from "../src/store";
 import { BlockCategory, ScheduleBlock } from "../src/types/database";
 import { minutesToTime, timeToMinutes } from "../src/lib/time";
 import { TimeField } from "../src/components/TimeField";
+import { handleError, getErrorMessage } from "../src/lib/errors";
 
 import { RequireAuth } from "../src/components/RequireAuth";
 import { colors, spacing, radii, typography } from "../src/theme";
@@ -82,7 +83,8 @@ function ScheduleBuilderScreenContent() {
       if (fetchError) throw fetchError;
       setBlocks(data ?? []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not load schedule");
+      handleError(err, "loadBlocks");
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -102,7 +104,7 @@ function ScheduleBuilderScreenContent() {
       setTips(loaded);
       await refreshProfile();
     } catch (err) {
-      console.error("Could not load schedule tips:", err);
+      handleError(err, "loadTips");
     } finally {
       setTipsLoading(false);
     }
@@ -181,7 +183,9 @@ function ScheduleBuilderScreenContent() {
       );
       setEditingBlockId(null);
     } catch (err) {
-      showError(err instanceof Error ? err.message : "Could not save block");
+      const message = getErrorMessage(err);
+      handleError(err, "handleSaveEdit", message);
+      setError(message);
     } finally {
       setSaving(false);
     }
@@ -207,7 +211,9 @@ function ScheduleBuilderScreenContent() {
           .sort((a, b) => a.start_minutes - b.start_minutes)
       );
     } catch (err) {
-      showError(err instanceof Error ? err.message : "Could not update days");
+      const message = getErrorMessage(err);
+      handleError(err, "handleToggleBlockDay", message);
+      setError(message);
     } finally {
       setSaving(false);
     }
@@ -251,7 +257,9 @@ function ScheduleBuilderScreenContent() {
         setAddOpen(false);
       }
     } catch (err) {
-      showError(err instanceof Error ? err.message : "Could not add block");
+      const message = getErrorMessage(err);
+      handleError(err, "handleAddBlock", message);
+      setError(message);
     } finally {
       setSaving(false);
     }
@@ -265,7 +273,9 @@ function ScheduleBuilderScreenContent() {
       setBlocks(blocks.filter((b) => b.id !== blockId));
       if (editingBlockId === blockId) setEditingBlockId(null);
     } catch (err) {
-      showError(err instanceof Error ? err.message : "Could not delete block");
+      const message = getErrorMessage(err);
+      handleError(err, "handleDeleteBlock", message);
+      setError(message);
     } finally {
       setSaving(false);
     }

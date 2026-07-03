@@ -8,11 +8,11 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  Alert,
   ScrollView,
 } from "react-native";
 import { router } from "expo-router";
 import { useAuth } from "../src/providers/AuthProvider";
+import { handleError, getErrorMessage } from "../src/lib/errors";
 import { colors, spacing, radii } from "../src/theme";
 
 export default function SignInScreen() {
@@ -29,13 +29,6 @@ export default function SignInScreen() {
       router.replace("/");
     }
   }, [session, authLoading]);
-
-  const showError = (message: string) => {
-    setError(message);
-    if (Platform.OS !== "web") {
-      Alert.alert("Error", message);
-    }
-  };
 
   const handleSubmit = async () => {
     if (!email.trim() || !password.trim()) return;
@@ -55,17 +48,20 @@ export default function SignInScreen() {
         );
       }
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Something went wrong";
+      const message = getErrorMessage(err);
 
       if (message.toLowerCase().includes("email not confirmed")) {
-        showError(
-          "Please confirm your email first (check your inbox), or turn off email confirmation in Supabase Auth settings."
-        );
+        const userMessage =
+          "Please confirm your email first (check your inbox), or turn off email confirmation in Supabase Auth settings.";
+        handleError(err, "signIn", userMessage);
+        setError(userMessage);
       } else if (message.toLowerCase().includes("invalid login")) {
-        showError("Wrong email or password. Try again.");
+        const userMessage = "Wrong email or password. Try again.";
+        handleError(err, "signIn", userMessage);
+        setError(userMessage);
       } else {
-        showError(message);
+        handleError(err, "signIn", message);
+        setError(message);
       }
     } finally {
       setLoading(false);

@@ -15,6 +15,7 @@ import { useAuth } from "../src/providers/AuthProvider";
 import { RequireAuth } from "../src/components/RequireAuth";
 import { colors, spacing, radii, typography } from "../src/theme";
 import { getInitials } from "../src/lib/format";
+import { handleError } from "../src/lib/errors";
 
 function AccountScreenContent() {
   const { session, profile, psychologyProfile, signOut, refreshProfile } = useAuth();
@@ -36,8 +37,7 @@ function AccountScreenContent() {
       await refreshProfile();
       setEditingName(false);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Could not save";
-      if (Platform.OS !== "web") Alert.alert("Error", msg);
+      handleError(err, "saveName", "Could not save");
     } finally {
       setSaving(false);
     }

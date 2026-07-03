@@ -8,7 +8,6 @@ import {
   TouchableOpacity,
   Pressable,
   Modal,
-  Alert,
   Animated as RNAnimated,
   Keyboard,
   Platform,
@@ -22,6 +21,7 @@ import Animated, {
 import { router } from "expo-router";
 import { supabase } from "../src/lib/supabase";
 import { findRescheduleSlot, getTodayLabel } from "../src/lib/schedule";
+import { handleError } from "../src/lib/errors";
 import { useAuth } from "../src/providers/AuthProvider";
 import { useStore } from "../src/store";
 import {
@@ -253,9 +253,7 @@ function TodayScreenContent() {
         completion_rating: null,
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Could not undo completion";
-      if (Platform.OS === "web") console.error(message);
-      else Alert.alert("Error", message);
+      handleError(err, "handleUndoCompletion", "Could not undo completion");
     } finally {
       setSaving(false);
       setUndoInstance(null);
@@ -274,9 +272,7 @@ function TodayScreenContent() {
 
       updateInstance(instanceId, { status: "pending" });
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Could not undo missed";
-      if (Platform.OS === "web") console.error(message);
-      else Alert.alert("Error", message);
+      handleError(err, "handleUndoMissed", "Could not undo missed");
     } finally {
       setSaving(false);
       setUndoInstance(null);
@@ -328,7 +324,7 @@ function TodayScreenContent() {
         if (fnError) throw fnError;
         setRecoveryAI(data);
       } catch (err) {
-        console.error("Recovery AI error:", err);
+        handleError(err, "fetchRecoveryAI");
         setRecoveryAI({
           acknowledgment: "One miss doesn't break anything — let's figure out what happened.",
           reflection_prompt_why: "What got in the way?",
@@ -339,9 +335,7 @@ function TodayScreenContent() {
         setRecoveryLoading(false);
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Could not mark missed";
-      if (Platform.OS === "web") console.error(message);
-      else Alert.alert("Error", message);
+      handleError(err, "handleMarkMissed", "Could not mark missed");
     } finally {
       setSaving(false);
     }
@@ -377,9 +371,7 @@ function TodayScreenContent() {
 
       closeRecovery();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Could not save reflection";
-      if (Platform.OS === "web") console.error(message);
-      else Alert.alert("Error", message);
+      handleError(err, "handleSaveRecovery", "Could not save reflection");
     } finally {
       setSaving(false);
     }
@@ -399,7 +391,7 @@ function TodayScreenContent() {
       .eq("id", recoveryInstance.id);
 
     if (error) {
-      console.error("Reschedule error:", error);
+      handleError(error, "handleReschedule");
       return;
     }
 
@@ -450,9 +442,7 @@ function TodayScreenContent() {
       });
       closeCheckIn();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Could not save check-in";
-      if (Platform.OS === "web") console.error(message);
-      else Alert.alert("Error", message);
+      handleError(err, "handleCheckIn", "Could not save check-in");
     } finally {
       setSaving(false);
     }
@@ -477,9 +467,7 @@ function TodayScreenContent() {
       updateInstance(instanceId, { task_detail: trimmed || null });
       closeTaskDetail();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Could not save task detail";
-      if (Platform.OS === "web") console.error(message);
-      else Alert.alert("Error", message);
+      handleError(err, "saveTaskDetail", "Could not save task detail");
     } finally {
       setSaving(false);
     }

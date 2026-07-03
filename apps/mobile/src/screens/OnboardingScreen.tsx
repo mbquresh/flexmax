@@ -17,13 +17,13 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
-  Alert,
 } from "react-native";
 import { router } from "expo-router";
 import { supabase } from "../lib/supabase";
 import { saveDemoProfile } from "../lib/mockOnboarding";
 import { useAuth } from "../providers/AuthProvider";
 import { useStore } from "../store";
+import { handleError, getErrorMessage } from "../lib/errors";
 import { colors, spacing, radii } from "../theme";
 
 interface Message {
@@ -74,7 +74,7 @@ export default function OnboardingScreen() {
 
       await extractAndSaveProfile(finalMessages);
     } catch (err) {
-      console.error("Profile save error:", err);
+      handleError(err, "finishOnboarding");
     }
   };
 
@@ -107,11 +107,8 @@ export default function OnboardingScreen() {
 
       if (done) await finishOnboarding(finalMessages);
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      console.error("Onboarding error:", err);
-      if (Platform.OS !== "web") {
-        Alert.alert("Something went wrong", message);
-      }
+      const message = getErrorMessage(err);
+      handleError(err, "sendMessage", message);
     } finally {
       setLoading(false);
     }
@@ -132,7 +129,7 @@ export default function OnboardingScreen() {
       setPsychologyProfile(data.profile);
       await refreshProfile();
     } catch (err) {
-      console.error("Profile extraction error:", err);
+      handleError(err, "extractProfile");
     }
   };
 
