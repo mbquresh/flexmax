@@ -54,6 +54,7 @@ function ScheduleBuilderScreenContent() {
   const [startTime, setStartTime] = useState("9:00 AM");
   const [endTime, setEndTime] = useState("10:00 AM");
   const [selectedDays, setSelectedDays] = useState<number[]>(ALL_DAYS);
+  const [isFixed, setIsFixed] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
@@ -61,6 +62,7 @@ function ScheduleBuilderScreenContent() {
   const [editStartTime, setEditStartTime] = useState("9:00 AM");
   const [editEndTime, setEditEndTime] = useState("10:00 AM");
   const [editSelectedDays, setEditSelectedDays] = useState<number[]>(ALL_DAYS);
+  const [editIsFixed, setEditIsFixed] = useState(false);
 
   const loadBlocks = async () => {
     if (!session.user.id) {
@@ -142,6 +144,7 @@ function ScheduleBuilderScreenContent() {
     setEditStartTime(minutesToTime(block.start_minutes));
     setEditEndTime(minutesToTime(block.end_minutes));
     setEditSelectedDays([...block.days_of_week]);
+    setEditIsFixed(block.is_fixed ?? false);
   };
 
   const cancelEdit = () => {
@@ -169,6 +172,7 @@ function ScheduleBuilderScreenContent() {
           days_of_week: editSelectedDays,
           start_minutes: timeToMinutes(editStartTime),
           end_minutes: timeToMinutes(editEndTime),
+          is_fixed: editIsFixed,
         })
         .eq("id", blockId)
         .select()
@@ -250,10 +254,12 @@ function ScheduleBuilderScreenContent() {
         endTime: blockEnd,
         sortOrder: blocks.length,
         daysOfWeek,
+        isFixed,
       });
       setBlocks([...blocks, created].sort((a, b) => a.start_minutes - b.start_minutes));
       if (!preset) {
         setName("");
+        setIsFixed(false);
         setAddOpen(false);
       }
     } catch (err) {
@@ -318,6 +324,22 @@ function ScheduleBuilderScreenContent() {
     );
   };
 
+  const renderFixedToggle = (value: boolean, onToggle: () => void) => (
+    <View style={styles.fixedToggleSection}>
+      <TouchableOpacity
+        style={[styles.fixedPill, value && styles.fixedPillActive]}
+        onPress={onToggle}
+      >
+        <Text style={[styles.fixedPillText, value && styles.fixedPillTextActive]}>
+          Fixed (can't be moved)
+        </Text>
+      </TouchableOpacity>
+      <Text style={styles.fixedHelper}>
+        Fixed blocks like work or commute stay locked in place.
+      </Text>
+    </View>
+  );
+
   const renderAddForm = () => (
     <View style={styles.addSection}>
       {!addOpen ? (
@@ -373,6 +395,7 @@ function ScheduleBuilderScreenContent() {
             <TimeField label="Start" value={startTime} onChange={setStartTime} />
             <TimeField label="End" value={endTime} onChange={setEndTime} />
           </View>
+          {renderFixedToggle(isFixed, () => setIsFixed((prev) => !prev))}
           <TouchableOpacity
             style={[styles.addBtn, saving && styles.btnDisabled]}
             onPress={() => handleAddBlock()}
@@ -405,6 +428,7 @@ function ScheduleBuilderScreenContent() {
       <Text style={styles.blockMeta}>
         {minutesToTime(item.start_minutes)} – {minutesToTime(item.end_minutes)} ·{" "}
         {formatDays(item.days_of_week)} · {item.category.replace("_", " ")}
+        {item.is_fixed ? " · 🔒 Fixed" : ""}
       </Text>
       <View style={styles.dayRow}>
         {WEEKDAYS.map((day) => {
@@ -470,6 +494,7 @@ function ScheduleBuilderScreenContent() {
             <TimeField label="Start" value={editStartTime} onChange={setEditStartTime} />
             <TimeField label="End" value={editEndTime} onChange={setEditEndTime} />
           </View>
+          {renderFixedToggle(editIsFixed, () => setEditIsFixed((prev) => !prev))}
           <TouchableOpacity
             style={[styles.addBtn, saving && styles.btnDisabled]}
             onPress={() => handleSaveEdit(item.id)}
@@ -646,6 +671,23 @@ const styles = StyleSheet.create({
   dayChipText: { color: colors.textFaint, fontSize: 12, fontWeight: "600" },
   dayChipTextActive: { color: colors.onPrimary },
   fieldLabel: { color: colors.textMuted, ...typography.smallBold },
+  fixedToggleSection: { gap: spacing.xs },
+  fixedPill: {
+    alignSelf: "flex-start",
+    borderRadius: radii.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.surface,
+    borderWidth: 0.5,
+    borderColor: colors.border,
+  },
+  fixedPillActive: {
+    backgroundColor: colors.primaryDeep,
+    borderColor: colors.primary,
+  },
+  fixedPillText: { color: colors.textMuted, fontSize: 13, fontWeight: "600" },
+  fixedPillTextActive: { color: colors.onPrimary },
+  fixedHelper: { color: colors.textFaint, fontSize: 12, lineHeight: 18 },
   empty: {
     color: colors.textFaint,
     textAlign: "center",

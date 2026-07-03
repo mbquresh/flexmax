@@ -142,6 +142,9 @@ function TodayScreenContent() {
   }, []);
 
   const handleSwap = async (instanceA: DailyInstance, instanceB: DailyInstance) => {
+    const isFixed = (inst: DailyInstance) => inst.is_fixed || !!inst.block?.is_fixed;
+    if (isFixed(instanceA) || isFixed(instanceB)) return;
+
     const durationA = instanceA.end_minutes - instanceA.start_minutes;
     const durationB = instanceB.end_minutes - instanceB.start_minutes;
 

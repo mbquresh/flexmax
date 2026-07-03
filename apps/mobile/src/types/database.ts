@@ -61,6 +61,7 @@ export interface ScheduleBlock {
   end_minutes: number;
   days_of_week: number[];
   sort_order: number;
+  is_fixed: boolean;
 }
 
 export interface DailyInstance {
@@ -76,6 +77,7 @@ export interface DailyInstance {
   reflection_why: string | null;
   reflection_improve: string | null;
   rescheduled_to_id: string | null;
+  is_fixed: boolean;
   // Joined from schedule_blocks
   block?: ScheduleBlock;
 }

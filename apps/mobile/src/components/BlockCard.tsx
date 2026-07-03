@@ -33,6 +33,10 @@ function getStatusColor(status: BlockStatus): string {
   return STATUS_COLORS[status] ?? STATUS_COLORS.pending;
 }
 
+function isInstanceFixed(instance: DailyInstance): boolean {
+  return instance.is_fixed || !!instance.block?.is_fixed;
+}
+
 interface BlockCardProps {
   instance: DailyInstance;
   saving: boolean;
@@ -64,6 +68,7 @@ export function BlockCard({
   const flashOpacity = useSharedValue(0);
   const isDone = instance.status === "completed";
   const isMissed = instance.status === "missed";
+  const isFixed = isInstanceFixed(instance);
 
   const triggerFlash = () => {
     flashOpacity.value = withRepeat(
@@ -93,6 +98,7 @@ export function BlockCard({
 
       for (const inst of instances) {
         if (inst.id === draggedId) continue;
+        if (isInstanceFixed(inst)) continue;
         const pos = cardPositions.current[inst.id];
         if (!pos) continue;
         if (draggedCenterY >= pos.y && draggedCenterY <= pos.y + pos.height) {
@@ -110,7 +116,7 @@ export function BlockCard({
       if (!swapTarget) return;
 
       const dragged = useStore.getState().todayInstances.find((i) => i.id === draggedId);
-      if (!dragged) return;
+      if (!dragged || isInstanceFixed(dragged)) return;
 
       onSwap(dragged, swapTarget);
     },
@@ -129,6 +135,7 @@ export function BlockCard({
   };
 
   const panGesture = Gesture.Pan()
+    .enabled(!isFixed)
     .activeOffsetY([-10, 10])
     .onUpdate((e) => {
       translateY.value = e.translationY;
@@ -158,7 +165,7 @@ export function BlockCard({
 
   return (
     <Animated.View
-      style={[styles.card, animatedCardStyle]}
+      style={[styles.card, isFixed && styles.cardFixed, animatedCardStyle]}
       onLayout={(e) => {
         const { y, height } = e.nativeEvent.layout;
         onLayout(instance.id, y, height);
@@ -169,17 +176,26 @@ export function BlockCard({
         onLongPress={() => onMarkMissed(instance)}
         delayLongPress={450}
       >
-        <GestureDetector gesture={panGesture}>
-          <View style={styles.dragHandle} hitSlop={12}>
-            <Text style={styles.dragLines}>≡</Text>
+        {isFixed ? (
+          <View style={[styles.dragHandle, styles.dragHandleFixed]}>
+            <Text style={styles.dragLinesFixed}>🔒</Text>
           </View>
-        </GestureDetector>
+        ) : (
+          <GestureDetector gesture={panGesture}>
+            <View style={styles.dragHandle} hitSlop={12}>
+              <Text style={styles.dragLines}>≡</Text>
+            </View>
+          </GestureDetector>
+        )}
         <View
           style={[styles.statusBar, { backgroundColor: getStatusColor(instance.status) }]}
         />
         <View style={styles.cardBody}>
           <View style={styles.cardMain}>
-            <Text style={styles.blockName}>{instance.block?.name ?? "Block"}</Text>
+            <View style={styles.blockNameRow}>
+              <Text style={styles.blockName}>{instance.block?.name ?? "Block"}</Text>
+              {isFixed ? <Text style={styles.lockIcon}>🔒</Text> : null}
+            </View>
             <Text style={styles.meta}>
               {minutesToTime(instance.start_minutes)} – {minutesToTime(instance.end_minutes)}
             </Text>
@@ -222,6 +238,11 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     position: "relative",
   },
+  cardFixed: {
+    backgroundColor: colors.surfaceDim,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.textMuted,
+  },
   cardInner: {
     flexDirection: "row",
     alignItems: "stretch",
@@ -235,6 +256,8 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   dragLines: { color: colors.textDisabled, fontSize: 18, lineHeight: 20 },
+  dragHandleFixed: { opacity: 0.5 },
+  dragLinesFixed: { fontSize: 14, lineHeight: 20 },
   statusBar: { width: 4 },
   cardBody: {
     flex: 1,
@@ -245,7 +268,9 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   cardMain: { flex: 1 },
+  blockNameRow: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
   blockName: { color: colors.text, fontSize: 16, fontWeight: "600" },
+  lockIcon: { fontSize: 14 },
   meta: { color: colors.textMuted, fontSize: 13, marginTop: spacing.xs },
   task: { color: colors.textSecondary, fontSize: 14, marginTop: spacing.sm },
   taskAdd: { color: colors.primary, fontSize: 13, marginTop: spacing.sm, fontWeight: "500" },
