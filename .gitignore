@@ -10,5 +10,6 @@ build/
 *.zip
 file_list.txt
 flexmax_snapshot.txt
+flex_max.bundle
 supabase/.temp/
 package-lock.json

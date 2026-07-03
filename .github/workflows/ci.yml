@@ -17,7 +17,6 @@ jobs:
           node-version: "20"
           cache: "yarn"
       - run: yarn install --frozen-lockfile
-      - run: yarn workspace @flexmax/ai build
       - name: Type check mobile
         run: yarn workspace @flexmax/mobile exec tsc --noEmit
 

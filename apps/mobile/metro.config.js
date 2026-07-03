@@ -12,8 +12,5 @@ config.resolver.nodeModulesPaths = [
   path.resolve(projectRoot, "node_modules"),
 ];
 config.resolver.disableHierarchicalLookup = true;
-config.resolver.extraNodeModules = {
-  "@flexmax/ai": path.resolve(workspaceRoot, "packages/ai"),
-};
 
 module.exports = config;

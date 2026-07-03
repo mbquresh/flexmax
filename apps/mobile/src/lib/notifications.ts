@@ -22,7 +22,6 @@ export async function registerPushToken(userId: string): Promise<string | null> 
   }
 
   if (finalStatus !== "granted") {
-    console.log("Push notification permission denied");
     return null;
   }
 
@@ -42,7 +41,6 @@ export async function registerPushToken(userId: string): Promise<string | null> 
     return null;
   }
 
-  console.log("Push token registered:", token);
   return token;
 }
 
