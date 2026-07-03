@@ -50,19 +50,17 @@ flex_max/
 
 ## Status
 
-Work in progress. **v1 and v1.1 are complete**, v1.2 in progress.
+Work in progress. **v1, v1.1 complete; v1.2 and chassis hardening complete; v1.3 in progress.**
 
 **Live now:**
 - AI onboarding (Claude-powered psychology profile extraction)
-- Schedule builder with AI coaching tips, quick-add presets, custom blocks, day toggles, inline editing
-- Today view: check-ins with completion ratings, drag-to-swap blocks, task detail entry, undo, missed-block recovery
+- Schedule builder: AI coaching tips, quick-add presets, custom blocks, day toggles, inline editing, fixed/flexible blocks
+- Today view: check-ins with ratings, drag-to-swap (respects fixed blocks + protected gaps), task detail entry, undo, missed-block recovery
 - Missed block recovery: AI reflection prompts + in-place rescheduling
 - Weekly streak tracking + completion rate
 - Account screen: psychology profile summary, editable name, redo onboarding
-- Push token registration
-- Nightly fill-in push notifications (pg_cron)
-- Post-block check-in notifications (local device scheduling)
-- Light grey + blue theme
+- Push token registration, nightly fill-in notifications (pg_cron), post-block check-in notifications (local scheduling)
+- Light grey + blue theme with centralized design tokens
 
 ## Getting started
 
@@ -85,31 +83,33 @@ yarn mobile
 ## Roadmap
 
 ### v1 — complete
-- Repo structure, Supabase schema + auth
-- AI onboarding chat (4-turn intake → psychology profile)
-- Schedule builder (blocks, presets, day toggles, inline editing)
-- AI schedule tips (profile-aware coaching)
-- Today view (daily instances, check-ins, drag-to-swap, missed-block recovery)
+Repo structure, Supabase schema + auth, AI onboarding, schedule builder, AI tips, Today view (check-ins, drag-to-swap, missed-block recovery).
 
 ### v1.1 — complete
-- Nightly task-fill notifications (pg_cron)
-- Post-block accountability check-ins (local scheduling)
-- Missed block recovery flow (AI reflection + in-place reschedule)
+Nightly task-fill notifications, post-block check-ins, missed block recovery flow.
 
-### v1.2 — in progress
-- Weekly streak + completion rate (done)
-- Account screen + psychology profile summary (done)
-- Light grey + blue theme (done)
-- App icon
+### v1.2 — complete
+Weekly streak + completion rate, account screen + psychology profile summary, light grey + blue theme.
+
+### Chassis hardening — complete
+Foundation work before v2 complexity:
+- Centralized design tokens (`src/theme.ts`)
+- Decomposed `today.tsx` into components + hooks
+- Standardized error handling utility
+- Streak calculation optimized (N+1 → single query)
+- Dead code sweep (removed unused `packages/ai` workspace)
+
+### v1.3 — in progress
+- Fixed/flexible blocks — inflexible anchors (work, commute) that can't move or be swap targets (done)
+- Swap respects protected gaps — unscheduled time is never treated as free (done)
+- Ad-hoc Today tasks — one-off tasks with an "anytime today" tray for quick untimed items (planned)
 
 ### v2 — planned
 - Behavioral learning: psychology profile evolves from actual completion patterns
 - Activity idle detection (requires native build)
-- Light/dark theme toggle
+- Light/dark theme toggle (design tokens make this cheap)
 - Morning brief
 - EAS build for reliable background notifications + TestFlight
-
-**Deferred:** AI schedule review screen (replaced by coaching tips), idle detection (native-only, moved to v2).
 
 ## Name
 
