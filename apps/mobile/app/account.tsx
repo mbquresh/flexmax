@@ -14,15 +14,7 @@ import { supabase } from "../src/lib/supabase";
 import { useAuth } from "../src/providers/AuthProvider";
 import { RequireAuth } from "../src/components/RequireAuth";
 import { colors, spacing, radii, typography } from "../src/theme";
-
-function getInitials(name: string): string {
-  return name
-    .split(" ")
-    .map((n) => n[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-}
+import { getInitials } from "../src/lib/format";
 
 function AccountScreenContent() {
   const { session, profile, psychologyProfile, signOut, refreshProfile } = useAuth();

@@ -8,213 +8,47 @@ import {
   TouchableOpacity,
   Pressable,
   Modal,
-  TextInput,
   Alert,
   Animated as RNAnimated,
   Keyboard,
-  KeyboardAvoidingView,
   Platform,
   ActionSheetIOS,
-  AppState,
 } from "react-native";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
-  runOnJS,
   useAnimatedStyle,
   useSharedValue,
-  withRepeat,
-  withSequence,
   withTiming,
 } from "react-native-reanimated";
 import { router } from "expo-router";
-import { generateDailyInstances, supabase } from "../src/lib/supabase";
-import { scheduleTodayBlockNotifications } from "../src/lib/blockNotifications";
+import { supabase } from "../src/lib/supabase";
 import { findRescheduleSlot, getTodayLabel } from "../src/lib/schedule";
 import { useAuth } from "../src/providers/AuthProvider";
 import { useStore } from "../src/store";
 import {
-  BlockStatus,
   CompletionRating,
   DailyInstance,
 } from "../src/types/database";
-import { minutesToTime, getLocalDateString } from "../src/lib/time";
-import { fetchTodayStats, TodayStats } from "../src/lib/stats";
+import { minutesToTime } from "../src/lib/time";
+import { getInitials } from "../src/lib/format";
 import { RequireAuth } from "../src/components/RequireAuth";
+import { StreakStrip } from "../src/components/StreakStrip";
+import { CheckInSheet } from "../src/components/CheckInSheet";
+import { TaskDetailSheet } from "../src/components/TaskDetailSheet";
+import { RecoverySheet, RecoveryAIContent } from "../src/components/RecoverySheet";
+import { BlockCard } from "../src/components/BlockCard";
+import { useTodayData } from "../src/hooks/useTodayData";
 import { colors, spacing, radii, typography } from "../src/theme";
-
-const STATUS_COLORS: Record<BlockStatus, string> = {
-  pending: colors.border,
-  active: colors.border,
-  completed: colors.success,
-  missed: colors.danger,
-  skipped: colors.textPlaceholder,
-  rescheduled: colors.textPlaceholder,
-};
-
-const RATING_OPTIONS: { value: CompletionRating; label: string }[] = [
-  { value: "crushed", label: "Crushed it" },
-  { value: "partial", label: "Partly" },
-  { value: "pulled_away", label: "Got pulled away" },
-];
-
-function getStatusColor(status: BlockStatus): string {
-  return STATUS_COLORS[status] ?? STATUS_COLORS.pending;
-}
-
-function getInitials(name: string): string {
-  return name
-    .split(" ")
-    .map((n) => n[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-}
-
-interface DraggableInstanceCardProps {
-  item: DailyInstance;
-  saving: boolean;
-  onLongPress: () => void;
-  onActionPress: () => void;
-  onOpenTaskDetail: () => void;
-  onCardLayout: (id: string, y: number, height: number) => void;
-  onDragEnd: (draggedId: string, translationY: number) => void;
-  registerFlashTrigger: (id: string, trigger: () => void) => void;
-  unregisterFlashTrigger: (id: string) => void;
-}
-
-function DraggableInstanceCard({
-  item,
-  saving,
-  onLongPress,
-  onActionPress,
-  onOpenTaskDetail,
-  onCardLayout,
-  onDragEnd,
-  registerFlashTrigger,
-  unregisterFlashTrigger,
-}: DraggableInstanceCardProps) {
-  const translateY = useSharedValue(0);
-  const flashOpacity = useSharedValue(0);
-  const isDone = item.status === "completed";
-  const isMissed = item.status === "missed";
-
-  const triggerFlash = () => {
-    flashOpacity.value = withRepeat(
-      withSequence(
-        withTiming(1, { duration: 200 }),
-        withTiming(0, { duration: 200 })
-      ),
-      5,
-      false
-    );
-  };
-
-  useEffect(() => {
-    registerFlashTrigger(item.id, triggerFlash);
-    return () => unregisterFlashTrigger(item.id);
-  }, [item.id, registerFlashTrigger, unregisterFlashTrigger]);
-
-  const panGesture = Gesture.Pan()
-    .activeOffsetY([-10, 10])
-    .onUpdate((e) => {
-      translateY.value = e.translationY;
-    })
-    .onEnd((e) => {
-      translateY.value = withTiming(0, { duration: 150 });
-      runOnJS(onDragEnd)(item.id, e.translationY);
-    });
-
-  const animatedCardStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }],
-    zIndex: translateY.value !== 0 ? 20 : 1,
-    elevation: translateY.value !== 0 ? 8 : 0,
-  }));
-
-  const flashStyle = useAnimatedStyle(() => ({
-    opacity: flashOpacity.value,
-    position: "absolute",
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: colors.streak,
-  }));
-
-  return (
-    <Animated.View
-      style={[styles.card, animatedCardStyle]}
-      onLayout={(e) => {
-        const { y, height } = e.nativeEvent.layout;
-        onCardLayout(item.id, y, height);
-      }}
-    >
-      <Pressable
-        style={styles.cardInner}
-        onLongPress={onLongPress}
-        delayLongPress={450}
-      >
-        <GestureDetector gesture={panGesture}>
-          <View style={styles.dragHandle} hitSlop={12}>
-            <Text style={styles.dragLines}>≡</Text>
-          </View>
-        </GestureDetector>
-        <View
-          style={[styles.statusBar, { backgroundColor: getStatusColor(item.status) }]}
-        />
-        <View style={styles.cardBody}>
-          <View style={styles.cardMain}>
-            <Text style={styles.blockName}>{item.block?.name ?? "Block"}</Text>
-            <Text style={styles.meta}>
-              {minutesToTime(item.start_minutes)} – {minutesToTime(item.end_minutes)}
-            </Text>
-            <TouchableOpacity onPress={onOpenTaskDetail} hitSlop={8}>
-              {item.task_detail ? (
-                <Text style={styles.task}>{item.task_detail}</Text>
-              ) : (
-                <Text style={styles.taskAdd}>Add task →</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-
-          <TouchableOpacity
-            style={[
-              styles.actionCircle,
-              isDone && styles.actionCircleDone,
-              isMissed && styles.actionCircleMissed,
-            ]}
-            onPress={onActionPress}
-            disabled={item.status === "skipped" || saving}
-            hitSlop={8}
-          >
-            {isDone ? (
-              <Text style={styles.actionCircleCheck}>✓</Text>
-            ) : isMissed ? (
-              <Text style={styles.actionCircleMissedIcon}>!</Text>
-            ) : null}
-          </TouchableOpacity>
-        </View>
-      </Pressable>
-      <Animated.View style={flashStyle} pointerEvents="none" />
-    </Animated.View>
-  );
-}
 
 function TodayScreenContent() {
   const { session, signOut, psychologyProfile, profile } = useAuth();
-  const { todayInstances, setTodayInstances, updateInstance } = useStore();
-  const [loading, setLoading] = useState(true);
-  const [totalBlocks, setTotalBlocks] = useState(0);
+  const { instances, displayDate, totalBlocks, stats, loading } = useTodayData(
+    session?.user.id
+  );
+  const { setTodayInstances, updateInstance } = useStore();
   const [checkInInstance, setCheckInInstance] = useState<DailyInstance | null>(null);
   const [undoInstance, setUndoInstance] = useState<DailyInstance | null>(null);
   const [recoveryInstance, setRecoveryInstance] = useState<DailyInstance | null>(null);
-  const [recoveryAI, setRecoveryAI] = useState<{
-    acknowledgment: string;
-    reflection_prompt_why: string;
-    reflection_prompt_improve: string;
-    pattern_note: string | null;
-  } | null>(null);
+  const [recoveryAI, setRecoveryAI] = useState<RecoveryAIContent | null>(null);
   const [recoveryLoading, setRecoveryLoading] = useState(false);
   const [reflectionWhy, setReflectionWhy] = useState("");
   const [reflectionImprove, setReflectionImprove] = useState("");
@@ -234,73 +68,11 @@ function TodayScreenContent() {
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cardPositions = useRef<Record<string, { y: number; height: number }>>({});
   const flashTriggers = useRef<Record<string, () => void>>({});
-  const [displayDate, setDisplayDate] = useState(getLocalDateString());
-  const currentDateRef = useRef(getLocalDateString());
-  const [stats, setStats] = useState<TodayStats | null>(null);
   const todayLabel = getTodayLabel();
 
-  const sortedInstances = [...todayInstances].sort(
+  const sortedInstances = [...instances].sort(
     (a, b) => a.start_minutes - b.start_minutes
   );
-
-  const loadToday = useCallback(
-    async (dateOverride?: string) => {
-      if (!session?.user.id) return;
-
-      const targetDate = dateOverride ?? getLocalDateString();
-      setDisplayDate(targetDate);
-      currentDateRef.current = targetDate;
-      setLoading(true);
-
-      await generateDailyInstances(targetDate);
-
-      const { count } = await supabase
-        .from("schedule_blocks")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", session.user.id);
-
-      setTotalBlocks(count ?? 0);
-
-      const { data, error } = await supabase
-        .from("daily_schedule_instances")
-        .select("*, block:schedule_blocks(*)")
-        .eq("user_id", session.user.id)
-        .eq("date", targetDate)
-        .order("start_minutes");
-
-      if (error) {
-        console.error(error);
-      } else {
-        setTodayInstances(data ?? []);
-        if (data?.length) {
-          scheduleTodayBlockNotifications(data, targetDate).catch(console.error);
-        }
-        fetchTodayStats(session.user.id)
-          .then(setStats)
-          .catch(console.error);
-      }
-      setLoading(false);
-    },
-    [session?.user.id, setTodayInstances]
-  );
-
-  useEffect(() => {
-    loadToday();
-  }, [session?.user.id, loadToday]);
-
-  useEffect(() => {
-    const subscription = AppState.addEventListener("change", (nextState) => {
-      if (nextState === "active") {
-        const freshDate = getLocalDateString();
-        if (freshDate !== currentDateRef.current) {
-          currentDateRef.current = freshDate;
-          loadToday(freshDate);
-        }
-      }
-    });
-
-    return () => subscription.remove();
-  }, [loadToday]);
 
   useEffect(() => {
     return () => {
@@ -369,29 +141,6 @@ function TodayScreenContent() {
     cardPositions.current[id] = { y, height };
   }, []);
 
-  const findSwapTarget = useCallback(
-    (draggedId: string, translationY: number): DailyInstance | null => {
-      const dragged = cardPositions.current[draggedId];
-      if (!dragged) return null;
-
-      const draggedCenterY = dragged.y + dragged.height / 2 + translationY;
-      const instances = [...useStore.getState().todayInstances].sort(
-        (a, b) => a.start_minutes - b.start_minutes
-      );
-
-      for (const instance of instances) {
-        if (instance.id === draggedId) continue;
-        const pos = cardPositions.current[instance.id];
-        if (!pos) continue;
-        if (draggedCenterY >= pos.y && draggedCenterY <= pos.y + pos.height) {
-          return instance;
-        }
-      }
-      return null;
-    },
-    []
-  );
-
   const handleSwap = async (instanceA: DailyInstance, instanceB: DailyInstance) => {
     const durationA = instanceA.end_minutes - instanceA.start_minutes;
     const durationB = instanceB.end_minutes - instanceB.start_minutes;
@@ -419,7 +168,7 @@ function TodayScreenContent() {
       .update({ start_minutes: newEarlierStart, end_minutes: newEarlierEnd })
       .eq("id", earlier.id);
 
-    const updated = todayInstances
+    const updated = instances
       .map((inst) => {
         if (inst.id === later.id) {
           return { ...inst, start_minutes: newLaterStart, end_minutes: newLaterEnd };
@@ -438,16 +187,6 @@ function TodayScreenContent() {
     );
     triggerFlash(earlier.id);
     triggerFlash(later.id);
-  };
-
-  const handleDragEnd = async (draggedId: string, translationY: number) => {
-    const swapTarget = findSwapTarget(draggedId, translationY);
-    if (!swapTarget) return;
-
-    const instanceA = useStore.getState().todayInstances.find((i) => i.id === draggedId);
-    if (!instanceA) return;
-
-    await handleSwap(instanceA, swapTarget);
   };
 
   const closeCheckIn = () => {
@@ -497,17 +236,6 @@ function TodayScreenContent() {
     }
 
     setUndoInstance(item);
-  };
-
-  const handleActionPress = (item: DailyInstance) => {
-    if (item.status === "skipped") return;
-
-    if (item.status === "completed" || item.status === "missed") {
-      showUndoActions(item);
-      return;
-    }
-
-    setCheckInInstance(item);
   };
 
   const handleUndoCompletion = async (instanceId: string) => {
@@ -689,7 +417,7 @@ function TodayScreenContent() {
     });
 
     setTodayInstances(
-      todayInstances
+      instances
         .map((i) => (i.id === recoveryInstance.id ? updated : i))
         .sort((a, b) => a.start_minutes - b.start_minutes)
     );
@@ -803,49 +531,7 @@ function TodayScreenContent() {
               <Text style={styles.link}>Sign out</Text>
             </TouchableOpacity>
           </View>
-          {stats ? (
-            <View style={styles.streakContainer}>
-              <View style={styles.streakHeader}>
-                <Text style={styles.streakLabel}>
-                  {stats.streak > 0
-                    ? `🔥 ${stats.streak}-day streak`
-                    : "Start your streak today"}
-                </Text>
-                <Text style={styles.streakSub}>{stats.completionRate}% this week</Text>
-              </View>
-              <View style={styles.weekStrip}>
-                {["M", "T", "W", "T", "F", "S", "S"].map((day, i) => {
-                  const todayIndex =
-                    new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;
-                  const isToday = i === todayIndex;
-                  const isDone = stats.weekDayCompletions[i];
-                  const isFuture = i > todayIndex;
-
-                  return (
-                    <View
-                      key={i}
-                      style={[
-                        styles.daySquare,
-                        isDone && styles.daySquareDone,
-                        isToday && !isDone && styles.daySquareToday,
-                        isFuture && styles.daySquareFuture,
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.daySquareLetter,
-                          isDone && styles.daySquareLetterDone,
-                          isFuture && styles.daySquareLetterFuture,
-                        ]}
-                      >
-                        {day}
-                      </Text>
-                    </View>
-                  );
-                })}
-              </View>
-            </View>
-          ) : null}
+          {stats ? <StreakStrip stats={stats} /> : null}
         </View>
 
         <View style={styles.list}>
@@ -857,15 +543,17 @@ function TodayScreenContent() {
             </Text>
           ) : (
             sortedInstances.map((item) => (
-              <DraggableInstanceCard
+              <BlockCard
                 key={item.id}
-                item={item}
+                instance={item}
                 saving={saving}
-                onLongPress={() => handleMarkMissed(item)}
-                onActionPress={() => handleActionPress(item)}
-                onOpenTaskDetail={() => openTaskDetail(item)}
-                onCardLayout={handleCardLayout}
-                onDragEnd={handleDragEnd}
+                cardPositions={cardPositions}
+                onCheckIn={setCheckInInstance}
+                onMarkMissed={handleMarkMissed}
+                onUndo={showUndoActions}
+                onTaskDetail={openTaskDetail}
+                onSwap={handleSwap}
+                onLayout={handleCardLayout}
                 registerFlashTrigger={registerFlashTrigger}
                 unregisterFlashTrigger={unregisterFlashTrigger}
               />
@@ -874,93 +562,20 @@ function TodayScreenContent() {
         </View>
       </ScrollView>
 
-      <Modal
-        visible={!!recoveryInstance}
-        transparent
-        animationType="slide"
-        onRequestClose={closeRecovery}
-      >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={styles.modalOverlay}
-        >
-          <View style={styles.recoverySheet}>
-            <View style={styles.sheetHandle} />
-            <Text style={styles.recoveryTitle}>
-              {recoveryInstance?.block?.name ?? "Block"} — missed
-            </Text>
-
-            {recoveryLoading ? (
-              <ActivityIndicator color={colors.primary} style={{ marginVertical: 16 }} />
-            ) : (
-              <>
-                <Text style={styles.recoveryAck}>{recoveryAI?.acknowledgment}</Text>
-                {recoveryAI?.pattern_note ? (
-                  <View style={styles.patternNote}>
-                    <Text style={styles.patternNoteText}>{recoveryAI.pattern_note}</Text>
-                  </View>
-                ) : null}
-              </>
-            )}
-
-            <Text style={styles.reflectionLabel}>
-              {recoveryAI?.reflection_prompt_why ?? "What got in the way?"}
-            </Text>
-            <TextInput
-              style={styles.reflectionInput}
-              value={reflectionWhy}
-              onChangeText={setReflectionWhy}
-              placeholder="Be honest..."
-              placeholderTextColor={colors.textPlaceholder}
-              multiline
-            />
-
-            <Text style={styles.reflectionLabel}>
-              {recoveryAI?.reflection_prompt_improve ?? "One thing you'd change next time?"}
-            </Text>
-            <TextInput
-              style={styles.reflectionInput}
-              value={reflectionImprove}
-              onChangeText={setReflectionImprove}
-              placeholder="Even something small..."
-              placeholderTextColor={colors.textPlaceholder}
-              multiline
-            />
-
-            {rescheduleSlot ? (
-              <View style={styles.rescheduleBox}>
-                <Text style={styles.rescheduleLabel}>Available slot today</Text>
-                <Text style={styles.rescheduleTime}>
-                  {minutesToTime(rescheduleSlot.start_minutes)} —{" "}
-                  {minutesToTime(rescheduleSlot.end_minutes)}
-                </Text>
-                <TouchableOpacity
-                  style={styles.rescheduleBtn}
-                  onPress={handleReschedule}
-                  disabled={saving}
-                >
-                  <Text style={styles.rescheduleBtnText}>Reschedule to this slot</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <Text style={styles.noSlot}>No open slots remaining today.</Text>
-            )}
-
-            <View style={styles.recoveryActions}>
-              <TouchableOpacity
-                style={[styles.saveBtn, saving && styles.btnDisabled]}
-                onPress={handleSaveRecovery}
-                disabled={saving}
-              >
-                <Text style={styles.saveBtnText}>Save reflection</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={closeRecovery} disabled={saving}>
-                <Text style={styles.skipText}>Skip</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
+      <RecoverySheet
+        recoveryInstance={recoveryInstance}
+        recoveryAI={recoveryAI}
+        recoveryLoading={recoveryLoading}
+        reflectionWhy={reflectionWhy}
+        reflectionImprove={reflectionImprove}
+        rescheduleSlot={rescheduleSlot}
+        saving={saving}
+        onSaveRecovery={handleSaveRecovery}
+        onReschedule={handleReschedule}
+        onChangeWhy={setReflectionWhy}
+        onChangeImprove={setReflectionImprove}
+        onClose={closeRecovery}
+      />
 
       {toastMessage ? (
         <Animated.View style={[styles.toast, toastAnimatedStyle]} pointerEvents="none">
@@ -968,101 +583,25 @@ function TodayScreenContent() {
         </Animated.View>
       ) : null}
 
-      <Modal
+      <CheckInSheet
+        instance={checkInInstance}
         visible={!!checkInInstance}
-        transparent
-        animationType="fade"
-        onRequestClose={closeCheckIn}
-      >
-        <Pressable style={styles.overlay} onPress={closeCheckIn}>
-          <Pressable onPress={(e) => e.stopPropagation()}>
-            <RNAnimated.View
-              style={[styles.sheet, { transform: [{ translateY: checkInSlideAnim }] }]}
-            >
-              <View style={styles.sheetHandle} />
-              <Text style={styles.sheetTitle}>
-                {checkInInstance?.block?.name ?? "Block"} — how'd it go?
-              </Text>
-              {checkInInstance ? (
-                <Text style={styles.sheetTime}>
-                  {minutesToTime(checkInInstance.start_minutes)} –{" "}
-                  {minutesToTime(checkInInstance.end_minutes)}
-                </Text>
-              ) : null}
+        slideAnim={checkInSlideAnim}
+        saving={saving}
+        onRate={handleCheckIn}
+        onClose={closeCheckIn}
+      />
 
-              <View style={styles.ratingRow}>
-                {RATING_OPTIONS.map((opt) => (
-                  <Pressable
-                    key={opt.value}
-                    style={({ pressed }) => [
-                      styles.ratingBtn,
-                      pressed && styles.ratingBtnActive,
-                    ]}
-                    onPress={() => handleCheckIn(opt.value)}
-                    disabled={saving}
-                  >
-                    <Text style={styles.ratingBtnText}>{opt.label}</Text>
-                  </Pressable>
-                ))}
-              </View>
-
-              {saving ? (
-                <ActivityIndicator color={colors.primary} style={styles.sheetSaving} />
-              ) : null}
-            </RNAnimated.View>
-          </Pressable>
-        </Pressable>
-      </Modal>
-
-      <Modal
+      <TaskDetailSheet
+        instance={activeTaskDetailInstance}
         visible={!!activeTaskDetailInstance}
-        transparent
-        animationType="fade"
-        onRequestClose={closeTaskDetail}
-      >
-        <KeyboardAvoidingView style={styles.overlay} behavior="padding">
-          <Pressable style={styles.overlayDismiss} onPress={closeTaskDetail} />
-          <RNAnimated.View
-            style={[styles.taskSheet, { transform: [{ translateY: taskSlideAnim }] }]}
-          >
-            <View style={styles.taskSheetHeader}>
-              <View style={styles.taskSheetHeaderText}>
-                <Text style={styles.sheetTitle}>
-                  {activeTaskDetailInstance?.block?.name ?? "Block"}
-                </Text>
-                <Text style={styles.taskSheetSubtitle}>What will you actually do?</Text>
-              </View>
-              <TouchableOpacity onPress={closeTaskDetail} hitSlop={8}>
-                <Text style={styles.taskSheetClose}>✕</Text>
-              </TouchableOpacity>
-            </View>
-
-            <TextInput
-              style={styles.taskDetailInput}
-              value={taskDetailDraft}
-              onChangeText={setTaskDetailDraft}
-              placeholder="e.g. Chest day + 20 min run"
-              placeholderTextColor={colors.textPlaceholder}
-              autoFocus
-              multiline
-              numberOfLines={3}
-              textAlignVertical="top"
-            />
-
-            <TouchableOpacity
-              style={[styles.taskSaveBtn, saving && styles.btnDisabled]}
-              onPress={saveTaskDetail}
-              disabled={saving}
-            >
-              {saving ? (
-                <ActivityIndicator color={colors.onPrimary} />
-              ) : (
-                <Text style={styles.taskSaveBtnText}>Save</Text>
-              )}
-            </TouchableOpacity>
-          </RNAnimated.View>
-        </KeyboardAvoidingView>
-      </Modal>
+        slideAnim={taskSlideAnim}
+        value={taskDetailDraft}
+        saving={saving}
+        onChangeText={setTaskDetailDraft}
+        onSave={saveTaskDetail}
+        onClose={closeTaskDetail}
+      />
 
       <Modal
         visible={!!undoInstance}
@@ -1133,121 +672,9 @@ const styles = StyleSheet.create({
   date: { fontSize: 14, color: colors.textMuted, marginTop: spacing.xs },
   headerActions: { flexDirection: "row", gap: spacing.lg, marginTop: spacing.md },
   link: { color: colors.primary, fontSize: 14 },
-  streakContainer: {
-    marginHorizontal: spacing.xl,
-    marginTop: spacing.md,
-    marginBottom: spacing.xs,
-    backgroundColor: colors.streakHousing,
-    borderRadius: radii.xl,
-    padding: 14,
-    borderWidth: 0.5,
-    borderColor: colors.streakBorder,
-  },
-  streakHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: spacing.md,
-  },
-  streakLabel: {
-    color: colors.streak,
-    ...typography.smallBold,
-  },
-  streakSub: {
-    color: colors.streakMuted,
-    ...typography.caption,
-  },
-  weekStrip: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 6,
-  },
-  daySquare: {
-    flex: 1,
-    aspectRatio: 1,
-    borderRadius: radii.sm,
-    backgroundColor: colors.streakBorder,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  daySquareDone: {
-    backgroundColor: colors.streak,
-  },
-  daySquareToday: {
-    backgroundColor: colors.streakBorder,
-    borderWidth: 1.5,
-    borderColor: colors.streak,
-  },
-  daySquareFuture: {
-    backgroundColor: colors.streakSquare,
-  },
-  daySquareLetter: {
-    color: colors.streakMuted,
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  daySquareLetterDone: {
-    color: colors.text,
-  },
-  daySquareLetterFuture: {
-    color: colors.streakMuted,
-  },
   list: { padding: spacing.lg, paddingBottom: 100 },
   scroll: { flex: 1 },
   scrollContent: { flexGrow: 1 },
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.lg,
-    marginBottom: 10,
-    position: "relative",
-  },
-  cardInner: {
-    flexDirection: "row",
-    alignItems: "stretch",
-    overflow: "hidden",
-    borderRadius: radii.lg,
-  },
-  dragHandle: {
-    width: 28,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 14,
-  },
-  dragLines: { color: colors.textDisabled, fontSize: 18, lineHeight: 20 },
-  statusBar: { width: 4 },
-  cardBody: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "flex-start",
-    padding: 14,
-    paddingLeft: spacing.sm,
-    gap: spacing.md,
-  },
-  cardMain: { flex: 1 },
-  blockName: { color: colors.text, fontSize: 16, fontWeight: "600" },
-  meta: { color: colors.textMuted, fontSize: 13, marginTop: spacing.xs },
-  task: { color: colors.textSecondary, fontSize: 14, marginTop: spacing.sm },
-  taskAdd: { color: colors.primary, fontSize: 13, marginTop: spacing.sm, fontWeight: "500" },
-  actionCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: radii.pill,
-    borderWidth: 1.5,
-    borderColor: colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 2,
-  },
-  actionCircleDone: {
-    borderColor: colors.success,
-    backgroundColor: colors.success,
-  },
-  actionCircleMissed: {
-    borderColor: colors.danger,
-    backgroundColor: "transparent",
-  },
-  actionCircleCheck: { color: colors.text, fontSize: 16, fontWeight: "700" },
-  actionCircleMissedIcon: { color: colors.danger, fontSize: 16, fontWeight: "700" },
   empty: { color: colors.textFaint, textAlign: "center", marginTop: 40, lineHeight: 22 },
   toast: {
     position: "absolute",
@@ -1267,92 +694,6 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.55)",
     justifyContent: "flex-end",
   },
-  overlayDismiss: {
-    flex: 1,
-  },
-  sheet: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radii.pill,
-    borderTopRightRadius: radii.pill,
-    paddingHorizontal: spacing.xl,
-    paddingBottom: Platform.OS === "ios" ? 36 : 24,
-    paddingTop: 10,
-  },
-  sheetHandle: {
-    alignSelf: "center",
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.textDisabled,
-    marginBottom: spacing.lg,
-  },
-  sheetTitle: {
-    color: colors.text,
-    fontSize: 18,
-    fontWeight: "600",
-  },
-  sheetTime: { color: colors.textMuted, fontSize: 14, marginBottom: spacing.xl, marginTop: 6 },
-  ratingRow: { flexDirection: "row", gap: spacing.sm },
-  ratingBtn: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderWidth: 0.5,
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    paddingVertical: 14,
-    paddingHorizontal: 6,
-    alignItems: "center",
-  },
-  ratingBtnActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  ratingBtnText: {
-    color: colors.onPrimary,
-    fontSize: 12,
-    fontWeight: "600",
-    textAlign: "center",
-  },
-  sheetSaving: { marginTop: spacing.lg },
-  taskSheet: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radii.pill,
-    borderTopRightRadius: radii.pill,
-    paddingHorizontal: spacing.xl,
-    paddingBottom: Platform.OS === "ios" ? 36 : 24,
-    paddingTop: spacing.lg,
-  },
-  taskSheetHeader: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    marginBottom: spacing.lg,
-    gap: spacing.md,
-  },
-  taskSheetHeaderText: { flex: 1 },
-  taskSheetSubtitle: { color: colors.textMuted, fontSize: 14, marginTop: spacing.xs },
-  taskSheetClose: { color: colors.textMuted, fontSize: 20, lineHeight: 22 },
-  taskDetailInput: {
-    backgroundColor: colors.surface,
-    borderWidth: 0.5,
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    paddingHorizontal: 14,
-    paddingVertical: spacing.md,
-    color: colors.text,
-    fontSize: 15,
-    minHeight: 88,
-    maxHeight: 88,
-  },
-  taskSaveBtn: {
-    marginTop: spacing.lg,
-    backgroundColor: colors.primary,
-    borderRadius: radii.lg,
-    paddingVertical: 14,
-    alignItems: "center",
-  },
-  taskSaveBtnText: { color: colors.onPrimary, ...typography.bodyBold },
-  btnDisabled: { opacity: 0.5 },
   undoSheet: {
     backgroundColor: colors.surface,
     borderTopLeftRadius: radii.pill,
@@ -1370,68 +711,4 @@ const styles = StyleSheet.create({
   undoOptionLast: { borderBottomWidth: 0 },
   undoOptionDestructive: { color: colors.danger, fontSize: 16, fontWeight: "600" },
   undoOptionCancel: { color: colors.textMuted, fontSize: 16, fontWeight: "500" },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: "flex-end",
-    backgroundColor: "rgba(0,0,0,0.6)",
-  },
-  recoverySheet: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.round,
-    padding: spacing.xl,
-    paddingBottom: 40,
-    gap: spacing.md,
-  },
-  recoveryTitle: { color: colors.danger, ...typography.heading },
-  recoveryAck: { color: colors.textSecondary, fontSize: 14, lineHeight: 22 },
-  patternNote: {
-    backgroundColor: colors.dangerTint,
-    borderLeftWidth: 2,
-    borderLeftColor: colors.danger,
-    borderRadius: radii.sm,
-    padding: spacing.md,
-  },
-  patternNoteText: { color: colors.danger, fontSize: 13, lineHeight: 20 },
-  reflectionLabel: { color: colors.textMuted, ...typography.smallBold },
-  reflectionInput: {
-    backgroundColor: colors.surface,
-    borderWidth: 0.5,
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    padding: spacing.md,
-    color: colors.text,
-    fontSize: 14,
-    minHeight: 60,
-  },
-  rescheduleBox: {
-    backgroundColor: colors.successTint,
-    borderRadius: radii.md,
-    padding: 14,
-    gap: 6,
-  },
-  rescheduleLabel: { color: colors.success, fontSize: 12, fontWeight: "600" },
-  rescheduleTime: { color: colors.text, ...typography.bodyBold },
-  rescheduleBtn: {
-    backgroundColor: colors.success,
-    borderRadius: radii.sm,
-    paddingVertical: 10,
-    alignItems: "center",
-    marginTop: spacing.xs,
-  },
-  rescheduleBtnText: { color: colors.text, fontSize: 14, fontWeight: "600" },
-  noSlot: { color: colors.textPlaceholder, fontSize: 13, fontStyle: "italic" },
-  recoveryActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: spacing.xs,
-  },
-  saveBtn: {
-    backgroundColor: colors.primary,
-    borderRadius: radii.md,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xxl,
-  },
-  saveBtnText: { color: colors.onPrimary, ...typography.bodyBold },
-  skipText: { color: colors.textPlaceholder, fontSize: 14 },
 });
