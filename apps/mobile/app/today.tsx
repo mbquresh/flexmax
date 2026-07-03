@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Pressable,
   Modal,
+  Alert,
   Animated as RNAnimated,
   Keyboard,
   Platform,
@@ -41,7 +42,7 @@ import { colors, spacing, radii, typography } from "../src/theme";
 
 function TodayScreenContent() {
   const { session, signOut, psychologyProfile, profile } = useAuth();
-  const { instances, displayDate, totalBlocks, stats, loading } = useTodayData(
+  const { instances, displayDate, totalBlocks, stats, loading, resetToday } = useTodayData(
     session?.user.id
   );
   const { setTodayInstances, updateInstance } = useStore();
@@ -104,6 +105,21 @@ function TodayScreenContent() {
     }
   }, [activeTaskDetailInstance, taskSlideAnim]);
 
+  const confirmReset = () => {
+    if (Platform.OS === "web") {
+      resetToday();
+      return;
+    }
+    Alert.alert(
+      "Reset today?",
+      "This clears all changes, check-ins, and swaps for today and restores your default schedule. This can't be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Reset", style: "destructive", onPress: resetToday },
+      ]
+    );
+  };
+
   const toastAnimatedStyle = useAnimatedStyle(() => ({
     opacity: toastOpacity.value,
     transform: [{ translateY: toastY.value }],
@@ -142,8 +158,8 @@ function TodayScreenContent() {
   }, []);
 
   const handleSwap = async (instanceA: DailyInstance, instanceB: DailyInstance) => {
-    const isFixed = (inst: DailyInstance) => inst.is_fixed || !!inst.block?.is_fixed;
-    if (isFixed(instanceA) || isFixed(instanceB)) return;
+    if (instanceA.is_fixed || instanceA.block?.is_fixed) return;
+    if (instanceB.is_fixed || instanceB.block?.is_fixed) return;
 
     const durationA = instanceA.end_minutes - instanceA.start_minutes;
     const durationB = instanceB.end_minutes - instanceB.start_minutes;
@@ -152,32 +168,80 @@ function TodayScreenContent() {
       instanceA.start_minutes < instanceB.start_minutes
         ? [instanceA, instanceB]
         : [instanceB, instanceA];
-
     const earlierDuration = earlier.end_minutes - earlier.start_minutes;
     const laterDuration = later.end_minutes - later.start_minutes;
 
-    const newLaterStart = earlier.start_minutes;
-    const newLaterEnd = newLaterStart + laterDuration;
-    const newEarlierStart = newLaterEnd;
-    const newEarlierEnd = newEarlierStart + earlierDuration;
+    const wereAdjacent = earlier.end_minutes === later.start_minutes;
+
+    let newAStart: number;
+    let newAEnd: number;
+    let newBStart: number;
+    let newBEnd: number;
+
+    if (wereAdjacent) {
+      const laterNewStart = earlier.start_minutes;
+      const laterNewEnd = laterNewStart + laterDuration;
+      const earlierNewStart = laterNewEnd;
+      const earlierNewEnd = earlierNewStart + earlierDuration;
+
+      if (earlier.id === instanceA.id) {
+        newAStart = earlierNewStart;
+        newAEnd = earlierNewEnd;
+        newBStart = laterNewStart;
+        newBEnd = laterNewEnd;
+      } else {
+        newAStart = laterNewStart;
+        newAEnd = laterNewEnd;
+        newBStart = earlierNewStart;
+        newBEnd = earlierNewEnd;
+      }
+    } else {
+      newAStart = instanceB.start_minutes;
+      newAEnd = newAStart + durationA;
+      newBStart = instanceA.start_minutes;
+      newBEnd = newBStart + durationB;
+
+      const otherBlocks = instances.filter(
+        (inst) =>
+          inst.id !== instanceA.id &&
+          inst.id !== instanceB.id &&
+          inst.status !== "skipped"
+      );
+      const overlaps = (start: number, end: number, other: DailyInstance) =>
+        start < other.end_minutes && end > other.start_minutes;
+
+      const swappedCollide = newAStart < newBEnd && newAEnd > newBStart;
+      const conflictA = otherBlocks.find((o) => overlaps(newAStart, newAEnd, o));
+      const conflictB = otherBlocks.find((o) => overlaps(newBStart, newBEnd, o));
+
+      if (conflictA || conflictB || swappedCollide) {
+        const conflictName =
+          conflictA?.block?.name ?? conflictB?.block?.name ?? "another block";
+        const tooBig = conflictA ? instanceA : instanceB;
+        showToast(
+          `Can't swap — ${tooBig.block?.name ?? "block"} doesn't fit there without overlapping ${conflictName}`
+        );
+        return;
+      }
+    }
 
     await supabase
       .from("daily_schedule_instances")
-      .update({ start_minutes: newLaterStart, end_minutes: newLaterEnd })
-      .eq("id", later.id);
+      .update({ start_minutes: newAStart, end_minutes: newAEnd })
+      .eq("id", instanceA.id);
 
     await supabase
       .from("daily_schedule_instances")
-      .update({ start_minutes: newEarlierStart, end_minutes: newEarlierEnd })
-      .eq("id", earlier.id);
+      .update({ start_minutes: newBStart, end_minutes: newBEnd })
+      .eq("id", instanceB.id);
 
     const updated = instances
       .map((inst) => {
-        if (inst.id === later.id) {
-          return { ...inst, start_minutes: newLaterStart, end_minutes: newLaterEnd };
+        if (inst.id === instanceA.id) {
+          return { ...inst, start_minutes: newAStart, end_minutes: newAEnd };
         }
-        if (inst.id === earlier.id) {
-          return { ...inst, start_minutes: newEarlierStart, end_minutes: newEarlierEnd };
+        if (inst.id === instanceB.id) {
+          return { ...inst, start_minutes: newBStart, end_minutes: newBEnd };
         }
         return inst;
       })
@@ -186,10 +250,10 @@ function TodayScreenContent() {
     setTodayInstances(updated);
 
     showToast(
-      `${later.block?.name ?? "Block"} swapped with ${earlier.block?.name ?? "block"}`
+      `${instanceA.block?.name ?? "Block"} swapped with ${instanceB.block?.name ?? "block"}`
     );
-    triggerFlash(earlier.id);
-    triggerFlash(later.id);
+    triggerFlash(instanceA.id);
+    triggerFlash(instanceB.id);
   };
 
   const closeCheckIn = () => {
@@ -513,6 +577,9 @@ function TodayScreenContent() {
             <TouchableOpacity onPress={() => router.push("/schedule-builder")}>
               <Text style={styles.link}>Edit schedule</Text>
             </TouchableOpacity>
+            <TouchableOpacity onPress={confirmReset}>
+              <Text style={styles.linkDanger}>Reset today</Text>
+            </TouchableOpacity>
             <TouchableOpacity
               onPress={async () => {
                 await signOut();
@@ -663,6 +730,7 @@ const styles = StyleSheet.create({
   date: { fontSize: 14, color: colors.textMuted, marginTop: spacing.xs },
   headerActions: { flexDirection: "row", gap: spacing.lg, marginTop: spacing.md },
   link: { color: colors.primary, fontSize: 14 },
+  linkDanger: { color: colors.danger, fontSize: 14 },
   list: { padding: spacing.lg, paddingBottom: 100 },
   scroll: { flex: 1 },
   scrollContent: { flexGrow: 1 },

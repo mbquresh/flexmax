@@ -76,6 +76,27 @@ export function useTodayData(userId: string | undefined) {
     return () => subscription.remove();
   }, [loadToday]);
 
+  const resetToday = useCallback(async () => {
+    if (!userId) return;
+    const targetDate = getLocalDateString();
+
+    try {
+      const { error: delError } = await supabase
+        .from("daily_schedule_instances")
+        .delete()
+        .eq("user_id", userId)
+        .eq("date", targetDate);
+
+      if (delError) throw delError;
+
+      await generateDailyInstances(targetDate);
+
+      await loadToday();
+    } catch (err) {
+      handleError(err, "resetToday", "Could not reset today's schedule");
+    }
+  }, [userId, loadToday]);
+
   return {
     instances: todayInstances,
     displayDate,
@@ -83,5 +104,6 @@ export function useTodayData(userId: string | undefined) {
     stats,
     loading,
     reload: loadToday,
+    resetToday,
   };
 }
