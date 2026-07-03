@@ -59,25 +59,37 @@ export async function fetchTodayStats(userId: string): Promise<TodayStats> {
   });
 
   // ── Streak: consecutive days with at least one completed block ─────────
-  let streak = 0;
-  let checkDate = new Date(now);
+  // Single query: fetch all completed dates in the last 30 days, compute locally
+  const thirtyDaysAgo = new Date(now);
+  thirtyDaysAgo.setDate(now.getDate() - 30);
+  const thirtyDaysAgoStr = [
+    thirtyDaysAgo.getFullYear(),
+    String(thirtyDaysAgo.getMonth() + 1).padStart(2, "0"),
+    String(thirtyDaysAgo.getDate()).padStart(2, "0"),
+  ].join("-");
 
-  for (let i = 0; i < 30; i++) {
+  const { data: completedRows } = await supabase
+    .from("daily_schedule_instances")
+    .select("date")
+    .eq("user_id", userId)
+    .eq("status", "completed")
+    .gte("date", thirtyDaysAgoStr)
+    .order("date", { ascending: false });
+
+  // Distinct set of dates that had at least one completion
+  const completedDates = new Set((completedRows ?? []).map((r) => r.date));
+
+  let streak = 0;
+  const checkDate = new Date(now);
+
+  for (let i = 0; i < 31; i++) {
     const dateStr = [
       checkDate.getFullYear(),
       String(checkDate.getMonth() + 1).padStart(2, "0"),
       String(checkDate.getDate()).padStart(2, "0"),
     ].join("-");
 
-    const { data } = await supabase
-      .from("daily_schedule_instances")
-      .select("status")
-      .eq("user_id", userId)
-      .eq("date", dateStr)
-      .eq("status", "completed")
-      .limit(1);
-
-    if (data && data.length > 0) {
+    if (completedDates.has(dateStr)) {
       streak++;
       checkDate.setDate(checkDate.getDate() - 1);
     } else {
