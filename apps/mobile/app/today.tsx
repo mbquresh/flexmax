@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -29,9 +29,10 @@ import { useAuth } from "../src/providers/AuthProvider";
 import { useStore } from "../src/store";
 import {
   CompletionRating,
+  AdhocTask,
   DailyInstance,
 } from "../src/types/database";
-import { minutesToTime } from "../src/lib/time";
+import { minutesToTime, timeToMinutes } from "../src/lib/time";
 import { getInitials } from "../src/lib/format";
 import { RequireAuth } from "../src/components/RequireAuth";
 import { StreakStrip } from "../src/components/StreakStrip";
@@ -39,14 +40,26 @@ import { CheckInSheet } from "../src/components/CheckInSheet";
 import { TaskDetailSheet } from "../src/components/TaskDetailSheet";
 import { RecoverySheet, RecoveryAIContent } from "../src/components/RecoverySheet";
 import { BlockCard } from "../src/components/BlockCard";
+import { AdhocTimedCard } from "../src/components/AdhocTimedCard";
+import { AdhocAnytimeRow } from "../src/components/AdhocAnytimeRow";
+import { TimeField } from "../src/components/TimeField";
 import { useTodayData } from "../src/hooks/useTodayData";
 import { colors, spacing, radii, typography } from "../src/theme";
 
 function TodayScreenContent() {
   const { session, signOut, psychologyProfile, profile } = useAuth();
-  const { instances, displayDate, totalBlocks, stats, loading, resetToday } = useTodayData(
-    session?.user.id
-  );
+  const {
+    instances,
+    displayDate,
+    totalBlocks,
+    stats,
+    loading,
+    reload,
+    resetToday,
+    timedAdhoc,
+    anytimeAdhoc,
+    updateAdhocTask,
+  } = useTodayData(session?.user.id);
   const { setTodayInstances, updateInstance } = useStore();
   const [checkInInstance, setCheckInInstance] = useState<DailyInstance | null>(null);
   const [undoInstance, setUndoInstance] = useState<DailyInstance | null>(null);
@@ -64,6 +77,11 @@ function TodayScreenContent() {
   const [taskDetailDraft, setTaskDetailDraft] = useState("");
   const [removeInstance, setRemoveInstance] = useState<DailyInstance | null>(null);
   const [removeReason, setRemoveReason] = useState("");
+  const [addTaskOpen, setAddTaskOpen] = useState(false);
+  const [addTaskName, setAddTaskName] = useState("");
+  const [addTaskMode, setAddTaskMode] = useState<"timed" | "anytime">("timed");
+  const [addTaskStart, setAddTaskStart] = useState("9:00 AM");
+  const [addTaskEnd, setAddTaskEnd] = useState("9:30 AM");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const checkInSlideAnim = useRef(new RNAnimated.Value(400)).current;
@@ -78,6 +96,22 @@ function TodayScreenContent() {
   const sortedInstances = [...instances].sort(
     (a, b) => a.start_minutes - b.start_minutes
   );
+
+  const timelineItems = useMemo(() => {
+    const items = [
+      ...sortedInstances.map((instance) => ({
+        kind: "block" as const,
+        instance,
+        sortKey: instance.start_minutes,
+      })),
+      ...timedAdhoc.map((task) => ({
+        kind: "adhoc" as const,
+        task,
+        sortKey: task.start_minutes!,
+      })),
+    ];
+    return items.sort((a, b) => a.sortKey - b.sortKey);
+  }, [sortedInstances, timedAdhoc]);
 
   useEffect(() => {
     return () => {
@@ -280,6 +314,76 @@ function TodayScreenContent() {
     } finally {
       setRemoveInstance(null);
       setRemoveReason("");
+    }
+  };
+
+  const openAddTask = () => {
+    setAddTaskName("");
+    setAddTaskMode("timed");
+    setAddTaskStart("9:00 AM");
+    setAddTaskEnd("9:30 AM");
+    setAddTaskOpen(true);
+  };
+
+  const closeAddTask = () => {
+    setAddTaskOpen(false);
+    setAddTaskName("");
+    setAddTaskMode("timed");
+    setAddTaskStart("9:00 AM");
+    setAddTaskEnd("9:30 AM");
+  };
+
+  const handleAddTask = async () => {
+    const name = addTaskName.trim();
+    if (!name || !session?.user.id) return;
+
+    let start_minutes: number | null = null;
+    let end_minutes: number | null = null;
+
+    if (addTaskMode === "timed") {
+      start_minutes = timeToMinutes(addTaskStart);
+      end_minutes = timeToMinutes(addTaskEnd);
+      if (end_minutes <= start_minutes) {
+        Alert.alert("Invalid time", "End time must be after start time.");
+        return;
+      }
+    }
+
+    setSaving(true);
+    try {
+      const { error } = await supabase.from("adhoc_tasks").insert({
+        user_id: session.user.id,
+        date: displayDate,
+        name,
+        start_minutes,
+        end_minutes,
+        status: "pending",
+      });
+      if (error) throw error;
+      closeAddTask();
+      await reload();
+      showToast(
+        addTaskMode === "timed" ? "Task added to timeline" : "Task added to Anytime today"
+      );
+    } catch (err) {
+      handleError(err, "handleAddTask", "Could not add task");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const toggleAdhocComplete = async (task: AdhocTask) => {
+    const newStatus = task.status === "completed" ? "pending" : "completed";
+    updateAdhocTask(task.id, { status: newStatus });
+    try {
+      const { error } = await supabase
+        .from("adhoc_tasks")
+        .update({ status: newStatus })
+        .eq("id", task.id);
+      if (error) throw error;
+    } catch (err) {
+      updateAdhocTask(task.id, { status: task.status });
+      handleError(err, "toggleAdhocComplete", "Could not update task");
     }
   };
 
@@ -620,31 +724,57 @@ function TodayScreenContent() {
         </View>
 
         <View style={styles.list}>
-          {sortedInstances.length === 0 ? (
+          {timelineItems.length === 0 ? (
             <Text style={styles.empty}>
               {totalBlocks > 0
                 ? `Nothing scheduled for ${todayLabel}. Your blocks may be set for other days — go to Edit schedule and tap ${todayLabel} on each block.`
                 : "No blocks yet. Add some in the schedule builder first."}
             </Text>
           ) : (
-            sortedInstances.map((item) => (
-              <BlockCard
-                key={item.id}
-                instance={item}
-                saving={saving}
-                cardPositions={cardPositions}
-                onCheckIn={setCheckInInstance}
-                onMarkMissed={handleMarkMissed}
-                onUndo={showUndoActions}
-                onTaskDetail={openTaskDetail}
-                onSwap={handleSwap}
-                onRemoveRequest={setRemoveInstance}
-                onLayout={handleCardLayout}
-                registerFlashTrigger={registerFlashTrigger}
-                unregisterFlashTrigger={unregisterFlashTrigger}
-              />
-            ))
+            timelineItems.map((item) =>
+              item.kind === "block" ? (
+                <BlockCard
+                  key={item.instance.id}
+                  instance={item.instance}
+                  saving={saving}
+                  cardPositions={cardPositions}
+                  onCheckIn={setCheckInInstance}
+                  onMarkMissed={handleMarkMissed}
+                  onUndo={showUndoActions}
+                  onTaskDetail={openTaskDetail}
+                  onSwap={handleSwap}
+                  onRemoveRequest={setRemoveInstance}
+                  onLayout={handleCardLayout}
+                  registerFlashTrigger={registerFlashTrigger}
+                  unregisterFlashTrigger={unregisterFlashTrigger}
+                />
+              ) : (
+                <AdhocTimedCard
+                  key={item.task.id}
+                  task={item.task}
+                  onToggle={toggleAdhocComplete}
+                />
+              )
+            )
           )}
+
+          <TouchableOpacity style={styles.addAdhocBtn} onPress={openAddTask}>
+            <Text style={styles.addAdhocPlus}>+</Text>
+            <Text style={styles.addAdhocLabel}>Add task</Text>
+          </TouchableOpacity>
+
+          {anytimeAdhoc.length > 0 ? (
+            <View style={styles.anytimeTray}>
+              <Text style={styles.anytimeTitle}>Anytime today</Text>
+              {anytimeAdhoc.map((task) => (
+                <AdhocAnytimeRow
+                  key={task.id}
+                  task={task}
+                  onToggle={toggleAdhocComplete}
+                />
+              ))}
+            </View>
+          ) : null}
         </View>
       </ScrollView>
 
@@ -770,6 +900,79 @@ function TodayScreenContent() {
           </Pressable>
         </KeyboardAvoidingView>
       </Modal>
+
+      <Modal
+        visible={addTaskOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={closeAddTask}
+      >
+        <KeyboardAvoidingView
+          style={styles.overlay}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
+          <Pressable style={styles.overlayDismiss} onPress={closeAddTask} />
+          <Pressable style={styles.addTaskSheet} onPress={(e) => e.stopPropagation()}>
+            <Text style={styles.addTaskTitle}>Add task</Text>
+            <TextInput
+              style={styles.addTaskInput}
+              value={addTaskName}
+              onChangeText={setAddTaskName}
+              placeholder="What needs doing?"
+              placeholderTextColor={colors.textPlaceholder}
+              autoFocus
+            />
+            <View style={styles.modeToggle}>
+              <TouchableOpacity
+                style={[styles.modeBtn, addTaskMode === "timed" && styles.modeBtnActive]}
+                onPress={() => setAddTaskMode("timed")}
+              >
+                <Text
+                  style={[
+                    styles.modeBtnText,
+                    addTaskMode === "timed" && styles.modeBtnTextActive,
+                  ]}
+                >
+                  Timed
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modeBtn, addTaskMode === "anytime" && styles.modeBtnActive]}
+                onPress={() => setAddTaskMode("anytime")}
+              >
+                <Text
+                  style={[
+                    styles.modeBtnText,
+                    addTaskMode === "anytime" && styles.modeBtnTextActive,
+                  ]}
+                >
+                  Anytime today
+                </Text>
+              </TouchableOpacity>
+            </View>
+            {addTaskMode === "timed" ? (
+              <View style={styles.timeFields}>
+                <TimeField label="Start" value={addTaskStart} onChange={setAddTaskStart} />
+                <TimeField label="End" value={addTaskEnd} onChange={setAddTaskEnd} />
+              </View>
+            ) : (
+              <Text style={styles.anytimeHelper}>
+                Good for quick things under 30 min
+              </Text>
+            )}
+            <TouchableOpacity
+              style={[styles.addTaskConfirmBtn, !addTaskName.trim() && styles.addTaskConfirmDisabled]}
+              onPress={handleAddTask}
+              disabled={!addTaskName.trim() || saving}
+            >
+              <Text style={styles.addTaskConfirmText}>Add</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={closeAddTask} disabled={saving}>
+              <Text style={styles.addTaskCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -814,6 +1017,112 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: { flexGrow: 1 },
   empty: { color: colors.textFaint, textAlign: "center", marginTop: 40, lineHeight: 22 },
+  addAdhocBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
+  addAdhocPlus: {
+    color: colors.danger,
+    fontSize: 20,
+    fontWeight: "600",
+    lineHeight: 22,
+  },
+  addAdhocLabel: {
+    color: colors.danger,
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  anytimeTray: {
+    marginTop: spacing.lg,
+    backgroundColor: colors.surfaceDim,
+    borderRadius: radii.lg,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
+    gap: spacing.xs,
+  },
+  anytimeTitle: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    paddingHorizontal: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  addTaskSheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radii.pill,
+    borderTopRightRadius: radii.pill,
+    marginTop: "auto",
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.lg,
+    paddingBottom: Platform.OS === "ios" ? 36 : 24,
+    gap: spacing.md,
+  },
+  addTaskTitle: { color: colors.text, ...typography.heading },
+  addTaskInput: {
+    backgroundColor: colors.surface,
+    borderWidth: 0.5,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    paddingHorizontal: 14,
+    paddingVertical: spacing.md,
+    color: colors.text,
+    fontSize: 16,
+  },
+  modeToggle: {
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
+  modeBtn: {
+    flex: 1,
+    borderRadius: radii.md,
+    paddingVertical: spacing.sm,
+    alignItems: "center",
+    borderWidth: 0.5,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+  },
+  modeBtnActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  modeBtnText: {
+    color: colors.textMuted,
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  modeBtnTextActive: {
+    color: colors.onPrimary,
+  },
+  timeFields: {
+    gap: spacing.md,
+  },
+  anytimeHelper: {
+    color: colors.textMuted,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  addTaskConfirmBtn: {
+    backgroundColor: colors.primary,
+    borderRadius: radii.lg,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+  addTaskConfirmDisabled: {
+    opacity: 0.5,
+  },
+  addTaskConfirmText: { color: colors.onPrimary, ...typography.bodyBold },
+  addTaskCancelText: {
+    color: colors.textMuted,
+    fontSize: 16,
+    fontWeight: "500",
+    textAlign: "center",
+    paddingVertical: spacing.sm,
+  },
   toast: {
     position: "absolute",
     bottom: 40,

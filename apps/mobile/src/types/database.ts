@@ -20,6 +20,20 @@ export type BlockStatus =
 
 export type CompletionRating = "crushed" | "partial" | "pulled_away";
 
+export type AdhocTaskStatus = "pending" | "completed" | "removed";
+
+export interface AdhocTask {
+  id: string;
+  user_id: string;
+  date: string;
+  name: string;
+  start_minutes: number | null;
+  end_minutes: number | null;
+  status: AdhocTaskStatus;
+  completion_rating: string | null;
+  created_at: string;
+}
+
 export interface Profile {
   id: string;
   name: string;
@@ -128,6 +142,16 @@ export interface Database {
           end_minutes: number;
         };
         Update: Partial<DailyInstance>;
+        Relationships: [];
+      };
+      adhoc_tasks: {
+        Row: AdhocTask & Record<string, unknown>;
+        Insert: Partial<AdhocTask> & {
+          user_id: string;
+          date: string;
+          name: string;
+        };
+        Update: Partial<AdhocTask>;
         Relationships: [];
       };
       push_tokens: {

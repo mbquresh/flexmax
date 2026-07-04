@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppState } from "react-native";
 import { generateDailyInstances, supabase } from "../lib/supabase";
 import { scheduleTodayBlockNotifications } from "../lib/blockNotifications";
 import { fetchTodayStats, TodayStats } from "../lib/stats";
 import { getLocalDateString } from "../lib/time";
 import { handleError } from "../lib/errors";
+import { AdhocTask } from "../types/database";
 import { useStore } from "../store";
 
 export function useTodayData(userId: string | undefined) {
@@ -13,7 +14,22 @@ export function useTodayData(userId: string | undefined) {
   const [totalBlocks, setTotalBlocks] = useState(0);
   const [displayDate, setDisplayDate] = useState(getLocalDateString());
   const [stats, setStats] = useState<TodayStats | null>(null);
+  const [adhocTasks, setAdhocTasks] = useState<AdhocTask[]>([]);
   const currentDateRef = useRef(getLocalDateString());
+
+  const timedAdhoc = useMemo(
+    () => adhocTasks.filter((t) => t.start_minutes != null),
+    [adhocTasks]
+  );
+
+  const anytimeAdhoc = useMemo(
+    () => adhocTasks.filter((t) => t.start_minutes == null),
+    [adhocTasks]
+  );
+
+  const updateAdhocTask = useCallback((id: string, patch: Partial<AdhocTask>) => {
+    setAdhocTasks((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)));
+  }, []);
 
   const loadToday = useCallback(
     async (dateOverride?: string) => {
@@ -41,6 +57,14 @@ export function useTodayData(userId: string | undefined) {
         .neq("status", "removed")
         .order("start_minutes");
 
+      const { data: adhoc, error: adhocError } = await supabase
+        .from("adhoc_tasks")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("date", targetDate)
+        .neq("status", "removed")
+        .order("start_minutes", { nullsFirst: false });
+
       if (error) {
         handleError(error, "loadToday");
       } else {
@@ -54,6 +78,13 @@ export function useTodayData(userId: string | undefined) {
           .then(setStats)
           .catch((err) => handleError(err, "fetchTodayStats"));
       }
+
+      if (adhocError) {
+        handleError(adhocError, "loadToday adhoc");
+      } else {
+        setAdhocTasks(adhoc ?? []);
+      }
+
       setLoading(false);
     },
     [userId, setTodayInstances]
@@ -106,5 +137,9 @@ export function useTodayData(userId: string | undefined) {
     loading,
     reload: loadToday,
     resetToday,
+    adhocTasks,
+    timedAdhoc,
+    anytimeAdhoc,
+    updateAdhocTask,
   };
 }
