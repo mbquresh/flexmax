@@ -167,6 +167,10 @@ export interface Database {
         Args: { target_date: string };
         Returns: undefined;
       };
+      generate_my_daily_instances: {
+        Args: { target_date: string };
+        Returns: undefined;
+      };
     };
   };
 }

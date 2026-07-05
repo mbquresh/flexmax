@@ -14,7 +14,8 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
 
 /** Typed wrapper until we generate types from Supabase CLI. */
 export async function generateDailyInstances(targetDate: string) {
-  return supabase.rpc("generate_daily_instances", {
+  const { error } = await supabase.rpc("generate_my_daily_instances", {
     target_date: targetDate,
-  } as never);
+  });
+  if (error) throw error;
 }
