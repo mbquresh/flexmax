@@ -19,6 +19,7 @@ FlexMax is not a calendar app. It's a behavioral accountability system built aro
 4. Each night, you fill in what you'll actually do in each block (nightly push notification)
 5. Smart notifications hold you accountable through the day
 6. Missed blocks trigger AI reflection + in-place rescheduling
+7. One-off ad-hoc tasks for today — timed (on the timeline) or anytime (secondary tray)
 
 ## Repo structure
 
@@ -28,16 +29,16 @@ flex_max/
 │   └── mobile/          # Expo React Native app
 │       ├── app/         # Expo Router routes
 │       └── src/
-│           ├── screens/
+│           ├── components/
+│           ├── hooks/
 │           ├── providers/
 │           ├── lib/
 │           ├── store/
 │           └── types/
-├── packages/
-│   └── ai/              # Claude API wrappers + prompt system
 └── supabase/
     ├── migrations/      # Database schema
-    └── functions/       # Edge functions (notifications, cron)
+    ├── functions/       # Edge functions (notifications, cron)
+    └── APPLY_IN_DASHBOARD.sql  # Manual SQL when db push is out of sync
 ```
 
 ## Tech stack
@@ -50,14 +51,18 @@ flex_max/
 
 ## Status
 
-Work in progress. **v1, v1.1 complete; v1.2 and chassis hardening complete; v1.3 in progress.**
+Work in progress. **v1, v1.1, v1.2, chassis hardening, and v1.3 complete.**
 
 **Live now:**
 - AI onboarding (Claude-powered psychology profile extraction)
 - Schedule builder: AI coaching tips, quick-add presets, custom blocks, day toggles, inline editing, fixed/flexible blocks
-- Today view: check-ins with ratings, drag-to-swap (respects fixed blocks + protected gaps), task detail entry, undo, missed-block recovery
+- Today view: check-ins with ratings, drag-to-swap from handle rail (respects fixed blocks + protected gaps), task detail entry, undo, missed-block recovery
+- Block cards: swipe-left reveals Missed + Remove actions; bidirectional swipe to close; scroll/drag/swipe coexist without conflict
+- Swipe-to-remove blocks from today (optional reason, excluded from stats and swap targets)
+- Ad-hoc today tasks: coral + button adds one-off timed tasks (inline on timeline) or anytime tasks (secondary tray below)
+- Reset today — clears swaps/check-ins and restores default schedule instances
 - Missed block recovery: AI reflection prompts + in-place rescheduling
-- Weekly streak tracking + completion rate
+- Weekly streak tracking + completion rate (scheduled blocks only; ad-hoc tasks excluded for now)
 - Account screen: psychology profile summary, editable name, redo onboarding
 - Push token registration, nightly fill-in notifications (pg_cron), post-block check-in notifications (local scheduling)
 - Light grey + blue theme with centralized design tokens
@@ -75,6 +80,8 @@ cp apps/mobile/.env.example apps/mobile/.env
 
 # Push Supabase schema
 npx supabase db push
+# If db push is out of sync, run pending migrations manually in the Supabase SQL editor
+# (see supabase/APPLY_IN_DASHBOARD.sql)
 
 # Start mobile app
 yarn mobile
@@ -99,10 +106,13 @@ Foundation work before v2 complexity:
 - Streak calculation optimized (N+1 → single query)
 - Dead code sweep (removed unused `packages/ai` workspace)
 
-### v1.3 — in progress
-- Fixed/flexible blocks — inflexible anchors (work, commute) that can't move or be swap targets (done)
-- Swap respects protected gaps — unscheduled time is never treated as free (done)
-- Ad-hoc Today tasks — one-off tasks with an "anytime today" tray for quick untimed items (planned)
+### v1.3 — complete
+- Fixed/flexible blocks — inflexible anchors (work, commute) that can't move or be swap targets
+- Swap respects protected gaps — unscheduled time is never treated as free; adjacency-aware tile/trade swaps
+- Swipe-to-remove blocks from today (`status='removed'`, optional `removed_reason`)
+- Territorial gesture architecture on block cards — handle-only drag, body-only swipe, vertical scroll preserved
+- Ad-hoc today tasks — timed (timeline) + anytime tray; tap to complete; separate `adhoc_tasks` table
+- Reset today — delete and regenerate today's instances
 
 ### v2 — planned
 - Behavioral learning: psychology profile evolves from actual completion patterns
