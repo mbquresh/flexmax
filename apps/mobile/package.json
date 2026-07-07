@@ -12,6 +12,7 @@
     "@expo/metro-runtime": "~6.1.2",
     "@expo/ngrok": "^4.1.0",
     "@opentelemetry/api": "^1.9.1",
+    "@react-native-async-storage/async-storage": "2.2.0",
     "@supabase/supabase-js": "^2.39.0",
     "expo": "^54.0.0",
     "expo-constants": "~18.0.13",
