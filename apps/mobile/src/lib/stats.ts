@@ -9,6 +9,14 @@ export interface TodayStats {
   weekDayCompletions: boolean[]; // Mon–Sun, index 0 = Monday
 }
 
+function toLocalDateStr(d: Date): string {
+  return [
+    d.getFullYear(),
+    String(d.getMonth() + 1).padStart(2, "0"),
+    String(d.getDate()).padStart(2, "0"),
+  ].join("-");
+}
+
 export async function fetchTodayStats(userId: string): Promise<TodayStats> {
   const today = getLocalDateString();
 
@@ -23,8 +31,8 @@ export async function fetchTodayStats(userId: string): Promise<TodayStats> {
   const sunday = new Date(monday);
   sunday.setDate(monday.getDate() + 6);
 
-  const mondayStr = monday.toISOString().split("T")[0];
-  const sundayStr = sunday.toISOString().split("T")[0];
+  const mondayStr = toLocalDateStr(monday);
+  const sundayStr = toLocalDateStr(sunday);
 
   const { data: weekInstances } = await supabase
     .from("daily_schedule_instances")

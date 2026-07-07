@@ -199,69 +199,60 @@ function TodayScreenContent() {
     if (instanceA.is_fixed || instanceA.block?.is_fixed) return;
     if (instanceB.is_fixed || instanceB.block?.is_fixed) return;
 
-    const durationA = instanceA.end_minutes - instanceA.start_minutes;
-    const durationB = instanceB.end_minutes - instanceB.start_minutes;
-
     const [earlier, later] =
       instanceA.start_minutes < instanceB.start_minutes
         ? [instanceA, instanceB]
         : [instanceB, instanceA];
+
     const earlierDuration = earlier.end_minutes - earlier.start_minutes;
     const laterDuration = later.end_minutes - later.start_minutes;
+    const gap = later.start_minutes - earlier.end_minutes;
 
-    const wereAdjacent = earlier.end_minutes === later.start_minutes;
+    const anchor = earlier.start_minutes;
+    const laterNewStart = anchor;
+    const laterNewEnd = laterNewStart + laterDuration;
+    const earlierNewStart = laterNewEnd + gap;
+    const earlierNewEnd = earlierNewStart + earlierDuration;
 
     let newAStart: number;
     let newAEnd: number;
     let newBStart: number;
     let newBEnd: number;
 
-    if (wereAdjacent) {
-      const laterNewStart = earlier.start_minutes;
-      const laterNewEnd = laterNewStart + laterDuration;
-      const earlierNewStart = laterNewEnd;
-      const earlierNewEnd = earlierNewStart + earlierDuration;
-
-      if (earlier.id === instanceA.id) {
-        newAStart = earlierNewStart;
-        newAEnd = earlierNewEnd;
-        newBStart = laterNewStart;
-        newBEnd = laterNewEnd;
-      } else {
-        newAStart = laterNewStart;
-        newAEnd = laterNewEnd;
-        newBStart = earlierNewStart;
-        newBEnd = earlierNewEnd;
-      }
+    if (earlier.id === instanceA.id) {
+      newAStart = earlierNewStart;
+      newAEnd = earlierNewEnd;
+      newBStart = laterNewStart;
+      newBEnd = laterNewEnd;
     } else {
-      newAStart = instanceB.start_minutes;
-      newAEnd = newAStart + durationA;
-      newBStart = instanceA.start_minutes;
-      newBEnd = newBStart + durationB;
+      newAStart = laterNewStart;
+      newAEnd = laterNewEnd;
+      newBStart = earlierNewStart;
+      newBEnd = earlierNewEnd;
+    }
 
-      const otherBlocks = instances.filter(
-        (inst) =>
-          inst.id !== instanceA.id &&
-          inst.id !== instanceB.id &&
-          inst.status !== "skipped" &&
-          inst.status !== "removed"
-      );
-      const overlaps = (start: number, end: number, other: DailyInstance) =>
-        start < other.end_minutes && end > other.start_minutes;
+    if (newAStart < 0 || newAEnd > 1440 || newBStart < 0 || newBEnd > 1440) {
+      showToast("Can't swap — that wouldn't fit in the day");
+      return;
+    }
 
-      const swappedCollide = newAStart < newBEnd && newAEnd > newBStart;
-      const conflictA = otherBlocks.find((o) => overlaps(newAStart, newAEnd, o));
-      const conflictB = otherBlocks.find((o) => overlaps(newBStart, newBEnd, o));
+    const otherBlocks = instances.filter(
+      (inst) =>
+        inst.id !== instanceA.id &&
+        inst.id !== instanceB.id &&
+        inst.status !== "skipped" &&
+        inst.status !== "removed"
+    );
+    const collides = (start: number, end: number, other: DailyInstance) =>
+      start < other.end_minutes && end > other.start_minutes;
 
-      if (conflictA || conflictB || swappedCollide) {
-        const conflictName =
-          conflictA?.block?.name ?? conflictB?.block?.name ?? "another block";
-        const tooBig = conflictA ? instanceA : instanceB;
-        showToast(
-          `Can't swap — ${tooBig.block?.name ?? "block"} doesn't fit there without overlapping ${conflictName}`
-        );
-        return;
-      }
+    const conflict = otherBlocks.find(
+      (other) =>
+        collides(newAStart, newAEnd, other) || collides(newBStart, newBEnd, other)
+    );
+    if (conflict) {
+      showToast(`Can't swap — would overlap ${conflict.block?.name ?? "another block"}`);
+      return;
     }
 
     const { error: swapError } = await supabase.rpc("swap_instance_times", {

@@ -118,14 +118,17 @@ export function useTodayData(userId: string | undefined) {
         .delete()
         .eq("user_id", userId)
         .eq("date", targetDate);
-
       if (delError) throw delError;
 
-      await generateDailyInstances(targetDate);
+      const { error: genError } = await supabase.rpc("generate_my_daily_instances", {
+        target_date: targetDate,
+      });
+      if (genError) throw genError;
 
       await loadToday();
     } catch (err) {
-      handleError(err, "resetToday", "Could not reset today's schedule");
+      await loadToday().catch(() => {});
+      handleError(err, "resetToday", "Couldn't reset today's schedule — please try again");
     }
   }, [userId, loadToday]);
 

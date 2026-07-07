@@ -79,24 +79,26 @@ yarn mobile
 
 ## 5. Schedule nightly notifications (pg_cron)
 
-In Supabase SQL editor:
+In Supabase SQL Editor:
 
 ```sql
--- Enable pg_cron (if not already enabled in Supabase dashboard)
--- Then schedule nightly-notify to run at 2 AM UTC (9 PM CST)
 select cron.schedule(
   'flexmax-nightly-notify',
   '0 2 * * *',
   $$
     select net.http_post(
       url := 'https://YOUR_PROJECT.supabase.co/functions/v1/nightly-notify',
-      headers := json_build_object(
-        'Authorization', 'Bearer ' || 'YOUR_SUPABASE_SERVICE_KEY'
-      )::jsonb
+      headers := jsonb_build_object(
+        'Content-Type', 'application/json',
+        'Authorization', 'Bearer YOUR_CRON_SECRET'
+      ),
+      body := '{}'::jsonb
     );
   $$
 );
 ```
+
+The `nightly-notify` function authenticates via the `CRON_SECRET` env var (set with `supabase secrets set CRON_SECRET=...`), not the service-role key. Use the same secret value here that you set in Supabase secrets. Do not put the service-role key in cron SQL.
 
 ---
 
