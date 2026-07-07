@@ -264,15 +264,19 @@ function TodayScreenContent() {
       }
     }
 
-    await supabase
-      .from("daily_schedule_instances")
-      .update({ start_minutes: newAStart, end_minutes: newAEnd })
-      .eq("id", instanceA.id);
+    const { error: swapError } = await supabase.rpc("swap_instance_times", {
+      instance_a_id: instanceA.id,
+      a_start: newAStart,
+      a_end: newAEnd,
+      instance_b_id: instanceB.id,
+      b_start: newBStart,
+      b_end: newBEnd,
+    });
 
-    await supabase
-      .from("daily_schedule_instances")
-      .update({ start_minutes: newBStart, end_minutes: newBEnd })
-      .eq("id", instanceB.id);
+    if (swapError) {
+      handleError(swapError, "handleSwap", "Couldn't swap the blocks — please try again");
+      return;
+    }
 
     const updated = instances
       .map((inst) => {

@@ -171,6 +171,17 @@ export interface Database {
         Args: { target_date: string };
         Returns: undefined;
       };
+      swap_instance_times: {
+        Args: {
+          instance_a_id: string;
+          a_start: number;
+          a_end: number;
+          instance_b_id: string;
+          b_start: number;
+          b_end: number;
+        };
+        Returns: undefined;
+      };
     };
   };
 }
