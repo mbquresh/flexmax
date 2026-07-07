@@ -61,7 +61,6 @@ export default function OnboardingScreen() {
   }, [messages]);
 
   const finishOnboarding = async (finalMessages: Message[]) => {
-    setIsComplete(true);
     if (!userId) return;
 
     try {
@@ -69,13 +68,20 @@ export default function OnboardingScreen() {
         const profile = await saveDemoProfile(userId, finalMessages);
         setPsychologyProfile(profile);
         await refreshProfile();
+        setIsComplete(true);
         return;
       }
 
       await extractAndSaveProfile(finalMessages);
+      setIsComplete(true);
     } catch (err) {
       handleError(err, "finishOnboarding");
     }
+  };
+
+  const goToScheduleBuilder = async () => {
+    await refreshProfile();
+    router.replace("/schedule-builder");
   };
 
   const sendMessage = async () => {
@@ -188,7 +194,7 @@ export default function OnboardingScreen() {
           </Text>
           <TouchableOpacity
             style={styles.completeBtn}
-            onPress={() => router.replace("/schedule-builder")}
+            onPress={goToScheduleBuilder}
           >
             <Text style={styles.completeBtnText}>Build my schedule →</Text>
           </TouchableOpacity>

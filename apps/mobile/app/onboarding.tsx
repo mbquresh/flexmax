@@ -3,7 +3,7 @@ import { RequireAuth } from "../src/components/RequireAuth";
 
 export default function OnboardingRoute() {
   return (
-    <RequireAuth>
+    <RequireAuth requireOnboarding={false}>
       <OnboardingScreen />
     </RequireAuth>
   );

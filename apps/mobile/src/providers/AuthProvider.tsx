@@ -10,6 +10,7 @@ interface AuthContextValue {
   profile: Profile | null;
   psychologyProfile: PsychologyProfile | null;
   loading: boolean;
+  profileLoaded: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, name: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -24,6 +25,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [psychologyProfile, setPsychologyProfile] =
     useState<PsychologyProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profileLoaded, setProfileLoaded] = useState(false);
   const { setUser, setPsychologyProfile: setStorePsych, reset } = useStore();
 
   const loadUserData = async (userId: string) => {
@@ -62,6 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setPsychologyProfile(psychResult.data);
     setUser(userId, profileResult.data);
     if (psychResult.data) setStorePsych(psychResult.data);
+    setProfileLoaded(true);
 
     registerPushToken(userId).catch(console.error);
   };
@@ -80,6 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .finally(() => setLoading(false));
       } else {
         setLoading(false);
+        setProfileLoaded(true);
       }
     });
 
@@ -95,6 +99,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         setProfile(null);
         setPsychologyProfile(null);
+        setProfileLoaded(false);
         reset();
         setLoading(false);
       }
@@ -132,6 +137,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         profile,
         psychologyProfile,
         loading,
+        profileLoaded,
         signIn,
         signUp,
         signOut,

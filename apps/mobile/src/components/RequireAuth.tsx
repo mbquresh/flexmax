@@ -1,13 +1,37 @@
-import React from "react";
-import { Redirect } from "expo-router";
+import React, { useEffect } from "react";
+import { router } from "expo-router";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { useAuth } from "../providers/AuthProvider";
 import { colors } from "../theme";
 
-export function RequireAuth({ children }: { children: React.ReactNode }) {
-  const { session, loading } = useAuth();
+interface RequireAuthProps {
+  children: React.ReactNode;
+  /** When false, only session is required (e.g. /onboarding route). Default true. */
+  requireOnboarding?: boolean;
+}
 
-  if (loading) {
+export function RequireAuth({
+  children,
+  requireOnboarding = true,
+}: RequireAuthProps) {
+  const { session, psychologyProfile, loading, profileLoaded } = useAuth();
+
+  const authReady = !loading && (!session || profileLoaded);
+
+  useEffect(() => {
+    if (!authReady) return;
+
+    if (!session) {
+      router.replace("/sign-in");
+      return;
+    }
+
+    if (requireOnboarding && !psychologyProfile?.completed_at) {
+      router.replace("/onboarding");
+    }
+  }, [session, psychologyProfile, authReady, requireOnboarding]);
+
+  if (!authReady) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={colors.primary} />
@@ -16,7 +40,11 @@ export function RequireAuth({ children }: { children: React.ReactNode }) {
   }
 
   if (!session) {
-    return <Redirect href="/sign-in" />;
+    return null;
+  }
+
+  if (requireOnboarding && !psychologyProfile?.completed_at) {
+    return null;
   }
 
   return <>{children}</>;
