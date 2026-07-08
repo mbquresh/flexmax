@@ -51,19 +51,18 @@ flex_max/
 
 ## Status
 
-Work in progress. **v1, v1.1, v1.2, chassis hardening, and v1.3 complete.**
+Work in progress. **v1, v1.1, v1.2, chassis hardening, v1.3, security & integrity hardening, and v1.4 complete.**
 
 **Live now:**
 - AI onboarding (Claude-powered psychology profile extraction)
-- Schedule builder: AI coaching tips, quick-add presets, custom blocks, day toggles, inline editing, fixed/flexible blocks
-- Today view: check-ins with ratings, drag-to-swap from handle rail (respects fixed blocks + protected gaps), task detail entry, undo, missed-block recovery
+- Schedule builder: AI coaching tips, quick-add presets, custom blocks, inline editing, fixed/flexible blocks, native time picker
+- Today view: check-ins with semantic ratings, drag-to-swap from handle rail (respects fixed blocks + protected gaps), task detail entry, undo, missed-block recovery, reset today
 - Block cards: swipe-left reveals Missed + Remove actions; bidirectional swipe to close; scroll/drag/swipe coexist without conflict
 - Swipe-to-remove blocks from today (optional reason, excluded from stats and swap targets)
-- Ad-hoc today tasks: coral + button adds one-off timed tasks (inline on timeline) or anytime tasks (secondary tray below)
-- Reset today — clears swaps/check-ins and restores default schedule instances
+- Ad-hoc today tasks: full-width coral add button; timed tasks on timeline or anytime tasks in secondary tray
 - Missed block recovery: AI reflection prompts + in-place rescheduling
 - Weekly streak tracking + completion rate (scheduled blocks only; ad-hoc tasks excluded for now)
-- Account screen: psychology profile summary, editable name, redo onboarding
+- Account screen: psychology profile summary, editable name, redo onboarding, sign out
 - Push token registration, nightly fill-in notifications (pg_cron), post-block check-in notifications (local scheduling)
 - Light grey + blue theme with centralized design tokens
 
@@ -107,19 +106,32 @@ Foundation work before v2 complexity:
 - Dead code sweep (removed unused `packages/ai` workspace)
 
 ### v1.3 — complete
-- Fixed/flexible blocks — inflexible anchors (work, commute) that can't move or be swap targets
-- Swap respects protected gaps — unscheduled time is never treated as free; adjacency-aware tile/trade swaps
-- Swipe-to-remove blocks from today (`status='removed'`, optional `removed_reason`)
-- Territorial gesture architecture on block cards — handle-only drag, body-only swipe, vertical scroll preserved
-- Ad-hoc today tasks — timed (timeline) + anytime tray; tap to complete; separate `adhoc_tasks` table
-- Reset today — delete and regenerate today's instances
+- Fixed/flexible blocks (inflexible anchors like work/commute)
+- Adjacency-aware swap (unified anchor-rebuild, preserves gaps, never overflows day)
+- Reset today
+- Swipe-to-remove + swipe-to-missed (Apple Mail style gestures)
+- Ad-hoc today tasks with "anytime today" tray
+
+### Security & integrity hardening — complete
+- Scoped generate_daily_instances (fixed cross-tenant write vulnerability)
+- AsyncStorage session persistence (sessions survive app restarts)
+- Atomic swap via transactional RPC
+- Onboarding gate on protected routes
+- Stats timezone consistency, reset rollback safety, cron doc fixes
+- Notifications reschedule after block time changes
+
+### v1.4 — complete
+- Native time picker (iOS/Android wheel)
+- Check-in ratings with semantic colors
+- Schedule builder + Today UI polish
 
 ### v2 — planned
-- Behavioral learning: psychology profile evolves from actual completion patterns
-- Activity idle detection (requires native build)
-- Light/dark theme toggle (design tokens make this cheap)
+- Behavioral learning: psychology profile evolves from completion patterns
+- Remaining hardening (see v2-issues.md): AI rate limiting, CHECK constraints, stack-trace audit, stale-request guard
+- Dark theme + light/dark toggle (design tokens make this feasible)
+- Activity idle detection (native build)
 - Morning brief
-- EAS build for reliable background notifications + TestFlight
+- EAS build → TestFlight
 
 ## Name
 
