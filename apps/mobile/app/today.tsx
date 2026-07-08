@@ -32,7 +32,8 @@ import {
   AdhocTask,
   DailyInstance,
 } from "../src/types/database";
-import { minutesToTime, timeToMinutes } from "../src/lib/time";
+import { minutesToTime, timeToMinutes, getLocalDateString } from "../src/lib/time";
+import { scheduleTodayBlockNotifications } from "../src/lib/blockNotifications";
 import { getInitials } from "../src/lib/format";
 import { RequireAuth } from "../src/components/RequireAuth";
 import { StreakStrip } from "../src/components/StreakStrip";
@@ -195,6 +196,12 @@ function TodayScreenContent() {
     cardPositions.current[id] = { y, height };
   }, []);
 
+  const resyncNotifications = (updatedInstances: DailyInstance[]) => {
+    scheduleTodayBlockNotifications(updatedInstances, getLocalDateString()).catch((err) =>
+      handleError(err, "resyncNotifications")
+    );
+  };
+
   const handleSwap = async (instanceA: DailyInstance, instanceB: DailyInstance) => {
     if (instanceA.is_fixed || instanceA.block?.is_fixed) return;
     if (instanceB.is_fixed || instanceB.block?.is_fixed) return;
@@ -282,6 +289,7 @@ function TodayScreenContent() {
       .sort((a, b) => a.start_minutes - b.start_minutes);
 
     setTodayInstances(updated);
+    resyncNotifications(updated);
 
     showToast(
       `${instanceA.block?.name ?? "Block"} swapped with ${instanceB.block?.name ?? "block"}`
@@ -595,17 +603,18 @@ function TodayScreenContent() {
       status: "pending" as const,
     };
 
+    const updatedInstances = instances
+      .map((i) => (i.id === recoveryInstance.id ? updated : i))
+      .sort((a, b) => a.start_minutes - b.start_minutes);
+
     updateInstance(recoveryInstance.id, {
       start_minutes: rescheduleSlot.start_minutes,
       end_minutes: rescheduleSlot.end_minutes,
       status: "pending",
     });
 
-    setTodayInstances(
-      instances
-        .map((i) => (i.id === recoveryInstance.id ? updated : i))
-        .sort((a, b) => a.start_minutes - b.start_minutes)
-    );
+    setTodayInstances(updatedInstances);
+    resyncNotifications(updatedInstances);
 
     showToast(
       `${recoveryInstance.block?.name ?? "Block"} rescheduled to ${minutesToTime(rescheduleSlot.start_minutes)}`
