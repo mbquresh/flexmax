@@ -26,6 +26,7 @@ export default ({ config }: ConfigContext): ExpoConfig & { eas?: { projectId: st
   },
   plugins: [
     "expo-router",
+    "@react-native-community/datetimepicker",
     [
       "expo-notifications",
       {

@@ -1,6 +1,5 @@
 import { supabase } from "./supabase";
 import { BlockCategory, DailyInstance, ScheduleBlock } from "../types/database";
-import { timeToMinutes } from "./time";
 
 export const WEEKDAYS = [
   { value: 0, label: "Sun" },
@@ -57,14 +56,13 @@ export async function createScheduleBlock(params: {
   templateId: string;
   name: string;
   category: BlockCategory;
-  startTime: string;
-  endTime: string;
+  startMinutes: number;
+  endMinutes: number;
   sortOrder: number;
   daysOfWeek?: number[];
   isFixed?: boolean;
 }): Promise<ScheduleBlock> {
-  const start_minutes = timeToMinutes(params.startTime);
-  const end_minutes = timeToMinutes(params.endTime);
+  const { startMinutes: start_minutes, endMinutes: end_minutes } = params;
 
   if (end_minutes <= start_minutes) {
     throw new Error("End time must be after start time");
@@ -117,26 +115,26 @@ export const BLOCK_PRESETS = [
   {
     name: "Morning routine",
     category: "morning_routine" as BlockCategory,
-    startTime: "6:00 AM",
-    endTime: "7:00 AM",
+    startMinutes: 6 * 60,
+    endMinutes: 7 * 60,
   },
   {
     name: "Deep work",
     category: "deep_work" as BlockCategory,
-    startTime: "9:00 AM",
-    endTime: "12:00 PM",
+    startMinutes: 9 * 60,
+    endMinutes: 12 * 60,
   },
   {
     name: "Workout",
     category: "health" as BlockCategory,
-    startTime: "6:00 PM",
-    endTime: "7:00 PM",
+    startMinutes: 18 * 60,
+    endMinutes: 19 * 60,
   },
   {
     name: "Wind down",
     category: "wind_down" as BlockCategory,
-    startTime: "9:30 PM",
-    endTime: "10:30 PM",
+    startMinutes: 21 * 60 + 30,
+    endMinutes: 22 * 60 + 30,
   },
 ];
 

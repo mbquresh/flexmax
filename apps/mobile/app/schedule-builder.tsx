@@ -22,15 +22,14 @@ import {
   deleteScheduleBlock,
   ensureActiveTemplate,
   formatDays,
-  updateBlockDays,
   WEEKDAYS,
 } from "../src/lib/schedule";
 import { loadScheduleTips } from "../src/lib/scheduleTips";
 import { useAuth } from "../src/providers/AuthProvider";
 import { useStore } from "../src/store";
 import { BlockCategory, ScheduleBlock } from "../src/types/database";
-import { minutesToTime, timeToMinutes } from "../src/lib/time";
-import { TimeField } from "../src/components/TimeField";
+import { minutesToTime } from "../src/lib/time";
+import { TimePicker } from "../src/components/TimePicker";
 import { handleError, getErrorMessage } from "../src/lib/errors";
 
 import { RequireAuth } from "../src/components/RequireAuth";
@@ -51,16 +50,16 @@ function ScheduleBuilderScreenContent() {
 
   const [name, setName] = useState("");
   const [category, setCategory] = useState<BlockCategory>("deep_work");
-  const [startTime, setStartTime] = useState("9:00 AM");
-  const [endTime, setEndTime] = useState("10:00 AM");
+  const [startMinutes, setStartMinutes] = useState(9 * 60);
+  const [endMinutes, setEndMinutes] = useState(10 * 60);
   const [selectedDays, setSelectedDays] = useState<number[]>(ALL_DAYS);
   const [isFixed, setIsFixed] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editCategory, setEditCategory] = useState<BlockCategory>("deep_work");
-  const [editStartTime, setEditStartTime] = useState("9:00 AM");
-  const [editEndTime, setEditEndTime] = useState("10:00 AM");
+  const [editStartMinutes, setEditStartMinutes] = useState(9 * 60);
+  const [editEndMinutes, setEditEndMinutes] = useState(10 * 60);
   const [editSelectedDays, setEditSelectedDays] = useState<number[]>(ALL_DAYS);
   const [editIsFixed, setEditIsFixed] = useState(false);
 
@@ -141,8 +140,8 @@ function ScheduleBuilderScreenContent() {
     setEditingBlockId(block.id);
     setEditName(block.name);
     setEditCategory(block.category);
-    setEditStartTime(minutesToTime(block.start_minutes));
-    setEditEndTime(minutesToTime(block.end_minutes));
+    setEditStartMinutes(block.start_minutes);
+    setEditEndMinutes(block.end_minutes);
     setEditSelectedDays([...block.days_of_week]);
     setEditIsFixed(block.is_fixed ?? false);
   };
@@ -160,6 +159,10 @@ function ScheduleBuilderScreenContent() {
       showError("Pick at least one day for this block.");
       return;
     }
+    if (editEndMinutes <= editStartMinutes) {
+      showError("End time must be after start time.");
+      return;
+    }
 
     setSaving(true);
     setError(null);
@@ -170,8 +173,8 @@ function ScheduleBuilderScreenContent() {
           name: editName.trim(),
           category: editCategory,
           days_of_week: editSelectedDays,
-          start_minutes: timeToMinutes(editStartTime),
-          end_minutes: timeToMinutes(editEndTime),
+          start_minutes: editStartMinutes,
+          end_minutes: editEndMinutes,
           is_fixed: editIsFixed,
         })
         .eq("id", blockId)
@@ -195,42 +198,14 @@ function ScheduleBuilderScreenContent() {
     }
   };
 
-  const handleToggleBlockDay = async (block: ScheduleBlock, day: number) => {
-    const next = block.days_of_week.includes(day)
-      ? block.days_of_week.filter((d) => d !== day)
-      : [...block.days_of_week, day].sort((a, b) => a - b);
-
-    if (!next.length) {
-      showError("Each block needs at least one day.");
-      return;
-    }
-
-    setSaving(true);
-    setError(null);
-    try {
-      const updated = await updateBlockDays(block.id, next);
-      setBlocks(
-        blocks
-          .map((b) => (b.id === block.id ? updated : b))
-          .sort((a, b) => a.start_minutes - b.start_minutes)
-      );
-    } catch (err) {
-      const message = getErrorMessage(err);
-      handleError(err, "handleToggleBlockDay", message);
-      setError(message);
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const handleAddBlock = async (preset?: (typeof BLOCK_PRESETS)[number]) => {
     if (!templateId) return;
     Keyboard.dismiss();
 
     const blockName = preset?.name ?? name.trim();
     const blockCategory = preset?.category ?? category;
-    const blockStart = preset?.startTime ?? startTime.trim();
-    const blockEnd = preset?.endTime ?? endTime.trim();
+    const blockStart = preset?.startMinutes ?? startMinutes;
+    const blockEnd = preset?.endMinutes ?? endMinutes;
     const daysOfWeek = selectedDays;
 
     if (!blockName) {
@@ -250,8 +225,8 @@ function ScheduleBuilderScreenContent() {
         templateId,
         name: blockName,
         category: blockCategory,
-        startTime: blockStart,
-        endTime: blockEnd,
+        startMinutes: blockStart,
+        endMinutes: blockEnd,
         sortOrder: blocks.length,
         daysOfWeek,
         isFixed,
@@ -392,8 +367,8 @@ function ScheduleBuilderScreenContent() {
             })}
           </View>
           <View style={styles.timeStack}>
-            <TimeField label="Start" value={startTime} onChange={setStartTime} />
-            <TimeField label="End" value={endTime} onChange={setEndTime} />
+            <TimePicker label="Starts" valueMinutes={startMinutes} onChange={setStartMinutes} />
+            <TimePicker label="Ends" valueMinutes={endMinutes} onChange={setEndMinutes} />
           </View>
           {renderFixedToggle(isFixed, () => setIsFixed((prev) => !prev))}
           <TouchableOpacity
@@ -418,35 +393,19 @@ function ScheduleBuilderScreenContent() {
         <Text style={styles.blockName}>{item.name}</Text>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
           <TouchableOpacity onPress={() => openEditBlock(item)} disabled={saving}>
-            <Text style={styles.deleteText}>Edit</Text>
+            <Text style={styles.editText}>Edit</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => handleDeleteBlock(item.id)} disabled={saving}>
-            <Text style={styles.deleteText}>Remove</Text>
+            <Text style={styles.removeText}>Remove</Text>
           </TouchableOpacity>
         </View>
       </View>
       <Text style={styles.blockMeta}>
         {minutesToTime(item.start_minutes)} – {minutesToTime(item.end_minutes)} ·{" "}
-        {formatDays(item.days_of_week)} · {item.category.replace("_", " ")}
+        {item.category.replace("_", " ")}
         {item.is_fixed ? " · 🔒 Fixed" : ""}
       </Text>
-      <View style={styles.dayRow}>
-        {WEEKDAYS.map((day) => {
-          const active = item.days_of_week.includes(day.value);
-          return (
-            <TouchableOpacity
-              key={day.value}
-              style={[styles.dayChip, active && styles.dayChipActive]}
-              onPress={() => handleToggleBlockDay(item, day.value)}
-              disabled={saving}
-            >
-              <Text style={[styles.dayChipText, active && styles.dayChipTextActive]}>
-                {day.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+      <Text style={styles.blockRepeats}>Repeats: {formatDays(item.days_of_week)}</Text>
 
       {editingBlockId === item.id ? (
         <View style={[styles.form, { marginTop: 12 }]}>
@@ -491,8 +450,16 @@ function ScheduleBuilderScreenContent() {
             })}
           </View>
           <View style={styles.timeStack}>
-            <TimeField label="Start" value={editStartTime} onChange={setEditStartTime} />
-            <TimeField label="End" value={editEndTime} onChange={setEditEndTime} />
+            <TimePicker
+              label="Starts"
+              valueMinutes={editStartMinutes}
+              onChange={setEditStartMinutes}
+            />
+            <TimePicker
+              label="Ends"
+              valueMinutes={editEndMinutes}
+              onChange={setEditEndMinutes}
+            />
           </View>
           {renderFixedToggle(editIsFixed, () => setEditIsFixed((prev) => !prev))}
           <TouchableOpacity
@@ -536,7 +503,7 @@ function ScheduleBuilderScreenContent() {
             <View style={styles.header}>
               <Text style={styles.title}>Build your schedule</Text>
               <Text style={styles.subtitle}>
-                Tap the day letters on each block to control when it repeats.
+                Tap Edit on a block to change its days, times, or name.
               </Text>
             </View>
 
@@ -656,8 +623,10 @@ const styles = StyleSheet.create({
   },
   blockHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   blockName: { color: colors.text, fontSize: 16, fontWeight: "600" },
-  deleteText: { color: colors.textMuted, fontSize: 13 },
-  blockMeta: { color: colors.textMuted, fontSize: 13, marginTop: spacing.xs, marginBottom: 10 },
+  editText: { color: colors.primary, fontSize: 13, fontWeight: "600" },
+  removeText: { color: colors.danger, fontSize: 13, fontWeight: "600" },
+  blockMeta: { color: colors.textMuted, fontSize: 13, marginTop: spacing.xs },
+  blockRepeats: { color: colors.textFaint, fontSize: 12, marginTop: 4, marginBottom: 10 },
   dayRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
   dayChip: {
     borderRadius: radii.sm,

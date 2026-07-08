@@ -11,12 +11,36 @@ import {
 } from "react-native";
 import { CompletionRating, DailyInstance } from "../types/database";
 import { minutesToTime } from "../lib/time";
-import { colors, spacing, radii } from "../theme";
+import { colors, spacing, radii, typography } from "../theme";
 
-const RATING_OPTIONS: { value: CompletionRating; label: string }[] = [
-  { value: "crushed", label: "Crushed it" },
-  { value: "partial", label: "Partly" },
-  { value: "pulled_away", label: "Got pulled away" },
+const RATING_OPTIONS: {
+  value: CompletionRating;
+  label: string;
+  bg: string;
+  text: string;
+  border: string;
+}[] = [
+  {
+    value: "crushed",
+    label: "Crushed it",
+    bg: colors.ratingGoodBg,
+    text: colors.ratingGoodText,
+    border: colors.ratingGoodBorder,
+  },
+  {
+    value: "partial",
+    label: "Partly",
+    bg: colors.ratingOkayBg,
+    text: colors.ratingOkayText,
+    border: colors.ratingOkayBorder,
+  },
+  {
+    value: "pulled_away",
+    label: "Lost focus",
+    bg: colors.ratingBadBg,
+    text: colors.ratingBadText,
+    border: colors.ratingBadBorder,
+  },
 ];
 
 interface CheckInSheetProps {
@@ -59,12 +83,16 @@ export function CheckInSheet({
                   key={opt.value}
                   style={({ pressed }) => [
                     styles.ratingBtn,
-                    pressed && styles.ratingBtnActive,
+                    {
+                      backgroundColor: opt.bg,
+                      borderColor: opt.border,
+                    },
+                    pressed && styles.ratingBtnPressed,
                   ]}
                   onPress={() => onRate(opt.value)}
                   disabled={saving}
                 >
-                  <Text style={styles.ratingBtnText}>{opt.label}</Text>
+                  <Text style={[styles.ratingBtnText, { color: opt.text }]}>{opt.label}</Text>
                 </Pressable>
               ))}
             </View>
@@ -110,22 +138,17 @@ const styles = StyleSheet.create({
   ratingRow: { flexDirection: "row", gap: spacing.sm },
   ratingBtn: {
     flex: 1,
-    backgroundColor: colors.surface,
-    borderWidth: 0.5,
-    borderColor: colors.border,
+    borderWidth: 2,
     borderRadius: radii.md,
     paddingVertical: 14,
     paddingHorizontal: 6,
     alignItems: "center",
   },
-  ratingBtnActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+  ratingBtnPressed: {
+    opacity: 0.85,
   },
   ratingBtnText: {
-    color: colors.onPrimary,
-    fontSize: 12,
-    fontWeight: "600",
+    ...typography.smallBold,
     textAlign: "center",
   },
   sheetSaving: { marginTop: spacing.lg },

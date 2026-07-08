@@ -46,6 +46,17 @@ export const colors = {
   streakBorder: "#F0D9A8",
   streakMuted: "#B07A28",
   streakSquare: "#F5E4C8",
+
+  // Pale semantic fills for check-in ratings
+  ratingGoodBg: "#D8EFD8",     // pale green — crushed it
+  ratingGoodText: "#2E7D32",
+  ratingOkayBg: "#FBF3D0",     // pale yellow — partly
+  ratingOkayText: "#9A7B0A",
+  ratingBadBg: "#F8DEDE",      // pale red — lost focus
+  ratingBadText: "#B03030",
+  ratingGoodBorder: "#00C853",   // neon green — crushed it
+  ratingOkayBorder: "#FFD600",   // neon yellow — partly
+  ratingBadBorder: "#FF1744",   // neon red — lost focus
 } as const;
 
 export const spacing = {

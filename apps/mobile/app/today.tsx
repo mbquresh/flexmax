@@ -32,7 +32,7 @@ import {
   AdhocTask,
   DailyInstance,
 } from "../src/types/database";
-import { minutesToTime, timeToMinutes, getLocalDateString } from "../src/lib/time";
+import { minutesToTime, getLocalDateString } from "../src/lib/time";
 import { scheduleTodayBlockNotifications } from "../src/lib/blockNotifications";
 import { getInitials } from "../src/lib/format";
 import { RequireAuth } from "../src/components/RequireAuth";
@@ -43,12 +43,12 @@ import { RecoverySheet, RecoveryAIContent } from "../src/components/RecoveryShee
 import { BlockCard } from "../src/components/BlockCard";
 import { AdhocTimedCard } from "../src/components/AdhocTimedCard";
 import { AdhocAnytimeRow } from "../src/components/AdhocAnytimeRow";
-import { TimeField } from "../src/components/TimeField";
+import { TimePicker } from "../src/components/TimePicker";
 import { useTodayData } from "../src/hooks/useTodayData";
 import { colors, spacing, radii, typography } from "../src/theme";
 
 function TodayScreenContent() {
-  const { session, signOut, psychologyProfile, profile } = useAuth();
+  const { session, psychologyProfile, profile } = useAuth();
   const {
     instances,
     displayDate,
@@ -81,8 +81,8 @@ function TodayScreenContent() {
   const [addTaskOpen, setAddTaskOpen] = useState(false);
   const [addTaskName, setAddTaskName] = useState("");
   const [addTaskMode, setAddTaskMode] = useState<"timed" | "anytime">("timed");
-  const [addTaskStart, setAddTaskStart] = useState("9:00 AM");
-  const [addTaskEnd, setAddTaskEnd] = useState("9:30 AM");
+  const [addTaskStartMinutes, setAddTaskStartMinutes] = useState(9 * 60);
+  const [addTaskEndMinutes, setAddTaskEndMinutes] = useState(9 * 60 + 30);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const checkInSlideAnim = useRef(new RNAnimated.Value(400)).current;
@@ -323,8 +323,8 @@ function TodayScreenContent() {
   const openAddTask = () => {
     setAddTaskName("");
     setAddTaskMode("timed");
-    setAddTaskStart("9:00 AM");
-    setAddTaskEnd("9:30 AM");
+    setAddTaskStartMinutes(9 * 60);
+    setAddTaskEndMinutes(9 * 60 + 30);
     setAddTaskOpen(true);
   };
 
@@ -332,8 +332,8 @@ function TodayScreenContent() {
     setAddTaskOpen(false);
     setAddTaskName("");
     setAddTaskMode("timed");
-    setAddTaskStart("9:00 AM");
-    setAddTaskEnd("9:30 AM");
+    setAddTaskStartMinutes(9 * 60);
+    setAddTaskEndMinutes(9 * 60 + 30);
   };
 
   const handleAddTask = async () => {
@@ -344,8 +344,8 @@ function TodayScreenContent() {
     let end_minutes: number | null = null;
 
     if (addTaskMode === "timed") {
-      start_minutes = timeToMinutes(addTaskStart);
-      end_minutes = timeToMinutes(addTaskEnd);
+      start_minutes = addTaskStartMinutes;
+      end_minutes = addTaskEndMinutes;
       if (end_minutes <= start_minutes) {
         Alert.alert("Invalid time", "End time must be after start time.");
         return;
@@ -715,14 +715,6 @@ function TodayScreenContent() {
             <TouchableOpacity onPress={confirmReset}>
               <Text style={styles.linkDanger}>Reset today</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              onPress={async () => {
-                await signOut();
-                router.replace("/sign-in");
-              }}
-            >
-              <Text style={styles.link}>Sign out</Text>
-            </TouchableOpacity>
           </View>
           {stats ? <StreakStrip stats={stats} /> : null}
         </View>
@@ -762,9 +754,8 @@ function TodayScreenContent() {
             )
           )}
 
-          <TouchableOpacity style={styles.addAdhocBtn} onPress={openAddTask}>
+          <TouchableOpacity style={styles.addAdhocPill} onPress={openAddTask} activeOpacity={0.85}>
             <Text style={styles.addAdhocPlus}>+</Text>
-            <Text style={styles.addAdhocLabel}>Add task</Text>
           </TouchableOpacity>
 
           {anytimeAdhoc.length > 0 ? (
@@ -956,8 +947,16 @@ function TodayScreenContent() {
             </View>
             {addTaskMode === "timed" ? (
               <View style={styles.timeFields}>
-                <TimeField label="Start" value={addTaskStart} onChange={setAddTaskStart} />
-                <TimeField label="End" value={addTaskEnd} onChange={setAddTaskEnd} />
+                <TimePicker
+                  label="Start"
+                  valueMinutes={addTaskStartMinutes}
+                  onChange={setAddTaskStartMinutes}
+                />
+                <TimePicker
+                  label="End"
+                  valueMinutes={addTaskEndMinutes}
+                  onChange={setAddTaskEndMinutes}
+                />
               </View>
             ) : (
               <Text style={styles.anytimeHelper}>
@@ -1014,30 +1013,35 @@ const styles = StyleSheet.create({
   avatarText: { color: colors.primary, ...typography.bodyBold },
   title: { fontSize: 28, fontWeight: "700", color: colors.text },
   date: { fontSize: 14, color: colors.textMuted, marginTop: spacing.xs },
-  headerActions: { flexDirection: "row", gap: spacing.lg, marginTop: spacing.md },
+  headerActions: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: spacing.lg,
+    marginTop: spacing.md,
+  },
   link: { color: colors.primary, fontSize: 14 },
   linkDanger: { color: colors.danger, fontSize: 14 },
   list: { padding: spacing.lg, paddingBottom: 100 },
   scroll: { flex: 1 },
   scrollContent: { flexGrow: 1 },
   empty: { color: colors.textFaint, textAlign: "center", marginTop: 40, lineHeight: 22 },
-  addAdhocBtn: {
-    flexDirection: "row",
+  addAdhocPill: {
+    backgroundColor: colors.danger,
+    borderRadius: radii.pill,
+    height: 48,
+    marginHorizontal: spacing.xl,
+    marginTop: spacing.lg,
+    marginBottom: spacing.lg,
     alignItems: "center",
-    gap: spacing.sm,
-    marginTop: spacing.sm,
-    paddingVertical: spacing.sm,
+    justifyContent: "center",
   },
   addAdhocPlus: {
-    color: colors.danger,
-    fontSize: 20,
+    color: "#FFFFFF",
+    fontSize: 26,
     fontWeight: "600",
-    lineHeight: 22,
-  },
-  addAdhocLabel: {
-    color: colors.danger,
-    fontSize: 14,
-    fontWeight: "500",
+    lineHeight: 28,
+    marginTop: -2,
   },
   anytimeTray: {
     marginTop: spacing.lg,
