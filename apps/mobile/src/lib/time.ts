@@ -103,10 +103,15 @@ export function clampMinute(value: number): number {
   return Math.min(59, Math.max(0, Math.round(value)));
 }
 
-export function getLocalDateString(): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
+export function getLocalDateString(d: Date = new Date()): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+export function getTomorrowLocalDateString(): string {
+  const t = new Date();
+  t.setDate(t.getDate() + 1);
+  return getLocalDateString(t);
 }

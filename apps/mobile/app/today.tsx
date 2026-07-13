@@ -796,6 +796,13 @@ function TodayScreenContent() {
         onClose={() => setMenuOpen(false)}
         items={[
           {
+            label: "Plan tomorrow",
+            onPress: () => {
+              setMenuOpen(false);
+              router.push("/plan-tomorrow");
+            },
+          },
+          {
             label: "Edit schedule",
             onPress: () => {
               setMenuOpen(false);
