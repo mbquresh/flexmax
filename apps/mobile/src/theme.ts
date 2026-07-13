@@ -57,6 +57,11 @@ export const colors = {
   ratingGoodBorder: "#00C853",   // neon green — crushed it
   ratingOkayBorder: "#FFD600",   // neon yellow — partly
   ratingBadBorder: "#FF1744",   // neon red — lost focus
+
+  // Menu button bars
+  menuBarBlue: "#4B79AC",
+  menuBarInk: "#2A2A2A",
+  menuBarCoral: "#CE7358",
 } as const;
 
 export const spacing = {

@@ -44,6 +44,7 @@ import { BlockCard } from "../src/components/BlockCard";
 import { AdhocTimedCard } from "../src/components/AdhocTimedCard";
 import { AdhocAnytimeRow } from "../src/components/AdhocAnytimeRow";
 import { TimePicker } from "../src/components/TimePicker";
+import { AppMenu, MenuButton } from "../src/components/AppMenu";
 import { useTodayData } from "../src/hooks/useTodayData";
 import { colors, spacing, radii, typography } from "../src/theme";
 
@@ -83,6 +84,7 @@ function TodayScreenContent() {
   const [addTaskMode, setAddTaskMode] = useState<"timed" | "anytime">("timed");
   const [addTaskStartMinutes, setAddTaskStartMinutes] = useState(9 * 60);
   const [addTaskEndMinutes, setAddTaskEndMinutes] = useState(9 * 60 + 30);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const checkInSlideAnim = useRef(new RNAnimated.Value(400)).current;
@@ -708,13 +710,8 @@ function TodayScreenContent() {
               </Text>
             </TouchableOpacity>
           </View>
-          <View style={styles.headerActions}>
-            <TouchableOpacity onPress={() => router.push("/schedule-builder")}>
-              <Text style={styles.link}>Edit schedule</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={confirmReset}>
-              <Text style={styles.linkDanger}>Reset today</Text>
-            </TouchableOpacity>
+          <View style={styles.menuButtonRow}>
+            <MenuButton onPress={() => setMenuOpen(true)} />
           </View>
           {stats ? <StreakStrip stats={stats} /> : null}
         </View>
@@ -793,6 +790,28 @@ function TodayScreenContent() {
           <Text style={styles.toastText}>{toastMessage}</Text>
         </Animated.View>
       ) : null}
+
+      <AppMenu
+        visible={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        items={[
+          {
+            label: "Edit schedule",
+            onPress: () => {
+              setMenuOpen(false);
+              router.push("/schedule-builder");
+            },
+          },
+          {
+            label: "Reset today",
+            danger: true,
+            onPress: () => {
+              setMenuOpen(false);
+              confirmReset();
+            },
+          },
+        ]}
+      />
 
       <CheckInSheet
         instance={checkInInstance}
@@ -1013,15 +1032,10 @@ const styles = StyleSheet.create({
   avatarText: { color: colors.primary, ...typography.bodyBold },
   title: { fontSize: 28, fontWeight: "700", color: colors.text },
   date: { fontSize: 14, color: colors.textMuted, marginTop: spacing.xs },
-  headerActions: {
-    flexDirection: "row",
-    justifyContent: "center",
+  menuButtonRow: {
     alignItems: "center",
-    gap: spacing.lg,
     marginTop: spacing.md,
   },
-  link: { color: colors.primary, fontSize: 14 },
-  linkDanger: { color: colors.danger, fontSize: 14 },
   list: { padding: spacing.lg, paddingBottom: 100 },
   scroll: { flex: 1 },
   scrollContent: { flexGrow: 1 },
