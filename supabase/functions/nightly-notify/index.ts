@@ -2,8 +2,9 @@
  * Edge Function: nightly-notify
  *
  * Runs nightly (via pg_cron or Supabase scheduled function).
- * 1. Generates tomorrow's daily instances from templates
- * 2. Sends "fill in your blocks" notification to all active users
+ * Sends "set up tomorrow" push to all users with registered tokens.
+ * Tomorrow's instances are generated client-side when the user opens
+ * Plan Tomorrow or Today — not here.
  *
  * Deploy: supabase functions deploy nightly-notify
  */
@@ -37,12 +38,6 @@ serve(async (req) => {
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowStr = tomorrow.toISOString().split("T")[0];
-
-  await supabase.rpc("generate_daily_instances", { target_date: tomorrowStr });
-
   const { data: tokens } = await supabase
     .from("push_tokens")
     .select("token, user_id");
@@ -57,7 +52,7 @@ serve(async (req) => {
     to: t.token,
     title: "Tonight: set up tomorrow",
     body: "Take 2 minutes to fill in what you'll actually do in each block. It makes the difference.",
-    data: { type: "nightly_fill", date: tomorrowStr },
+    data: { type: "nightly_fill" },
     sound: "default",
   }));
 
