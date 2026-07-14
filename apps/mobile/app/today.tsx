@@ -701,17 +701,17 @@ function TodayScreenContent() {
                 {displayDate} · {todayLabel}
               </Text>
             </View>
-            <TouchableOpacity
-              style={styles.avatar}
-              onPress={() => router.push("/account")}
-            >
-              <Text style={styles.avatarText}>
-                {getInitials(profile?.name ?? "U")}
-              </Text>
-            </TouchableOpacity>
-          </View>
-          <View style={styles.menuButtonRow}>
-            <MenuButton onPress={() => setMenuOpen(true)} />
+            <View style={styles.headerRight}>
+              <MenuButton onPress={() => setMenuOpen(true)} />
+              <TouchableOpacity
+                style={styles.avatar}
+                onPress={() => router.push("/account")}
+              >
+                <Text style={styles.avatarText}>
+                  {getInitials(profile?.name ?? "U")}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
           {stats ? <StreakStrip stats={stats} /> : null}
         </View>
@@ -1026,7 +1026,12 @@ const styles = StyleSheet.create({
   headerTop: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
+    alignItems: "center",
+  },
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
   },
   avatar: {
     width: 40,
@@ -1039,10 +1044,6 @@ const styles = StyleSheet.create({
   avatarText: { color: colors.primary, ...typography.bodyBold },
   title: { fontSize: 28, fontWeight: "700", color: colors.text },
   date: { fontSize: 14, color: colors.textMuted, marginTop: spacing.xs },
-  menuButtonRow: {
-    alignItems: "center",
-    marginTop: spacing.md,
-  },
   list: { padding: spacing.lg, paddingBottom: 100 },
   scroll: { flex: 1 },
   scrollContent: { flexGrow: 1 },

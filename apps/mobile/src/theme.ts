@@ -62,6 +62,9 @@ export const colors = {
   menuBarBlue: "#4B79AC",
   menuBarInk: "#2A2A2A",
   menuBarCoral: "#CE7358",
+
+  // Modal scrim (opacity animated on top)
+  overlayScrim: "#000000",
 } as const;
 
 export const spacing = {

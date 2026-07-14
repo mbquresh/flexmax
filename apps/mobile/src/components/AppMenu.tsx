@@ -7,6 +7,7 @@ import {
   Pressable,
   TouchableOpacity,
   Animated as RNAnimated,
+  Easing,
   Platform,
 } from "react-native";
 import { colors, spacing, radii, typography } from "../theme";
@@ -27,6 +28,10 @@ interface MenuButtonProps {
   onPress: () => void;
 }
 
+const SHEET_OFFSET = 400;
+const OPEN_DURATION = 220;
+const CLOSE_DURATION = 180;
+
 export function MenuButton({ onPress }: MenuButtonProps) {
   return (
     <TouchableOpacity
@@ -45,64 +50,88 @@ export function MenuButton({ onPress }: MenuButtonProps) {
 }
 
 export function AppMenu({ visible, onClose, items }: AppMenuProps) {
-  const slideAnim = useRef(new RNAnimated.Value(400)).current;
+  const slideAnim = useRef(new RNAnimated.Value(SHEET_OFFSET)).current;
+  const scrimAnim = useRef(new RNAnimated.Value(0)).current;
 
   useEffect(() => {
     if (visible) {
-      slideAnim.setValue(400);
-      RNAnimated.spring(slideAnim, {
-        toValue: 0,
-        useNativeDriver: true,
-        damping: 22,
-        stiffness: 220,
-      }).start();
+      slideAnim.setValue(SHEET_OFFSET);
+      scrimAnim.setValue(0);
+      RNAnimated.parallel([
+        RNAnimated.timing(slideAnim, {
+          toValue: 0,
+          duration: OPEN_DURATION,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        RNAnimated.timing(scrimAnim, {
+          toValue: 0.4,
+          duration: OPEN_DURATION,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+      ]).start();
     }
-  }, [visible, slideAnim]);
+  }, [visible, slideAnim, scrimAnim]);
 
   const handleClose = () => {
-    RNAnimated.timing(slideAnim, {
-      toValue: 400,
-      duration: 180,
-      useNativeDriver: true,
-    }).start(() => onClose());
+    RNAnimated.parallel([
+      RNAnimated.timing(slideAnim, {
+        toValue: SHEET_OFFSET,
+        duration: CLOSE_DURATION,
+        useNativeDriver: true,
+      }),
+      RNAnimated.timing(scrimAnim, {
+        toValue: 0,
+        duration: CLOSE_DURATION,
+        useNativeDriver: true,
+      }),
+    ]).start(() => onClose());
   };
 
   const firstDangerIndex = items.findIndex((item) => item.danger);
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
-      <Pressable style={styles.overlay} onPress={handleClose}>
-        <Pressable onPress={(e) => e.stopPropagation()}>
-          <RNAnimated.View
-            style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}
-          >
-            <Pressable style={styles.sheetHandleWrap} onPress={handleClose} hitSlop={8}>
-              <View style={styles.sheetHandle} />
-            </Pressable>
+    <Modal visible={visible} transparent animationType="none" onRequestClose={handleClose}>
+      <View style={styles.root}>
+        <RNAnimated.View
+          style={[styles.scrim, { opacity: scrimAnim }]}
+          pointerEvents="none"
+        />
 
-            {items.map((item, index) => (
-              <React.Fragment key={item.label}>
-                {index === firstDangerIndex && firstDangerIndex > 0 ? (
-                  <View style={styles.divider} />
-                ) : null}
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.menuRow,
-                    pressed && styles.menuRowPressed,
-                  ]}
-                  onPress={item.onPress}
-                >
-                  <Text
-                    style={[styles.menuRowText, item.danger && styles.menuRowTextDanger]}
+        <Pressable style={styles.overlayPressable} onPress={handleClose}>
+          <Pressable onPress={(e) => e.stopPropagation()}>
+            <RNAnimated.View
+              style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}
+            >
+              <Pressable style={styles.sheetHandleWrap} onPress={handleClose} hitSlop={8}>
+                <View style={styles.sheetHandle} />
+              </Pressable>
+
+              {items.map((item, index) => (
+                <React.Fragment key={item.label}>
+                  {index === firstDangerIndex && firstDangerIndex > 0 ? (
+                    <View style={styles.divider} />
+                  ) : null}
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.menuRow,
+                      pressed && styles.menuRowPressed,
+                    ]}
+                    onPress={item.onPress}
                   >
-                    {item.label}
-                  </Text>
-                </Pressable>
-              </React.Fragment>
-            ))}
-          </RNAnimated.View>
+                    <Text
+                      style={[styles.menuRowText, item.danger && styles.menuRowTextDanger]}
+                    >
+                      {item.label}
+                    </Text>
+                  </Pressable>
+                </React.Fragment>
+              ))}
+            </RNAnimated.View>
+          </Pressable>
         </Pressable>
-      </Pressable>
+      </View>
     </Modal>
   );
 }
@@ -124,9 +153,16 @@ const styles = StyleSheet.create({
     borderRadius: 1,
     marginVertical: 1.5,
   },
-  overlay: {
+  root: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.55)",
+    justifyContent: "flex-end",
+  },
+  scrim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: colors.overlayScrim,
+  },
+  overlayPressable: {
+    flex: 1,
     justifyContent: "flex-end",
   },
   sheet: {
@@ -145,7 +181,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: colors.textDisabled,
+    backgroundColor: colors.border,
   },
   divider: {
     height: 0.5,
@@ -153,7 +189,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   menuRow: {
-    paddingVertical: 14,
+    paddingVertical: 16,
     paddingHorizontal: spacing.xs,
     borderRadius: radii.sm,
   },
