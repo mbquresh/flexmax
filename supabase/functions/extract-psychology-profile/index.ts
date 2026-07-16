@@ -12,6 +12,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { extractPsychologyProfile } from "../_shared/ai.ts";
 import { PROFILE_EXTRACTION_PROMPT } from "../_shared/prompts.ts";
 import { corsHeaders, getAuthenticatedUser } from "../_shared/auth.ts";
+import { checkRateLimit } from "../_shared/rateLimit.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -30,13 +31,42 @@ serve(async (req) => {
       });
     }
 
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+    const { data: existing } = await supabase
+      .from("psychology_profiles")
+      .select("*")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (existing?.completed_at) {
+      return new Response(JSON.stringify({ profile: existing, cached: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { messages } = await req.json();
+
+    const { allowed, limit } = await checkRateLimit(user.id, "extract-psychology-profile");
+    if (!allowed) {
+      return new Response(
+        JSON.stringify({
+          error: `Rate limit exceeded. Max ${limit} requests per hour.`,
+        }),
+        {
+          status: 429,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+            "Retry-After": "3600",
+          },
+        }
+      );
+    }
+
     const { profile, provider } = await extractPsychologyProfile(
       messages,
       PROFILE_EXTRACTION_PROMPT
     );
-
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
     const { data: saved, error } = await supabase
       .from("psychology_profiles")

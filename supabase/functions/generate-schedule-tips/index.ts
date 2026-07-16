@@ -11,6 +11,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { generateScheduleTips } from "../_shared/ai.ts";
 import { corsHeaders, getAuthenticatedUser } from "../_shared/auth.ts";
+import { checkRateLimit } from "../_shared/rateLimit.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -49,6 +50,23 @@ serve(async (req) => {
       return new Response(JSON.stringify({ tips: profile.schedule_tips }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    const { allowed, limit } = await checkRateLimit(user.id, "generate-schedule-tips");
+    if (!allowed) {
+      return new Response(
+        JSON.stringify({
+          error: `Rate limit exceeded. Max ${limit} requests per hour.`,
+        }),
+        {
+          status: 429,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+            "Retry-After": "3600",
+          },
+        }
+      );
     }
 
     const { tips, provider } = await generateScheduleTips(profile);

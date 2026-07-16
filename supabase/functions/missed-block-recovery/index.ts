@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders, getAuthenticatedUser } from "../_shared/auth.ts";
+import { checkRateLimit } from "../_shared/rateLimit.ts";
 
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY")!;
 
@@ -27,6 +28,23 @@ serve(async (req) => {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    const { allowed, limit } = await checkRateLimit(user.id, "missed-block-recovery");
+    if (!allowed) {
+      return new Response(
+        JSON.stringify({
+          error: `Rate limit exceeded. Max ${limit} requests per hour.`,
+        }),
+        {
+          status: 429,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+            "Retry-After": "3600",
+          },
+        }
+      );
     }
 
     const { blockName, missCount, psychologyProfile } = await req.json();

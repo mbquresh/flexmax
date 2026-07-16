@@ -11,6 +11,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { onboardingReply } from "../_shared/ai.ts";
 import { ONBOARDING_SYSTEM_PROMPT } from "../_shared/prompts.ts";
 import { corsHeaders, getAuthenticatedUser } from "../_shared/auth.ts";
+import { checkRateLimit } from "../_shared/rateLimit.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -24,6 +25,23 @@ serve(async (req) => {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    const { allowed, limit } = await checkRateLimit(user.id, "onboarding-chat");
+    if (!allowed) {
+      return new Response(
+        JSON.stringify({
+          error: `Rate limit exceeded. Max ${limit} requests per hour.`,
+        }),
+        {
+          status: 429,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+            "Retry-After": "3600",
+          },
+        }
+      );
     }
 
     const { messages } = await req.json();
