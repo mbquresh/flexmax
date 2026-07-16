@@ -13,6 +13,80 @@ One-liner: "Habit trackers watch you fail. FlexMax figures out why."
 
 ---
 
+## Competitive positioning: FlexMax vs. Structured
+
+Structured (unorderly GmbH) is the category king in visual day-planning:
+15M+ downloads, 500K+ Pro users, 400K+ five-star reviews, Apple Editor's
+Choice. It has explicitly moved onto our ICP's turf — its App Store copy
+now says "whether dealing with ADHD, autism, or simply seeking a bit more
+structure" — and it is not standing still on AI: "Structured AI" creates
+schedules from natural language, and the team has publicly said they're
+reworking their AI assistant.
+
+**Conclusion: we cannot win as "a beautiful, simple time-block planner."**
+That position is occupied, polished, and well-funded. Any positioning that
+reads as "like Structured but—" loses by default.
+
+### Where the seam is
+
+Two findings from Structured's own reviews and marketing:
+
+1. ADHD-focused reviews of Structured cite the same limitation repeatedly:
+   it becomes discouraging when the timeline is overfilled, and it only
+   works well when the day plan is realistic. In other words: Structured is
+   a beautiful mirror of your plan. It works when you're already doing
+   well. When you fall behind, the mirror shows you failing, in gorgeous
+   detail — the exact shame-spiral our ICP (the "Capable Drifter") has
+   already quit every other planner over.
+
+2. Structured's own answer to missed tasks is "Replan — reschedule with a
+   quick swipe." That is mechanical relocation: the block moves, nothing
+   learns. Miss morning gym 40 times, replan it 40 times, and Structured
+   will happily schedule morning gym #41, identical to #1. It treats the
+   symptom (an unfinished block) and is structurally blind to the cause.
+
+### FlexMax's answer
+
+Structured answers "what is my day?" FlexMax answers "why does my day keep
+breaking, and what should change?" Structured captures the plan. FlexMax
+captures the failure data — completion_ratings, reflection_why,
+reflection_improve, removed_reason, swap patterns — and v2b's behavioral
+learning turns that into an evolving model of the person. Structured's
+Replan moves the block. FlexMax's recovery asks why, remembers the answer,
+and eventually stops proposing blocks the user's own data says don't
+survive.
+
+One-liner against them: "Structured shows you your plan. FlexMax learns
+why your plans fail."
+
+### Implications this creates (binding on future work)
+
+- **v2b is not just a feature, it is the entire differentiation.** Until
+  the psychology profile evolves from behavior, FlexMax is an objectively
+  worse Structured — less polish, fewer integrations, no widgets, no Apple
+  Watch. The moment the profile evolves, FlexMax is in a category
+  Structured cannot enter without abandoning its own identity. This raises
+  the priority of the v2a capture-gap fixes (swap audit trail, notification
+  response tracking, check-in timing) — they are prerequisites for v2b, and
+  data not captured today is unrecoverable later.
+
+- **The miss/recovery moment is the battlefield.** Structured's weakest
+  moment is falling behind — a timeline that turns into a wall of missed
+  blocks. That exact moment must be FlexMax's strongest. When a user misses
+  multiple blocks, Structured shows multiple failures; FlexMax must show
+  one recovery path and zero judgment. Any UI touching missed-block
+  recovery should be designed with this contrast explicitly in mind.
+
+- **AI scope boundary: their AI accelerates planning, ours must accelerate
+  understanding.** Structured AI's job is to create a schedule faster from
+  natural language — that is input/creation. If FlexMax's AI roadmap drifts
+  toward "AI that builds your schedule for you" as its main value, we are
+  building Structured's feature, not ours. Keep FlexMax's AI focused on
+  learning and adapting to the user's demonstrated behavior, not on
+  authoring the plan itself.
+
+---
+
 ## Stack
 
 - **Mobile:** Expo / React Native (tested on physical iPhone via Expo Go / EAS)
@@ -137,6 +211,9 @@ recovery per-miss with miss count). Profile FROZEN after onboarding.
 - Notification response tracking (did the user act on the nudge?)
 - Check-in timing (how long after block end did they rate it?)
 
+Prerequisites for v2b differentiation vs Structured — see **Competitive positioning**.
+Data not captured today is unrecoverable later.
+
 ---
 
 ## v2 roadmap (sequenced)
@@ -147,7 +224,7 @@ recovery per-miss with miss count). Profile FROZEN after onboarding.
 | v2 prep | v2-issues.md hardening (rate limiting first) | Must precede public exposure |
 | v2a | EAS build → TestFlight (10-20 users) | Gate for real notifications + native extension |
 | v2a | Presence-aware nudges (block-start + mid-block) | Requires EAS; feeds behavioral learning |
-| v2a | Capture gap fixes (swap trail, notif response, timing) | Feeds behavioral learning |
+| v2a | Capture gap fixes (swap trail, notif response, timing) | Prerequisites for v2b vs Structured — see **Competitive positioning** |
 | v2b | Behavioral learning v1 — THE flagship | Profile evolves from actual behavior |
 | v2b | Shareable weekly recap card | Organic growth primitive |
 | v2b | Morning brief | Powered by evolved profile |
@@ -171,7 +248,9 @@ recovery per-miss with miss count). Profile FROZEN after onboarding.
 Notion/Habitica/planners, ADHD-adjacent segment deliberately valuable, converts
 Sunday evening, pays $10/mo, allergic to toxic-positivity AND shame, Apple-polish taste.
 
-**Key competitor:** Me+ Lifestyle Routine (Enerjoy) — 21M downloads, 4.79 stars.
+**Day-planning competitor:** Structured — see **Competitive positioning** above.
+
+**Habit-tracker competitor:** Me+ Lifestyle Routine (Enerjoy) — 21M downloads, 4.79 stars.
 Validates market. Static tracker, MBTI "personalization," self-care framing.
 Positioning: "Me+ helps you decorate a routine. FlexMax helps you keep one."
 Compete ONLY on adaptive intelligence + flexibility axis. Never on templates or aesthetics.
