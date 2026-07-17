@@ -1,12 +1,13 @@
 /**
  * Edge Function: nightly-notify
  *
- * Runs nightly (via pg_cron or Supabase scheduled function).
- * Sends "set up tomorrow" push to all users with registered tokens.
+ * Called HOURLY (via pg_cron or Supabase scheduled function).
+ * Sends "set up tomorrow" push only to users whose local time is 9pm.
+ * Uses users_to_notify_now(21) to join push_tokens → profiles.timezone.
  * Tomorrow's instances are generated client-side when the user opens
  * Plan Tomorrow or Today — not here.
  *
- * Deploy: supabase functions deploy nightly-notify
+ * Deploy: supabase functions deploy nightly-notify --no-verify-jwt
  */
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -38,9 +39,19 @@ serve(async (req) => {
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
-  const { data: tokens } = await supabase
-    .from("push_tokens")
-    .select("token, user_id");
+  // 21 = 9pm local. The RPC joins push_tokens -> profiles and filters by each
+  // user's own timezone, so this function is called hourly by cron and only
+  // sends to users for whom it is currently 9pm.
+  const { data: tokens, error: tokensError } = await supabase
+    .rpc("users_to_notify_now", { target_hour: 21 });
+
+  if (tokensError) {
+    console.error("users_to_notify_now failed:", tokensError);
+    return new Response(JSON.stringify({ error: "Lookup failed" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
 
   if (!tokens?.length) {
     return new Response(JSON.stringify({ sent: 0 }), {
