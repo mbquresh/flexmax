@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { Session } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
 import { registerPushToken, unregisterPushToken } from "../lib/notifications";
+import { handleError } from "../lib/errors";
 import { useStore } from "../store";
 import { Profile, PsychologyProfile } from "../types/database";
 
@@ -18,6 +19,31 @@ interface AuthContextValue {
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+
+async function syncDeviceTimezone(
+  userId: string,
+  currentTimezone: string
+): Promise<string> {
+  try {
+    const deviceTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const validTz = deviceTz && deviceTz.includes("/");
+
+    if (!validTz || currentTimezone === deviceTz) {
+      return currentTimezone;
+    }
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({ timezone: deviceTz })
+      .eq("id", userId);
+
+    if (error) throw error;
+    return deviceTz;
+  } catch (err) {
+    handleError(err, "syncDeviceTimezone");
+    return currentTimezone;
+  }
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
@@ -54,15 +80,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (profileResult.error) throw profileResult.error;
 
+    const timezone = await syncDeviceTimezone(
+      userId,
+      profileResult.data.timezone
+    );
+    const profileData =
+      timezone === profileResult.data.timezone
+        ? profileResult.data
+        : { ...profileResult.data, timezone };
+
     const psychResult = await supabase
       .from("psychology_profiles")
       .select("*")
       .eq("user_id", userId)
       .maybeSingle();
 
-    setProfile(profileResult.data);
+    setProfile(profileData);
     setPsychologyProfile(psychResult.data);
-    setUser(userId, profileResult.data);
+    setUser(userId, profileData);
     if (psychResult.data) setStorePsych(psychResult.data);
     setProfileLoaded(true);
 
