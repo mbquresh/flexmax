@@ -89,8 +89,10 @@ export interface DailyInstance {
   task_detail: string | null;
   status: BlockStatus;
   completion_rating: CompletionRating | null;
+  rated_at: string | null;
   reflection_why: string | null;
   reflection_improve: string | null;
+  reflected_at: string | null;
   rescheduled_to_id: string | null;
   is_fixed: boolean;
   removed_reason: string | null;
