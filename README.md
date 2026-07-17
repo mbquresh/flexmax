@@ -1,138 +1,105 @@
-# FlexMax
+<p align="center">
+  <img src="apps/mobile/assets/icon.png" width="96" alt="FlexMax">
+</p>
 
-> A 24/7 life optimization agent that keeps you on track through psychology-aware scheduling, AI accountability, and smart behavioral nudges.
+<h1 align="center">FlexMax</h1>
 
-## Interactive mockup
+<p align="center"><strong>Habit trackers watch you fail. FlexMax figures out why.</strong></p>
 
-Browse the full app mockup (all screens side-by-side): **[mbquresh.github.io/flexmax](https://mbquresh.github.io/flexmax/)**
+<p align="center">
+  <a href="https://mbquresh.github.io/flexmax">Interactive demo</a> — every screen, tappable
+</p>
 
-Source: [`docs/index.html`](docs/index.html) — enable GitHub Pages with **Settings → Pages → Build from `/docs`**.
+---
 
-## What this is
+FlexMax is an AI-powered behavioral accountability app for iOS. You build 
+your day out of flexible time blocks. The app pays attention to what you 
+actually do — what you complete, what you miss, what you swap, and why.
 
-FlexMax is not a calendar app. It's a behavioral accountability system built around how humans actually work — avoidance loops, motivation patterns, distraction tendencies — and it learns yours.
+It is not a calendar app. Calendars and planners are mirrors: they show 
+you your plan, and when you fall behind, they show you falling behind in 
+gorgeous detail. FlexMax is built around the opposite moment — the missed 
+block. Instead of a red X, you get a short reflection and a schedule that 
+rebuilds around what's still possible today.
 
-**Core loop:**
-1. AI onboarding learns your psychology (goals, tendencies, sabotage patterns)
-2. You build a weekly schedule with draggable time blocks (quick-add presets + custom blocks)
-3. AI coaching tips guide how you set up blocks — no auto-generated schedule
-4. Each night, you fill in what you'll actually do in each block (nightly push notification)
-5. Smart notifications hold you accountable through the day
-6. Missed blocks trigger AI reflection + in-place rescheduling
-7. One-off ad-hoc tasks for today — timed (on the timeline) or anytime (secondary tray)
+## Why it exists
 
-## Repo structure
+Every popular planner works well when you're already doing well. The 
+people who need one most — ambitious, capable, easily derailed — abandon 
+app after app, not because features were missing, but because day three of 
+a bad week made them feel like a failure.
 
-```
-flex_max/
-├── apps/
-│   └── mobile/          # Expo React Native app
-│       ├── app/         # Expo Router routes
-│       └── src/
-│           ├── components/
-│           ├── hooks/
-│           ├── providers/
-│           ├── lib/
-│           ├── store/
-│           └── types/
-└── supabase/
-    ├── migrations/      # Database schema
-    ├── functions/       # Edge functions (notifications, cron)
-    └── APPLY_IN_DASHBOARD.sql  # Manual SQL when db push is out of sync
-```
+Rescheduling a missed task moves the block. It doesn't ask why the block 
+keeps getting missed. Miss the gym forty times and a planner will 
+cheerfully schedule gym #41, identical to #1.
 
-## Tech stack
+FlexMax counts. When a block has been missed three or more times, the 
+recovery flow names the pattern instead of quietly relocating it, then 
+offers the next real slot in the day.
 
-- **Mobile**: Expo (React Native) — push notifications, cross-platform mobile
-- **Backend**: Supabase — auth, Postgres, realtime, edge functions
-- **AI**: Anthropic Claude API (claude-sonnet-4-6)
-- **State**: Zustand
-- **Notifications**: Expo Notifications + Supabase Edge Functions cron
+## Core loop
+
+1. Conversational AI onboarding builds a psychology profile (4 turns)
+2. You build a schedule of time blocks — some flexible, some fixed anchors
+3. Tips from your own answers shape the schedule as you build it
+4. Timezone-aware notifications through the day
+5. Check-ins: crushed it / partly / lost focus — the middle option is 
+   where the signal is
+6. Missed blocks open recovery: acknowledge, reflect, reschedule
 
 ## Status
 
-Work in progress. **v1, v1.1, v1.2, chassis hardening, v1.3, security & integrity hardening, and v1.4 complete.**
+**v1.4 — on TestFlight, internal testing.** Built solo.
 
-**Live now:**
-- AI onboarding (Claude-powered psychology profile extraction)
-- Schedule builder: AI coaching tips, quick-add presets, custom blocks, inline editing, fixed/flexible blocks, native time picker
-- Today view: check-ins with semantic ratings, drag-to-swap from handle rail (respects fixed blocks + protected gaps), task detail entry, undo, missed-block recovery, reset today
-- Block cards: swipe-left reveals Missed + Remove actions; bidirectional swipe to close; scroll/drag/swipe coexist without conflict
-- Swipe-to-remove blocks from today (optional reason, excluded from stats and swap targets)
-- Ad-hoc today tasks: full-width coral add button; timed tasks on timeline or anytime tasks in secondary tray
-- Missed block recovery: AI reflection prompts + in-place rescheduling
-- Weekly streak tracking + completion rate (scheduled blocks only; ad-hoc tasks excluded for now)
-- Account screen: psychology profile summary, editable name, redo onboarding, sign out
-- Push token registration, nightly fill-in notifications (pg_cron), post-block check-in notifications (local scheduling)
-- Light grey + blue theme with centralized design tokens
+Working: AI onboarding and psychology profile, schedule builder with 
+drag-to-swap and fixed anchors, check-ins, miss reflections, missed-block 
+recovery with reschedule, push notifications in each user's local 
+timezone, rate-limited AI endpoints with the API key server-side only.
 
-## Getting started
+Not built yet: the full behavioral learning layer. Swap patterns, 
+completion ratings, and removal reasons are captured but not yet read back 
+— miss counts are the exception, and they already feed the recovery 
+prompts. Also pending: payments, Screen Time shielding (awaiting an Apple 
+entitlement), widgets, Watch.
+
+The app is about half of what it should be. The magic is in the other half.
+
+## Stack
+
+| | |
+|---|---|
+| Mobile | Expo (React Native), Expo Router, Zustand, Reanimated |
+| Backend | Supabase — Postgres + RLS, auth, edge functions, cron |
+| AI | Claude API (claude-sonnet-4-6), called only from edge functions |
+| Notifications | Expo Notifications, resolved per user's local timezone |
+| Design | One token file — `apps/mobile/src/theme.ts`. No hex values or magic numbers in any StyleSheet. |
+
+```
+apps/mobile/          Expo app
+  app/                Expo Router routes — today, schedule-builder, onboarding, account
+  src/components/     BlockCard, RecoverySheet, CheckInSheet, StreakStrip
+  src/theme.ts        design tokens, single source of truth
+packages/ai/          Claude wrappers + prompt system
+supabase/
+  migrations/         schema
+  functions/          onboarding-chat, extract-psychology-profile,
+                      generate-schedule-tips, missed-block-recovery, nightly-notify
+docs/index.html       the interactive demo published above
+```
+
+## Running it
 
 ```bash
-# Install dependencies
 yarn install
-
-# Set up environment variables
 cp apps/mobile/.env.example apps/mobile/.env
-# Fill in: EXPO_PUBLIC_SUPABASE_URL, EXPO_PUBLIC_SUPABASE_ANON_KEY
-# ANTHROPIC_API_KEY lives server-side only (Supabase edge function secret)
-
-# Push Supabase schema
+# EXPO_PUBLIC_SUPABASE_URL, EXPO_PUBLIC_SUPABASE_ANON_KEY
+# ANTHROPIC_API_KEY is a Supabase edge function secret — never client-side
 npx supabase db push
-# If db push is out of sync, run pending migrations manually in the Supabase SQL editor
-# (see supabase/APPLY_IN_DASHBOARD.sql)
-
-# Start mobile app
 yarn mobile
 ```
 
-## Roadmap
+## License
 
-### v1 — complete
-Repo structure, Supabase schema + auth, AI onboarding, schedule builder, AI tips, Today view (check-ins, drag-to-swap, missed-block recovery).
+All rights reserved. Readable, not reusable — see [LICENSE](LICENSE).
 
-### v1.1 — complete
-Nightly task-fill notifications, post-block check-ins, missed block recovery flow.
-
-### v1.2 — complete
-Weekly streak + completion rate, account screen + psychology profile summary, light grey + blue theme.
-
-### Chassis hardening — complete
-Foundation work before v2 complexity:
-- Centralized design tokens (`src/theme.ts`)
-- Decomposed `today.tsx` into components + hooks
-- Standardized error handling utility
-- Streak calculation optimized (N+1 → single query)
-- Dead code sweep (removed unused `packages/ai` workspace)
-
-### v1.3 — complete
-- Fixed/flexible blocks (inflexible anchors like work/commute)
-- Adjacency-aware swap (unified anchor-rebuild, preserves gaps, never overflows day)
-- Reset today
-- Swipe-to-remove + swipe-to-missed (Apple Mail style gestures)
-- Ad-hoc today tasks with "anytime today" tray
-
-### Security & integrity hardening — complete
-- Scoped generate_daily_instances (fixed cross-tenant write vulnerability)
-- AsyncStorage session persistence (sessions survive app restarts)
-- Atomic swap via transactional RPC
-- Onboarding gate on protected routes
-- Stats timezone consistency, reset rollback safety, cron doc fixes
-- Notifications reschedule after block time changes
-
-### v1.4 — complete
-- Native time picker (iOS/Android wheel)
-- Check-in ratings with semantic colors
-- Schedule builder + Today UI polish
-
-### v2 — planned
-- Behavioral learning: psychology profile evolves from completion patterns
-- Remaining hardening (see v2-issues.md): AI rate limiting, CHECK constraints, stack-trace audit, stale-request guard
-- Dark theme + light/dark toggle (design tokens make this feasible)
-- Activity idle detection (native build)
-- Morning brief
-- EAS build → TestFlight
-
-## Name
-
-**FlexMax** — flexibility meets optimization. The schedule bends to your life; the AI makes sure you don't use that as an excuse.
+Built by [Belal Qureshi](https://github.com/mbquresh) in Houston, TX.

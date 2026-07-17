@@ -1,319 +1,911 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FlexMax — App Mockup</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FlexMax — Habit trackers watch you fail. FlexMax figures out why.</title>
+<meta name="description" content="FlexMax is an AI-powered behavioral accountability app for iOS. Built around the missed block, not the perfect day.">
+<link rel="icon" type="image/png" href="data:image/png;base64,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iAAAAIBABAAAAAQiAAAAIBABAAAAgQgAAAAIRAAAAEAgAgAAAAIRAAAAEIgAAACAQAQAAAAEIgAAACAQAQAAAIEIAAAACEQAAABAIAIAAAACEQAAABCIAAAAgEAEAAAABCIAAAAgEAEAAACBCAAAAAhEAAAAQCACAAAAAhEAAAAQiAAAAIBABAAAAAQiAAAAIBABAAAAgQgAAAAIRAAAAEAgAgAAAAIRAAAAEIgAAACAQAQAAAAEIgAAACAQAQAAAIEIAAAACEQAAABAIAIAAAACEQAAABCIAAAAgEAEAAAABCIAAAAgEAEAAACBCAAAAAhEAAAAQCACAAAAAhEAAAAQiAAAAIBABAAAAAQiAAAAIBABAAAAgQgAAAAIRAAAAEAgAgAAAAIRAAAAEIgAAACAQAQAAAAEIgAAACAQAQAAAIEIAAAACEQAAABAIAIAAAACEQAAABCIAAAAgEAEAAAABCIAAAAgEAEAAACBCAAAAAhEAAAAQCACAAAAAhEAAAAQiAAAAIBABAAAAAQiAAAAIBABAAAAgQgAAAAIRAAAAEAgAgAAAAIRAAAAEIgAAACAQAQAAAAEIgAAACAQAQAAAIEIAAAACEQAAABAIAIAAAACEQAAABCIAAAAgED+L1uR7+OuFjWaAAAAAElFTkSuQmCC">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: #0a0a0d; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 2rem; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-  h1 { font-size: 13px; color: #534AB7; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 1.5rem; text-align: center; }
-  .fm-root { display: flex; gap: 20px; padding: 1.5rem; background: #111115; border-radius: 20px; justify-content: center; flex-wrap: wrap; border: 0.5px solid #2a2a2a; }
-  .fm-phone-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-  .fm-screen { width: 200px; background: #0f0f12; border-radius: 28px; padding: 0; overflow: hidden; border: 1.5px solid #2a2a2a; box-shadow: 0 0 0 6px #1a1a1a; }
-  .fm-notch { height: 32px; background: #0f0f12; display: flex; align-items: center; justify-content: center; padding-top: 6px; }
-  .fm-notch-pill { width: 72px; height: 20px; background: #1a1a1a; border-radius: 20px; display: flex; align-items: center; justify-content: center; }
-  .fm-notch-cam { width: 8px; height: 8px; border-radius: 50%; background: #333; }
-  .fm-body { padding: 12px 11px 16px; min-height: 420px; }
-  .fm-label { font-size: 11px; color: #888; text-align: center; font-weight: 500; letter-spacing: 0.04em; }
-  .fm-step { font-size: 10px; color: #534AB7; background: #2d2250; padding: 2px 8px; border-radius: 20px; text-align: center; width: fit-content; margin: 0 auto 4px; font-weight: 500; }
-  .fm-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
-  .fm-greeting { font-size: 12px; font-weight: 500; color: #f0f0f0; }
-  .fm-sub { font-size: 9px; color: #555; margin-top: 2px; }
-  .fm-avatar { width: 26px; height: 26px; border-radius: 50%; background: #2d2250; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 500; color: #AFA9EC; }
-  .fm-logo { font-size: 13px; font-weight: 500; color: #AFA9EC; letter-spacing: -0.02em; }
-  .fm-logo span { color: #534AB7; }
-  .fm-block { border-radius: 9px; padding: 8px 9px; margin-bottom: 5px; position: relative; }
-  .fm-block-time { font-size: 8px; font-weight: 500; margin-bottom: 2px; }
-  .fm-block-name { font-size: 10px; font-weight: 500; }
-  .fm-block-task { font-size: 8px; margin-top: 2px; opacity: 0.65; }
-  .fm-drag { position: absolute; right: 7px; top: 50%; transform: translateY(-50%); font-size: 12px; opacity: 0.25; color: #fff; }
-  .fm-block-done { position: absolute; right: 7px; top: 7px; width: 14px; height: 14px; border-radius: 50%; background: #5DCAA5; display: flex; align-items: center; justify-content: center; }
-  .b-purple { background: #1e1830; } .b-purple .fm-block-time { color: #AFA9EC; } .b-purple .fm-block-name { color: #EEEDFE; }
-  .b-teal { background: #0b2a20; } .b-teal .fm-block-time { color: #5DCAA5; } .b-teal .fm-block-name { color: #E1F5EE; }
-  .b-amber { background: #221808; } .b-amber .fm-block-time { color: #EF9F27; } .b-amber .fm-block-name { color: #FAEEDA; }
-  .b-coral { background: #22100a; } .b-coral .fm-block-time { color: #F0997B; } .b-coral .fm-block-name { color: #FAECE7; }
-  .b-gray { background: #191919; } .b-gray .fm-block-time { color: #666; } .b-gray .fm-block-name { color: #aaa; }
-  .fm-now-bar { display: flex; align-items: center; gap: 5px; margin: 7px 0; }
-  .fm-now-line { flex: 1; height: 0.5px; background: #5DCAA5; }
-  .fm-now-dot { width: 5px; height: 5px; border-radius: 50%; background: #5DCAA5; flex-shrink: 0; }
-  .fm-now-time { font-size: 8px; color: #5DCAA5; font-weight: 500; white-space: nowrap; }
-  .chat-wrap { display: flex; flex-direction: column; gap: 7px; }
-  .chat-ai { background: #1a1a22; border-radius: 9px 9px 9px 2px; padding: 7px 9px; font-size: 9.5px; color: #c8c8c8; line-height: 1.55; }
-  .chat-ai-label { font-size: 8px; color: #534AB7; margin-bottom: 4px; font-weight: 500; display: flex; align-items: center; gap: 4px; }
-  .chat-user { background: #2d2250; border-radius: 9px 9px 2px 9px; padding: 7px 9px; font-size: 9.5px; color: #EEEDFE; line-height: 1.55; margin-left: 16px; }
-  .chat-typing { display: flex; align-items: center; gap: 3px; padding: 8px 10px; background: #1a1a22; border-radius: 9px 9px 9px 2px; width: fit-content; }
-  .chat-dot { width: 4px; height: 4px; border-radius: 50%; background: #534AB7; animation: pulse 1.2s infinite; }
-  .chat-dot:nth-child(2) { animation-delay: 0.2s; }
-  .chat-dot:nth-child(3) { animation-delay: 0.4s; }
-  @keyframes pulse { 0%, 80%, 100% { opacity: 0.3; } 40% { opacity: 1; } }
-  .chat-input-bar { display: flex; gap: 5px; margin-top: 10px; align-items: center; }
-  .chat-input { flex: 1; background: #1a1a1a; border: 0.5px solid #2a2a2a; border-radius: 14px; padding: 5px 9px; font-size: 9px; color: #666; }
-  .chat-send { width: 24px; height: 24px; border-radius: 50%; background: #534AB7; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-  .fm-psych { background: #1a1a22; border-radius: 9px; padding: 8px 9px; margin-bottom: 6px; }
-  .fm-psych-label { font-size: 8px; color: #555; margin-bottom: 5px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; }
-  .fm-tag { display: inline-block; font-size: 8px; padding: 2px 7px; border-radius: 10px; margin: 2px 2px 2px 0; font-weight: 500; }
-  .tag-purple { background: #2d2250; color: #AFA9EC; }
-  .tag-coral { background: #2a130a; color: #F0997B; }
-  .tag-teal { background: #0b2a20; color: #5DCAA5; }
-  .tag-amber { background: #221808; color: #EF9F27; }
-  .fm-ai-card { background: #1a1a22; border-radius: 9px; padding: 8px 9px; margin-bottom: 6px; border-left: 2px solid #534AB7; }
-  .fm-ai-card-head { font-size: 9px; font-weight: 500; color: #AFA9EC; margin-bottom: 4px; display: flex; align-items: center; gap: 4px; }
-  .fm-ai-card-body { font-size: 8.5px; color: #888; line-height: 1.5; }
-  .fm-ai-card-actions { display: flex; gap: 5px; margin-top: 7px; }
-  .fm-btn-sm { font-size: 8px; padding: 3px 9px; border-radius: 10px; border: none; cursor: pointer; font-weight: 500; transition: opacity 0.15s; }
-  .fm-btn-sm:hover { opacity: 0.8; }
-  .fm-btn-primary { background: #534AB7; color: #EEEDFE; }
-  .fm-btn-ghost { background: #1e1e1e; color: #666; border: 0.5px solid #2a2a2a; }
-  .fm-btn-teal { background: #0b2a20; color: #5DCAA5; }
-  .fm-btn-coral { background: #2a130a; color: #F0997B; }
-  .fm-reflect { background: #1a1a22; border-radius: 9px; padding: 8px 9px; border-left: 2px solid #D85A30; margin-bottom: 6px; }
-  .fm-reflect-head { font-size: 9px; font-weight: 500; color: #F0997B; margin-bottom: 4px; }
-  .fm-reflect-q { font-size: 8.5px; color: #888; margin-bottom: 5px; line-height: 1.4; }
-  .fm-reflect-input { width: 100%; background: #141414; border: 0.5px solid #2a2a2a; border-radius: 5px; padding: 5px 7px; font-size: 8.5px; color: #aaa; box-sizing: border-box; min-height: 32px; resize: none; font-family: inherit; }
-  .fm-reschedule { background: #0b2a20; border-radius: 9px; padding: 8px 9px; margin-top: 4px; }
-  .fm-reschedule-head { font-size: 8px; color: #5DCAA5; font-weight: 500; margin-bottom: 6px; display: flex; align-items: center; gap: 4px; }
-  .fm-progress { height: 3px; background: #1e1e1e; border-radius: 3px; margin-top: 10px; overflow: hidden; }
-  .fm-progress-bar { height: 100%; background: #534AB7; border-radius: 3px; }
-  .fm-stat-row { display: flex; gap: 5px; margin-bottom: 6px; }
-  .fm-stat { flex: 1; background: #1a1a22; border-radius: 8px; padding: 7px 8px; text-align: center; }
-  .fm-stat-num { font-size: 16px; font-weight: 500; color: #EEEDFE; }
-  .fm-stat-label { font-size: 7.5px; color: #555; margin-top: 1px; }
-  .fm-streak { background: #221808; border-radius: 8px; padding: 7px 9px; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; }
-  .fm-streak-left { font-size: 9px; color: #EF9F27; font-weight: 500; }
-  .fm-streak-days { display: flex; gap: 3px; }
-  .fm-day { width: 14px; height: 14px; border-radius: 3px; font-size: 7px; display: flex; align-items: center; justify-content: center; font-weight: 500; }
-  .fm-day-done { background: #EF9F27; color: #221808; }
-  .fm-day-today { background: #2c1f08; color: #EF9F27; border: 0.5px solid #EF9F27; }
-  .fm-day-empty { background: #1a1a1a; color: #333; }
-  .fm-footer { margin-top: 1.5rem; font-size: 11px; color: #333; text-align: center; }
-  .fm-footer a { color: #534AB7; text-decoration: none; }
+/* ============================================================
+   FlexMax showcase
+   Every colour below is lifted from apps/mobile/src/theme.ts —
+   the app's single source of truth. Nothing here is eyeballed.
+   ============================================================ */
+:root{
+  --background:#DCDCDC; --surface:#EDEDED; --surface-nested:#E4E4E4; --surface-dim:#D0D0D0;
+  --primary:#3B6EA5; --primary-bright:#5B9BD5; --primary-deep:#2C4A6E;
+  --primary-disabled:#A8C0DC; --primary-tint:#DCE6F2; --on-primary:#FFFFFF;
+  --text:#1E1E1E; --text-secondary:#333333; --text-muted:#666666;
+  --text-faint:#888888; --text-placeholder:#999999; --text-disabled:#AAAAAA;
+  --border:#C4C4C4; --border-light:#CCCCCC;
+  --success:#5DCAA5; --success-tint:#DFF3EA; --danger:#D9694A; --danger-tint:#F8E5E0;
+  --streak:#EF9F27; --streak-housing:#FBEFD9; --streak-border:#F0D9A8;
+  --streak-muted:#B07A28; --streak-square:#F5E4C8;
+  --rating-good-bg:#D8EFD8; --rating-good-text:#2E7D32; --rating-good-border:#00C853;
+  --rating-okay-bg:#FBF3D0; --rating-okay-text:#9A7B0A; --rating-okay-border:#FFD600;
+  --rating-bad-bg:#F8DEDE; --rating-bad-text:#B03030; --rating-bad-border:#FF1744;
+  --menu-blue:#4B79AC; --menu-ink:#2A2A2A; --menu-coral:#CE7358;
+  --page:#1E1E1E; --page-line:#2E2E2E; --page-text:#DCDCDC; --page-muted:#8A8A8A;
+  --display:'Archivo',system-ui,sans-serif;
+  --body:'IBM Plex Sans',system-ui,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+  --ios:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',Roboto,sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}
+  *{animation-duration:.001ms!important;transition-duration:.001ms!important}}
+body{background:var(--page);color:var(--page-text);font-family:var(--body);
+  font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
+:focus-visible{outline:2px solid var(--primary-bright);outline-offset:3px}
+
+/* ---------- brand mark: the geometric F ---------- */
+.mark{width:28px;height:28px;flex:none;border-radius:22.5%;display:block}
+
+/* ---------- shell ---------- */
+.wrap{max-width:1180px;margin:0 auto;padding:0 28px}
+header.top{position:sticky;top:0;z-index:60;background:var(--page);
+  border-bottom:1px solid var(--page-line)}
+.top-in{display:flex;align-items:center;gap:12px;height:60px}
+.word{font-family:var(--display);font-weight:700;font-size:17px;letter-spacing:-.02em}
+.top-links{margin-left:auto;display:flex;gap:22px;font-family:var(--mono);
+  font-size:12px;letter-spacing:.02em}
+.top-links a{color:var(--page-muted);text-decoration:none}
+.top-links a:hover{color:var(--page-text)}
+
+/* ---------- the ruler: page's structural spine ----------
+   Ticks are hours. The device is a schedule; the page is too. */
+.ruler{position:fixed;left:0;top:60px;bottom:0;width:46px;z-index:5;
+  border-right:1px solid var(--page-line);display:flex;flex-direction:column;
+  justify-content:space-between;padding:26px 0;pointer-events:none}
+.ruler span{font-family:var(--mono);font-size:9px;color:#4A4A4A;
+  writing-mode:vertical-rl;text-align:center;letter-spacing:.14em}
+.ruler i{display:block;height:1px;background:var(--page-line);width:12px;margin-left:auto}
+@media(max-width:1100px){.ruler{display:none}}
+
+/* ---------- layout ---------- */
+.stage{display:grid;grid-template-columns:1fr 400px;gap:64px;align-items:start}
+@media(max-width:940px){.stage{grid-template-columns:1fr;gap:40px}}
+
+/* ---------- hero ---------- */
+.hero{padding:88px 0 40px}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--page-muted);margin-bottom:26px}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(34px,5vw,58px);
+  line-height:1.02;letter-spacing:-.035em;color:#fff;max-width:15ch}
+h1 .fade{color:#6E6E6E}
+.lede{margin-top:26px;max-width:46ch;color:#B4B4B4;font-size:17px}
+.meta-row{margin-top:34px;display:flex;flex-wrap:wrap;gap:10px}
+.tag{font-family:var(--mono);font-size:11px;letter-spacing:.04em;color:var(--page-muted);
+  border:1px solid var(--page-line);border-radius:2px;padding:6px 10px}
+
+/* ---------- sections ---------- */
+section.blk{padding:62px 0;border-top:1px solid var(--page-line)}
+h2{font-family:var(--display);font-weight:600;font-size:clamp(23px,2.6vw,31px);
+  letter-spacing:-.025em;color:#fff;max-width:20ch}
+.blk p{margin-top:18px;max-width:52ch;color:#A8A8A8}
+.blk p strong{color:var(--page-text);font-weight:500}
+.num{font-family:var(--mono);font-size:11px;color:#555;letter-spacing:.14em;
+  display:block;margin-bottom:14px}
+
+/* ---------- screen navigator: built from the app's own block card ---------- */
+.nav-blocks{margin-top:30px;display:flex;flex-direction:column;gap:8px;max-width:340px}
+.nav-block{display:flex;align-items:stretch;background:#252525;border:1px solid var(--page-line);
+  border-radius:12px;overflow:hidden;cursor:pointer;text-align:left;width:100%;
+  font:inherit;color:inherit;transition:background .15s,border-color .15s}
+.nav-block:hover{background:#2C2C2C}
+.nav-block[aria-current="true"]{border-color:var(--primary);background:#2A3441}
+.nav-bar{width:4px;background:#3A3A3A;flex:none}
+.nav-block[aria-current="true"] .nav-bar{background:var(--primary)}
+.nav-body{padding:11px 14px;flex:1}
+.nav-name{font-size:14px;font-weight:500;color:var(--page-text)}
+.nav-sub{font-family:var(--mono);font-size:10.5px;color:#6E6E6E;margin-top:3px}
+
+/* ---------- CTA that drives the device ---------- */
+.drive{margin-top:26px;display:inline-flex;align-items:center;gap:10px;
+  background:transparent;border:1px solid var(--danger);color:var(--danger);
+  font-family:var(--mono);font-size:12px;letter-spacing:.05em;padding:11px 18px;
+  border-radius:3px;cursor:pointer;transition:background .15s,color .15s}
+.drive:hover{background:var(--danger);color:#fff}
+.drive.blue{border-color:var(--primary);color:var(--primary-bright)}
+.drive.blue:hover{background:var(--primary);color:#fff}
+
+/* ---------- device ---------- */
+.device-col{position:sticky;top:96px}
+@media(max-width:940px){.device-col{position:static;display:flex;justify-content:center}}
+.device{width:376px;height:770px;background:#000;border:1px solid #3A3A3A;
+  border-radius:46px;padding:9px;position:relative}
+.notch{position:absolute;top:9px;left:50%;transform:translateX(-50%);
+  width:118px;height:26px;background:#000;border-radius:0 0 16px 16px;z-index:30}
+.screen-host{width:100%;height:100%;background:var(--background);border-radius:38px;
+  overflow:hidden;position:relative;font-family:var(--ios);color:var(--text);
+  line-height:normal}
+.device-cap{margin-top:16px;text-align:center;font-family:var(--mono);
+  font-size:10.5px;color:#5C5C5C;letter-spacing:.05em}
+
+/* ---------- shared in-device primitives (mirrors theme.ts) ---------- */
+.scr{position:absolute;inset:0;display:none;flex-direction:column;overflow:hidden}
+.scr.on{display:flex}
+.scr-scroll{flex:1;overflow-y:auto;overscroll-behavior:contain}
+.scr-scroll::-webkit-scrollbar{width:0}
+.hdr{padding:52px 20px 16px}
+.hdr-top{display:flex;justify-content:space-between;align-items:center}
+.h-title{font-size:28px;font-weight:700;color:var(--text);letter-spacing:-.02em}
+.h-date{font-size:14px;color:var(--text-muted);margin-top:4px}
+.hdr-right{display:flex;align-items:center;gap:10px}
+.menu-btn{width:22px;height:16px;display:flex;flex-direction:column;
+  justify-content:space-between;background:none;border:0;cursor:pointer;padding:0}
+.menu-btn i{height:2.5px;border-radius:1px;display:block}
+.menu-btn i:nth-child(1){background:var(--menu-blue)}
+.menu-btn i:nth-child(2){background:var(--menu-ink)}
+.menu-btn i:nth-child(3){background:var(--menu-coral)}
+.avatar{width:40px;height:40px;border-radius:20px;background:var(--primary-deep);
+  display:flex;align-items:center;justify-content:center;border:0;cursor:pointer;
+  color:var(--primary);font-size:15px;font-weight:600}
+
+/* streak strip — StreakStrip.tsx */
+.streak{margin:12px 20px 4px;background:var(--streak-housing);border-radius:14px;
+  padding:14px;border:.5px solid var(--streak-border)}
+.streak-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.streak-lbl{color:var(--streak);font-size:13px;font-weight:600}
+.streak-sub{color:var(--streak-muted);font-size:12px;font-weight:500}
+.week{display:flex;gap:6px}
+.day{flex:1;aspect-ratio:1;border-radius:8px;background:var(--streak-border);
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:700;color:var(--streak-muted)}
+.day.done{background:var(--streak);color:var(--text)}
+.day.today{border:1.5px solid var(--streak)}
+.day.future{background:var(--streak-square)}
+
+/* block card — BlockCard.tsx */
+.list{padding:16px 16px 90px}
+.card{display:flex;align-items:stretch;background:var(--surface);border-radius:12px;
+  margin-bottom:10px;overflow:hidden;cursor:pointer;position:relative;
+  border:0;width:100%;text-align:left;font:inherit;transition:transform .12s}
+.card:active{transform:scale(.995)}
+.card.fixed{background:var(--surface-dim);border-left:3px solid var(--text-muted);cursor:default}
+.grip{width:28px;border-right:1px solid var(--border);display:flex;align-items:center;
+  justify-content:center;color:var(--text-disabled);font-size:18px;flex:none}
+.status-bar{width:4px;flex:none;background:var(--border)}
+.status-bar.completed{background:var(--success)}
+.status-bar.missed{background:var(--danger)}
+.card-main{flex:1;padding:14px 14px 14px 8px;min-width:0}
+.b-name{font-size:16px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:4px}
+.b-meta{font-family:var(--ios);font-size:13px;color:var(--text-muted);margin-top:4px}
+.b-task{font-size:14px;color:var(--text-secondary);margin-top:8px}
+.b-add{font-size:13px;color:var(--primary);margin-top:8px;font-weight:500}
+.circ{width:32px;height:32px;border-radius:16px;border:1.5px solid var(--primary);
+  display:flex;align-items:center;justify-content:center;margin:16px 14px 0 0;flex:none;
+  background:transparent;font-size:16px;font-weight:700}
+.circ.done{border-color:var(--success);background:var(--success);color:var(--text)}
+.circ.miss{border-color:var(--danger);color:var(--danger)}
+.add-pill{background:var(--danger);border-radius:16px;height:48px;margin:16px 4px;
+  display:flex;align-items:center;justify-content:center;color:#fff;font-size:26px;
+  font-weight:600;border:0;width:calc(100% - 8px);cursor:pointer}
+.tray{margin-top:16px;background:var(--surface-dim);border-radius:12px;padding:12px 8px}
+.tray-t{color:var(--text-muted);font-size:12px;font-weight:600;text-transform:uppercase;
+  letter-spacing:.5px;padding:0 8px;margin-bottom:6px}
+.tray-row{display:flex;align-items:center;gap:10px;padding:8px}
+.tray-box{width:20px;height:20px;border-radius:6px;border:1.5px solid var(--primary);flex:none}
+.tray-txt{font-size:14px;color:var(--text-secondary)}
+
+/* sheets */
+.scrim{position:absolute;inset:0;background:rgba(0,0,0,.55);z-index:20;
+  display:none;align-items:flex-end}
+.scrim.on{display:flex}
+.sheet{background:var(--surface);width:100%;border-radius:16px 16px 0 0;
+  padding:10px 20px 30px;animation:rise .26s cubic-bezier(.2,.8,.2,1)}
+@keyframes rise{from{transform:translateY(70%)}to{transform:translateY(0)}}
+.grab{width:36px;height:4px;border-radius:2px;background:var(--text-disabled);
+  margin:0 auto 16px}
+.s-title{font-size:18px;font-weight:600;color:var(--text)}
+.s-time{color:var(--text-muted);font-size:14px;margin:6px 0 20px}
+.rates{display:flex;gap:8px}
+.rate{flex:1;border-width:2px;border-style:solid;border-radius:10px;padding:14px 6px;
+  text-align:center;font-size:13px;font-weight:600;cursor:pointer;background:none}
+.rate.good{background:var(--rating-good-bg);border-color:var(--rating-good-border);color:var(--rating-good-text)}
+.rate.okay{background:var(--rating-okay-bg);border-color:var(--rating-okay-border);color:var(--rating-okay-text)}
+.rate.bad{background:var(--rating-bad-bg);border-color:var(--rating-bad-border);color:var(--rating-bad-text)}
+
+/* recovery sheet — RecoverySheet.tsx */
+.rec{background:var(--surface);width:100%;border-radius:20px 20px 0 0;padding:20px 20px 34px;
+  display:flex;flex-direction:column;gap:12px;animation:rise .3s cubic-bezier(.2,.8,.2,1);
+  max-height:96%;overflow-y:auto}
+.rec::-webkit-scrollbar{width:0}
+.rec-title{color:var(--danger);font-size:17px;font-weight:600}
+.rec-ack{color:var(--text-secondary);font-size:14px;line-height:22px}
+.pattern{background:var(--danger-tint);border-left:2px solid var(--danger);
+  border-radius:8px;padding:12px}
+.pattern p{color:var(--danger);font-size:13px;line-height:20px;margin:0}
+.r-lbl{color:var(--text-muted);font-size:13px;font-weight:600}
+.r-in{background:var(--surface);border:.5px solid var(--border);border-radius:10px;
+  padding:12px;color:var(--text);font-size:14px;min-height:60px;font-family:var(--ios);
+  width:100%;resize:none}
+.r-in::placeholder{color:var(--text-placeholder)}
+.resched{background:var(--success-tint);border-radius:10px;padding:14px}
+.resched-l{color:var(--success);font-size:12px;font-weight:600}
+.resched-t{color:var(--text);font-size:15px;font-weight:600;margin:6px 0 0}
+.resched-b{background:var(--success);border-radius:8px;padding:10px;text-align:center;
+  color:var(--text);font-size:14px;font-weight:600;margin-top:4px;border:0;width:100%;cursor:pointer}
+.rec-acts{display:flex;align-items:center;justify-content:space-between;margin-top:4px}
+.save-b{background:var(--primary);border-radius:10px;padding:12px 24px;color:var(--on-primary);
+  font-size:15px;font-weight:600;border:0;cursor:pointer}
+.skip{color:var(--text-placeholder);font-size:14px;background:none;border:0;cursor:pointer}
+
+/* menu sheet */
+.menu-sheet{background:var(--surface);width:100%;border-radius:16px 16px 0 0;
+  padding:10px 0 26px;animation:rise .22s ease-out}
+.menu-item{padding:16px 24px;font-size:16px;color:var(--text);border:0;background:none;
+  width:100%;text-align:left;cursor:pointer;border-top:.5px solid var(--border-light);font:inherit}
+.menu-item.danger{color:var(--danger)}
+
+/* onboarding — OnboardingScreen.tsx */
+.ob-hd{padding:52px 20px 16px;border-bottom:.5px solid var(--border-light)}
+.ob-t{font-size:20px;font-weight:600;color:var(--text)}
+.ob-s{font-size:13px;color:var(--text-faint);margin-top:2px}
+.msgs{padding:16px}
+.mw{margin-bottom:12px;display:flex}
+.mw.ai{justify-content:flex-start}
+.mw.me{justify-content:flex-end}
+.bub{max-width:82%;border-radius:14px;padding:12px;font-size:15px;line-height:22px}
+.bub.ai{background:var(--surface);color:var(--text-secondary);border-bottom-left-radius:2px}
+.bub.me{background:var(--primary-deep);color:var(--on-primary);border-bottom-right-radius:2px}
+.ob-in{display:flex;align-items:flex-end;padding:12px 12px 20px;gap:10px;
+  border-top:.5px solid var(--surface)}
+.ob-field{flex:1;background:var(--surface);border:.5px solid var(--border);border-radius:20px;
+  padding:10px 16px;color:var(--text-placeholder);font-size:15px}
+.send{width:40px;height:40px;border-radius:20px;background:var(--primary);border:0;
+  color:var(--on-primary);font-size:18px;flex:none;cursor:pointer}
+
+/* sign-in */
+.si{flex:1;display:flex;flex-direction:column;justify-content:center;padding:24px;gap:12px}
+.si-t{font-size:32px;font-weight:700;color:var(--text);margin-bottom:4px;letter-spacing:-.02em}
+.si-s{font-size:15px;color:var(--text-muted);margin-bottom:24px}
+.si-in{background:var(--surface);border:.5px solid var(--border);border-radius:12px;
+  padding:14px 16px;color:var(--text-placeholder);font-size:16px}
+.si-b{background:var(--primary);border-radius:12px;padding:16px;text-align:center;
+  color:var(--on-primary);font-size:16px;font-weight:600;margin-top:8px;border:0;cursor:pointer}
+.si-tog{color:var(--text-muted);text-align:center;margin-top:16px;font-size:14px}
+
+/* schedule builder */
+.sb-hd{padding:52px 20px 8px}
+.sb-t{font-size:28px;font-weight:700;letter-spacing:-.02em}
+.sb-s{font-size:14px;color:var(--text-muted);margin-top:4px}
+.tips{background:var(--primary-tint);border-radius:12px;margin:16px;padding:14px}
+.tips-t{font-size:13px;font-weight:600;color:var(--primary-deep);margin-bottom:8px}
+.tip-row{display:flex;gap:8px;margin-bottom:6px}
+.tip-b{color:var(--primary);font-size:13px;line-height:20px}
+.tip-x{color:var(--text-secondary);font-size:13px;line-height:20px;flex:1}
+.tips-dis{background:none;border:0;color:var(--primary);font-size:13px;font-weight:600;
+  padding:6px 0 0;cursor:pointer;font-family:var(--ios)}
+.sec{padding:0 16px 12px}
+.sec-t{font-size:17px;font-weight:600;margin-bottom:10px}
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
+.chips::-webkit-scrollbar{height:0}
+.chip{background:var(--surface);border:.5px solid var(--border);border-radius:16px;
+  padding:8px 14px;font-size:13px;color:var(--text-secondary);white-space:nowrap;flex:none}
+.sb-card{background:var(--surface);border-radius:12px;padding:14px;margin:0 16px 10px}
+.sb-hd2{display:flex;justify-content:space-between;align-items:center}
+.sb-n{font-size:16px;font-weight:600}
+.sb-acts{display:flex;gap:14px}
+.sb-e{color:var(--primary);font-size:13px;font-weight:500}
+.sb-r{color:var(--danger);font-size:13px;font-weight:500}
+.sb-m{color:var(--text-muted);font-size:13px;margin-top:6px}
+.sb-rep{color:var(--text-faint);font-size:12px;margin-top:4px}
+.prim{background:var(--primary);border-radius:12px;padding:16px;text-align:center;
+  color:var(--on-primary);font-size:16px;font-weight:600;margin:16px;border:0;
+  width:calc(100% - 32px);cursor:pointer}
+
+/* account */
+.acc-sec{margin:0 16px 12px;background:var(--surface);border-radius:12px;padding:16px}
+.acc-t{font-size:17px;font-weight:600;margin-bottom:10px}
+.acc-sum{font-size:14px;color:var(--text-secondary);line-height:22px}
+.acc-row{display:flex;justify-content:space-between;padding:10px 0;
+  border-top:.5px solid var(--border-light)}
+.acc-l{font-size:14px;color:var(--text-muted)}
+.acc-v{font-size:14px;color:var(--text);font-weight:500}
+.pills{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.pill{background:var(--primary-tint);color:var(--primary-deep);border-radius:16px;
+  padding:5px 11px;font-size:12px;font-weight:500}
+
+/* toast */
+.toast{position:absolute;left:20px;right:20px;bottom:26px;background:var(--text);
+  border-radius:10px;padding:12px 16px;color:var(--surface);font-size:14px;z-index:40;
+  opacity:0;transform:translateY(60px);transition:opacity .25s,transform .25s;
+  pointer-events:none;text-align:center}
+.toast.on{opacity:1;transform:translateY(0)}
+
+/* ---------- honesty panel ---------- */
+.split{display:grid;grid-template-columns:1fr 1fr;gap:2px;background:var(--page-line);
+  border:1px solid var(--page-line);margin-top:32px}
+@media(max-width:640px){.split{grid-template-columns:1fr}}
+.split div{background:var(--page);padding:22px}
+.split h3{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--page-muted);font-weight:400;margin-bottom:14px}
+.split ul{list-style:none;display:flex;flex-direction:column;gap:9px}
+.split li{font-size:14px;color:#A8A8A8;padding-left:16px;position:relative;line-height:1.5}
+.split li::before{content:'';position:absolute;left:0;top:9px;width:6px;height:1px;background:#555}
+.split.built li::before{background:var(--success)}
+.split.not li::before{background:var(--danger)}
+
+/* stack */
+.stack{display:flex;flex-direction:column;gap:0;margin-top:30px;
+  border-top:1px solid var(--page-line);max-width:640px}
+.srow{display:grid;grid-template-columns:104px 1fr;gap:20px;padding:15px 0;
+  border-bottom:1px solid var(--page-line);align-items:baseline}
+@media(max-width:520px){.srow{grid-template-columns:1fr;gap:4px}}
+.srow dt{font-family:var(--mono);font-size:11px;color:#5C5C5C;letter-spacing:.08em;
+  text-transform:uppercase}
+.srow dd{font-size:14.5px;color:#A8A8A8}
+.srow dd b{color:var(--page-text);font-weight:500}
+
+.src{color:var(--primary-bright);text-decoration:none;border-bottom:1px solid #2E4257;white-space:nowrap}
+.src:hover{border-bottom-color:var(--primary-bright)}
+footer{border-top:1px solid var(--page-line);padding:40px 0 60px;margin-top:20px}
+.foot{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;
+  font-family:var(--mono);font-size:11.5px;color:#5C5C5C;letter-spacing:.04em}
+.foot a{color:var(--page-muted);text-decoration:none;border-bottom:1px solid #3A3A3A}
+.foot a:hover{color:var(--page-text)}
 </style>
 </head>
 <body>
 
-<h1>FlexMax — UI Mockup · v1 Work in Progress</h1>
+<!-- hour ruler: the page is a schedule too -->
+<div class="ruler" aria-hidden="true">
+  <i></i><span>06:00</span><i></i><span>12:00</span><i></i><span>18:00</span><i></i>
+</div>
 
-<div class="fm-root">
-
-  <div class="fm-phone-wrap">
-    <div class="fm-screen">
-      <div class="fm-notch"><div class="fm-notch-pill"><div class="fm-notch-cam"></div></div></div>
-      <div class="fm-body">
-        <div class="fm-top">
-          <div class="fm-logo">Flex<span>Max</span></div>
-          <div style="font-size:8px;color:#534AB7;background:#1e1830;padding:2px 7px;border-radius:10px;font-weight:500;">Step 1 of 4</div>
-        </div>
-        <div class="fm-progress" style="margin-bottom:12px;"><div class="fm-progress-bar" style="width:25%;"></div></div>
-        <div class="chat-wrap">
-          <div class="chat-ai">
-            <div class="chat-ai-label"><i class="ti ti-brain" style="font-size:10px;"></i> FlexMax AI</div>
-            Hey — before we build your schedule, I want to understand how you actually work. What's one thing you keep putting off, even though you know it matters?
-          </div>
-          <div class="chat-user">Honestly, working out. I always push it to "later" and later never comes.</div>
-          <div class="chat-ai">
-            <div class="chat-ai-label"><i class="ti ti-brain" style="font-size:10px;"></i> FlexMax AI</div>
-            Classic avoidance loop. What time of day do you actually have energy — not what you wish were true, but what's real?
-          </div>
-          <div class="chat-user">Mornings, if I don't check my phone first.</div>
-          <div class="chat-ai">
-            <div class="chat-ai-label"><i class="ti ti-brain" style="font-size:10px;"></i> FlexMax AI</div>
-            Got it. Phone-first kills morning momentum. We'll lock your first block before it gets a chance.
-          </div>
-          <div class="chat-typing">
-            <div class="chat-dot"></div><div class="chat-dot"></div><div class="chat-dot"></div>
-          </div>
-        </div>
-        <div class="chat-input-bar">
-          <div class="chat-input">Type your answer...</div>
-          <div class="chat-send"><i class="ti ti-arrow-up" style="font-size:11px;color:#fff;"></i></div>
-        </div>
-      </div>
-    </div>
-    <div class="fm-step">1 / onboarding</div>
-    <div class="fm-label">AI learns your psychology</div>
+<header class="top">
+  <div class="wrap top-in">
+    <img class="mark" src="data:image/png;base64,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iAAAAIBABAAAAAQiAAAAIBABAAAAgQgAAAAIRAAAAEAgAgAAAAIRAAAAEIgAAACAQAQAAAAEIgAAACAQAQAAAIEIAAAACEQAAABAIAIAAAACEQAAABCIAAAAgEAEAAAABCIAAAAgEAEAAACBCAAAAAhEAAAAQCACAAAAAhEAAAAQiAAAAIBABAAAAAQiAAAAIBABAAAAgQgAAAAIRAAAAEAgAgAAAAIRAAAAEIgAAACAQAQAAAAEIgAAACAQAQAAAIEIAAAACEQAAABAIAIAAAACEQAAABCIAAAAgEAEAAAABCIAAAAgEAEAAACBCAAAAAhEAAAAQCACAAAAAhEAAAAQiAAAAIBABAAAAAQiAAAAIBABAAAAgQgAAAAIRAAAAEAgAgAAAAIRAAAAEIgAAACAQAQAAAAEIgAAACAQAQAAAIEIAAAACEQAAABAIAIAAAACEQAAABCIAAAAgEAEAAAABCIAAAAgEAEAAACBCAAAAAhEAAAAQCACAAAAAhEAAAAQiAAAAIBABAAAAAQiAAAAIBABAAAAgQgAAAAIRAAAAEAgAgAAAAIRAAAAEIgAAACAQAQAAAAEIgAAACAQAQAAAIEIAAAACEQAAABAIAIAAAACEQAAABCIAAAAgED+L1uR7+OuFjWaAAAAAElFTkSuQmCC" alt="FlexMax app icon">
+    <span class="word">FlexMax</span>
+    <nav class="top-links">
+      <a href="#product">Product</a>
+      <a href="#miss">The miss</a>
+      <a href="#state">State</a>
+      <a href="#build">Build</a>
+      <a href="https://github.com/mbquresh/flexmax">Source</a>
+    </nav>
   </div>
+</header>
 
-  <div class="fm-phone-wrap">
-    <div class="fm-screen">
-      <div class="fm-notch"><div class="fm-notch-pill"><div class="fm-notch-cam"></div></div></div>
-      <div class="fm-body">
-        <div class="fm-top">
-          <div><div class="fm-greeting">Your profile</div><div class="fm-sub">Built from your answers</div></div>
-          <div class="fm-avatar">MQ</div>
-        </div>
-        <div class="fm-psych">
-          <div class="fm-psych-label">Peak energy window</div>
-          <div class="fm-tag tag-teal">Morning (6–10 AM)</div>
-          <div class="fm-tag" style="background:#1e1e1e;color:#666;">Drops after lunch</div>
-        </div>
-        <div class="fm-psych">
-          <div class="fm-psych-label">Known sabotage patterns</div>
-          <div class="fm-tag tag-coral">Phone-first mornings</div>
-          <div class="fm-tag tag-coral">Vague task blocks</div>
-          <div class="fm-tag tag-amber">Open-ended evenings</div>
-        </div>
-        <div class="fm-psych">
-          <div class="fm-psych-label">What motivates you</div>
-          <div class="fm-tag tag-purple">Visible progress</div>
-          <div class="fm-tag tag-teal">Short win cycles</div>
-        </div>
-        <div class="fm-psych">
-          <div class="fm-psych-label">AI scheduling rules</div>
-          <div style="font-size:8.5px;color:#888;line-height:1.6;">• Hard tasks before 11 AM<br>• No phone block on wake-up<br>• 15-min buffers between deep work<br>• Wind-down locked at 9 PM</div>
-        </div>
-        <div style="margin-top:8px;">
-          <button class="fm-btn-sm fm-btn-primary" style="width:100%;font-size:9px;padding:6px;">Build my schedule →</button>
-        </div>
+<div class="wrap">
+<div class="stage">
+
+  <!-- ============ LEFT: the argument ============ -->
+  <main>
+    <div class="hero">
+      <p class="eyebrow">iOS · behavioral accountability · v1.4 on TestFlight</p>
+      <h1>Habit trackers watch you fail.<br><span class="fade">FlexMax figures out why.</span></h1>
+      <p class="lede">Every planner works when you're already doing well. FlexMax is built
+        around the other day — the one where the plan falls apart by 10am and most apps
+        just show you the damage in high resolution.</p>
+      <div class="meta-row">
+        <span class="tag">Expo · React Native</span>
+        <span class="tag">Supabase</span>
+        <span class="tag">Claude API</span>
+        <span class="tag">Solo build</span>
       </div>
     </div>
-    <div class="fm-step">2 / profile</div>
-    <div class="fm-label">Psychology profile summary</div>
-  </div>
 
-  <div class="fm-phone-wrap">
-    <div class="fm-screen">
-      <div class="fm-notch"><div class="fm-notch-pill"><div class="fm-notch-cam"></div></div></div>
-      <div class="fm-body">
-        <div class="fm-top">
-          <div><div class="fm-greeting">Thursday</div><div class="fm-sub">Jun 19 · 5 blocks · 92% aligned</div></div>
-          <div class="fm-avatar">MQ</div>
+    <section class="blk" id="product">
+      <span class="num">01 / SCREENS</span>
+      <h2>Every screen here is the real app.</h2>
+      <p>Not mockups. The layout, spacing, and colour of each screen on the right are
+        rebuilt directly from the source — <strong>theme.ts</strong> is the app's single
+        source of truth for design tokens, and this page imports the same values.
+        Pick a screen.</p>
+
+      <div class="nav-blocks" role="tablist" aria-label="App screens">
+        <button class="nav-block" role="tab" data-screen="signin" aria-current="false">
+          <span class="nav-bar"></span>
+          <span class="nav-body"><span class="nav-name">Sign in</span>
+          <span class="nav-sub">app/sign-in.tsx</span></span>
+        </button>
+        <button class="nav-block" role="tab" data-screen="onboarding" aria-current="false">
+          <span class="nav-bar"></span>
+          <span class="nav-body"><span class="nav-name">AI onboarding</span>
+          <span class="nav-sub">screens/OnboardingScreen.tsx · 4 turns</span></span>
+        </button>
+        <button class="nav-block" role="tab" data-screen="builder" aria-current="false">
+          <span class="nav-bar"></span>
+          <span class="nav-body"><span class="nav-name">Schedule builder</span>
+          <span class="nav-sub">app/schedule-builder.tsx</span></span>
+        </button>
+        <button class="nav-block" role="tab" data-screen="today" aria-current="true">
+          <span class="nav-bar"></span>
+          <span class="nav-body"><span class="nav-name">Today</span>
+          <span class="nav-sub">app/today.tsx · drag, swap, check in</span></span>
+        </button>
+        <button class="nav-block" role="tab" data-screen="account" aria-current="false">
+          <span class="nav-bar"></span>
+          <span class="nav-body"><span class="nav-name">Account</span>
+          <span class="nav-sub">app/account.tsx · psychology profile</span></span>
+        </button>
+      </div>
+    </section>
+
+    <section class="blk" id="miss">
+      <span class="num">02 / THE MISS</span>
+      <h2>The whole product is one moment: what happens when you miss.</h2>
+      <p>Rescheduling a missed task moves a block. It doesn't ask why the block keeps
+        getting missed. Miss the gym forty times and a planner will cheerfully schedule
+        gym #41, identical to #1.</p>
+      <p>FlexMax counts. When a block has been missed three or more times, the recovery
+        sheet stops being polite about it and <strong>names the pattern</strong> —
+        then offers the next real slot in your day. No red X, no streak funeral.
+        A question and a way forward.</p>
+      <button class="drive" data-action="miss">▸ Miss the 1:00 PM block</button>
+    </section>
+
+    <section class="blk" id="checkin">
+      <span class="num">03 / CHECK-IN</span>
+      <h2>Three taps of honesty, not a binary.</h2>
+      <p>Done/not-done throws away the interesting part. Crushed it, partly, lost focus —
+        the middle option is where the signal lives, and it's the one every habit
+        tracker refuses to offer.</p>
+      <button class="drive blue" data-action="checkin">▸ Check in on Deep work</button>
+    </section>
+
+    <section class="blk" id="state">
+      <span class="num">04 / HONEST STATE</span>
+      <h2>What's real, and what isn't.</h2>
+      <p>A portfolio page that claims everything works is a portfolio page nobody
+        believes. So, precisely:</p>
+      <div class="split built">
+        <div>
+          <h3>Shipped and working</h3>
+          <ul>
+            <li>Conversational AI onboarding → psychology profile</li>
+            <li>Schedule builder: drag, swap, fixed anchors, per-day repeats</li>
+            <li>Check-ins, miss reflections, recovery + reschedule</li>
+            <li>Push notifications, per-user local timezone</li>
+            <li>Rate-limited AI endpoints, key server-side only</li>
+            <li>Miss counts read back into recovery prompts</li>
+          </ul>
         </div>
-        <div class="fm-block b-gray">
-          <div class="fm-block-time">5:30 AM — 6:00 AM</div>
-          <div class="fm-block-name">No-phone wake-up</div>
-          <div class="fm-block-done"><i class="ti ti-check" style="font-size:8px;color:#0b2a20;"></i></div>
-        </div>
-        <div class="fm-block b-teal">
-          <div class="fm-block-time">6:00 AM — 7:00 AM</div>
-          <div class="fm-block-name">Workout</div>
-          <div class="fm-block-task">Chest + 20 min run</div>
-          <div class="fm-block-done"><i class="ti ti-check" style="font-size:8px;color:#0b2a20;"></i></div>
-        </div>
-        <div class="fm-now-bar">
-          <div class="fm-now-dot"></div>
-          <div class="fm-now-time">now · 9:14 AM</div>
-          <div class="fm-now-line"></div>
-        </div>
-        <div class="fm-block b-purple">
-          <div class="fm-block-time">9:00 AM — 1:00 PM</div>
-          <div class="fm-block-name">Deep work</div>
-          <div class="fm-block-task">FlexMax — schedule engine</div>
-          <div class="fm-drag">⠿</div>
-        </div>
-        <div class="fm-block b-amber">
-          <div class="fm-block-time">2:00 PM — 3:00 PM</div>
-          <div class="fm-block-name">Admin + messages</div>
-          <div class="fm-block-task">Email, GitHub issues</div>
-          <div class="fm-drag">⠿</div>
-        </div>
-        <div class="fm-block b-coral">
-          <div class="fm-block-time">9:00 PM — 9:30 PM</div>
-          <div class="fm-block-name">Wind-down</div>
-          <div class="fm-block-task">No screens after this</div>
-          <div class="fm-drag">⠿</div>
+        <div>
+          <h3>Not built yet</h3>
+          <ul style="--x:1">
+            <li>The full behavioral learning layer — swaps, ratings and removal
+              reasons are captured but not yet read back</li>
+            <li>Payments / paywall — deliberately deferred</li>
+            <li>Screen Time shielding — pending an Apple entitlement</li>
+            <li>Widgets, Apple Watch, integrations</li>
+            <li>External testers. Users. Revenue.</li>
+          </ul>
         </div>
       </div>
-    </div>
-    <div class="fm-step">3 / schedule</div>
-    <div class="fm-label">Daily schedule · drag to adjust</div>
-  </div>
+      <p style="margin-top:26px">The app is roughly half of what it should be, and the
+        magic is in the other half. That's the honest number.</p>
+    </section>
 
-  <div class="fm-phone-wrap">
-    <div class="fm-screen">
-      <div class="fm-notch"><div class="fm-notch-pill"><div class="fm-notch-cam"></div></div></div>
-      <div class="fm-body">
-        <div class="fm-top">
-          <div><div class="fm-greeting">Check in</div><div class="fm-sub">Deep work · 9AM–1PM done</div></div>
-        </div>
-        <div class="fm-ai-card">
-          <div class="fm-ai-card-head"><i class="ti ti-brain" style="font-size:10px;"></i> How was the session?</div>
-          <div class="fm-ai-card-body">You had 4 hours for the FlexMax schedule engine. Did you stay in the zone, or did distractions creep in?</div>
-          <div class="fm-ai-card-actions">
-            <button class="fm-btn-sm fm-btn-teal">Crushed it</button>
-            <button class="fm-btn-sm fm-btn-ghost">Partly</button>
-            <button class="fm-btn-sm fm-btn-coral">Lost focus</button>
+    <section class="blk" id="build">
+      <span class="num">05 / BUILD</span>
+      <h2>How it's put together.</h2>
+      <dl class="stack">
+        <div class="srow"><dt>Mobile</dt><dd><b>Expo / React Native</b> — Expo Router,
+          Zustand, Reanimated gestures for drag-to-swap</dd></div>
+        <div class="srow"><dt>Backend</dt><dd><b>Supabase</b> — Postgres with RLS,
+          auth, 11 migrations, edge functions</dd></div>
+        <div class="srow"><dt>AI</dt><dd><b>Claude API</b>, called only from edge
+          functions — onboarding chat, profile extraction, schedule tips,
+          missed-block recovery. No key ever ships in the client.</dd></div>
+        <div class="srow"><dt>Notify</dt><dd><b>Expo Notifications</b> driven by
+          Supabase cron, resolved against each user's local timezone</dd></div>
+        <div class="srow"><dt>Design</dt><dd><b>One token file.</b> No hex values or
+          magic numbers in any StyleSheet — everything imports from theme.ts</dd></div>
+      </dl>
+      <p style="margin-top:28px">The source is public and readable — all rights
+        reserved, no license granted. <a class="src" href="https://github.com/mbquresh/flexmax">Read the code →</a></p>
+    </section>
+  </main>
+
+  <!-- ============ RIGHT: the device ============ -->
+  <div class="device-col">
+    <div class="device">
+      <div class="notch"></div>
+      <div class="screen-host" id="host">
+
+        <!-- ===== TODAY ===== -->
+        <div class="scr on" data-scr="today">
+          <div class="scr-scroll">
+            <div class="hdr">
+              <div class="hdr-top">
+                <div>
+                  <div class="h-title">Today</div>
+                  <div class="h-date">Thu, Jul 16 · today</div>
+                </div>
+                <div class="hdr-right">
+                  <button class="menu-btn" data-action="menu" aria-label="Open menu">
+                    <i></i><i></i><i></i>
+                  </button>
+                  <button class="avatar" data-goto="account">BQ</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="streak">
+              <div class="streak-hd">
+                <span class="streak-lbl">🔥 4-day streak</span>
+                <span class="streak-sub">68% this week</span>
+              </div>
+              <div class="week">
+                <div class="day done">M</div><div class="day done">T</div>
+                <div class="day done">W</div><div class="day today">T</div>
+                <div class="day future">F</div><div class="day future">S</div>
+                <div class="day future">S</div>
+              </div>
+            </div>
+
+            <div class="list" id="cards">
+              <button class="card" data-id="reset">
+                <span class="grip">⠿</span><span class="status-bar completed"></span>
+                <span class="card-main">
+                  <span class="b-name">Morning reset</span>
+                  <span class="b-meta">7:00 AM – 7:30 AM</span>
+                  <span class="b-task">Coffee, no phone, write the one thing</span>
+                </span>
+                <span class="circ done">✓</span>
+              </button>
+
+              <button class="card" data-id="deep">
+                <span class="grip">⠿</span><span class="status-bar"></span>
+                <span class="card-main">
+                  <span class="b-name">Deep work</span>
+                  <span class="b-meta">8:00 AM – 9:30 AM</span>
+                  <span class="b-task">Finish the migration script</span>
+                </span>
+                <span class="circ"></span>
+              </button>
+
+              <div class="card fixed">
+                <span class="grip">🔒</span><span class="status-bar"></span>
+                <span class="card-main">
+                  <span class="b-name">Standup <span style="font-size:14px">🔒</span></span>
+                  <span class="b-meta">11:00 AM – 11:15 AM</span>
+                  <span class="b-task">Anchor — won't move</span>
+                </span>
+                <span class="circ"></span>
+              </div>
+
+              <button class="card" data-id="gym">
+                <span class="grip">⠿</span><span class="status-bar"></span>
+                <span class="card-main">
+                  <span class="b-name">Gym</span>
+                  <span class="b-meta">1:00 PM – 2:00 PM</span>
+                  <span class="b-add">Add task →</span>
+                </span>
+                <span class="circ"></span>
+              </button>
+
+              <button class="card" data-id="calls">
+                <span class="grip">⠿</span><span class="status-bar"></span>
+                <span class="card-main">
+                  <span class="b-name">Client calls</span>
+                  <span class="b-meta">3:00 PM – 4:30 PM</span>
+                  <span class="b-task">Two renewals, one intro</span>
+                </span>
+                <span class="circ"></span>
+              </button>
+
+              <button class="add-pill" aria-label="Add task">+</button>
+
+              <div class="tray">
+                <div class="tray-t">Anytime today</div>
+                <div class="tray-row"><span class="tray-box"></span>
+                  <span class="tray-txt">Renew the parking permit</span></div>
+                <div class="tray-row"><span class="tray-box"></span>
+                  <span class="tray-txt">Text Dana back</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="toast" id="toast"></div>
+
+          <!-- check-in sheet -->
+          <div class="scrim" id="checkinScrim">
+            <div class="sheet">
+              <div class="grab"></div>
+              <div class="s-title" id="ciName">Deep work — how'd it go?</div>
+              <div class="s-time" id="ciTime">8:00 AM – 9:30 AM</div>
+              <div class="rates">
+                <button class="rate good" data-rate="Crushed it">Crushed it</button>
+                <button class="rate okay" data-rate="Partly">Partly</button>
+                <button class="rate bad" data-rate="Lost focus">Lost focus</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- recovery sheet -->
+          <div class="scrim" id="recScrim">
+            <div class="rec">
+              <div class="grab"></div>
+              <div class="rec-title">Gym — missed</div>
+              <p class="rec-ack">Missed Gym. That's the fourth time this block has gone
+                by — worth a look, not a verdict.</p>
+              <div class="pattern">
+                <p>Gym has now been missed 4 times. That's a pattern in the block,
+                  not a flaw in you. The 1:00 PM slot may be the problem.</p>
+              </div>
+              <div class="r-lbl">What was happening right before 1:00 PM?</div>
+              <textarea class="r-in" placeholder="Be honest..."></textarea>
+              <div class="r-lbl">One thing you'd change next time?</div>
+              <textarea class="r-in" placeholder="Even something small..."></textarea>
+              <div class="resched">
+                <div class="resched-l">Available slot today</div>
+                <div class="resched-t">7:30 PM — 8:30 PM</div>
+                <button class="resched-b" data-action="resched">Reschedule to this slot</button>
+              </div>
+              <div class="rec-acts">
+                <button class="save-b" data-action="saverec">Save reflection</button>
+                <button class="skip" data-action="close">Skip</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- menu -->
+          <div class="scrim" id="menuScrim">
+            <div class="menu-sheet">
+              <button class="menu-item" data-action="close">Plan tomorrow</button>
+              <button class="menu-item" data-goto="builder">Edit schedule</button>
+              <button class="menu-item danger" data-action="close">Reset today</button>
+            </div>
           </div>
         </div>
-        <div class="fm-ai-card" style="border-left-color:#EF9F27;">
-          <div class="fm-ai-card-head" style="color:#EF9F27;"><i class="ti ti-clock" style="font-size:10px;"></i> 18 mins idle detected</div>
-          <div class="fm-ai-card-body">You haven't interacted with work apps in a while. Still on task, or did you drift?</div>
-          <div class="fm-ai-card-actions">
-            <button class="fm-btn-sm fm-btn-primary">Still on it</button>
-            <button class="fm-btn-sm fm-btn-ghost">I drifted</button>
+
+        <!-- ===== SIGN IN ===== -->
+        <div class="scr" data-scr="signin">
+          <div class="si">
+            <div class="si-t">FlexMax</div>
+            <div class="si-s">Welcome back</div>
+            <div class="si-in">Email</div>
+            <div class="si-in">Password</div>
+            <button class="si-b" data-goto="onboarding">Sign in</button>
+            <div class="si-tog">Need an account? Sign up</div>
           </div>
         </div>
-        <div class="fm-ai-card" style="border-left-color:#5DCAA5;">
-          <div class="fm-ai-card-head" style="color:#5DCAA5;"><i class="ti ti-moon" style="font-size:10px;"></i> Tonight's wind-down</div>
-          <div class="fm-ai-card-body">9 PM block is empty. Naming it makes it real — what's the plan?</div>
-          <div class="fm-ai-card-actions">
-            <button class="fm-btn-sm fm-btn-primary">Fill in</button>
+
+        <!-- ===== ONBOARDING ===== -->
+        <div class="scr" data-scr="onboarding">
+          <div class="ob-hd">
+            <div class="ob-t">FlexMax</div>
+            <div class="ob-s">Understanding how you work</div>
+          </div>
+          <div class="scr-scroll">
+            <div class="msgs">
+              <div class="mw ai"><div class="bub ai">What are you actually trying to
+                get done right now? Not the five-year plan — this month.</div></div>
+              <div class="mw me"><div class="bub me">Ship my side project. I keep
+                starting and stalling out around week two.</div></div>
+              <div class="mw ai"><div class="bub ai">Got it. When do you actually have
+                energy during the day — morning, afternoon, or evening?</div></div>
+              <div class="mw me"><div class="bub me">Mornings, easily. By 2pm I'm
+                useless.</div></div>
+              <div class="mw ai"><div class="bub ai">Noted. When you've tried to stick
+                to a routine before, what usually gets in the way?</div></div>
+              <div class="mw me"><div class="bub me">One bad day and I just stop
+                opening the app.</div></div>
+              <div class="mw ai"><div class="bub ai">Does having someone or something
+                check on you help you stay on track, or does it backfire?</div></div>
+            </div>
+          </div>
+          <div class="ob-in">
+            <div class="ob-field">Type your answer...</div>
+            <button class="send" data-goto="builder">→</button>
           </div>
         </div>
-        <div class="fm-streak">
-          <div class="fm-streak-left"><i class="ti ti-flame" style="font-size:11px;vertical-align:-1px;"></i> 4-day streak</div>
-          <div class="fm-streak-days">
-            <div class="fm-day fm-day-done">M</div>
-            <div class="fm-day fm-day-done">T</div>
-            <div class="fm-day fm-day-done">W</div>
-            <div class="fm-day fm-day-today">T</div>
-            <div class="fm-day fm-day-empty">F</div>
-            <div class="fm-day fm-day-empty">S</div>
-            <div class="fm-day fm-day-empty">S</div>
+
+        <!-- ===== SCHEDULE BUILDER ===== -->
+        <div class="scr" data-scr="builder">
+          <div class="scr-scroll">
+            <div class="sb-hd">
+              <div class="sb-t">Build your schedule</div>
+              <div class="sb-s">Tap Edit on a block to change its days, times, or name.</div>
+            </div>
+            <div class="tips">
+              <div class="tips-t">Tips from your answers</div>
+              <div class="tip-row"><span class="tip-b">•</span>
+                <span class="tip-x">Put deep work before 11am — you said afternoons are a write-off.</span></div>
+              <div class="tip-row"><span class="tip-b">•</span>
+                <span class="tip-x">Keep it to four blocks. Week two stalls are usually an overfilled day.</span></div>
+              <div class="tip-row"><span class="tip-b">•</span>
+                <span class="tip-x">Mark standup fixed so the rest can move around it.</span></div>
+              <button class="tips-dis">Got it</button>
+            </div>
+            <div class="sec">
+              <div class="sec-t">Quick add</div>
+              <div class="chips">
+                <span class="chip">Deep work</span><span class="chip">Gym</span>
+                <span class="chip">Reading</span><span class="chip">Admin</span>
+                <span class="chip">Meal</span>
+              </div>
+            </div>
+            <div class="sb-card">
+              <div class="sb-hd2"><span class="sb-n">Morning reset</span>
+                <span class="sb-acts"><span class="sb-e">Edit</span>
+                <span class="sb-r">Remove</span></span></div>
+              <div class="sb-m">7:00 AM – 7:30 AM</div>
+              <div class="sb-rep">Repeats: Mon–Fri</div>
+            </div>
+            <div class="sb-card">
+              <div class="sb-hd2"><span class="sb-n">Deep work</span>
+                <span class="sb-acts"><span class="sb-e">Edit</span>
+                <span class="sb-r">Remove</span></span></div>
+              <div class="sb-m">8:00 AM – 9:30 AM</div>
+              <div class="sb-rep">Repeats: Mon–Fri</div>
+            </div>
+            <div class="sb-card">
+              <div class="sb-hd2"><span class="sb-n">Gym</span>
+                <span class="sb-acts"><span class="sb-e">Edit</span>
+                <span class="sb-r">Remove</span></span></div>
+              <div class="sb-m">1:00 PM – 2:00 PM</div>
+              <div class="sb-rep">Repeats: Mon, Wed, Fri</div>
+            </div>
+            <button class="prim" data-goto="today">Continue to today →</button>
           </div>
         </div>
+
+        <!-- ===== ACCOUNT ===== -->
+        <div class="scr" data-scr="account">
+          <div class="scr-scroll">
+            <div class="sb-hd"><div class="sb-t">Account</div></div>
+            <div class="acc-sec">
+              <div class="acc-t">What FlexMax learned about you</div>
+              <p class="acc-sum">Works best in the morning and knows it. Stalls around
+                week two, usually after a single missed day turns into avoiding the app
+                entirely. Responds to gentle accountability; pressure backfires.</p>
+              <div class="pills">
+                <span class="pill">Peak: morning</span>
+                <span class="pill">Motivation: accountability</span>
+                <span class="pill">Tone: gentle</span>
+                <span class="pill">Trigger: one bad day</span>
+              </div>
+            </div>
+            <div class="acc-sec">
+              <div class="acc-t">Settings</div>
+              <div class="acc-row"><span class="acc-l">Timezone</span>
+                <span class="acc-v">America/Chicago</span></div>
+              <div class="acc-row"><span class="acc-l">Nightly plan reminder</span>
+                <span class="acc-v">9:00 PM</span></div>
+              <div class="acc-row"><span class="acc-l">Check-in nudges</span>
+                <span class="acc-v">On</span></div>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
-    <div class="fm-step">4 / accountability</div>
-    <div class="fm-label">Smart check-ins + streak</div>
-  </div>
-
-  <div class="fm-phone-wrap">
-    <div class="fm-screen">
-      <div class="fm-notch"><div class="fm-notch-pill"><div class="fm-notch-cam"></div></div></div>
-      <div class="fm-body">
-        <div class="fm-top">
-          <div><div class="fm-greeting">Missed block</div><div class="fm-sub">Workout · 6AM–7AM</div></div>
-          <div style="font-size:8px;color:#F0997B;background:#2a130a;padding:2px 7px;border-radius:10px;font-weight:500;">no judgment</div>
-        </div>
-        <div class="fm-reflect">
-          <div class="fm-reflect-head"><i class="ti ti-alert-triangle" style="font-size:10px;vertical-align:-1px;margin-right:3px;"></i> What got in the way?</div>
-          <div class="fm-reflect-q">Be honest — this helps me learn your patterns.</div>
-          <textarea class="fm-reflect-input" placeholder="Was tired, hit snooze twice..."></textarea>
-        </div>
-        <div class="fm-reflect" style="border-left-color:#534AB7;">
-          <div class="fm-reflect-head" style="color:#AFA9EC;"><i class="ti ti-bulb" style="font-size:10px;vertical-align:-1px;margin-right:3px;"></i> One thing to change?</div>
-          <div class="fm-reflect-q">Small adjustments compound. What would help next time?</div>
-          <textarea class="fm-reflect-input" placeholder="Lay out gym clothes the night before..."></textarea>
-        </div>
-        <div class="fm-reschedule">
-          <div class="fm-reschedule-head"><i class="ti ti-calendar" style="font-size:10px;"></i> Best recovery slot found</div>
-          <div class="fm-block b-teal" style="margin-bottom:6px;">
-            <div class="fm-block-time">12:30 PM — 1:30 PM</div>
-            <div class="fm-block-name">Workout (rescheduled)</div>
-          </div>
-          <div class="fm-ai-card-actions">
-            <button class="fm-btn-sm fm-btn-teal">Use this slot</button>
-            <button class="fm-btn-sm fm-btn-ghost">Skip today</button>
-          </div>
-        </div>
-        <div class="fm-stat-row" style="margin-top:8px;">
-          <div class="fm-stat"><div class="fm-stat-num" style="color:#EF9F27;">4</div><div class="fm-stat-label">day streak</div></div>
-          <div class="fm-stat"><div class="fm-stat-num" style="color:#5DCAA5;">87%</div><div class="fm-stat-label">completion</div></div>
-          <div class="fm-stat"><div class="fm-stat-num" style="color:#AFA9EC;">12</div><div class="fm-stat-label">blocks done</div></div>
-        </div>
-      </div>
-    </div>
-    <div class="fm-step">5 / recovery</div>
-    <div class="fm-label">Missed block · reflect + reschedule</div>
+    <p class="device-cap">Interactive · tap a block, or miss one</p>
   </div>
 
 </div>
-
-<div class="fm-footer">
-  FlexMax · <a href="https://github.com/mbquresh/flexmax">github.com/mbquresh/flexmax</a> · v1 work in progress
 </div>
 
+<footer>
+  <div class="wrap foot">
+    <span>FlexMax — Houston, TX</span>
+    <span>Built solo · <a href="https://github.com/mbquresh">github.com/mbquresh</a></span>
+    <span>Source readable · all rights reserved</span>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var host = document.getElementById('host');
+  var toast = document.getElementById('toast');
+  var toastT;
+
+  function showScreen(name){
+    host.querySelectorAll('.scr').forEach(function(s){
+      s.classList.toggle('on', s.dataset.scr === name);
+    });
+    document.querySelectorAll('.nav-block').forEach(function(b){
+      b.setAttribute('aria-current', String(b.dataset.screen === name));
+    });
+    closeAll();
+  }
+
+  function closeAll(){
+    host.querySelectorAll('.scrim').forEach(function(s){ s.classList.remove('on'); });
+  }
+
+  function open(id){
+    showScreen('today');
+    document.getElementById(id).classList.add('on');
+  }
+
+  function say(msg){
+    toast.textContent = msg;
+    toast.classList.add('on');
+    clearTimeout(toastT);
+    toastT = setTimeout(function(){ toast.classList.remove('on'); }, 2000);
+  }
+
+  // ---- screen navigator
+  document.querySelectorAll('.nav-block').forEach(function(b){
+    b.addEventListener('click', function(){ showScreen(b.dataset.screen); });
+  });
+
+  // ---- section CTAs drive the device
+  document.querySelectorAll('.drive').forEach(function(b){
+    b.addEventListener('click', function(){
+      if (b.dataset.action === 'miss'){ markMissed(); }
+      if (b.dataset.action === 'checkin'){ openCheckIn('Deep work','8:00 AM – 9:30 AM'); }
+      if (window.innerWidth < 940) {
+        document.querySelector('.device').scrollIntoView({block:'center'});
+      }
+    });
+  });
+
+  // ---- in-device interaction
+  function openCheckIn(name, time){
+    document.getElementById('ciName').textContent = name + " — how'd it go?";
+    document.getElementById('ciTime').textContent = time;
+    open('checkinScrim');
+  }
+
+  function markMissed(){
+    var gym = host.querySelector('[data-id="gym"]');
+    gym.querySelector('.status-bar').className = 'status-bar missed';
+    var c = gym.querySelector('.circ');
+    c.className = 'circ miss'; c.textContent = '!';
+    open('recScrim');
+  }
+
+  host.addEventListener('click', function(e){
+    var card = e.target.closest('.card');
+    var act  = e.target.closest('[data-action]');
+    var goto = e.target.closest('[data-goto]');
+    var rate = e.target.closest('[data-rate]');
+
+    if (goto){ showScreen(goto.dataset.goto); return; }
+
+    if (rate){
+      closeAll();
+      var deep = host.querySelector('[data-id="deep"]');
+      if (rate.dataset.rate === 'Crushed it'){
+        deep.querySelector('.status-bar').className = 'status-bar completed';
+        var dc = deep.querySelector('.circ'); dc.className = 'circ done'; dc.textContent = '✓';
+      }
+      say(rate.dataset.rate + ' — logged');
+      return;
+    }
+
+    if (act){
+      var a = act.dataset.action;
+      if (a === 'menu'){ open('menuScrim'); }
+      if (a === 'close'){ closeAll(); }
+      if (a === 'saverec'){ closeAll(); say('Reflection saved'); }
+      if (a === 'resched'){
+        closeAll();
+        var g = host.querySelector('[data-id="gym"]');
+        g.querySelector('.b-meta').textContent = '7:30 PM – 8:30 PM';
+        g.querySelector('.status-bar').className = 'status-bar';
+        var gc = g.querySelector('.circ'); gc.className = 'circ'; gc.textContent = '';
+        say('Gym moved to 7:30 PM');
+      }
+      return;
+    }
+
+    if (card && !card.classList.contains('fixed')){
+      var id = card.dataset.id;
+      if (id === 'gym'){ markMissed(); return; }
+      var nm = card.querySelector('.b-name').textContent.trim();
+      var tm = card.querySelector('.b-meta').textContent.trim();
+      openCheckIn(nm, tm);
+    }
+  });
+
+  // click scrim background to dismiss
+  host.querySelectorAll('.scrim').forEach(function(s){
+    s.addEventListener('click', function(e){ if (e.target === s) closeAll(); });
+  });
+})();
+</script>
 </body>
 </html>
