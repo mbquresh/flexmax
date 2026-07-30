@@ -22,6 +22,149 @@ gorgeous detail. FlexMax is built around the opposite moment — the missed
 block. Instead of a red X, you get a short reflection and a schedule that 
 rebuilds around what's still possible today.
 
+## The behavioral learning engine (v2b)
+
+### Design principle
+
+**SQL computes. Claude narrates. Nothing learns in the dark.**
+
+All arithmetic — counts, rates, trends, correlations — happens in Postgres,
+where it is exact and auditable. The LLM receives only finished numbers and the
+user's own verbatim words, and its single job is to name the causal story and
+cite the evidence. It never calculates, never invents a statistic, and never
+decides strategy.
+
+One AI call per user per week. Everything else is free injection of stored
+results.
+
+### Architecture
+
+    daily_schedule_instances ──┐
+    instance_time_changes ─────┼──> get_behavior_evidence(user_id)  [SQL]
+    schedule_blocks ───────────┘              │
+                                              ▼
+                                     weekly-insight  [edge fn, 1 AI call/wk]
+                                              │
+                                              ▼
+                                    behavioral_insights  [stored beliefs]
+                                              │
+                    ┌─────────────────────────┼─────────────────────────┐
+                    ▼                         ▼                         ▼
+            missed-block-recovery      Today morning card        Plan Tomorrow
+              (injected, free)          (injected, free)        (injected, free)
+
+### Data integrity rules (learned the hard way)
+
+These are non-negotiable. Each one was discovered by building the wrong thing
+first and getting a confidently false answer.
+
+1. **`start_minutes` / `end_minutes` are SCHEDULED template times, not
+   behavioral records.** Blocks are recurring, so a "Sleep" block ending at
+   23:00 reports 23:00 every night regardless of when the user actually slept.
+   An early causal design self-joined on `end_minutes` to correlate late
+   evenings with missed mornings; it returned the identical value on all 40+
+   rows, because it was reading the plan, not the behavior. **Never generate a
+   claim of the form "your deep work ran until 1am" from these columns.**
+
+2. **`unaccounted` is disengagement signal, not a confirmed miss.** Nothing in
+   the app auto-transitions stale blocks, so a block the user never
+   acknowledged used to sit in `pending` forever. Migration 012 sweeps past-date
+   `pending`/`active` rows to `unaccounted`. This is deliberately distinct from
+   `missed` (which means the user engaged and marked it). Silence is data — but
+   weaker data, and must be described as "never checked in", never as "you
+   failed this".
+
+3. **Blocks the user does not track regularly are excluded.** The filter
+   requires at least 3 check-ins AND check-ins on at least 25% of instances.
+   An earlier version required only a single check-in ever — which let "Sleep"
+   through (completed once by accident out of 26) and ranked it the user's
+   single largest failure at 24/26. Nobody checks off sleep. The filter is
+   behavioral, not a hardcoded name list.
+
+4. **All-unaccounted days are excluded.** Instances are generated on demand, so
+   opening Plan Tomorrow mints a full day of blocks. During development this
+   produced ~76% unaccounted rows across all history. A naive read would
+   conclude "this user abandons three quarters of their commitments" — both
+   false and exactly the shame-mirror the ICP quits apps over. A day counts only
+   if it contains at least one real check-in.
+
+5. **The caveats travel with the payload.** `data_quality.caveats` is shipped
+   inside the evidence JSON so the narrator prompt cannot drift away from what
+   the data actually supports.
+
+6. **Never trend from a partial period or a single block type.** An early
+   insight draft claimed a four-day winning streak based on morning blocks
+   completing. Whole-day data showed two of those four days were 1-of-8
+   collapses, and the most recent complete week was in fact the worst of the
+   month. Trends come from `weekly_trend` and `day_shape`, complete periods only.
+   Today is excluded from the evidence pack entirely.
+
+### The highest-signal data is text, not timestamps
+
+`reflection_why` and `reflection_improve` are the most valuable columns in the
+database. Users narrate their own causality in plain language, which no
+inference layer needs to reconstruct. In one month of single-user data, 29
+reflections contained two distinct causal chains sharing a single root cause,
+stated explicitly and repeatedly by the user.
+
+This inverted the architecture: the evidence pack is **text-first**, with
+statistics as supporting context — not statistics-first with text as colour.
+
+A direct consequence: whatever the reflection UI does to encourage or discourage
+filling in these fields has more impact on product quality than any modelling
+work. Protect that input path.
+
+### Corroboration across independent sources
+
+An insight is trustworthy when two unrelated data sources agree. Example from
+real data: the user's reflections state that deep work overruns and consumes
+exercise blocks. Independently, `swap_drift` shows Cardio moved 13 times,
+Weights 9, Breakfast 10 — while Morning Deep Work moved twice. The text says it;
+the audit trail shows it. Prefer insights with this kind of corroboration over
+single-source patterns.
+
+### Engagement asymmetry is a signal in its own right
+
+The ratio of `missed` to `unaccounted` per block reveals which commitments the
+user still treats as real. Real example: Fajr+Quran shows 14 missed and 1
+unaccounted — the user reports on it almost every time, including failures.
+Weights workout shows 6 missed and 15 unaccounted — silent abandonment.
+Confronting a miss repeatedly is accountability, not avoidance, and is
+legitimate evidence for a strength insight.
+
+### Tone constraints (product-critical, not cosmetic)
+
+Real reflection data contains heavy self-blame: "Sloth." "Bad day."
+"unconsciousness." "Saturday, cut me some slack." That last one is preemptive
+defensiveness toward the app itself.
+
+The ICP ("the Capable Drifter") has already abandoned every planner that made
+them feel like a failure. Therefore the narrator MUST:
+
+- Name **structural** causes (a mechanism, a sequence, a missing cutoff), never
+  character causes.
+- Never echo the user's self-blaming vocabulary back at them.
+- Never use: lazy, failure, discipline, "should have", willpower.
+- Include at least one genuine, evidence-backed strength per insight set.
+- State small-n honestly ("4 of your last 5"), never dress it as a percentage.
+- Offer at most one small structural lever, never "try harder".
+- Be truthful about a bad week. The test case is an 11%-completion week: the
+  insight must not hide it, and must not moralise about it. Name the mechanism.
+
+### What is deliberately deferred
+
+- **Timestamp-based causal inference.** `rated_at` / `reflected_at` (migration
+  010) record real user activity times and can eventually support genuine
+  cross-day causality. They only began collecting recently, so there is
+  insufficient history to validate against. Revisit once several weeks of
+  evenings exist.
+- **Bayesian confidence scoring / hypothesis engines / RL-scored intervention
+  libraries.** Evaluated and rejected for this stage: every threshold and prior
+  would be invented rather than calibrated, and per-user intervention
+  effectiveness needs an n a single user will never reach. At current scale,
+  `GROUP BY` finds the patterns that matter. Revisit when real multi-user data
+  can calibrate the parameters.
+
 ## Why it exists
 
 Every popular planner works well when you're already doing well. The 
