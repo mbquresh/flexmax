@@ -13,6 +13,7 @@ export type BlockStatus =
   | "pending"
   | "active"
   | "completed"
+  | "unaccounted"
   | "missed"
   | "skipped"
   | "rescheduled"

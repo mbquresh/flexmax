@@ -18,7 +18,7 @@ const ACTION_BUTTON_WIDTH = 80;
 const REVEAL_WIDTH_PENDING = 160;
 const REVEAL_WIDTH_SINGLE = 80;
 
-const STATUS_COLORS: Record<BlockStatus, string> = {
+const STATUS_COLORS = {
   pending: colors.border,
   active: colors.border,
   completed: colors.success,
@@ -26,7 +26,7 @@ const STATUS_COLORS: Record<BlockStatus, string> = {
   skipped: colors.textPlaceholder,
   rescheduled: colors.textPlaceholder,
   removed: colors.textPlaceholder,
-};
+} as Record<BlockStatus, string>;
 
 function getStatusColor(status: BlockStatus): string {
   return STATUS_COLORS[status] ?? STATUS_COLORS.pending;
