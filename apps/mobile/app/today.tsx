@@ -22,6 +22,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { router } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "../src/lib/supabase";
 import { findRescheduleSlot, getTodayLabel } from "../src/lib/schedule";
 import { handleError } from "../src/lib/errors";
@@ -41,6 +42,7 @@ import { CheckInSheet } from "../src/components/CheckInSheet";
 import { TaskDetailSheet } from "../src/components/TaskDetailSheet";
 import { RecoverySheet, RecoveryAIContent } from "../src/components/RecoverySheet";
 import { BlockCard } from "../src/components/BlockCard";
+import { BedtimeCard } from "../src/components/BedtimeCard";
 import { AdhocTimedCard } from "../src/components/AdhocTimedCard";
 import { AdhocAnytimeRow } from "../src/components/AdhocAnytimeRow";
 import { TimePicker } from "../src/components/TimePicker";
@@ -85,6 +87,8 @@ function TodayScreenContent() {
   const [addTaskStartMinutes, setAddTaskStartMinutes] = useState(9 * 60);
   const [addTaskEndMinutes, setAddTaskEndMinutes] = useState(9 * 60 + 30);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [pendingBedtime, setPendingBedtime] = useState<DailyInstance | null>(null);
+  const [bedtimeDismissed, setBedtimeDismissed] = useState(true);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const checkInSlideAnim = useRef(new RNAnimated.Value(400)).current;
@@ -121,6 +125,42 @@ function TodayScreenContent() {
       if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (!session?.user.id) return;
+
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayDateString = getLocalDateString(yesterday);
+    const dismissKey = `bedtime_dismissed_${yesterdayDateString}`;
+
+    (async () => {
+      const dismissed = await AsyncStorage.getItem(dismissKey);
+      if (dismissed) {
+        setBedtimeDismissed(true);
+        setPendingBedtime(null);
+        return;
+      }
+
+      setBedtimeDismissed(false);
+
+      const { data, error } = await supabase
+        .from("daily_schedule_instances")
+        .select("*, block:schedule_blocks!inner(*)")
+        .eq("user_id", session.user.id)
+        .eq("date", yesterdayDateString)
+        .is("actual_end_minutes", null)
+        .eq("block.category", "wind_down")
+        .maybeSingle();
+
+      if (error) {
+        handleError(error, "loadPendingBedtime");
+        return;
+      }
+
+      setPendingBedtime(data);
+    })();
+  }, [session?.user.id]);
 
   useEffect(() => {
     if (checkInInstance) {
@@ -652,6 +692,36 @@ function TodayScreenContent() {
     }
   };
 
+  const handleSaveBedtime = async (actualMinutes: number) => {
+    if (!pendingBedtime) return;
+
+    setSaving(true);
+    try {
+      const target = pendingBedtime.end_minutes;
+      const derivedStatus = actualMinutes <= target + 30 ? "completed" : "missed";
+      const { error } = await supabase
+        .from("daily_schedule_instances")
+        .update({ actual_end_minutes: actualMinutes, status: derivedStatus })
+        .eq("id", pendingBedtime.id);
+
+      if (error) throw error;
+      setPendingBedtime(null);
+    } catch (err) {
+      handleError(err, "handleSaveBedtime", "Could not save bedtime");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDismissBedtime = async () => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayDateString = getLocalDateString(yesterday);
+    await AsyncStorage.setItem(`bedtime_dismissed_${yesterdayDateString}`, "1");
+    setBedtimeDismissed(true);
+    setPendingBedtime(null);
+  };
+
   const saveTaskDetail = async () => {
     if (!activeTaskDetailInstance) return;
 
@@ -713,6 +783,14 @@ function TodayScreenContent() {
               </TouchableOpacity>
             </View>
           </View>
+          {pendingBedtime && !bedtimeDismissed ? (
+            <BedtimeCard
+              targetMinutes={pendingBedtime.end_minutes}
+              onSave={handleSaveBedtime}
+              onDismiss={handleDismissBedtime}
+              saving={saving}
+            />
+          ) : null}
           {stats ? <StreakStrip stats={stats} /> : null}
         </View>
 

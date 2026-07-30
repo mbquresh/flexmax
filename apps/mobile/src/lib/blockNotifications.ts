@@ -25,9 +25,13 @@ export async function scheduleTodayBlockNotifications(
   const now = new Date();
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
 
-  // Only schedule blocks that haven't ended yet
+  // Only schedule blocks that haven't ended yet.
+  // A wind_down block's goal is ending screen time, so a phone notification at
+  // its end is self-defeating. Captured retroactively instead.
   const futureInstances = instances.filter(
-    (inst) => inst.end_minutes > nowMinutes + 1 // at least 1 min in the future
+    (inst) =>
+      inst.end_minutes > nowMinutes + 1 &&
+      inst.block?.category !== "wind_down"
   );
 
   for (const inst of futureInstances) {
