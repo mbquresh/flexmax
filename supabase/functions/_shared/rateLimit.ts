@@ -5,6 +5,7 @@ const LIMITS: Record<string, number> = {
   "extract-psychology-profile": 5,
   "generate-schedule-tips": 5,
   "missed-block-recovery": 15,
+  "weekly-insight": 3,
 };
 
 const WINDOW_MS = 60 * 60 * 1000;

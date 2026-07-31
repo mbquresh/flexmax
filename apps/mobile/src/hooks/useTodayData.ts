@@ -87,6 +87,10 @@ export function useTodayData(userId: string | undefined) {
       }
 
       setLoading(false);
+
+      // Fire-and-forget. Returns cached insights without an AI call if a fresh
+      // set exists, so this is cheap to call on every load.
+      supabase.functions.invoke("weekly-insight").catch(() => {});
     },
     [userId, setTodayInstances]
   );
