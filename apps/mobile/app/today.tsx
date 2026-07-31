@@ -522,6 +522,39 @@ function TodayScreenContent() {
     }
   };
 
+  const loadRecoveryAI = async (instance: DailyInstance) => {
+    try {
+      const { count } = await supabase
+        .from("daily_schedule_instances")
+        .select("*", { count: "exact", head: true })
+        .eq("block_id", instance.block_id)
+        .eq("status", "missed");
+
+      const { data, error: fnError } = await supabase.functions.invoke(
+        "missed-block-recovery",
+        {
+          body: {
+            blockName: instance.block?.name ?? "this block",
+            missCount: count ?? 1,
+            psychologyProfile,
+          },
+        }
+      );
+      if (fnError) throw fnError;
+      setRecoveryAI(data);
+    } catch (err) {
+      handleError(err, "fetchRecoveryAI");
+      setRecoveryAI({
+        acknowledgment: "One miss doesn't break anything — let's figure out what happened.",
+        reflection_prompt_why: "What got in the way?",
+        reflection_prompt_improve: "What's one thing you'd change next time?",
+        pattern_note: null,
+      });
+    } finally {
+      setRecoveryLoading(false);
+    }
+  };
+
   const handleMarkMissed = async (instance: DailyInstance) => {
     if (instance.status !== "pending" && instance.status !== "active") return;
 
@@ -534,54 +567,26 @@ function TodayScreenContent() {
 
       if (error) throw error;
       updateInstance(instance.id, { status: "missed" });
-
-      const slot = findRescheduleSlot(
-        { ...instance, status: "missed" },
-        useStore.getState().todayInstances
-      );
-      setRescheduleSlot(slot);
-
-      const { count } = await supabase
-        .from("daily_schedule_instances")
-        .select("*", { count: "exact", head: true })
-        .eq("block_id", instance.block_id)
-        .eq("status", "missed");
-
-      setRecoveryInstance(instance);
-      setReflectionWhy("");
-      setReflectionImprove("");
-      setRecoveryLoading(true);
-      setRecoveryAI(null);
-
-      try {
-        const { data, error: fnError } = await supabase.functions.invoke(
-          "missed-block-recovery",
-          {
-            body: {
-              blockName: instance.block?.name ?? "this block",
-              missCount: count ?? 1,
-              psychologyProfile,
-            },
-          }
-        );
-        if (fnError) throw fnError;
-        setRecoveryAI(data);
-      } catch (err) {
-        handleError(err, "fetchRecoveryAI");
-        setRecoveryAI({
-          acknowledgment: "One miss doesn't break anything — let's figure out what happened.",
-          reflection_prompt_why: "What got in the way?",
-          reflection_prompt_improve: "What's one thing you'd change next time?",
-          pattern_note: null,
-        });
-      } finally {
-        setRecoveryLoading(false);
-      }
     } catch (err) {
       handleError(err, "handleMarkMissed", "Could not mark missed");
+      return;
     } finally {
       setSaving(false);
     }
+
+    const slot = findRescheduleSlot(
+      { ...instance, status: "missed" },
+      useStore.getState().todayInstances
+    );
+    setRescheduleSlot(slot);
+
+    setRecoveryInstance(instance);
+    setReflectionWhy("");
+    setReflectionImprove("");
+    setRecoveryLoading(true);
+    setRecoveryAI(null);
+
+    loadRecoveryAI(instance);
   };
 
   const closeRecovery = () => {

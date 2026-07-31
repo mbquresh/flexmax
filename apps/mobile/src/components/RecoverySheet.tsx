@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
 } from "react-native";
 import { DailyInstance } from "../types/database";
 import { minutesToTime } from "../lib/time";
@@ -72,61 +73,70 @@ export function RecoverySheet({
             {recoveryInstance?.block?.name ?? "Block"} — missed
           </Text>
 
-          {recoveryLoading ? (
-            <ActivityIndicator color={colors.primary} style={{ marginVertical: 16 }} />
-          ) : (
-            <>
-              <Text style={styles.recoveryAck}>{recoveryAI?.acknowledgment}</Text>
-              {recoveryAI?.pattern_note ? (
-                <View style={styles.patternNote}>
-                  <Text style={styles.patternNoteText}>{recoveryAI.pattern_note}</Text>
-                </View>
-              ) : null}
-            </>
-          )}
+          <ScrollView
+            style={{ flexShrink: 1 }}
+            contentContainerStyle={{ paddingBottom: spacing.sm }}
+            keyboardShouldPersistTaps="handled"
+          >
+            {recoveryLoading ? (
+              <View style={styles.loadingRow}>
+                <ActivityIndicator size="small" color={colors.primary} />
+                <Text style={styles.loadingText}>Thinking about this one...</Text>
+              </View>
+            ) : (
+              <>
+                <Text style={styles.recoveryAck}>{recoveryAI?.acknowledgment}</Text>
+                {recoveryAI?.pattern_note ? (
+                  <View style={styles.patternNote}>
+                    <Text style={styles.patternNoteText}>{recoveryAI.pattern_note}</Text>
+                  </View>
+                ) : null}
+              </>
+            )}
 
-          <Text style={styles.reflectionLabel}>
-            {recoveryAI?.reflection_prompt_why ?? "What got in the way?"}
-          </Text>
-          <TextInput
-            style={styles.reflectionInput}
-            value={reflectionWhy}
-            onChangeText={onChangeWhy}
-            placeholder="Be honest..."
-            placeholderTextColor={colors.textPlaceholder}
-            multiline
-          />
+            <Text style={styles.reflectionLabel}>
+              {recoveryAI?.reflection_prompt_why ?? "What got in the way?"}
+            </Text>
+            <TextInput
+              style={styles.reflectionInput}
+              value={reflectionWhy}
+              onChangeText={onChangeWhy}
+              placeholder="Be honest..."
+              placeholderTextColor={colors.textPlaceholder}
+              multiline
+            />
 
-          <Text style={styles.reflectionLabel}>
-            {recoveryAI?.reflection_prompt_improve ?? "One thing you'd change next time?"}
-          </Text>
-          <TextInput
-            style={styles.reflectionInput}
-            value={reflectionImprove}
-            onChangeText={onChangeImprove}
-            placeholder="Even something small..."
-            placeholderTextColor={colors.textPlaceholder}
-            multiline
-          />
+            <Text style={styles.reflectionLabel}>
+              {recoveryAI?.reflection_prompt_improve ?? "One thing you'd change next time?"}
+            </Text>
+            <TextInput
+              style={styles.reflectionInput}
+              value={reflectionImprove}
+              onChangeText={onChangeImprove}
+              placeholder="Even something small..."
+              placeholderTextColor={colors.textPlaceholder}
+              multiline
+            />
 
-          {rescheduleSlot ? (
-            <View style={styles.rescheduleBox}>
-              <Text style={styles.rescheduleLabel}>Available slot today</Text>
-              <Text style={styles.rescheduleTime}>
-                {minutesToTime(rescheduleSlot.start_minutes)} —{" "}
-                {minutesToTime(rescheduleSlot.end_minutes)}
-              </Text>
-              <TouchableOpacity
-                style={styles.rescheduleBtn}
-                onPress={onReschedule}
-                disabled={saving}
-              >
-                <Text style={styles.rescheduleBtnText}>Reschedule to this slot</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <Text style={styles.noSlot}>No open slots remaining today.</Text>
-          )}
+            {rescheduleSlot ? (
+              <View style={styles.rescheduleBox}>
+                <Text style={styles.rescheduleLabel}>Available slot today</Text>
+                <Text style={styles.rescheduleTime}>
+                  {minutesToTime(rescheduleSlot.start_minutes)} —{" "}
+                  {minutesToTime(rescheduleSlot.end_minutes)}
+                </Text>
+                <TouchableOpacity
+                  style={styles.rescheduleBtn}
+                  onPress={onReschedule}
+                  disabled={saving}
+                >
+                  <Text style={styles.rescheduleBtnText}>Reschedule to this slot</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <Text style={styles.noSlot}>No open slots remaining today.</Text>
+            )}
+          </ScrollView>
 
           <View style={styles.recoveryActions}>
             <TouchableOpacity
@@ -136,7 +146,7 @@ export function RecoverySheet({
             >
               <Text style={styles.saveBtnText}>Save reflection</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={onClose} disabled={saving}>
+            <TouchableOpacity onPress={onClose}>
               <Text style={styles.skipText}>Skip</Text>
             </TouchableOpacity>
           </View>
@@ -158,6 +168,7 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     paddingBottom: 40,
     gap: spacing.md,
+    maxHeight: "85%",
   },
   sheetHandle: {
     alignSelf: "center",
@@ -168,6 +179,16 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   recoveryTitle: { color: colors.danger, ...typography.heading },
+  loadingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  loadingText: {
+    color: colors.textSecondary,
+    fontSize: 13,
+  },
   recoveryAck: { color: colors.textSecondary, fontSize: 14, lineHeight: 22 },
   patternNote: {
     backgroundColor: colors.dangerTint,
