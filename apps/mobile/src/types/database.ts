@@ -57,6 +57,14 @@ export interface PsychologyProfile {
   schedule_tips: string[] | null;
 }
 
+export interface BehavioralInsight {
+  kind: "causal" | "pattern" | "strength";
+  belief: string;
+  suggestion: string | null;
+  related_blocks: string[];
+  rank: number;
+}
+
 export interface ScheduleTemplate {
   id: string;
   user_id: string;

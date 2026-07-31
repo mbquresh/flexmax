@@ -1,9 +1,26 @@
-import { DailyInstance } from "../types/database";
+import { DailyInstance, BehavioralInsight } from "../types/database";
 
 export interface RecoveryCopy {
   headline: string | null;
   structuralNote: string | null;
   lastIntention: { text: string; date: string } | null;
+}
+
+/**
+ * Finds the highest-ranked insight concerning this block.
+ * 'strength' insights are excluded — a strength shown at the moment of a
+ * miss reads as sarcasm.
+ */
+export function findInsightForBlock(
+  insights: BehavioralInsight[],
+  blockName: string
+): BehavioralInsight | null {
+  return (
+    insights
+      .filter((i) => i.kind !== "strength")
+      .filter((i) => i.related_blocks.includes(blockName))
+      .sort((a, b) => a.rank - b.rank)[0] ?? null
+  );
 }
 
 interface Occurrence {

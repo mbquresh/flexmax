@@ -41,7 +41,7 @@ import { StreakStrip } from "../src/components/StreakStrip";
 import { CheckInSheet } from "../src/components/CheckInSheet";
 import { TaskDetailSheet } from "../src/components/TaskDetailSheet";
 import { RecoverySheet } from "../src/components/RecoverySheet";
-import { buildRecoveryCopy, RecoveryCopy } from "../src/lib/recoveryCopy";
+import { buildRecoveryCopy, findInsightForBlock, RecoveryCopy } from "../src/lib/recoveryCopy";
 import { BlockCard } from "../src/components/BlockCard";
 import { BedtimeCard } from "../src/components/BedtimeCard";
 import { AdhocTimedCard } from "../src/components/AdhocTimedCard";
@@ -64,6 +64,7 @@ function TodayScreenContent() {
     timedAdhoc,
     anytimeAdhoc,
     updateAdhocTask,
+    insights,
   } = useTodayData(session?.user.id);
   const { setTodayInstances, updateInstance } = useStore();
   const [checkInInstance, setCheckInInstance] = useState<DailyInstance | null>(null);
@@ -578,7 +579,14 @@ function TodayScreenContent() {
           }
         : null
     );
-    setRecoveryCopy(copy);
+    const insight = findInsightForBlock(insights, instance.block?.name ?? "");
+    setRecoveryCopy({
+      ...copy,
+      // A specific, evidence-backed insight replaces the generic note.
+      // Falls back to the deterministic note when no insight matches —
+      // new users have no insights and must still get useful copy.
+      structuralNote: insight?.belief ?? copy.structuralNote,
+    });
     setRecoveryInstance(instance);
     setReflectionWhy("");
     setReflectionImprove("");

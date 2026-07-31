@@ -5,7 +5,7 @@ import { scheduleTodayBlockNotifications } from "../lib/blockNotifications";
 import { fetchTodayStats, TodayStats } from "../lib/stats";
 import { getLocalDateString } from "../lib/time";
 import { handleError } from "../lib/errors";
-import { AdhocTask } from "../types/database";
+import { AdhocTask, BehavioralInsight } from "../types/database";
 import { useStore } from "../store";
 
 export function useTodayData(userId: string | undefined) {
@@ -15,6 +15,7 @@ export function useTodayData(userId: string | undefined) {
   const [displayDate, setDisplayDate] = useState(getLocalDateString());
   const [stats, setStats] = useState<TodayStats | null>(null);
   const [adhocTasks, setAdhocTasks] = useState<AdhocTask[]>([]);
+  const [insights, setInsights] = useState<BehavioralInsight[]>([]);
   const currentDateRef = useRef(getLocalDateString());
 
   const timedAdhoc = useMemo(
@@ -86,6 +87,22 @@ export function useTodayData(userId: string | undefined) {
         setAdhocTasks(adhoc ?? []);
       }
 
+      const { data: insightsData, error: insightsError } = await (
+        supabase as typeof supabase & {
+          from: (table: "behavioral_insights") => ReturnType<typeof supabase.from>;
+        }
+      )
+        .from("behavioral_insights")
+        .select("kind, belief, suggestion, related_blocks, rank")
+        .eq("superseded", false)
+        .order("rank") as { data: BehavioralInsight[] | null; error: Error | null };
+
+      if (insightsError) {
+        handleError(insightsError, "loadToday insights");
+      } else {
+        setInsights(insightsData ?? []);
+      }
+
       setLoading(false);
 
       // Fire-and-forget. Returns cached insights without an AI call if a fresh
@@ -155,5 +172,6 @@ export function useTodayData(userId: string | undefined) {
     timedAdhoc,
     anytimeAdhoc,
     updateAdhocTask,
+    insights,
   };
 }
