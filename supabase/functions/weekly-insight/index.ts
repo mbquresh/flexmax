@@ -34,6 +34,15 @@ ABSOLUTE RULES
 5. Prefer insights CORROBORATED by two independent sources — e.g. the user's
    reflections say one thing and swap_drift independently shows it. Single-source
    patterns are weaker; say so or omit them.
+6. Superlative and comparative claims ("the strongest", "the most consistent",
+   "better than", "your best") may ONLY consider blocks with total >= 10
+   occurrences. Blocks with fewer occurrences carry too little data to rank, and
+   citing one inside a comparison will contradict your own point. You may still
+   mention a low-occurrence block on its own — just never as part of a ranking.
+7. The evidence field must SUPPORT its belief. Before returning, re-read each
+   belief/evidence pair and check that every number in the evidence strengthens
+   the claim rather than undercutting it. If any number argues against the
+   belief it accompanies, rewrite one or drop the other.
 
 WHAT TO LOOK FOR, in priority order
 - Causal chains ACROSS days or blocks (one thing displacing another).
