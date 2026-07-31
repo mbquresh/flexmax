@@ -1127,7 +1127,7 @@ const styles = StyleSheet.create({
   scrollContent: { flexGrow: 1 },
   empty: { color: colors.textFaint, textAlign: "center", marginTop: 40, lineHeight: 22 },
   addAdhocPill: {
-    backgroundColor: colors.danger,
+    backgroundColor: colors.primary,
     borderRadius: radii.pill,
     height: 48,
     marginHorizontal: spacing.xl,
