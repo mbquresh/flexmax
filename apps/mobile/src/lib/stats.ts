@@ -34,12 +34,29 @@ export async function fetchTodayStats(userId: string): Promise<TodayStats> {
   const mondayStr = toLocalDateStr(monday);
   const sundayStr = toLocalDateStr(sunday);
 
-  const { data: weekInstances } = await supabase
-    .from("daily_schedule_instances")
-    .select("date, status")
-    .eq("user_id", userId)
-    .gte("date", mondayStr)
-    .lte("date", sundayStr);
+  const thirtyDaysAgo = new Date(now);
+  thirtyDaysAgo.setDate(now.getDate() - 30);
+  const thirtyDaysAgoStr = [
+    thirtyDaysAgo.getFullYear(),
+    String(thirtyDaysAgo.getMonth() + 1).padStart(2, "0"),
+    String(thirtyDaysAgo.getDate()).padStart(2, "0"),
+  ].join("-");
+
+  const [{ data: weekInstances }, { data: completedRows }] = await Promise.all([
+    supabase
+      .from("daily_schedule_instances")
+      .select("date, status")
+      .eq("user_id", userId)
+      .gte("date", mondayStr)
+      .lte("date", sundayStr),
+    supabase
+      .from("daily_schedule_instances")
+      .select("date")
+      .eq("user_id", userId)
+      .eq("status", "completed")
+      .gte("date", thirtyDaysAgoStr)
+      .order("date", { ascending: false }),
+  ]);
 
   const total =
     weekInstances?.filter(
@@ -71,21 +88,6 @@ export async function fetchTodayStats(userId: string): Promise<TodayStats> {
 
   // ── Streak: consecutive days with at least one completed block ─────────
   // Single query: fetch all completed dates in the last 30 days, compute locally
-  const thirtyDaysAgo = new Date(now);
-  thirtyDaysAgo.setDate(now.getDate() - 30);
-  const thirtyDaysAgoStr = [
-    thirtyDaysAgo.getFullYear(),
-    String(thirtyDaysAgo.getMonth() + 1).padStart(2, "0"),
-    String(thirtyDaysAgo.getDate()).padStart(2, "0"),
-  ].join("-");
-
-  const { data: completedRows } = await supabase
-    .from("daily_schedule_instances")
-    .select("date")
-    .eq("user_id", userId)
-    .eq("status", "completed")
-    .gte("date", thirtyDaysAgoStr)
-    .order("date", { ascending: false });
 
   // Distinct set of dates that had at least one completion
   const completedDates = new Set((completedRows ?? []).map((r) => r.date));

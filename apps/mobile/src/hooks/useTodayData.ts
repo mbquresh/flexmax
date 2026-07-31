@@ -42,6 +42,10 @@ export function useTodayData(userId: string | undefined) {
 
       await generateDailyInstances(targetDate);
 
+      fetchTodayStats(userId)
+        .then(setStats)
+        .catch((err) => handleError(err, "fetchTodayStats"));
+
       const { count } = await supabase
         .from("schedule_blocks")
         .select("*", { count: "exact", head: true })
@@ -74,9 +78,6 @@ export function useTodayData(userId: string | undefined) {
             handleError(err, "scheduleBlockNotifications")
           );
         }
-        fetchTodayStats(userId)
-          .then(setStats)
-          .catch((err) => handleError(err, "fetchTodayStats"));
       }
 
       if (adhocError) {
