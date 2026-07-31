@@ -6,21 +6,14 @@ import {
   Modal,
   TouchableOpacity,
   TextInput,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
 } from "react-native";
 import { DailyInstance } from "../types/database";
+import { RecoveryCopy } from "../lib/recoveryCopy";
 import { minutesToTime } from "../lib/time";
 import { colors, spacing, radii, typography } from "../theme";
-
-export interface RecoveryAIContent {
-  acknowledgment: string;
-  reflection_prompt_why: string;
-  reflection_prompt_improve: string;
-  pattern_note: string | null;
-}
 
 export interface RescheduleSlot {
   start_minutes: number;
@@ -29,8 +22,7 @@ export interface RescheduleSlot {
 
 interface RecoverySheetProps {
   recoveryInstance: DailyInstance | null;
-  recoveryAI: RecoveryAIContent | null;
-  recoveryLoading: boolean;
+  copy: RecoveryCopy | null;
   reflectionWhy: string;
   reflectionImprove: string;
   rescheduleSlot: RescheduleSlot | null;
@@ -44,8 +36,7 @@ interface RecoverySheetProps {
 
 export function RecoverySheet({
   recoveryInstance,
-  recoveryAI,
-  recoveryLoading,
+  copy,
   reflectionWhy,
   reflectionImprove,
   rescheduleSlot,
@@ -78,25 +69,16 @@ export function RecoverySheet({
             contentContainerStyle={{ paddingBottom: spacing.sm }}
             keyboardShouldPersistTaps="handled"
           >
-            {recoveryLoading ? (
-              <View style={styles.loadingRow}>
-                <ActivityIndicator size="small" color={colors.primary} />
-                <Text style={styles.loadingText}>Thinking about this one...</Text>
+            {copy?.headline ? (
+              <Text style={styles.recoveryAck}>{copy.headline}</Text>
+            ) : null}
+            {copy?.structuralNote ? (
+              <View style={styles.patternNote}>
+                <Text style={styles.patternNoteText}>{copy.structuralNote}</Text>
               </View>
-            ) : (
-              <>
-                <Text style={styles.recoveryAck}>{recoveryAI?.acknowledgment}</Text>
-                {recoveryAI?.pattern_note ? (
-                  <View style={styles.patternNote}>
-                    <Text style={styles.patternNoteText}>{recoveryAI.pattern_note}</Text>
-                  </View>
-                ) : null}
-              </>
-            )}
+            ) : null}
 
-            <Text style={styles.reflectionLabel}>
-              {recoveryAI?.reflection_prompt_why ?? "What got in the way?"}
-            </Text>
+            <Text style={styles.reflectionLabel}>What got in the way?</Text>
             <TextInput
               style={styles.reflectionInput}
               value={reflectionWhy}
@@ -106,9 +88,7 @@ export function RecoverySheet({
               multiline
             />
 
-            <Text style={styles.reflectionLabel}>
-              {recoveryAI?.reflection_prompt_improve ?? "One thing you'd change next time?"}
-            </Text>
+            <Text style={styles.reflectionLabel}>One thing you'd change next time?</Text>
             <TextInput
               style={styles.reflectionInput}
               value={reflectionImprove}
@@ -181,16 +161,6 @@ const styles = StyleSheet.create({
     color: colors.text,
     ...typography.heading,
     marginBottom: spacing.sm,
-  },
-  loadingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    marginBottom: spacing.xl,
-  },
-  loadingText: {
-    color: colors.textSecondary,
-    fontSize: 13,
   },
   recoveryAck: {
     color: colors.textSecondary,

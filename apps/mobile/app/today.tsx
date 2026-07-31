@@ -40,7 +40,8 @@ import { RequireAuth } from "../src/components/RequireAuth";
 import { StreakStrip } from "../src/components/StreakStrip";
 import { CheckInSheet } from "../src/components/CheckInSheet";
 import { TaskDetailSheet } from "../src/components/TaskDetailSheet";
-import { RecoverySheet, RecoveryAIContent } from "../src/components/RecoverySheet";
+import { RecoverySheet } from "../src/components/RecoverySheet";
+import { buildRecoveryCopy, RecoveryCopy } from "../src/lib/recoveryCopy";
 import { BlockCard } from "../src/components/BlockCard";
 import { BedtimeCard } from "../src/components/BedtimeCard";
 import { AdhocTimedCard } from "../src/components/AdhocTimedCard";
@@ -68,8 +69,7 @@ function TodayScreenContent() {
   const [checkInInstance, setCheckInInstance] = useState<DailyInstance | null>(null);
   const [undoInstance, setUndoInstance] = useState<DailyInstance | null>(null);
   const [recoveryInstance, setRecoveryInstance] = useState<DailyInstance | null>(null);
-  const [recoveryAI, setRecoveryAI] = useState<RecoveryAIContent | null>(null);
-  const [recoveryLoading, setRecoveryLoading] = useState(false);
+  const [recoveryCopy, setRecoveryCopy] = useState<RecoveryCopy | null>(null);
   const [reflectionWhy, setReflectionWhy] = useState("");
   const [reflectionImprove, setReflectionImprove] = useState("");
   const [rescheduleSlot, setRescheduleSlot] = useState<{
@@ -522,55 +522,6 @@ function TodayScreenContent() {
     }
   };
 
-  const loadRecoveryAI = async (instance: DailyInstance) => {
-    try {
-      // Rolling window over the last 14 OCCURRENCES of this block, not days —
-      // normalizes across blocks scheduled daily vs 3x/week. Old misses age out
-      // as the user improves, so this number can go DOWN. An all-time count can
-      // only ever rise, which makes improvement invisible and the sheet punitive.
-      const { data: recent } = await supabase
-        .from("daily_schedule_instances")
-        .select("date, status")
-        .eq("block_id", instance.block_id)
-        .order("date", { ascending: false })
-        .limit(14);
-
-      const window = recent ?? [];
-      const missCount = window.filter((r) => r.status === "missed").length;
-      const windowSize = window.length;
-      // Of the 5 most recent occurrences, how many were completed —
-      // lets the AI lead with improvement when it exists.
-      const recentCompleted = window
-        .slice(0, 5)
-        .filter((r) => r.status === "completed").length;
-
-      const { data, error: fnError } = await supabase.functions.invoke(
-        "missed-block-recovery",
-        {
-          body: {
-            blockName: instance.block?.name ?? "this block",
-            missCount,
-            windowSize,
-            recentCompleted,
-            psychologyProfile,
-          },
-        }
-      );
-      if (fnError) throw fnError;
-      setRecoveryAI(data);
-    } catch (err) {
-      handleError(err, "fetchRecoveryAI");
-      setRecoveryAI({
-        acknowledgment: "One miss doesn't break anything — let's figure out what happened.",
-        reflection_prompt_why: "What got in the way?",
-        reflection_prompt_improve: "What's one thing you'd change next time?",
-        pattern_note: null,
-      });
-    } finally {
-      setRecoveryLoading(false);
-    }
-  };
-
   const handleMarkMissed = async (instance: DailyInstance) => {
     if (instance.status !== "pending" && instance.status !== "active") return;
 
@@ -596,18 +547,27 @@ function TodayScreenContent() {
     );
     setRescheduleSlot(slot);
 
+    const { data: recent } = await supabase
+      .from("daily_schedule_instances")
+      .select("date, status")
+      .eq("block_id", instance.block_id)
+      .order("date", { ascending: false })
+      .limit(14);
+
+    const copy = buildRecoveryCopy(
+      instance.block?.name ?? "this block",
+      recent ?? [],
+      getLocalDateString()
+    );
+    setRecoveryCopy(copy);
     setRecoveryInstance(instance);
     setReflectionWhy("");
     setReflectionImprove("");
-    setRecoveryLoading(true);
-    setRecoveryAI(null);
-
-    loadRecoveryAI(instance);
   };
 
   const closeRecovery = () => {
     setRecoveryInstance(null);
-    setRecoveryAI(null);
+    setRecoveryCopy(null);
     setRescheduleSlot(null);
     setReflectionWhy("");
     setReflectionImprove("");
@@ -683,7 +643,7 @@ function TodayScreenContent() {
       `${recoveryInstance.block?.name ?? "Block"} rescheduled to ${minutesToTime(rescheduleSlot.start_minutes)}`
     );
     setRecoveryInstance(null);
-    setRecoveryAI(null);
+    setRecoveryCopy(null);
   };
 
   const handleCheckIn = async (rating: CompletionRating) => {
@@ -871,8 +831,7 @@ function TodayScreenContent() {
 
       <RecoverySheet
         recoveryInstance={recoveryInstance}
-        recoveryAI={recoveryAI}
-        recoveryLoading={recoveryLoading}
+        copy={recoveryCopy}
         reflectionWhy={reflectionWhy}
         reflectionImprove={reflectionImprove}
         rescheduleSlot={rescheduleSlot}
