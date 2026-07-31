@@ -4,6 +4,12 @@ export interface RecoveryCopy {
   headline: string | null;
   structuralNote: string | null;
   lastIntention: { text: string; date: string } | null;
+  /**
+   * True when a genuine streak just broke. The user is doing well; a
+   * behavioral diagnosis at this moment is deflating and wrong. Suppresses
+   * insight injection downstream.
+   */
+  suppressInsight: boolean;
 }
 
 /**
@@ -48,7 +54,7 @@ export function buildRecoveryCopy(
   lastIntention: { text: string; date: string } | null
 ): RecoveryCopy {
   if (window.length === 0) {
-    return { headline: null, structuralNote: null, lastIntention };
+    return { headline: null, structuralNote: null, lastIntention, suppressInsight: false };
   }
 
   const lastLandedIdx = window.findIndex((r) => r.status === "completed");
@@ -69,6 +75,7 @@ export function buildRecoveryCopy(
       headline: `${blockName} had a ${priorStreak}-day run going.`,
       structuralNote: null,
       lastIntention,
+      suppressInsight: true,
     };
   }
 
@@ -94,6 +101,7 @@ export function buildRecoveryCopy(
       headline: `${blockName} hasn't landed in over ${weeks} weeks.`,
       structuralNote: placeNote,
       lastIntention,
+      suppressInsight: false,
     };
   }
   if (daysSince >= 14) {
@@ -101,6 +109,7 @@ export function buildRecoveryCopy(
       headline: `${blockName} hasn't landed in over two weeks.`,
       structuralNote: placeNote,
       lastIntention,
+      suppressInsight: false,
     };
   }
   if (daysSince >= 7) {
@@ -108,16 +117,18 @@ export function buildRecoveryCopy(
       headline: `${blockName} hasn't landed in about a week.`,
       structuralNote: slotNote,
       lastIntention,
+      suppressInsight: false,
     };
   }
 
   // Under a week.
   if (notLandedSince === 1) {
-    return { headline: null, structuralNote: null, lastIntention };
+    return { headline: null, structuralNote: null, lastIntention, suppressInsight: false };
   }
   return {
     headline: `That's ${notLandedSince} tries in a row on ${blockName}.`,
     structuralNote: notLandedSince >= 3 ? slotNote : null,
     lastIntention,
+    suppressInsight: false,
   };
 }

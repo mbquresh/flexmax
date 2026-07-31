@@ -579,12 +579,11 @@ function TodayScreenContent() {
           }
         : null
     );
-    const insight = findInsightForBlock(insights, instance.block?.name ?? "");
+    const insight = copy.suppressInsight
+      ? null
+      : findInsightForBlock(insights, instance.block?.name ?? "");
     setRecoveryCopy({
       ...copy,
-      // A specific, evidence-backed insight replaces the generic note.
-      // Falls back to the deterministic note when no insight matches —
-      // new users have no insights and must still get useful copy.
       structuralNote: insight?.belief ?? copy.structuralNote,
     });
     setRecoveryInstance(instance);
