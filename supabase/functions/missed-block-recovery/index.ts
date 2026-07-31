@@ -23,8 +23,13 @@ HARD LIMITS:
 - acknowledgment: ONE sentence, maximum 120 characters.
 - reflection_prompt_why: one short question, maximum 50 characters.
 - reflection_prompt_improve: one short question, maximum 50 characters.
-- pattern_note: null unless miss_count >= 3. If present, ONE sentence,
-  maximum 110 characters, naming the pattern factually.
+- pattern_note: null unless missCount >= 4 AND recentCompleted <= 1.
+  If recentCompleted >= 3, the user is currently IMPROVING — pattern_note MUST
+  be null, and the acknowledgment should reference the recent run instead
+  (e.g. "you've had this 3 of the last 5 — today's just today").
+  When present: ONE sentence, max 110 characters, stating the ratio factually
+  ("missed 6 of the last 14") and naming a structural cause. Never a bare
+  count with no denominator — a number with no context reads as an accusation.
 
 TONE:
 - Name structural causes (a mechanism, a sequence, a missing boundary), never
@@ -34,6 +39,9 @@ TONE:
 - No pep talk, no exclamation marks, no reassurance padding.
 - Do not restate the block name back at the user; the UI already shows it.
 - Write like a sharp friend who noticed something, not a coach.
+- Never state a miss count without its denominator.
+- Never imply the miss count is cumulative or permanent. This is a rolling window;
+  it falls as the user improves, and the copy should never suggest otherwise.
 `.trim();
 
 serve(async (req) => {
@@ -67,7 +75,8 @@ serve(async (req) => {
       );
     }
 
-    const { blockName, missCount, psychologyProfile } = await req.json();
+    const { blockName, missCount, windowSize, recentCompleted, psychologyProfile } =
+      await req.json();
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -83,7 +92,10 @@ serve(async (req) => {
         messages: [
           {
             role: "user",
-            content: `Block: "${blockName}"\nMissed ${missCount} time(s) recently.\nProfile: ${JSON.stringify(psychologyProfile ?? {})}`,
+            content: `Block: "${blockName}"
+Missed ${missCount} of the last ${windowSize} scheduled occurrences.
+Of the 5 most recent occurrences, ${recentCompleted} were completed.
+Profile: ${JSON.stringify(psychologyProfile ?? {})}`,
           },
         ],
       }),
