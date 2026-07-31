@@ -524,18 +524,34 @@ function TodayScreenContent() {
 
   const loadRecoveryAI = async (instance: DailyInstance) => {
     try {
-      const { count } = await supabase
+      // Rolling window over the last 14 OCCURRENCES of this block, not days —
+      // normalizes across blocks scheduled daily vs 3x/week. Old misses age out
+      // as the user improves, so this number can go DOWN. An all-time count can
+      // only ever rise, which makes improvement invisible and the sheet punitive.
+      const { data: recent } = await supabase
         .from("daily_schedule_instances")
-        .select("*", { count: "exact", head: true })
+        .select("date, status")
         .eq("block_id", instance.block_id)
-        .eq("status", "missed");
+        .order("date", { ascending: false })
+        .limit(14);
+
+      const window = recent ?? [];
+      const missCount = window.filter((r) => r.status === "missed").length;
+      const windowSize = window.length;
+      // Of the 5 most recent occurrences, how many were completed —
+      // lets the AI lead with improvement when it exists.
+      const recentCompleted = window
+        .slice(0, 5)
+        .filter((r) => r.status === "completed").length;
 
       const { data, error: fnError } = await supabase.functions.invoke(
         "missed-block-recovery",
         {
           body: {
             blockName: instance.block?.name ?? "this block",
-            missCount: count ?? 1,
+            missCount,
+            windowSize,
+            recentCompleted,
             psychologyProfile,
           },
         }
