@@ -40,12 +40,13 @@ export const colors = {
   errorTint: "#F8E0E0",
   errorBorder: "#D99999",
 
-  // Streak (orange)
-  streak: "#EF9F27",
-  streakHousing: "#FBEFD9",
-  streakBorder: "#F0D9A8",
-  streakMuted: "#B07A28",
-  streakSquare: "#F5E4C8",
+  // Streak (teal earned / neutral housing)
+  streak: "#5DCAA5",
+  streakHousing: "#EDEDED",
+  streakBorder: "#C4C4C4",
+  streakMuted: "#666666",
+  streakSquare: "#E0E0E0",
+  streakSquareToday: "#E4E4E4",
 
   // Pale semantic fills for check-in ratings
   ratingGoodBg: "#D8EFD8",     // pale green — crushed it

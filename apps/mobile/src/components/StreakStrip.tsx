@@ -13,7 +13,7 @@ export function StreakStrip({ stats }: StreakStripProps) {
       <View style={styles.streakHeader}>
         <Text style={styles.streakLabel}>
           {stats.streak > 0
-            ? `🔥 ${stats.streak}-day streak`
+            ? `${stats.streak}-day streak`
             : "Start your streak today"}
         </Text>
         <Text style={styles.streakSub}>{stats.completionRate}% this week</Text>
@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   streakLabel: {
-    color: colors.streak,
+    color: colors.text,
     ...typography.smallBold,
   },
   streakSub: {
@@ -94,7 +94,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.streak,
   },
   daySquareToday: {
-    backgroundColor: colors.streakBorder,
+    backgroundColor: colors.streakSquareToday,
     borderWidth: 1.5,
     borderColor: colors.streak,
   },
