@@ -554,10 +554,29 @@ function TodayScreenContent() {
       .order("date", { ascending: false })
       .limit(14);
 
+    // Separate, wider lookup: the user's most recent forward-looking note on
+    // this block, however long ago. The 14-row streak window is far too narrow
+    // — intentions are written rarely (~1 in 3 misses) and stay relevant.
+    const { data: lastIntentionRow } = await supabase
+      .from("daily_schedule_instances")
+      .select("date, reflection_improve")
+      .eq("block_id", instance.block_id)
+      .not("reflection_improve", "is", null)
+      .neq("date", getLocalDateString())
+      .order("date", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
     const copy = buildRecoveryCopy(
       instance.block?.name ?? "this block",
       recent ?? [],
-      getLocalDateString()
+      getLocalDateString(),
+      lastIntentionRow?.reflection_improve
+        ? {
+            text: lastIntentionRow.reflection_improve.trim(),
+            date: lastIntentionRow.date,
+          }
+        : null
     );
     setRecoveryCopy(copy);
     setRecoveryInstance(instance);

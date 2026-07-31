@@ -78,6 +78,13 @@ export function RecoverySheet({
               </View>
             ) : null}
 
+            {copy?.lastIntention ? (
+              <View style={styles.lastIntention}>
+                <Text style={styles.lastIntentionLabel}>Last time you wrote</Text>
+                <Text style={styles.lastIntentionText}>"{copy.lastIntention.text}"</Text>
+              </View>
+            ) : null}
+
             <Text style={styles.reflectionLabel}>What got in the way?</Text>
             <TextInput
               style={styles.reflectionInput}
@@ -177,6 +184,26 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   patternNoteText: { color: colors.text, fontSize: 13, lineHeight: 20 },
+  lastIntention: {
+    backgroundColor: colors.surfaceNested,
+    borderRadius: radii.sm,
+    padding: spacing.lg,
+    marginBottom: spacing.xl,
+  },
+  lastIntentionLabel: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: spacing.sm,
+  },
+  lastIntentionText: {
+    color: colors.text,
+    fontSize: 14,
+    lineHeight: 21,
+    fontStyle: "italic",
+  },
   reflectionLabel: {
     color: colors.textMuted,
     ...typography.smallBold,

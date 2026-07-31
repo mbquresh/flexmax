@@ -3,6 +3,7 @@ import { DailyInstance } from "../types/database";
 export interface RecoveryCopy {
   headline: string | null;
   structuralNote: string | null;
+  lastIntention: { text: string; date: string } | null;
 }
 
 interface Occurrence {
@@ -26,9 +27,12 @@ const toLocal = (s: string) => {
 export function buildRecoveryCopy(
   blockName: string,
   window: Occurrence[],   // newest first, today's miss at index 0
-  todayDate: string
+  todayDate: string,
+  lastIntention: { text: string; date: string } | null
 ): RecoveryCopy {
-  if (window.length === 0) return { headline: null, structuralNote: null };
+  if (window.length === 0) {
+    return { headline: null, structuralNote: null, lastIntention };
+  }
 
   const lastLandedIdx = window.findIndex((r) => r.status === "completed");
   const notLandedSince = lastLandedIdx === -1 ? window.length : lastLandedIdx;
@@ -47,6 +51,7 @@ export function buildRecoveryCopy(
     return {
       headline: `${blockName} had a ${priorStreak}-day run going.`,
       structuralNote: null,
+      lastIntention,
     };
   }
 
@@ -71,27 +76,31 @@ export function buildRecoveryCopy(
     return {
       headline: `${blockName} hasn't landed in over ${weeks} weeks.`,
       structuralNote: placeNote,
+      lastIntention,
     };
   }
   if (daysSince >= 14) {
     return {
       headline: `${blockName} hasn't landed in over two weeks.`,
       structuralNote: placeNote,
+      lastIntention,
     };
   }
   if (daysSince >= 7) {
     return {
       headline: `${blockName} hasn't landed in about a week.`,
       structuralNote: slotNote,
+      lastIntention,
     };
   }
 
   // Under a week.
   if (notLandedSince === 1) {
-    return { headline: null, structuralNote: null };   // genuinely a one-off
+    return { headline: null, structuralNote: null, lastIntention };
   }
   return {
-    headline: `${notLandedSince} in a row on ${blockName}.`,
-    structuralNote: notLandedSince >= 4 ? slotNote : null,
+    headline: `That's ${notLandedSince} tries in a row on ${blockName}.`,
+    structuralNote: notLandedSince >= 3 ? slotNote : null,
+    lastIntention,
   };
 }
