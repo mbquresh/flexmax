@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderTopLeftRadius: radii.pill,
     borderTopRightRadius: radii.pill,
-    paddingHorizontal: spacing.xl,
+    paddingHorizontal: spacing.xxl,
     paddingBottom: Platform.OS === "ios" ? 36 : 24,
     paddingTop: 10,
   },
