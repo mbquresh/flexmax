@@ -44,6 +44,7 @@ import { RecoverySheet } from "../src/components/RecoverySheet";
 import { buildRecoveryCopy, findInsightForBlock, RecoveryCopy } from "../src/lib/recoveryCopy";
 import { BlockCard } from "../src/components/BlockCard";
 import { BedtimeCard } from "../src/components/BedtimeCard";
+import { InsightCard } from "../src/components/InsightCard";
 import { AdhocTimedCard } from "../src/components/AdhocTimedCard";
 import { AdhocAnytimeRow } from "../src/components/AdhocAnytimeRow";
 import { TimePicker } from "../src/components/TimePicker";
@@ -90,6 +91,7 @@ function TodayScreenContent() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [pendingBedtime, setPendingBedtime] = useState<DailyInstance | null>(null);
   const [bedtimeDismissed, setBedtimeDismissed] = useState(true);
+  const [insightDismissed, setInsightDismissed] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const checkInSlideAnim = useRef(new RNAnimated.Value(400)).current;
@@ -103,6 +105,14 @@ function TodayScreenContent() {
 
   const sortedInstances = [...instances].sort(
     (a, b) => a.start_minutes - b.start_minutes
+  );
+
+  const morningInsight = useMemo(
+    () =>
+      insights
+        .filter((i) => i.kind !== "strength")
+        .sort((a, b) => a.rank - b.rank)[0] ?? null,
+    [insights]
   );
 
   const timelineItems = useMemo(() => {
@@ -162,6 +172,13 @@ function TodayScreenContent() {
       setPendingBedtime(data);
     })();
   }, [session?.user.id]);
+
+  useEffect(() => {
+    const dismissKey = `insight_dismissed_${getLocalDateString()}`;
+    AsyncStorage.getItem(dismissKey).then((val) => {
+      if (val) setInsightDismissed(true);
+    });
+  }, []);
 
   useEffect(() => {
     if (checkInInstance) {
@@ -729,6 +746,11 @@ function TodayScreenContent() {
     setPendingBedtime(null);
   };
 
+  const handleDismissInsight = async () => {
+    await AsyncStorage.setItem(`insight_dismissed_${getLocalDateString()}`, "1");
+    setInsightDismissed(true);
+  };
+
   const saveTaskDetail = async () => {
     if (!activeTaskDetailInstance) return;
 
@@ -797,6 +819,8 @@ function TodayScreenContent() {
               onDismiss={handleDismissBedtime}
               saving={saving}
             />
+          ) : morningInsight && !insightDismissed ? (
+            <InsightCard insight={morningInsight} onDismiss={handleDismissInsight} />
           ) : null}
           {stats ? <StreakStrip stats={stats} /> : null}
         </View>
