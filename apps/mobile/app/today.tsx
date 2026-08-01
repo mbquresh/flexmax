@@ -91,7 +91,7 @@ function TodayScreenContent() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [pendingBedtime, setPendingBedtime] = useState<DailyInstance | null>(null);
   const [bedtimeDismissed, setBedtimeDismissed] = useState(true);
-  const [insightDismissed, setInsightDismissed] = useState(false);
+  const [insightDismissed, setInsightDismissed] = useState(true);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const checkInSlideAnim = useRef(new RNAnimated.Value(400)).current;
@@ -111,6 +111,10 @@ function TodayScreenContent() {
     () =>
       insights
         .filter((i) => i.kind !== "strength")
+        .filter((i) => {
+          const age = Date.now() - new Date(i.generated_at).getTime();
+          return age < 8 * 24 * 60 * 60 * 1000;
+        })
         .sort((a, b) => a.rank - b.rank)[0] ?? null,
     [insights]
   );
@@ -174,11 +178,13 @@ function TodayScreenContent() {
   }, [session?.user.id]);
 
   useEffect(() => {
-    const dismissKey = `insight_dismissed_${getLocalDateString()}`;
+    if (!morningInsight) return;
+    setInsightDismissed(true);
+    const dismissKey = `insight_seen_${morningInsight.id}`;
     AsyncStorage.getItem(dismissKey).then((val) => {
-      if (val) setInsightDismissed(true);
+      setInsightDismissed(!!val);
     });
-  }, []);
+  }, [morningInsight?.id]);
 
   useEffect(() => {
     if (checkInInstance) {
@@ -747,7 +753,8 @@ function TodayScreenContent() {
   };
 
   const handleDismissInsight = async () => {
-    await AsyncStorage.setItem(`insight_dismissed_${getLocalDateString()}`, "1");
+    if (!morningInsight) return;
+    await AsyncStorage.setItem(`insight_seen_${morningInsight.id}`, "1");
     setInsightDismissed(true);
   };
 

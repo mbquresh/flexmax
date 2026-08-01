@@ -93,7 +93,7 @@ export function useTodayData(userId: string | undefined) {
         }
       )
         .from("behavioral_insights")
-        .select("kind, belief, suggestion, related_blocks, rank")
+        .select("id, kind, belief, suggestion, related_blocks, rank, generated_at")
         .eq("superseded", false)
         .order("rank") as { data: BehavioralInsight[] | null; error: Error | null };
 

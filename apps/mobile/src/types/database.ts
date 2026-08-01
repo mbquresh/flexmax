@@ -58,11 +58,13 @@ export interface PsychologyProfile {
 }
 
 export interface BehavioralInsight {
+  id: string;
   kind: "causal" | "pattern" | "strength";
   belief: string;
   suggestion: string | null;
   related_blocks: string[];
   rank: number;
+  generated_at: string;
 }
 
 export interface ScheduleTemplate {
