@@ -7,11 +7,47 @@ export interface ScheduledCutoff {
   scheduledFor: Date;
 }
 
+export const CUTOFF_CATEGORY = "block_cutoff_actions";
+
+export async function registerNotificationCategories(): Promise<void> {
+  await Notifications.setNotificationCategoryAsync(CUTOFF_CATEGORY, [
+    {
+      identifier: "wrapping_up",
+      buttonTitle: "Wrapping up",
+      options: { opensAppToForeground: false },
+    },
+    {
+      identifier: "more_time",
+      buttonTitle: "Need 15 more",
+      options: { opensAppToForeground: false },
+    },
+  ]);
+}
+
+export async function scheduleFollowUpNudge(
+  instanceId: string,
+  taskTitle: string
+): Promise<void> {
+  const when = new Date(Date.now() + 15 * 60 * 1000);
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title: taskTitle,
+      body: "That's the 15.",
+      sound: false,
+      data: { type: "block_followup", instanceId, screen: "today" },
+    },
+    trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.DATE,
+      date: when,
+    },
+  });
+}
+
 // Cancel all previously scheduled block notifications for today
 // Call this before rescheduling to avoid duplicates
 export async function cancelTodayBlockNotifications(): Promise<void> {
   const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-  const managed = ["block_complete", "block_cutoff"];
+  const managed = ["block_complete", "block_cutoff", "block_followup"];
   const todayBlockNotifs = scheduled.filter((n) =>
     managed.includes(n.content.data?.type as string)
   );
@@ -123,6 +159,7 @@ export async function scheduleTodayBlockNotifications(
             title: inst.task_detail!.trim().slice(0, 60),
             body,
             sound: false,
+            categoryIdentifier: CUTOFF_CATEGORY,
             data: {
               type: "block_cutoff",
               instanceId: inst.id,
