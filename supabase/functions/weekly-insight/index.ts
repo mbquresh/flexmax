@@ -77,9 +77,24 @@ Return ONLY a JSON array of 2-3 objects, no markdown, no preamble:
     "belief": "one sentence, max 200 characters",
     "evidence": "the specific numbers and quotes behind it, max 250 characters",
     "suggestion": "one small structural change, max 150 characters, or null",
-    "related_blocks": ["exact block names from the payload this concerns"]
+    "related_blocks": ["exact block names from the payload this concerns"],
+    "nudge_line": "max 80 characters, or null"
   }
 ]
+
+- nudge_line is shown inside a phone notification 30 minutes before a block ends.
+  It must be readable at a glance on a lock screen.
+- It states the DOWNSTREAM COST of this block running over, in the fewest words
+  that stay true. Example shape: "late finishes here have cost you the morning
+  8 times this month".
+- It must contain only numbers that appear in the payload. Same rule as
+  everything else: never compute.
+- Lowercase start is fine — it is appended after "Ends at 8:30. "
+- No imperatives. Do not tell the user to stop, wrap up, or hurry. State the
+  cost; the decision is theirs.
+- Set it to null for "strength" insights and for any insight with no clear
+  downstream cost. Null is correct and common — a nudge without a why is still
+  a useful nudge.
 
 At least one object MUST have kind "strength" and must be genuine — supported by
 real evidence, not consolation. related_blocks must use block names exactly as
@@ -91,6 +106,7 @@ type InsightPayload = {
   evidence: string;
   suggestion: string | null;
   related_blocks: string[];
+  nudge_line: string | null;
 };
 
 serve(async (req) => {
@@ -222,6 +238,7 @@ ${JSON.stringify(evidence)}`,
       evidence: item.evidence,
       suggestion: item.suggestion ?? null,
       related_blocks: item.related_blocks ?? [],
+      nudge_line: item.nudge_line ?? null,
       rank: i + 1,
       superseded: false,
     }));
