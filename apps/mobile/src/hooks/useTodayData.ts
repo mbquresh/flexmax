@@ -75,9 +75,29 @@ export function useTodayData(userId: string | undefined) {
       } else {
         setTodayInstances(data ?? []);
         if (data?.length) {
-          scheduleTodayBlockNotifications(data, targetDate).catch((err) =>
-            handleError(err, "scheduleBlockNotifications")
-          );
+          try {
+            const cutoffs = await scheduleTodayBlockNotifications(data, targetDate);
+            if (cutoffs.length > 0) {
+              const { error: nudgeError } = await (
+                supabase as typeof supabase & {
+                  from: (table: "nudge_events") => ReturnType<typeof supabase.from>;
+                }
+              )
+                .from("nudge_events")
+                .upsert(
+                  cutoffs.map((c) => ({
+                    user_id: userId,
+                    instance_id: c.instanceId,
+                    kind: "cutoff",
+                    scheduled_for: c.scheduledFor.toISOString(),
+                  })),
+                  { onConflict: "instance_id,kind" }
+                );
+              if (nudgeError) throw nudgeError;
+            }
+          } catch (err) {
+            handleError(err, "scheduleBlockNotifications");
+          }
         }
       }
 
