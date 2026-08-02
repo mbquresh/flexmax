@@ -65,6 +65,7 @@ export interface BehavioralInsight {
   related_blocks: string[];
   rank: number;
   generated_at: string;
+  nudge_line: string | null;
 }
 
 export interface ScheduleTemplate {

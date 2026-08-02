@@ -70,13 +70,27 @@ export function useTodayData(userId: string | undefined) {
         .neq("status", "removed")
         .order("start_minutes", { nullsFirst: false });
 
+      const { data: insightsData, error: insightsError } = await (
+        supabase as typeof supabase & {
+          from: (table: "behavioral_insights") => ReturnType<typeof supabase.from>;
+        }
+      )
+        .from("behavioral_insights")
+        .select("id, kind, belief, suggestion, related_blocks, rank, generated_at, nudge_line")
+        .eq("superseded", false)
+        .order("rank") as { data: BehavioralInsight[] | null; error: Error | null };
+
       if (error) {
         handleError(error, "loadToday");
       } else {
         setTodayInstances(data ?? []);
         if (data?.length) {
           try {
-            const cutoffs = await scheduleTodayBlockNotifications(data, targetDate);
+            const cutoffs = await scheduleTodayBlockNotifications(
+              data,
+              targetDate,
+              insightsData ?? []
+            );
             if (cutoffs.length > 0) {
               const { error: nudgeError } = await (
                 supabase as typeof supabase & {
@@ -106,16 +120,6 @@ export function useTodayData(userId: string | undefined) {
       } else {
         setAdhocTasks(adhoc ?? []);
       }
-
-      const { data: insightsData, error: insightsError } = await (
-        supabase as typeof supabase & {
-          from: (table: "behavioral_insights") => ReturnType<typeof supabase.from>;
-        }
-      )
-        .from("behavioral_insights")
-        .select("id, kind, belief, suggestion, related_blocks, rank, generated_at")
-        .eq("superseded", false)
-        .order("rank") as { data: BehavioralInsight[] | null; error: Error | null };
 
       if (insightsError) {
         handleError(insightsError, "loadToday insights");

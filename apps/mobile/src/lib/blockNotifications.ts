@@ -1,5 +1,5 @@
 import * as Notifications from "expo-notifications";
-import { DailyInstance } from "../types/database";
+import { DailyInstance, BehavioralInsight } from "../types/database";
 import { minutesToTime as formatTime } from "./time";
 
 export interface ScheduledCutoff {
@@ -24,7 +24,8 @@ export async function cancelTodayBlockNotifications(): Promise<void> {
 
 export async function scheduleTodayBlockNotifications(
   instances: DailyInstance[],
-  date: string
+  date: string,
+  insights: BehavioralInsight[] = []
 ): Promise<ScheduledCutoff[]> {
   // Cancel existing ones first to avoid duplicates on refresh
   await cancelTodayBlockNotifications();
@@ -98,8 +99,22 @@ export async function scheduleTodayBlockNotifications(
           .filter((i) => i.start_minutes >= inst.end_minutes && i.id !== inst.id)
           .sort((a, b) => a.start_minutes - b.start_minutes)[0];
 
+        // Prefer an insight about the NEXT block — that is what running over costs.
+        // Fall back to one about the current block. Strengths are excluded; a
+        // strength in a cutoff warning reads as sarcasm.
+        const usable = insights.filter(
+          (i) => i.kind !== "strength" && !!i.nudge_line
+        );
+        const relevant =
+          (next?.block?.name &&
+            usable.find((i) => i.related_blocks.includes(next.block!.name))) ||
+          usable.find((i) => i.related_blocks.includes(inst.block!.name)) ||
+          null;
+
         const endLabel = formatTime(inst.end_minutes);
-        const body = next?.block?.name
+        const body = relevant?.nudge_line
+          ? `Ends at ${endLabel}. ${relevant.nudge_line}`
+          : next?.block?.name
           ? `Ends at ${endLabel}. ${next.block.name} is next.`
           : `Ends at ${endLabel}.`;
 
