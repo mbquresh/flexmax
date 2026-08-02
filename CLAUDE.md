@@ -125,6 +125,13 @@ why your plans fail."
 | 006 | adhoc_tasks.sql | adhoc_tasks table + RLS |
 | 007 | secure_generate_instances.sql | Security split: generate_my_daily_instances (client-safe, auth.uid() scoped) + revoke execute on global from authenticated |
 | 008 | swap_instances_rpc.sql | swap_instance_times transactional RPC (atomic, ownership-validated) |
+| 009 | swap_audit_trail.sql | instance_time_changes audit trail + trigger (swap RPC untouched) |
+| 010 | checkin_timing.sql | rated_at / reflected_at on daily_schedule_instances + trigger |
+| 011 | local_time_notify.sql | users_to_notify_now RPC for per-user local-hour notifications |
+| 012 | sweep_unaccounted.sql | sweep_unaccounted_instances RPC + hourly cron; unaccounted status |
+| 013 | behavior_evidence.sql | get_behavior_evidence() RPC — precomputed 30-day facts |
+| 014 | actual_end_minutes.sql | actual_end_minutes column for real bedtime capture |
+| 015 | behavioral_insights.sql | behavioral_insights table; weekly stored beliefs, RLS read-only for users |
 
 ---
 
@@ -194,42 +201,57 @@ Cancel-all-then-reschedule pattern (idempotent).
 
 ---
 
-## v1 AI data map (what the AI sees today vs what's captured but unused)
+## Behavioral engine data flow (v2b — SHIPPED)
 
-**AI reads:** onboarding transcript (once), static psychology profile (tips once,
-recovery per-miss with miss count). Profile FROZEN after onboarding.
+Captured → read by the engine:
+- completion_rating, reflection_why, reflection_improve (check-ins + misses)
+- removed_reason, swap patterns via instance_time_changes (009)
+- rated_at / reflected_at check-in timing (010)
+- unaccounted status from the hourly sweep (012)
+- actual_end_minutes — real bedtime, retroactively captured (014)
 
-**Captured but never read by AI (v2 fuel):**
-- completion_ratings on every check-in
-- reflection_why + reflection_improve on every miss
-- removed_reason on every removal
-- adhoc_tasks completion behavior
-- day-of-week patterns in daily_schedule_instances
+Pipeline:
+  get_behavior_evidence(user_id)  [SQL, 013 — does ALL arithmetic]
+    → weekly-insight edge function [1 AI call per user per week]
+    → behavioral_insights table [015 — stored beliefs, superseded weekly]
+    → injected FREE at read time into: recovery sheet, morning InsightCard
 
-**Capture gaps to fix in v2 (behavioral learning needs these):**
-- Swap audit trail (currently old times are overwritten, no history)
-- Notification response tracking (did the user act on the nudge?)
-- Check-in timing (how long after block end did they rate it?)
-
-Prerequisites for v2b differentiation vs Structured — see **Competitive positioning**.
-Data not captured today is unrecoverable later.
+Still captured but NOT yet read:
+- Notification response (whether a nudge was acted on) — not captured at all yet
 
 ---
 
-## v2 roadmap (sequenced)
+## v2 roadmap — status as of commit b1bca42
 
-| Phase | What | Notes |
-|-------|------|-------|
-| v2 prep NOW | Apply for FamilyControls entitlement | Time-gated by Apple; apply at developer.apple.com |
-| v2 prep | v2-issues.md hardening (rate limiting first) | Must precede public exposure |
-| v2a | EAS build → TestFlight (10-20 users) | Gate for real notifications + native extension |
-| v2a | Presence-aware nudges (block-start + mid-block) | Requires EAS; feeds behavioral learning |
-| v2a | Capture gap fixes (swap trail, notif response, timing) | Prerequisites for v2b vs Structured — see **Competitive positioning** |
-| v2b | Behavioral learning v1 — THE flagship | Profile evolves from actual behavior |
-| v2b | Shareable weekly recap card | Organic growth primitive |
-| v2b | Morning brief | Powered by evolved profile |
-| v2c | Screen Time API app shielding | Requires entitlement + EAS + native extension |
-| v2c | Dark theme | Design tokens make it feasible |
+### Shipped
+| What | Where |
+|------|-------|
+| Rate limiting on all AI edge functions | _shared/rateLimit.ts; check placed AFTER cache checks |
+| EAS build → TestFlight (internal only) | eas.json; F-mark icon set |
+| Hamburger menu + action sheet | AppMenu.tsx; tricolor button |
+| Plan Tomorrow screen + notification deep-link | app/plan-tomorrow.tsx |
+| Per-user local-time notifications | users_to_notify_now RPC (011); hourly cron; DST-proof |
+| Device timezone sync | profiles.timezone, written on session establish |
+| Swap audit trail | 009, trigger-based — swap RPC untouched |
+| Check-in timing | 010, rated_at / reflected_at |
+| Unaccounted sweep | 012, hourly, timezone-aware, 4am local grace |
+| Behavioral evidence pack | 013 |
+| Retroactive bedtime capture | 014 + BedtimeCard.tsx |
+| Behavioral learning v1 (THE flagship) | 015 + weekly-insight + InsightCard |
+| Deterministic recovery copy (AI call REMOVED) | src/lib/recoveryCopy.ts |
+
+### Not built
+| What | Notes |
+|------|-------|
+| Presence-aware nudges (block-start + mid-block) | The "smart notification suite". User requested this in their OWN reflections 3x: "harder cutoffs", "need enforcements", "maybe you can do something to help" |
+| Shareable weekly recap card | The weekly scorecard. Growth primitive |
+| Notification response tracking | Pairs with nudges — build together |
+| Day-3 first observation | New users currently see NOTHING for 5+ days (weekly-insight gates at engaged_days < 5). Week one is when they decide to keep the app |
+| "Ask me about yourself" conversational surface | Reads get_behavior_evidence with the narrator's tone rules |
+| reflection_improve UX fix | 31% fill rate on the highest-signal field in the DB |
+| External TestFlight | Needs Beta App Review (~1 day) + a demo account or auto-rejection |
+| Screen Time shielding | FamilyControls entitlement — STILL UNFILED. Multi-week Apple clock |
+| Dark theme | Design tokens make it feasible |
 
 ---
 
@@ -262,3 +284,33 @@ every week of use. Models commoditize; behavioral history doesn't.
 
 **The retention risk:** shame-churn. Users who fail may avoid reopening the app.
 Recovery-without-judgment is the design bet. Instrument this in the beta.
+
+---
+
+## Honest risks (carry these — do not let them drift)
+
+- **Everything is validated on n=1.** Every filter, threshold, and tone rule was
+  tuned against the author's own month of data — an unusually diligent
+  self-journaler who wrote 31 reflections in 30 days. Whether any of it survives
+  sparse, low-effort user data is untested and is the whole ballgame.
+- **Reflection dependency is the bottleneck.** The engine is text-first because
+  the user's own words are the highest-signal data. Most users write nothing.
+  reflection_improve is at 31% fill for the ONE user who exists.
+- **The moat is retention-dependent.** Accumulated behavioral history only
+  compounds if the user keeps opening the app. Shame-churn is the named risk.
+- **Differentiation is more copyable than this document implies.** A funded
+  incumbent could ship a weekly "why your plans fail" card as a feature update.
+  The durable edges are tone discipline, data-integrity care, and eventually the
+  behavioral corpus itself.
+- **NORTH-STAR METRIC: reopen rate after a bad week.** Everything else is
+  downstream of whether people come back after failing. Instrument this before
+  external testers arrive, not after.
+
+## Unresolved decisions
+
+- **Paywall model.** CLAUDE.md currently says 14-day trial → $9.99/mo. A later
+  strategy session proposed a HARD paywall immediately after AI onboarding with
+  NO free trial. Unresolved — the hard paywall contradicts a value proposition
+  built on compounding behavioral understanding, since it charges before the
+  mechanism that justifies the price has done anything. Do not treat either as
+  settled.
