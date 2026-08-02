@@ -78,7 +78,11 @@ export async function scheduleTodayBlockNotifications(
     const isOpen = inst.status === "pending" || inst.status === "active";
 
     if (hasIntent && isOpen && duration >= 30) {
-      const cutoffMinutes = inst.end_minutes - 10;
+      // Later of midpoint or end-30. Short blocks need enough runway to still
+      // act on the nudge; long blocks need the warning near the end, where
+      // overrun happens. A fixed offset cannot serve both.
+      const midpoint = inst.start_minutes + Math.floor(duration / 2);
+      const cutoffMinutes = Math.max(midpoint, inst.end_minutes - 30);
       const cutoffDate = new Date(
         year,
         month - 1,
