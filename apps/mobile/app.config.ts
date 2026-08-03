@@ -16,6 +16,12 @@ export default ({ config }: ConfigContext): ExpoConfig & { eas?: { projectId: st
   ios: {
     supportsTablet: false,
     bundleIdentifier: "com.flexmax.app",
+    infoPlist: {
+      // App uses only standard OS-level HTTPS/TLS to reach Supabase and the
+      // Anthropic API. No proprietary or bundled cryptography, so it qualifies
+      // for the export compliance exemption.
+      ITSAppUsesNonExemptEncryption: false,
+    },
   },
   android: {
     adaptiveIcon: {
