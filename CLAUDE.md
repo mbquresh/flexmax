@@ -294,7 +294,7 @@ Still captured but NOT yet read:
 | Notification response tracking                  | Pairs with nudges — build together                                                                                                                           |
 | Day-3 first observation                         | New users currently see NOTHING for 5+ days (weekly-insight gates at engaged_days < 5). Week one is when they decide to keep the app                         |
 | Onboarding revamp — replace 4-turn AI chat with preset questions | Deletes `onboarding-chat` and `extract-psychology-profile`. Drops per-signup AI cost to ~zero and removes the ONLY unbounded abuse surface (a fake account could burn 30 onboarding calls/hour). `accountability_tone` comes from a direct preset answer instead of being inferred from chat |
-| Paywall + RevenueCat (3-day trial)              | Blocked on Day-3 observation existing — see protocol below                                                                                                   |
+| Paywall + RevenueCat                            | Hard paywall $14.99/mo — paywall placement OPEN, see **Pricing & paywall**                                                                                   |
 | "Ask me about yourself" conversational surface  | Reads get_behavior_evidence with the narrator's tone rules                                                                                                   |
 | reflection_improve UX fix                       | 31% fill rate on the highest-signal field in the DB                                                                                                          |
 | External TestFlight                             | Needs Beta App Review (~1 day) + a demo account or auto-rejection                                                                                            |
@@ -305,6 +305,92 @@ Still captured but NOT yet read:
 ---
 
 
+## Feature triage (2026-08-02)
+
+Ideas evaluated from an external strategy session. Decisions and reasoning
+recorded so they are not re-argued from scratch.
+
+### Accepted — build
+
+**1. The accounted-for streak (replaces the completion streak).**
+The streak currently counts days with at least one `completed` block, so it
+breaks on the first bad day — the historical uninstall trigger for this ICP.
+Change the protected number to "every block accounted for, honestly": a day
+counts if every instance has a real user-set status, regardless of outcome.
+`missed` (engaged, admitted) keeps it alive; only `unaccounted` (silence)
+breaks it.
+
+Supported by real data: the sole user's Fajr+Quran block shows 14 missed and 1
+unaccounted — they show up to admit failure. That is the behavior worth
+protecting. Weights shows 6 missed and 15 unaccounted — silent abandonment is
+the real drift, not the miss.
+
+DESIGN CONSTRAINT: a user with a 30-day accounting streak and 20% completion
+must not read as the app congratulating failure. Keep both numbers visible with
+different weight — the streak is protected, completion rate stays as
+information, never celebrated.
+
+**2. Quality-drift signal in the evidence pack.**
+`completion_rating` (crushed it / partly / lost focus) is captured on every
+check-in and read by nothing — it appears zero times in
+`get_behavior_evidence`. A block still completing but trending toward "lost
+focus" is an earlier warning than a miss. ~15 lines of SQL, no new AI cost.
+
+**3. Merged evening ritual: close today → plan tomorrow.**
+An external proposal for a "close the day" screen conflicts with the existing
+9pm push → Plan Tomorrow flow. Two evening rituals compete for the same 60
+seconds and users will do one or neither. They merge into ONE flow behind the
+existing notification: sweep today's blocks to a real status (feeding the
+accounted-for streak and fixing data quality), then plan tomorrow.
+
+The "load governor" idea belongs inside this flow: after seeing today's
+reality, push back on an overbuilt tomorrow by comparing planned flexible
+minutes against the trailing 30-day *completed* median. TONE WARNING: "you're
+scheduling 9 hours, your real median is 5.5" is one word away from "you are not
+capable of this." Structural framing only.
+
+### Deferred — with reasons
+
+**Survival forecast at planning time** ("blocks like this after 8pm survived 2
+of your last 14"). Requires slot VARIANCE to have a counterfactual. A user whose
+schedule is static has every instance of a block in the same slot, so there is
+nothing to compare against. Works only for users who move blocks frequently.
+Less universal than it appears.
+
+**Voice reflections.** Correct target — `reflection_improve` fill rate (31%) is
+the known bottleneck and reflections are the highest-signal data in the system.
+But it means a new vendor (transcription), new per-use cost, and real native
+work. The cheaper fixes are already queued: recovery presets, a `miss_reason_tag`
+column, and an optional completion-side reflection field. Test those first. If
+fill rate moves to ~55%, voice is unnecessary.
+
+**Graduation / block retirement.** Proposing progression or retirement once a
+block sustains high completion. Conceptually strong and it is the product's
+answer to "what happens after six months" — but it needs months of sustained
+data that no user has yet.
+
+**Monthly letter with memory.** One AI call a month citing the user's own past
+reflections back to them. Needs months of history, and overlaps with the planned
+shareable weekly recap card — these should be ONE surface, not two.
+
+**Declared rest days / rebellion valve.** Onboarding turn 4 currently asks
+whether accountability makes the user rebel and nothing consumes the answer.
+The "closes an existing loop" argument dies with the AI onboarding removal.
+Salvageable later as a preset question, but it needs new schema (a rest-day
+flag), so it is not free.
+
+### Rejected
+
+**"Addiction to 100% completion scores" as a design goal.** A perfect-score
+mechanic is brittle by design: the first 60% day breaks the spell, and for this
+ICP that is the uninstall moment. Superseded by the accounted-for streak above.
+
+**Engagement-mechanism vocabulary in user-facing copy.** Words like "addiction",
+"hooked", "streak-breaking" describe our internal mechanics, never the user's
+experience. Internal-only. This has now surfaced from more than one source, so
+it is recorded as a standing copy rule.
+
+---
 
 ## v2-issues.md deferred items
 
@@ -330,7 +416,7 @@ Validates market. Static tracker, MBTI "personalization," self-care framing.
 Positioning: "Me+ helps you decorate a routine. FlexMax helps you keep one."
 Compete ONLY on adaptive intelligence + flexibility axis. Never on templates or aesthetics.
 
-**Pricing:** See **Paywall protocol** below. $9.99/mo; $79.99/year ($7.50/mo equivalent). Annual encouraged.
+**Pricing:** See **Pricing & paywall** below.
 
 **The moat:** accumulated per-user behavioral understanding. Switching cost grows
 every week of use. Models commoditize; behavioral history doesn't.
@@ -363,30 +449,33 @@ external testers arrive, not after.
 
 
 
-## Paywall protocol (DECIDED)
+## Pricing & paywall (DECIDED — supersedes all earlier versions)
 
-- **3-day free trial**, announced at the END of onboarding — never silent.
-- The post-onboarding screen states plainly: your trial has started, it ends on
-  [date], here are the plans, nothing is charged now. No card required up front.
-- The user is not asked to decide immediately. They have three days to use the
-  app and get comfortable with the UI.
-- The day-3 wall must land **after** the first behavioral observation, so the
-  "it knows me" moment precedes the ask.
-- Annual is the hero plan, shown as monthly-equivalent ("$7.50/mo, billed
-  annually"), not as a lump sum. Monthly $9.99.
-- Grandfather early users.
+- **$14.99/month. NO free trial.** Hard paywall.
+- **~$99/year**, shown at checkout as monthly-equivalent ("$8.25/mo, billed
+  annually"), never as a lump sum.
+- **No weekly plan.** Weekly billing selects for the user this product serves worst.
+- **Grandfathering: early users lock their price permanently.** "Locked for life"
+  must be explicit copy on the paywall and account screen, not implied. At $14.99
+  this is a materially stronger retention lever than at $9.99.
 
-This supersedes BOTH the earlier "14-day trial → $9.99/mo" in this document and
-the later marketing proposal of a hard paywall immediately after onboarding with
-no trial.
+**Rationale for no trial at this stage:** every free user costs real Anthropic
+spend; payment is itself the first commitment device in an accountability
+product; direct buyers outperform trial-converted users on LTV in productivity;
+and 200 paying users produce cleaner retention data than 5,000 free installs.
+This is a STAGE decision — value-gated freemium is the correct scale strategy
+later, once the insight engine is proven.
 
-**Rationale for the announcement:** a paywall that appears unannounced on day 3
-reads as a trap; one the user was told about on day 0 reads as a deadline they
-agreed to. Same wall, opposite emotional response — and the ICP churns on
-feeling tricked.
+**Accepted cost:** some "paywalled instantly, didn't get to try it" reviews.
+That is the tax of the approach, not a signal something is broken.
 
-**Consequence — this makes Day-3 first observation load-bearing for revenue.**
-It stopped being a retention nicety the moment it became the thing that justifies
-the price. If the day-3 observation is weak, the paywall converts badly. Sequence
-Day-3 BEFORE any paywall work.
+**OPEN QUESTION — paywall placement.** Earlier strategy placed the wall
+immediately after the 4-turn AI onboarding, "right after the psychology profile
+is shown." That anchor is being DELETED (see onboarding revamp). A $14.99 wall
+behind a preset questionnaire proves nothing. Resolve before RevenueCat work.
+
+**DEPENDENCY — docs/index.html is now commercially load-bearing.** With no trial,
+the public showcase is the only place a prospective payer can evaluate the
+product before paying. It currently carries no pricing and no founding-member
+framing. It must stay in sync with the shipped app AND carry the offer.
 
