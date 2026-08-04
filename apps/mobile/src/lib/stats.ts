@@ -66,21 +66,29 @@ export async function fetchTodayStats(userId: string): Promise<TodayStats> {
       .order("date", { ascending: false }),
   ]);
 
-  const total =
-    weekInstances?.filter(
-      (i) =>
-        i.status !== "skipped" &&
-        i.status !== "rescheduled" &&
-        i.status !== "removed"
-    ).length ?? 0;
+  const todayStr = toLocalDateStr(now);
 
-  const completed =
-    weekInstances?.filter((i) => i.status === "completed").length ?? 0;
+  // Only days that have happened. Plan Tomorrow pre-generates tomorrow's
+  // instances as 'pending'; counting them would penalize the user for
+  // planning ahead.
+  const elapsedWeekInstances = (weekInstances ?? []).filter(
+    (i) => i.date <= todayStr
+  );
+
+  const total = elapsedWeekInstances.filter(
+    (i) =>
+      i.status !== "skipped" &&
+      i.status !== "rescheduled" &&
+      i.status !== "removed"
+  ).length;
+
+  const completed = elapsedWeekInstances.filter(
+    (i) => i.status === "completed"
+  ).length;
 
   const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
 
-  const todayStr = toLocalDateStr(now);
-  const todayInstances = weekInstances?.filter((i) => i.date === todayStr) ?? [];
+  const todayInstances = elapsedWeekInstances.filter((i) => i.date === todayStr);
   const todayTotal = todayInstances.filter(
     (i) =>
       i.status !== "skipped" &&
