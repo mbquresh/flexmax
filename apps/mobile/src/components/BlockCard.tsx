@@ -99,6 +99,15 @@ export function BlockCard({
     return () => unregisterFlashTrigger(instance.id);
   }, [instance.id, registerFlashTrigger, unregisterFlashTrigger]);
 
+  useEffect(() => {
+    if (isAnswered) {
+      // Animate the tray shut before the gesture gate takes effect —
+      // otherwise it stays translated open with no way to close.
+      isOpen.value = 0;
+      translateX.value = withTiming(0, { duration: 150 });
+    }
+  }, [isAnswered]);
+
   const findSwapTarget = useCallback(
     (draggedId: string, dragTranslationY: number): DailyInstance | null => {
       const dragged = cardPositions.current[draggedId];
