@@ -1,13 +1,33 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { TodayStats } from "../lib/stats";
+import { getLocalDateString } from "../lib/time";
 import { colors, spacing, radii, typography } from "../theme";
 
 interface StreakStripProps {
   stats: TodayStats;
+  todayRatio?: number;
 }
 
-export function StreakStrip({ stats }: StreakStripProps) {
+function getTodayWeekIndex(): number {
+  const now = new Date();
+  const dayOfWeek = now.getDay();
+  const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() + diffToMonday);
+  monday.setHours(0, 0, 0, 0);
+  const todayStr = getLocalDateString(now);
+  for (let i = 0; i < 7; i++) {
+    const day = new Date(monday);
+    day.setDate(monday.getDate() + i);
+    if (getLocalDateString(day) === todayStr) return i;
+  }
+  return 0;
+}
+
+export function StreakStrip({ stats, todayRatio }: StreakStripProps) {
+  const todayIndex = getTodayWeekIndex();
+
   return (
     <View style={styles.streakContainer}>
       <View style={styles.streakHeader}>
@@ -20,9 +40,11 @@ export function StreakStrip({ stats }: StreakStripProps) {
       </View>
       <View style={styles.weekStrip}>
         {["M", "T", "W", "T", "F", "S", "S"].map((day, i) => {
-          const todayIndex = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;
           const isToday = i === todayIndex;
-          const ratio = stats.weekDayAccountedRatio[i];
+          const ratio =
+            isToday && todayRatio !== undefined
+              ? todayRatio
+              : stats.weekDayAccountedRatio[i];
           const fillPct =
             ratio > 0 ? Math.max(12, Math.round(ratio * 100)) : 0;
           const isFuture = i > todayIndex;
@@ -30,13 +52,10 @@ export function StreakStrip({ stats }: StreakStripProps) {
           return (
             <View
               key={i}
-              style={[
-                styles.daySquare,
-                isFuture && styles.daySquareFuture,
-                isToday && styles.daySquareToday,
-              ]}
+              style={[styles.daySquare, isFuture && styles.daySquareFuture]}
             >
               <View style={[styles.dayFill, { height: `${fillPct}%` }]} />
+              {isToday ? <View style={styles.todayRing} pointerEvents="none" /> : null}
               <View style={styles.dayLetterWrap}>
                 <Text
                   style={[
@@ -92,10 +111,12 @@ const styles = StyleSheet.create({
     borderRadius: radii.sm,
     backgroundColor: colors.streakSquare,
     overflow: "hidden",
-    justifyContent: "flex-end",
   },
   dayFill: {
-    width: "100%",
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: colors.streak,
   },
   dayLetterWrap: {
@@ -103,9 +124,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  daySquareToday: {
+  todayRing: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     borderWidth: 1.5,
     borderColor: colors.streak,
+    borderRadius: radii.sm,
   },
   daySquareFuture: {
     backgroundColor: colors.streakSquare,

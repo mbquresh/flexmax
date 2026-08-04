@@ -119,6 +119,18 @@ function TodayScreenContent() {
     [insights]
   );
 
+  // Mirrors ACCOUNTED / EXCLUDED in src/lib/stats.ts. Keep in sync.
+  const todayAccountedRatio = useMemo(() => {
+    const relevant = instances.filter(
+      (i) => i.status !== "removed" && i.status !== "rescheduled"
+    );
+    if (relevant.length === 0) return 0;
+    const accounted = relevant.filter((i) =>
+      ["completed", "missed", "skipped"].includes(i.status)
+    ).length;
+    return accounted / relevant.length;
+  }, [instances]);
+
   const timelineItems = useMemo(() => {
     const items = [
       ...sortedInstances.map((instance) => ({
@@ -829,7 +841,9 @@ function TodayScreenContent() {
           ) : morningInsight && !insightDismissed ? (
             <InsightCard insight={morningInsight} onDismiss={handleDismissInsight} />
           ) : null}
-          {stats ? <StreakStrip stats={stats} /> : null}
+          {stats ? (
+            <StreakStrip stats={stats} todayRatio={todayAccountedRatio} />
+          ) : null}
         </View>
 
         <View style={styles.list}>
