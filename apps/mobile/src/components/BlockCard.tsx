@@ -137,7 +137,7 @@ export function BlockCard({
   };
 
   const onCardPress = () => {
-    if (instance.status === "skipped" || saving) return;
+    if (saving) return;
 
     if (instance.status === "completed" || instance.status === "missed") {
       onUndo(instance);
@@ -217,32 +217,32 @@ export function BlockCard({
       }}
     >
       <View style={styles.actionsBehind}>
-        {isPending && (
-          <TouchableOpacity
-            style={[styles.actionBtn, styles.missedBtn, styles.actionBtnLeftRounded]}
-            onPress={() => {
-              closeSwipe();
-              onMarkMissed(instance);
-            }}
-            activeOpacity={0.85}
-          >
-            <Text style={[styles.actionText, styles.missedBtnText]}>Missed</Text>
-          </TouchableOpacity>
-        )}
         <TouchableOpacity
           style={[
             styles.actionBtn,
-            styles.removeBtn,
+            styles.missedBtn,
             !isPending && styles.actionBtnLeftRounded,
           ]}
           onPress={() => {
             closeSwipe();
-            onRemoveRequest(instance);
+            onMarkMissed(instance);
           }}
           activeOpacity={0.85}
         >
-          <Text style={styles.actionText}>Remove</Text>
+          <Text style={[styles.actionText, styles.missedBtnText]}>Missed</Text>
         </TouchableOpacity>
+        {isPending ? (
+          <TouchableOpacity
+            style={[styles.actionBtn, styles.removeBtn]}
+            onPress={() => {
+              closeSwipe();
+              onRemoveRequest(instance);
+            }}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.actionText}>Remove</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
 
       <Animated.View
@@ -289,7 +289,7 @@ export function BlockCard({
                 isMissed && styles.actionCircleMissed,
               ]}
               onPress={handleActionPress}
-              disabled={instance.status === "skipped" || saving}
+              disabled={saving}
               hitSlop={8}
             >
               {isDone ? (

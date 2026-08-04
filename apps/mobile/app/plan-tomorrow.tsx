@@ -102,7 +102,13 @@ function PlanTomorrowScreenContent() {
   const closeTodayLeft = closeTodayInstances.filter(
     (i) => i.status === "pending" || i.status === "active"
   ).length;
-  const showCloseToday = closeTodayLeft > 0 || awaitingPresetIds.size > 0;
+  const closeTodayVisible = closeTodayInstances.filter(
+    (i) =>
+      i.status === "pending" ||
+      i.status === "active" ||
+      awaitingPresetIds.has(i.id)
+  );
+  const showCloseToday = closeTodayVisible.length > 0;
 
   const handleCloseTodayStatus = async (
     instanceId: string,
@@ -246,7 +252,7 @@ function PlanTomorrowScreenContent() {
             <Text style={styles.sectionHeader}>
               Close today · {closeTodayLeft} left
             </Text>
-            {closeTodayInstances.map((instance) => (
+            {closeTodayVisible.map((instance) => (
               <CloseTodayRow
                 key={instance.id}
                 instance={instance}

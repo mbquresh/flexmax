@@ -22,13 +22,6 @@ interface CloseTodayRowProps {
   onPresetSkip: (instanceId: string) => void;
 }
 
-function statusLabel(status: DailyInstance["status"]): string {
-  if (status === "completed") return "Done";
-  if (status === "missed") return "Missed";
-  if (status === "skipped") return "Skipped";
-  return "";
-}
-
 export function CloseTodayRow({
   instance,
   onStatusTap,
@@ -39,22 +32,10 @@ export function CloseTodayRow({
 
   const blockName = instance.block?.name ?? "Block";
   const timeRange = `${minutesToTime(instance.start_minutes)} – ${minutesToTime(instance.end_minutes)}`;
-  const isUnanswered =
-    instance.status === "pending" || instance.status === "active";
   const showPresets =
     instance.status === "missed" &&
     !instance.miss_reason_tag &&
     !presetsDismissed;
-
-  if (!isUnanswered && !showPresets) {
-    return (
-      <View style={styles.answeredRow}>
-        <Text style={styles.answeredText} numberOfLines={1}>
-          {blockName} · {timeRange} · {statusLabel(instance.status)}
-        </Text>
-      </View>
-    );
-  }
 
   if (showPresets) {
     return (
@@ -198,13 +179,5 @@ const styles = StyleSheet.create({
     color: colors.textFaint,
     fontSize: 13,
     alignSelf: "flex-start",
-  },
-  answeredRow: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.xs,
-  },
-  answeredText: {
-    color: colors.textFaint,
-    fontSize: 13,
   },
 });

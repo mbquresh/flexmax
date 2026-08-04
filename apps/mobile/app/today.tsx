@@ -575,8 +575,6 @@ function TodayScreenContent() {
   };
 
   const handleMarkMissed = async (instance: DailyInstance) => {
-    if (instance.status !== "pending" && instance.status !== "active") return;
-
     setSaving(true);
     try {
       const { error } = await supabase
