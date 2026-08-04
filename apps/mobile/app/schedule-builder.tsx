@@ -587,7 +587,7 @@ function ScheduleBuilderScreenContent() {
         }
         ListFooterComponent={
           <>
-            <Text style={styles.boundaryLabel}>Day ends</Text>
+            <Text style={[styles.boundaryLabel, styles.sleepBoundaryLabel]}>Day ends</Text>
             <BoundaryRow
               label="Sleep"
               minutes={sleepTarget}
@@ -633,11 +633,16 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     textTransform: "uppercase",
     letterSpacing: 0.5,
-    marginTop: spacing.xl,
+    marginTop: spacing.xxl,
     marginBottom: spacing.sm,
   },
   wakeBoundaryLabel: {
-    marginTop: spacing.xxl,
+    // Quick add section already has marginBottom spacing.lg.
+    marginTop: spacing.xxl - spacing.lg,
+  },
+  sleepBoundaryLabel: {
+    // Block cards already have marginBottom 10.
+    marginTop: spacing.xxl - 10,
   },
   errorBox: {
     marginHorizontal: spacing.xl,
