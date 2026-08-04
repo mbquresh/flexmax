@@ -22,7 +22,9 @@ export function StreakStrip({ stats }: StreakStripProps) {
         {["M", "T", "W", "T", "F", "S", "S"].map((day, i) => {
           const todayIndex = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;
           const isToday = i === todayIndex;
-          const isDone = stats.weekDayAccounted[i];
+          const ratio = stats.weekDayAccountedRatio[i];
+          const fillPct =
+            ratio > 0 ? Math.max(12, Math.round(ratio * 100)) : 0;
           const isFuture = i > todayIndex;
 
           return (
@@ -30,20 +32,22 @@ export function StreakStrip({ stats }: StreakStripProps) {
               key={i}
               style={[
                 styles.daySquare,
-                isDone && styles.daySquareDone,
-                isToday && !isDone && styles.daySquareToday,
                 isFuture && styles.daySquareFuture,
+                isToday && styles.daySquareToday,
               ]}
             >
-              <Text
-                style={[
-                  styles.daySquareLetter,
-                  isDone && styles.daySquareLetterDone,
-                  isFuture && styles.daySquareLetterFuture,
-                ]}
-              >
-                {day}
-              </Text>
+              <View style={[styles.dayFill, { height: `${fillPct}%` }]} />
+              <View style={styles.dayLetterWrap}>
+                <Text
+                  style={[
+                    styles.daySquareLetter,
+                    ratio >= 0.8 && styles.daySquareLetterDone,
+                    isFuture && styles.daySquareLetterFuture,
+                  ]}
+                >
+                  {day}
+                </Text>
+              </View>
             </View>
           );
         })}
@@ -86,15 +90,20 @@ const styles = StyleSheet.create({
     flex: 1,
     aspectRatio: 1,
     borderRadius: radii.sm,
-    backgroundColor: colors.streakBorder,
+    backgroundColor: colors.streakSquare,
+    overflow: "hidden",
+    justifyContent: "flex-end",
+  },
+  dayFill: {
+    width: "100%",
+    backgroundColor: colors.streak,
+  },
+  dayLetterWrap: {
+    ...StyleSheet.absoluteFillObject,
     alignItems: "center",
     justifyContent: "center",
   },
-  daySquareDone: {
-    backgroundColor: colors.streak,
-  },
   daySquareToday: {
-    backgroundColor: colors.streakSquareToday,
     borderWidth: 1.5,
     borderColor: colors.streak,
   },

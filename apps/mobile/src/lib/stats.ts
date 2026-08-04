@@ -6,7 +6,7 @@ export interface TodayStats {
   completionRate: number; // 0-100
   completedCount: number;
   totalCount: number;
-  weekDayAccounted: boolean[]; // Mon–Sun, index 0 = Monday
+  weekDayAccountedRatio: number[]; // Mon–Sun, 0–1 accounted share per day
 }
 
 function toLocalDateStr(d: Date): string {
@@ -25,9 +25,12 @@ function toLocalDateStr(d: Date): string {
 const ACCOUNTED = ["completed", "missed", "skipped"];
 const EXCLUDED = ["removed", "rescheduled"];
 
-export async function fetchTodayStats(userId: string): Promise<TodayStats> {
-  const today = getLocalDateString();
+// A day counts toward the streak at 80%+ accounted. With ~8 blocks that is
+// 7 of 8 — one forgotten block should not erase a day that was otherwise
+// closed out honestly, but a real collapse still breaks the streak.
+const STREAK_THRESHOLD = 0.8;
 
+export async function fetchTodayStats(userId: string): Promise<TodayStats> {
   // ── Completion rate: current week Mon–Sun ──────────────────────────────
   const now = new Date();
   const dayOfWeek = now.getDay(); // 0=Sun, 1=Mon...
@@ -83,10 +86,9 @@ export async function fetchTodayStats(userId: string): Promise<TodayStats> {
     byDate.set(r.date, entry);
   }
 
-  // A day is closed out when every relevant block has a real status.
   const accountedDates = new Set(
     [...byDate.entries()]
-      .filter(([, v]) => v.relevant > 0 && v.accounted === v.relevant)
+      .filter(([, v]) => v.relevant > 0 && v.accounted / v.relevant >= STREAK_THRESHOLD)
       .map(([date]) => date)
   );
 
@@ -96,11 +98,13 @@ export async function fetchTodayStats(userId: string): Promise<TodayStats> {
     [...byDate.entries()].filter(([, v]) => v.relevant === 0).map(([d]) => d)
   );
 
-  const weekDayAccounted = Array.from({ length: 7 }, (_, i) => {
+  const weekDayAccountedRatio = Array.from({ length: 7 }, (_, i) => {
     const day = new Date(monday);
     day.setDate(monday.getDate() + i);
     const dateStr = toLocalDateStr(day);
-    return accountedDates.has(dateStr);
+    const entry = byDate.get(dateStr);
+    if (!entry || entry.relevant === 0) return 0;
+    return entry.accounted / entry.relevant;
   });
 
   let streak = 0;
@@ -132,6 +136,6 @@ export async function fetchTodayStats(userId: string): Promise<TodayStats> {
     completionRate,
     completedCount: completed,
     totalCount: total,
-    weekDayAccounted,
+    weekDayAccountedRatio,
   };
 }
