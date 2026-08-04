@@ -42,6 +42,7 @@ export const colors = {
 
   // Streak (teal earned / neutral housing)
   streak: "#5DCAA5",
+  streakMissed: "#A8B4BE", // muted slate — accounted but not completed
   streakHousing: "#EDEDED",
   streakBorder: "#C4C4C4",
   streakMuted: "#666666",

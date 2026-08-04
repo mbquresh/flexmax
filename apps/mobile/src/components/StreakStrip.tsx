@@ -4,12 +4,10 @@ import { TodayStats } from "../lib/stats";
 import { getLocalDateString } from "../lib/time";
 import { colors, spacing, radii, typography } from "../theme";
 
-const STREAK_THRESHOLD = 0.8;
-
 interface StreakStripProps {
   stats: TodayStats;
   todayCompletionRatio?: number;
-  todayAccountedRatio?: number;
+  todayMissedRatio?: number;
   liveCompletionRate?: number;
 }
 
@@ -29,10 +27,15 @@ function getTodayWeekIndex(): number {
   return 0;
 }
 
+function segmentHeightPct(ratio: number): number {
+  if (ratio <= 0) return 0;
+  return Math.max(12, Math.round(ratio * 100));
+}
+
 export function StreakStrip({
   stats,
   todayCompletionRatio,
-  todayAccountedRatio,
+  todayMissedRatio,
   liveCompletionRate,
 }: StreakStripProps) {
   const todayIndex = getTodayWeekIndex();
@@ -55,30 +58,49 @@ export function StreakStrip({
             isToday && todayCompletionRatio !== undefined
               ? todayCompletionRatio
               : stats.weekDayCompletionRatio[i];
-          const isAccounted =
-            isToday && todayAccountedRatio !== undefined
-              ? todayAccountedRatio >= STREAK_THRESHOLD
-              : stats.weekDayAccounted[i];
-          const fillPct =
-            completionRatio > 0 ? Math.max(12, Math.round(completionRatio * 100)) : 0;
+          const missedRatio =
+            isToday && todayMissedRatio !== undefined
+              ? todayMissedRatio
+              : stats.weekDayMissedRatio[i];
+          const combinedRatio = completionRatio + missedRatio;
+          const combinedPct = segmentHeightPct(combinedRatio);
+          const completedPct = segmentHeightPct(completionRatio);
           const isFuture = i > todayIndex;
+          const isFilledOut = combinedRatio >= 1;
 
           return (
             <View
               key={i}
               style={[styles.daySquare, isFuture && styles.daySquareFuture]}
             >
-              <View style={[styles.dayFill, { height: `${fillPct}%` }]} />
-              {isToday ? (
-                <View style={styles.todayRing} pointerEvents="none" />
-              ) : isAccounted ? (
-                <View style={styles.accountedRing} pointerEvents="none" />
+              {combinedPct > 0 ? (
+                <View
+                  style={[
+                    styles.fill,
+                    {
+                      height: `${combinedPct}%`,
+                      backgroundColor: colors.streakMissed,
+                    },
+                  ]}
+                />
               ) : null}
+              {completedPct > 0 ? (
+                <View
+                  style={[
+                    styles.fill,
+                    {
+                      height: `${completedPct}%`,
+                      backgroundColor: colors.streak,
+                    },
+                  ]}
+                />
+              ) : null}
+              {isToday ? <View style={styles.todayRing} pointerEvents="none" /> : null}
               <View style={styles.dayLetterWrap}>
                 <Text
                   style={[
                     styles.daySquareLetter,
-                    isAccounted && styles.daySquareLetterDone,
+                    isFilledOut && styles.daySquareLetterDone,
                     isFuture && styles.daySquareLetterFuture,
                   ]}
                 >
@@ -130,12 +152,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.streakSquare,
     overflow: "hidden",
   },
-  dayFill: {
+  fill: {
     position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: colors.streak,
   },
   dayLetterWrap: {
     ...StyleSheet.absoluteFillObject,
@@ -143,16 +164,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   todayRing: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderWidth: 1.5,
-    borderColor: colors.streak,
-    borderRadius: radii.sm,
-  },
-  accountedRing: {
     position: "absolute",
     top: 0,
     left: 0,

@@ -122,24 +122,20 @@ function TodayScreenContent() {
     [insights]
   );
 
-  // Mirrors ACCOUNTED / EXCLUDED in src/lib/stats.ts. Keep in sync.
-  const todayAccountedRatio = useMemo(() => {
-    const relevant = instances.filter(
-      (i) => i.status !== "removed" && i.status !== "rescheduled"
-    );
-    if (relevant.length === 0) return 0;
-    const accounted = relevant.filter((i) =>
-      ["completed", "missed", "skipped"].includes(i.status)
-    ).length;
-    return accounted / relevant.length;
-  }, [instances]);
-
   const todayCompletionRatio = useMemo(() => {
     const relevant = instances.filter(
       (i) => i.status !== "removed" && i.status !== "rescheduled"
     );
     if (relevant.length === 0) return 0;
     return relevant.filter((i) => i.status === "completed").length / relevant.length;
+  }, [instances]);
+
+  const todayMissedRatio = useMemo(() => {
+    const relevant = instances.filter(
+      (i) => i.status !== "removed" && i.status !== "rescheduled"
+    );
+    if (relevant.length === 0) return 0;
+    return relevant.filter((i) => i.status === "missed").length / relevant.length;
   }, [instances]);
 
   const liveCompletionRate = useMemo(() => {
@@ -923,7 +919,7 @@ function TodayScreenContent() {
             <StreakStrip
               stats={stats}
               todayCompletionRatio={todayCompletionRatio}
-              todayAccountedRatio={todayAccountedRatio}
+              todayMissedRatio={todayMissedRatio}
               liveCompletionRate={liveCompletionRate}
             />
           ) : null}

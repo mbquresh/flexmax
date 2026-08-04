@@ -9,7 +9,7 @@ export interface TodayStats {
   todayCompleted: number; // completed instances dated today, as fetched
   todayTotal: number; // relevant instances dated today, as fetched
   weekDayCompletionRatio: number[]; // Mon–Sun, 0–1 completed / relevant (fill height)
-  weekDayAccounted: boolean[]; // Mon–Sun, day fully closed out (outline)
+  weekDayMissedRatio: number[]; // Mon–Sun, 0–1 missed / relevant (fill height)
 }
 
 function toLocalDateStr(d: Date): string {
@@ -101,13 +101,22 @@ export async function fetchTodayStats(userId: string): Promise<TodayStats> {
   ).length;
   const todayCompleted = todayInstances.filter((i) => i.status === "completed").length;
 
-  const byDate = new Map<string, { relevant: number; accounted: number; completed: number }>();
+  const byDate = new Map<
+    string,
+    { relevant: number; accounted: number; completed: number; missed: number }
+  >();
   for (const r of windowRows ?? []) {
     if (EXCLUDED.includes(r.status)) continue;
-    const entry = byDate.get(r.date) ?? { relevant: 0, accounted: 0, completed: 0 };
+    const entry = byDate.get(r.date) ?? {
+      relevant: 0,
+      accounted: 0,
+      completed: 0,
+      missed: 0,
+    };
     entry.relevant++;
     if (ACCOUNTED.includes(r.status)) entry.accounted++;
     if (r.status === "completed") entry.completed++;
+    if (r.status === "missed") entry.missed++;
     byDate.set(r.date, entry);
   }
 
@@ -132,14 +141,13 @@ export async function fetchTodayStats(userId: string): Promise<TodayStats> {
     return entry.completed / entry.relevant;
   });
 
-  const weekDayAccounted = Array.from({ length: 7 }, (_, i) => {
+  const weekDayMissedRatio = Array.from({ length: 7 }, (_, i) => {
     const day = new Date(monday);
     day.setDate(monday.getDate() + i);
     const dateStr = toLocalDateStr(day);
     const entry = byDate.get(dateStr);
-    return entry
-      ? entry.relevant > 0 && entry.accounted / entry.relevant >= STREAK_THRESHOLD
-      : false;
+    if (!entry || entry.relevant === 0) return 0;
+    return entry.missed / entry.relevant;
   });
 
   let streak = 0;
@@ -174,6 +182,6 @@ export async function fetchTodayStats(userId: string): Promise<TodayStats> {
     todayCompleted,
     todayTotal,
     weekDayCompletionRatio,
-    weekDayAccounted,
+    weekDayMissedRatio,
   };
 }
