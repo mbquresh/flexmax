@@ -971,6 +971,12 @@ function TodayScreenContent() {
               ))}
             </View>
           ) : null}
+
+          {profile?.sleep_target_minutes != null ? (
+            <Text style={styles.sleepFooter}>
+              Sleep · target {minutesToTime(profile.sleep_target_minutes)}
+            </Text>
+          ) : null}
         </View>
       </ScrollView>
 
@@ -1284,6 +1290,13 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     paddingHorizontal: spacing.sm,
     marginBottom: spacing.xs,
+  },
+  sleepFooter: {
+    color: colors.textMuted,
+    fontSize: 13,
+    textAlign: "center",
+    marginTop: spacing.xl,
+    marginBottom: spacing.xxl,
   },
   addTaskSheet: {
     backgroundColor: colors.surface,

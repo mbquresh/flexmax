@@ -33,6 +33,7 @@ import { TimePicker } from "../src/components/TimePicker";
 import { handleError, getErrorMessage } from "../src/lib/errors";
 
 import { RequireAuth } from "../src/components/RequireAuth";
+import { BoundaryRow } from "../src/components/BoundaryRow";
 import { colors, spacing, radii, typography } from "../src/theme";
 
 function ScheduleBuilderScreenContent() {
@@ -62,6 +63,8 @@ function ScheduleBuilderScreenContent() {
   const [editEndMinutes, setEditEndMinutes] = useState(10 * 60);
   const [editSelectedDays, setEditSelectedDays] = useState<number[]>(ALL_DAYS);
   const [editIsFixed, setEditIsFixed] = useState(false);
+  const [wakeTarget, setWakeTarget] = useState<number | null>(null);
+  const [sleepTarget, setSleepTarget] = useState<number | null>(null);
 
   const loadBlocks = async () => {
     if (!session.user.id) {
@@ -75,14 +78,25 @@ function ScheduleBuilderScreenContent() {
       const tid = await ensureActiveTemplate(session.user.id);
       setTemplateId(tid);
 
-      const { data, error: fetchError } = await supabase
-        .from("schedule_blocks")
-        .select("*")
-        .eq("user_id", session.user.id)
-        .order("start_minutes");
+      const [{ data, error: fetchError }, { data: profileData, error: profileError }] =
+        await Promise.all([
+          supabase
+            .from("schedule_blocks")
+            .select("*")
+            .eq("user_id", session.user.id)
+            .order("start_minutes"),
+          supabase
+            .from("profiles")
+            .select("sleep_target_minutes, wake_target_minutes")
+            .eq("id", session.user.id)
+            .single(),
+        ]);
 
       if (fetchError) throw fetchError;
+      if (profileError) throw profileError;
       setBlocks(data ?? []);
+      setWakeTarget(profileData?.wake_target_minutes ?? null);
+      setSleepTarget(profileData?.sleep_target_minutes ?? null);
     } catch (err) {
       handleError(err, "loadBlocks");
       setError(getErrorMessage(err));
@@ -122,6 +136,37 @@ function ScheduleBuilderScreenContent() {
   const showError = (message: string) => {
     setError(message);
     if (Platform.OS !== "web") Alert.alert("Error", message);
+  };
+
+  const saveBoundary = async (
+    field: "wake_target_minutes" | "sleep_target_minutes",
+    minutes: number
+  ) => {
+    const prevWake = wakeTarget;
+    const prevSleep = sleepTarget;
+
+    if (field === "wake_target_minutes") setWakeTarget(minutes);
+    else setSleepTarget(minutes);
+
+    const { error } =
+      field === "wake_target_minutes"
+        ? await supabase
+            .from("profiles")
+            .update({ wake_target_minutes: minutes })
+            .eq("id", session.user.id)
+        : await supabase
+            .from("profiles")
+            .update({ sleep_target_minutes: minutes })
+            .eq("id", session.user.id);
+
+    if (error) {
+      setWakeTarget(prevWake);
+      setSleepTarget(prevSleep);
+      handleError(error, "saveBoundary", "Could not save");
+      return;
+    }
+
+    await refreshProfile();
   };
 
   const toggleDay = (day: number) => {
@@ -507,6 +552,13 @@ function ScheduleBuilderScreenContent() {
               </Text>
             </View>
 
+            <Text style={styles.boundaryLabel}>Day starts</Text>
+            <BoundaryRow
+              label="Wake"
+              minutes={wakeTarget}
+              onChange={(m) => saveBoundary("wake_target_minutes", m)}
+            />
+
             {renderTipsCard()}
 
             {error ? <Text style={styles.errorBox}>{error}</Text> : null}
@@ -535,6 +587,12 @@ function ScheduleBuilderScreenContent() {
         }
         ListFooterComponent={
           <>
+            <Text style={styles.boundaryLabel}>Day ends</Text>
+            <BoundaryRow
+              label="Sleep"
+              minutes={sleepTarget}
+              onChange={(m) => saveBoundary("sleep_target_minutes", m)}
+            />
             {renderAddForm()}
             <TouchableOpacity
               style={[styles.primaryBtn, blocks.length === 0 && styles.btnDisabled]}
@@ -569,6 +627,15 @@ const styles = StyleSheet.create({
   header: { paddingTop: 60, paddingHorizontal: spacing.xl, paddingBottom: spacing.md },
   title: { fontSize: 24, fontWeight: "600", color: colors.text },
   subtitle: { fontSize: 14, color: colors.textMuted, marginTop: 6 },
+  boundaryLabel: {
+    color: colors.textMuted,
+    fontSize: 11,
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginTop: spacing.xl,
+    marginBottom: spacing.sm,
+  },
   errorBox: {
     marginHorizontal: spacing.xl,
     marginBottom: spacing.sm,
