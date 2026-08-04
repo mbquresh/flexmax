@@ -6,7 +6,7 @@ export interface TodayStats {
   completionRate: number; // 0-100
   completedCount: number;
   totalCount: number;
-  weekDayCompletions: boolean[]; // Mon–Sun, index 0 = Monday
+  weekDayAccounted: boolean[]; // Mon–Sun, index 0 = Monday
 }
 
 function toLocalDateStr(d: Date): string {
@@ -16,6 +16,14 @@ function toLocalDateStr(d: Date): string {
     String(d.getDate()).padStart(2, "0"),
   ].join("-");
 }
+
+// A block is "accounted for" when the user gave it a real status.
+// 'unaccounted' (swept by migration 012 — never acknowledged) and
+// 'pending'/'active' (not yet answered) are NOT accounted.
+// 'removed' and 'rescheduled' are excluded from the ledger entirely —
+// they are not part of that day's commitments.
+const ACCOUNTED = ["completed", "missed", "skipped"];
+const EXCLUDED = ["removed", "rescheduled"];
 
 export async function fetchTodayStats(userId: string): Promise<TodayStats> {
   const today = getLocalDateString();
@@ -36,13 +44,9 @@ export async function fetchTodayStats(userId: string): Promise<TodayStats> {
 
   const thirtyDaysAgo = new Date(now);
   thirtyDaysAgo.setDate(now.getDate() - 30);
-  const thirtyDaysAgoStr = [
-    thirtyDaysAgo.getFullYear(),
-    String(thirtyDaysAgo.getMonth() + 1).padStart(2, "0"),
-    String(thirtyDaysAgo.getDate()).padStart(2, "0"),
-  ].join("-");
+  const thirtyDaysAgoStr = toLocalDateStr(thirtyDaysAgo);
 
-  const [{ data: weekInstances }, { data: completedRows }] = await Promise.all([
+  const [{ data: weekInstances }, { data: windowRows }] = await Promise.all([
     supabase
       .from("daily_schedule_instances")
       .select("date, status")
@@ -51,9 +55,8 @@ export async function fetchTodayStats(userId: string): Promise<TodayStats> {
       .lte("date", sundayStr),
     supabase
       .from("daily_schedule_instances")
-      .select("date")
+      .select("date, status")
       .eq("user_id", userId)
-      .eq("status", "completed")
       .gte("date", thirtyDaysAgoStr)
       .order("date", { ascending: false }),
   ]);
@@ -71,48 +74,57 @@ export async function fetchTodayStats(userId: string): Promise<TodayStats> {
 
   const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
 
-  const weekDayCompletions = Array.from({ length: 7 }, (_, i) => {
+  const byDate = new Map<string, { relevant: number; accounted: number }>();
+  for (const r of windowRows ?? []) {
+    if (EXCLUDED.includes(r.status)) continue;
+    const entry = byDate.get(r.date) ?? { relevant: 0, accounted: 0 };
+    entry.relevant++;
+    if (ACCOUNTED.includes(r.status)) entry.accounted++;
+    byDate.set(r.date, entry);
+  }
+
+  // A day is closed out when every relevant block has a real status.
+  const accountedDates = new Set(
+    [...byDate.entries()]
+      .filter(([, v]) => v.relevant > 0 && v.accounted === v.relevant)
+      .map(([date]) => date)
+  );
+
+  // Days with nothing scheduled are transparent — they neither break the
+  // streak nor extend it. A user should not lose a streak to an empty day.
+  const emptyDates = new Set(
+    [...byDate.entries()].filter(([, v]) => v.relevant === 0).map(([d]) => d)
+  );
+
+  const weekDayAccounted = Array.from({ length: 7 }, (_, i) => {
     const day = new Date(monday);
     day.setDate(monday.getDate() + i);
-    const dateStr = [
-      day.getFullYear(),
-      String(day.getMonth() + 1).padStart(2, "0"),
-      String(day.getDate()).padStart(2, "0"),
-    ].join("-");
-    return (
-      weekInstances?.some(
-        (inst) => inst.date === dateStr && inst.status === "completed"
-      ) ?? false
-    );
+    const dateStr = toLocalDateStr(day);
+    return accountedDates.has(dateStr);
   });
-
-  // ── Streak: consecutive days with at least one completed block ─────────
-  // Single query: fetch all completed dates in the last 30 days, compute locally
-
-  // Distinct set of dates that had at least one completion
-  const completedDates = new Set((completedRows ?? []).map((r) => r.date));
 
   let streak = 0;
   const checkDate = new Date(now);
 
   for (let i = 0; i < 31; i++) {
-    const dateStr = [
-      checkDate.getFullYear(),
-      String(checkDate.getMonth() + 1).padStart(2, "0"),
-      String(checkDate.getDate()).padStart(2, "0"),
-    ].join("-");
+    const dateStr = toLocalDateStr(checkDate);
 
-    if (completedDates.has(dateStr)) {
-      streak++;
+    if (i === 0) {
+      // Today is still in progress. Count it if already fully closed out,
+      // but never let it break the streak.
+      if (accountedDates.has(dateStr)) streak++;
       checkDate.setDate(checkDate.getDate() - 1);
+      continue;
+    }
+
+    if (accountedDates.has(dateStr)) {
+      streak++;
+    } else if (!byDate.has(dateStr) || emptyDates.has(dateStr)) {
+      // Nothing was scheduled — transparent, skip without breaking.
     } else {
-      // Today with no completions yet doesn't break the streak
-      if (i === 0) {
-        checkDate.setDate(checkDate.getDate() - 1);
-        continue;
-      }
       break;
     }
+    checkDate.setDate(checkDate.getDate() - 1);
   }
 
   return {
@@ -120,6 +132,6 @@ export async function fetchTodayStats(userId: string): Promise<TodayStats> {
     completionRate,
     completedCount: completed,
     totalCount: total,
-    weekDayCompletions,
+    weekDayAccounted,
   };
 }

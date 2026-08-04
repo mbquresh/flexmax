@@ -13,16 +13,16 @@ export function StreakStrip({ stats }: StreakStripProps) {
       <View style={styles.streakHeader}>
         <Text style={styles.streakLabel}>
           {stats.streak > 0
-            ? `${stats.streak}-day streak`
+            ? `${stats.streak} ${stats.streak === 1 ? "day" : "days"} accounted for`
             : "Start your streak today"}
         </Text>
-        <Text style={styles.streakSub}>{stats.completionRate}% this week</Text>
+        <Text style={styles.streakSub}>{stats.completionRate}% completed this week</Text>
       </View>
       <View style={styles.weekStrip}>
         {["M", "T", "W", "T", "F", "S", "S"].map((day, i) => {
           const todayIndex = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;
           const isToday = i === todayIndex;
-          const isDone = stats.weekDayCompletions[i];
+          const isDone = stats.weekDayAccounted[i];
           const isFuture = i > todayIndex;
 
           return (
