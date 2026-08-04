@@ -75,10 +75,13 @@ export function BlockCard({
   const isMissed = instance.status === "missed";
   const isFixed = isInstanceFixed(instance);
   const isPending = instance.status === "pending";
-  // Missed is available on any block that isn't already missed.
-  // Today is authoritative: a wrong entry from anywhere must be fixable here.
-  const showMissedAction = instance.status !== "missed";
-  const revealWidth = showMissedAction ? REVEAL_WIDTH_PENDING : REVEAL_WIDTH_SINGLE;
+  // Swipe actions are for blocks still awaiting a decision. Answered blocks
+  // are corrected by tapping the action circle, which toggles state.
+  const isAnswered =
+    instance.status === "completed" ||
+    instance.status === "missed" ||
+    instance.status === "skipped";
+  const revealWidth = isPending ? REVEAL_WIDTH_PENDING : REVEAL_WIDTH_SINGLE;
 
   const triggerFlash = () => {
     flashOpacity.value = withRepeat(
@@ -175,7 +178,7 @@ export function BlockCard({
     });
 
   const swipeGesture = Gesture.Pan()
-    .enabled(!isFixed)
+    .enabled(!isFixed && !isAnswered)
     .activeOffsetX([-15, 15])
     .failOffsetY([-8, 8])
     .maxPointers(1)
@@ -220,13 +223,9 @@ export function BlockCard({
       }}
     >
       <View style={styles.actionsBehind}>
-        {showMissedAction ? (
+        {isPending && (
           <TouchableOpacity
-            style={[
-              styles.actionBtn,
-              styles.missedBtn,
-              !isPending && styles.actionBtnLeftRounded,
-            ]}
+            style={[styles.actionBtn, styles.missedBtn, styles.actionBtnLeftRounded]}
             onPress={() => {
               closeSwipe();
               onMarkMissed(instance);
@@ -235,23 +234,21 @@ export function BlockCard({
           >
             <Text style={[styles.actionText, styles.missedBtnText]}>Missed</Text>
           </TouchableOpacity>
-        ) : null}
-        {isPending ? (
-          <TouchableOpacity
-            style={[
-              styles.actionBtn,
-              styles.removeBtn,
-              !showMissedAction && styles.actionBtnLeftRounded,
-            ]}
-            onPress={() => {
-              closeSwipe();
-              onRemoveRequest(instance);
-            }}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.actionText}>Remove</Text>
-          </TouchableOpacity>
-        ) : null}
+        )}
+        <TouchableOpacity
+          style={[
+            styles.actionBtn,
+            styles.removeBtn,
+            !isPending && styles.actionBtnLeftRounded,
+          ]}
+          onPress={() => {
+            closeSwipe();
+            onRemoveRequest(instance);
+          }}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.actionText}>Remove</Text>
+        </TouchableOpacity>
       </View>
 
       <Animated.View
