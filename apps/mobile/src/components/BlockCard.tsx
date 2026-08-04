@@ -74,14 +74,17 @@ export function BlockCard({
   const isDone = instance.status === "completed";
   const isMissed = instance.status === "missed";
   const isFixed = isInstanceFixed(instance);
-  const isPending = instance.status === "pending";
+  // Unanswered = still awaiting a decision. Blocks become "active" once
+  // their start time passes, and must remain swipeable.
+  const isUnanswered =
+    instance.status === "pending" || instance.status === "active";
   // Swipe actions are for blocks still awaiting a decision. Answered blocks
   // are corrected by tapping the action circle, which toggles state.
   const isAnswered =
     instance.status === "completed" ||
     instance.status === "missed" ||
     instance.status === "skipped";
-  const revealWidth = isPending ? REVEAL_WIDTH_PENDING : REVEAL_WIDTH_SINGLE;
+  const revealWidth = isUnanswered ? REVEAL_WIDTH_PENDING : REVEAL_WIDTH_SINGLE;
 
   const triggerFlash = () => {
     flashOpacity.value = withRepeat(
@@ -232,7 +235,7 @@ export function BlockCard({
       }}
     >
       <View style={styles.actionsBehind}>
-        {isPending && (
+        {isUnanswered && (
           <TouchableOpacity
             style={[styles.actionBtn, styles.missedBtn, styles.actionBtnLeftRounded]}
             onPress={() => {
@@ -248,7 +251,7 @@ export function BlockCard({
           style={[
             styles.actionBtn,
             styles.removeBtn,
-            !isPending && styles.actionBtnLeftRounded,
+            !isUnanswered && styles.actionBtnLeftRounded,
           ]}
           onPress={() => {
             closeSwipe();
