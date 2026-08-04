@@ -13,7 +13,7 @@ export function StreakStrip({ stats }: StreakStripProps) {
       <View style={styles.streakHeader}>
         <Text style={styles.streakLabel}>
           {stats.streak > 0
-            ? `${stats.streak} ${stats.streak === 1 ? "day" : "days"} accounted for`
+            ? `${stats.streak}-day streak`
             : "Start your streak today"}
         </Text>
         <Text style={styles.streakSub}>{stats.completionRate}% completed this week</Text>
