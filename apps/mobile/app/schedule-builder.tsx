@@ -552,13 +552,6 @@ function ScheduleBuilderScreenContent() {
               </Text>
             </View>
 
-            <Text style={styles.boundaryLabel}>Day starts</Text>
-            <BoundaryRow
-              label="Wake"
-              minutes={wakeTarget}
-              onChange={(m) => saveBoundary("wake_target_minutes", m)}
-            />
-
             {renderTipsCard()}
 
             {error ? <Text style={styles.errorBox}>{error}</Text> : null}
@@ -578,6 +571,13 @@ function ScheduleBuilderScreenContent() {
                 ))}
               </ScrollView>
             </View>
+
+            <Text style={[styles.boundaryLabel, styles.wakeBoundaryLabel]}>Day starts</Text>
+            <BoundaryRow
+              label="Wake"
+              minutes={wakeTarget}
+              onChange={(m) => saveBoundary("wake_target_minutes", m)}
+            />
           </>
         }
         ListEmptyComponent={
@@ -635,6 +635,9 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     marginTop: spacing.xl,
     marginBottom: spacing.sm,
+  },
+  wakeBoundaryLabel: {
+    marginTop: spacing.xxl,
   },
   errorBox: {
     marginHorizontal: spacing.xl,
