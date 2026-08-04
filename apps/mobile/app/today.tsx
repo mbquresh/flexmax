@@ -131,6 +131,22 @@ function TodayScreenContent() {
     return accounted / relevant.length;
   }, [instances]);
 
+  const liveCompletionRate = useMemo(() => {
+    if (!stats) return 0;
+    const relevant = instances.filter(
+      (i) =>
+        i.status !== "skipped" &&
+        i.status !== "rescheduled" &&
+        i.status !== "removed"
+    );
+    const liveCompleted = relevant.filter((i) => i.status === "completed").length;
+
+    const weekCompleted = stats.completedCount - stats.todayCompleted + liveCompleted;
+    const weekTotal = stats.totalCount - stats.todayTotal + relevant.length;
+
+    return weekTotal > 0 ? Math.round((weekCompleted / weekTotal) * 100) : 0;
+  }, [instances, stats]);
+
   const timelineItems = useMemo(() => {
     const items = [
       ...sortedInstances.map((instance) => ({
@@ -842,7 +858,11 @@ function TodayScreenContent() {
             <InsightCard insight={morningInsight} onDismiss={handleDismissInsight} />
           ) : null}
           {stats ? (
-            <StreakStrip stats={stats} todayRatio={todayAccountedRatio} />
+            <StreakStrip
+              stats={stats}
+              todayRatio={todayAccountedRatio}
+              liveCompletionRate={liveCompletionRate}
+            />
           ) : null}
         </View>
 

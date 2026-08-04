@@ -6,6 +6,8 @@ export interface TodayStats {
   completionRate: number; // 0-100
   completedCount: number;
   totalCount: number;
+  todayCompleted: number; // completed instances dated today, as fetched
+  todayTotal: number; // relevant instances dated today, as fetched
   weekDayAccountedRatio: number[]; // Mon–Sun, 0–1 accounted share per day
 }
 
@@ -77,6 +79,16 @@ export async function fetchTodayStats(userId: string): Promise<TodayStats> {
 
   const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
 
+  const todayStr = toLocalDateStr(now);
+  const todayInstances = weekInstances?.filter((i) => i.date === todayStr) ?? [];
+  const todayTotal = todayInstances.filter(
+    (i) =>
+      i.status !== "skipped" &&
+      i.status !== "rescheduled" &&
+      i.status !== "removed"
+  ).length;
+  const todayCompleted = todayInstances.filter((i) => i.status === "completed").length;
+
   const byDate = new Map<string, { relevant: number; accounted: number }>();
   for (const r of windowRows ?? []) {
     if (EXCLUDED.includes(r.status)) continue;
@@ -136,6 +148,8 @@ export async function fetchTodayStats(userId: string): Promise<TodayStats> {
     completionRate,
     completedCount: completed,
     totalCount: total,
+    todayCompleted,
+    todayTotal,
     weekDayAccountedRatio,
   };
 }

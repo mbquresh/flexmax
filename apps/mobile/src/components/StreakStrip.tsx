@@ -7,6 +7,7 @@ import { colors, spacing, radii, typography } from "../theme";
 interface StreakStripProps {
   stats: TodayStats;
   todayRatio?: number;
+  liveCompletionRate?: number;
 }
 
 function getTodayWeekIndex(): number {
@@ -25,8 +26,9 @@ function getTodayWeekIndex(): number {
   return 0;
 }
 
-export function StreakStrip({ stats, todayRatio }: StreakStripProps) {
+export function StreakStrip({ stats, todayRatio, liveCompletionRate }: StreakStripProps) {
   const todayIndex = getTodayWeekIndex();
+  const completionRate = liveCompletionRate ?? stats.completionRate;
 
   return (
     <View style={styles.streakContainer}>
@@ -36,7 +38,7 @@ export function StreakStrip({ stats, todayRatio }: StreakStripProps) {
             ? `${stats.streak}-day streak`
             : "Start your streak today"}
         </Text>
-        <Text style={styles.streakSub}>{stats.completionRate}% completed this week</Text>
+        <Text style={styles.streakSub}>{completionRate}% completed this week</Text>
       </View>
       <View style={styles.weekStrip}>
         {["M", "T", "W", "T", "F", "S", "S"].map((day, i) => {
