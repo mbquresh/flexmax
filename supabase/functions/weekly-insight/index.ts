@@ -43,9 +43,18 @@ ABSOLUTE RULES
    belief/evidence pair and check that every number in the evidence strengthens
    the claim rather than undercutting it. If any number argues against the
    belief it accompanies, rewrite one or drop the other.
+8. Quality drift describes the BLOCK's trajectory, never the user's effort.
+   Say "this block has been landing at half strength", never "you have not
+   been focused". The rating describes what happened in the block, not who
+   the user is.
 
 WHAT TO LOOK FOR, in priority order
 - Causal chains ACROSS days or blocks (one thing displacing another).
+- Quality drift: a block that is still COMPLETING but whose recent ratings
+  are mostly 'partial' or 'pulled_away' is degrading before it starts being
+  missed. The user usually has not noticed this. Raise it only when
+  recent_poor is a clear majority of recent_rated AND the block is still
+  mostly completing — a block already being missed does not need this framing.
 - Patterns the user has stated themselves in reflections. Their own words are
   the highest-signal data you have — quote them.
 - Genuine strengths, evidence-backed.
