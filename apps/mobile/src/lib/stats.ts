@@ -24,6 +24,7 @@ function toLocalDateStr(d: Date): string {
 // 'pending'/'active' (not yet answered) are NOT accounted.
 // 'removed' and 'rescheduled' are excluded from the ledger entirely —
 // they are not part of that day's commitments.
+// skipped: legacy status, no longer writable from the UI.
 const ACCOUNTED = ["completed", "missed", "skipped"];
 const EXCLUDED = ["removed", "rescheduled"];
 
@@ -77,6 +78,7 @@ export async function fetchTodayStats(userId: string): Promise<TodayStats> {
 
   const total = elapsedWeekInstances.filter(
     (i) =>
+      // skipped: legacy status, no longer writable from the UI.
       i.status !== "skipped" &&
       i.status !== "rescheduled" &&
       i.status !== "removed"
@@ -91,6 +93,7 @@ export async function fetchTodayStats(userId: string): Promise<TodayStats> {
   const todayInstances = elapsedWeekInstances.filter((i) => i.date === todayStr);
   const todayTotal = todayInstances.filter(
     (i) =>
+      // skipped: legacy status, no longer writable from the UI.
       i.status !== "skipped" &&
       i.status !== "rescheduled" &&
       i.status !== "removed"

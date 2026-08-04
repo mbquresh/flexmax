@@ -16,7 +16,7 @@ interface CloseTodayRowProps {
   instance: DailyInstance;
   onStatusTap: (
     instanceId: string,
-    status: "completed" | "missed" | "skipped"
+    status: "completed" | "missed"
   ) => void;
   onPresetTap: (instanceId: string, tag: string) => void;
   onPresetSkip: (instanceId: string) => void;
@@ -88,13 +88,6 @@ export function CloseTodayRow({
           activeOpacity={0.85}
         >
           <Text style={styles.neutralBtnText}>Missed</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.actionBtn, styles.neutralBtn]}
-          onPress={() => onStatusTap(instance.id, "skipped")}
-          activeOpacity={0.85}
-        >
-          <Text style={styles.neutralBtnText}>Skipped</Text>
         </TouchableOpacity>
       </View>
     </View>

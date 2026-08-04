@@ -731,6 +731,7 @@ function TodayScreenContent() {
         .update({
           status: "completed",
           completion_rating: rating,
+          miss_reason_tag: null,
         })
         .eq("id", checkInInstance.id);
 
@@ -739,6 +740,7 @@ function TodayScreenContent() {
       updateInstance(checkInInstance.id, {
         status: "completed",
         completion_rating: rating,
+        miss_reason_tag: null,
       });
       closeCheckIn();
     } catch (err) {

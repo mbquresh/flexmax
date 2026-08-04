@@ -75,7 +75,10 @@ export function BlockCard({
   const isMissed = instance.status === "missed";
   const isFixed = isInstanceFixed(instance);
   const isPending = instance.status === "pending";
-  const revealWidth = isPending ? REVEAL_WIDTH_PENDING : REVEAL_WIDTH_SINGLE;
+  // Missed is available on any block that isn't already missed.
+  // Today is authoritative: a wrong entry from anywhere must be fixable here.
+  const showMissedAction = instance.status !== "missed";
+  const revealWidth = showMissedAction ? REVEAL_WIDTH_PENDING : REVEAL_WIDTH_SINGLE;
 
   const triggerFlash = () => {
     flashOpacity.value = withRepeat(
@@ -217,23 +220,29 @@ export function BlockCard({
       }}
     >
       <View style={styles.actionsBehind}>
-        <TouchableOpacity
-          style={[
-            styles.actionBtn,
-            styles.missedBtn,
-            !isPending && styles.actionBtnLeftRounded,
-          ]}
-          onPress={() => {
-            closeSwipe();
-            onMarkMissed(instance);
-          }}
-          activeOpacity={0.85}
-        >
-          <Text style={[styles.actionText, styles.missedBtnText]}>Missed</Text>
-        </TouchableOpacity>
+        {showMissedAction ? (
+          <TouchableOpacity
+            style={[
+              styles.actionBtn,
+              styles.missedBtn,
+              !isPending && styles.actionBtnLeftRounded,
+            ]}
+            onPress={() => {
+              closeSwipe();
+              onMarkMissed(instance);
+            }}
+            activeOpacity={0.85}
+          >
+            <Text style={[styles.actionText, styles.missedBtnText]}>Missed</Text>
+          </TouchableOpacity>
+        ) : null}
         {isPending ? (
           <TouchableOpacity
-            style={[styles.actionBtn, styles.removeBtn]}
+            style={[
+              styles.actionBtn,
+              styles.removeBtn,
+              !showMissedAction && styles.actionBtnLeftRounded,
+            ]}
             onPress={() => {
               closeSwipe();
               onRemoveRequest(instance);

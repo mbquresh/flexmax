@@ -112,7 +112,7 @@ function PlanTomorrowScreenContent() {
 
   const handleCloseTodayStatus = async (
     instanceId: string,
-    status: "completed" | "missed" | "skipped"
+    status: "completed" | "missed"
   ) => {
     const previous = closeTodayInstances;
     setCloseTodayInstances((prev) =>
