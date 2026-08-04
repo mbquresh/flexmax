@@ -99,7 +99,7 @@ first and getting a confidently false answer.
    month. Trends come from `weekly_trend` and `day_shape`, complete periods only.
    Today is excluded from the evidence pack entirely.
 
-### What the streak measures — and why it is not completion
+### The streak measures accounting. The squares show both.
 
 A completion-based streak breaks on the first bad day. For the user this product
 is built for — someone who has abandoned every planner that made them feel like
@@ -107,9 +107,9 @@ a failure — that is precisely the uninstall moment. Optimizing for an unbroken
 completion record means optimizing for the exact fragility the product exists to
 solve.
 
-So the protected number is **accounting, not completion**. A day counts if every
-block has a real, user-set status. Marking something missed keeps the streak
-alive; only silence breaks it.
+So the protected number is **accounting, not completion**. A day counts toward
+the streak when at least 80% of its blocks have a real, user-set status. Marking
+something missed keeps the streak alive; only silence (`unaccounted`) breaks it.
 
 The schema already made this distinction for other reasons: `missed` means the
 user engaged and admitted it, `unaccounted` means no acknowledgement at all.
@@ -117,6 +117,19 @@ Single-user data showed the gap plainly — one block had 14 misses and 1
 unaccounted (reported almost every time, including failures), while another had
 6 misses and 15 unaccounted (silently abandoned). The same completion rate would
 have described both. Confronting a miss is accountability. Silence is the drift.
+
+**But the visual encoding must not reward missing.** An earlier version filled
+each day square by the accounting ratio, which meant a fully-missed day and a
+fully-completed day rendered identically — awarding visual credit for work that
+never happened. The two meanings are now separated into two channels:
+
+- **Fill height = completion ratio.** Honest achievement. Miss everything, empty
+  square.
+- **Outline = day fully accounted for.** Credit for closing out honestly.
+
+A day where everything was reported but nothing landed shows an empty square
+with a ring: you showed up and told the truth, nothing got done. No false
+signal, and the accountability still gets visible credit.
 
 Completion rate still exists and is still shown. It is information the engine
 works with, not the thing the user is asked to protect.

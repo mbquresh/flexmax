@@ -276,10 +276,18 @@ Still captured but NOT yet read:
 | Check-in timing                               | 010, rated_at / reflected_at                          |
 | Unaccounted sweep                             | 012, hourly, timezone-aware, 4am local grace          |
 | Behavioral evidence pack                      | 013                                                   |
-| Retroactive bedtime capture                   | 014 + BedtimeCard.tsx                                 |
+| Retroactive bedtime capture                   | 014 actual_end_minutes (legacy column; data migrated to day_log) |
 | Behavioral learning v1 (THE flagship)         | 015 + weekly-insight + InsightCard                    |
 | Deterministic recovery copy (AI call REMOVED) | src/lib/recoveryCopy.ts                               |
 | AI onboarding (4-turn chat + profile extract) | onboarding-chat, extract-psychology-profile; OnboardingScreen.tsx — **slated for removal, see Architecture** |
+| Accountability streak (80% threshold)         | stats.ts; two-channel square encoding                 |
+| Close-today sweep merged into evening ritual  | plan-tomorrow.tsx + CloseTodayRow; Done/Missed only, preset miss reasons |
+| Preset miss reasons                           | 019 miss_reason_tag; structural labels only, never stored as reflection prose |
+| Cutoff nudges + telemetry                     | blockNotifications.ts; fires at midpoint or end-30, gated on task_detail; 016 nudge_events |
+| Notification action buttons                   | "Wrapping up" / "Need 15 more"; 018 nudge_response    |
+| nudge_line on insights                        | 017; notification-sized restatement, written in the same weekly AI call |
+| Day boundaries (sleep/wake)                   | 020 day_log; replaces BedtimeCard; wake/sleep rows on schedule builder |
+| Morning InsightCard                           | Rank-1 non-strength insight, dismissed per-insight, 8-day expiry |
 
 
 
@@ -291,7 +299,6 @@ Still captured but NOT yet read:
 | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Presence-aware nudges (block-start + mid-block) | The "smart notification suite". User requested this in their OWN reflections 3x: "harder cutoffs", "need enforcements", "maybe you can do something to help" |
 | Shareable weekly recap card                     | The weekly scorecard. Growth primitive                                                                                                                       |
-| Notification response tracking                  | Pairs with nudges — build together                                                                                                                           |
 | Day-3 first observation                         | New users currently see NOTHING for 5+ days (weekly-insight gates at engaged_days < 5). Week one is when they decide to keep the app                         |
 | Onboarding revamp — replace 4-turn AI chat with preset questions | Deletes `onboarding-chat` and `extract-psychology-profile`. Drops per-signup AI cost to ~zero and removes the ONLY unbounded abuse surface (a fake account could burn 30 onboarding calls/hour). `accountability_tone` comes from a direct preset answer instead of being inferred from chat |
 | Paywall + RevenueCat                            | Hard paywall $14.99/mo — paywall placement OPEN, see **Pricing & paywall**                                                                                   |
@@ -300,6 +307,8 @@ Still captured but NOT yet read:
 | External TestFlight                             | Needs Beta App Review (~1 day) + a demo account or auto-rejection                                                                                            |
 | Screen Time shielding                           | FamilyControls entitlement — STILL UNFILED. Multi-week Apple clock                                                                                           |
 | Dark theme                                      | Design tokens make it feasible                                                                                                                               |
+| Night routine block is hard to answer           | Excluded from the evening sweep (hasn't happened yet) and from bedtime notifications (by design). Drifts to unaccounted unless answered from Today. Candidate fix: a third question on the morning DayBoundaryCard |
+| User instructions page                          | The streak rises on a day where everything was missed. Without a qualifier on the label (removed for width), there is no in-app explanation. Owed |
 
 
 ---
@@ -325,10 +334,11 @@ unaccounted — they show up to admit failure. That is the behavior worth
 protecting. Weights shows 6 missed and 15 unaccounted — silent abandonment is
 the real drift, not the miss.
 
-DESIGN CONSTRAINT: a user with a 30-day accounting streak and 20% completion
-must not read as the app congratulating failure. Keep both numbers visible with
-different weight — the streak is protected, completion rate stays as
-information, never celebrated.
+SHIPPED, with a correction. The streak is accounting-based at an 80% daily
+threshold. The day squares originally filled by the accounting ratio, which made
+a fully-missed day look identical to a fully-completed one. Corrected to a
+two-channel encoding: fill height = completion ratio, outline = day accounted
+for. The streak number itself remains accounting-based.
 
 **2. Quality-drift signal in the evidence pack.**
 `completion_rating` (crushed it / partly / lost focus) is captured on every
