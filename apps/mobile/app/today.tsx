@@ -134,6 +134,14 @@ function TodayScreenContent() {
     return accounted / relevant.length;
   }, [instances]);
 
+  const todayCompletionRatio = useMemo(() => {
+    const relevant = instances.filter(
+      (i) => i.status !== "removed" && i.status !== "rescheduled"
+    );
+    if (relevant.length === 0) return 0;
+    return relevant.filter((i) => i.status === "completed").length / relevant.length;
+  }, [instances]);
+
   const liveCompletionRate = useMemo(() => {
     if (!stats) return 0;
     const relevant = instances.filter(
@@ -914,7 +922,8 @@ function TodayScreenContent() {
           {stats ? (
             <StreakStrip
               stats={stats}
-              todayRatio={todayAccountedRatio}
+              todayCompletionRatio={todayCompletionRatio}
+              todayAccountedRatio={todayAccountedRatio}
               liveCompletionRate={liveCompletionRate}
             />
           ) : null}

@@ -572,12 +572,14 @@ function ScheduleBuilderScreenContent() {
               </ScrollView>
             </View>
 
-            <Text style={[styles.boundaryLabel, styles.wakeBoundaryLabel]}>Day starts</Text>
-            <BoundaryRow
-              label="Wake"
-              minutes={wakeTarget}
-              onChange={(m) => saveBoundary("wake_target_minutes", m)}
-            />
+            <View style={styles.boundarySection}>
+              <Text style={[styles.boundaryLabel, styles.wakeBoundaryLabel]}>Day starts</Text>
+              <BoundaryRow
+                label="Wake"
+                minutes={wakeTarget}
+                onChange={(m) => saveBoundary("wake_target_minutes", m)}
+              />
+            </View>
           </>
         }
         ListEmptyComponent={
@@ -587,12 +589,14 @@ function ScheduleBuilderScreenContent() {
         }
         ListFooterComponent={
           <>
-            <Text style={[styles.boundaryLabel, styles.sleepBoundaryLabel]}>Day ends</Text>
-            <BoundaryRow
-              label="Sleep"
-              minutes={sleepTarget}
-              onChange={(m) => saveBoundary("sleep_target_minutes", m)}
-            />
+            <View style={styles.boundarySection}>
+              <Text style={[styles.boundaryLabel, styles.sleepBoundaryLabel]}>Day ends</Text>
+              <BoundaryRow
+                label="Sleep"
+                minutes={sleepTarget}
+                onChange={(m) => saveBoundary("sleep_target_minutes", m)}
+              />
+            </View>
             {renderAddForm()}
             <TouchableOpacity
               style={[styles.primaryBtn, blocks.length === 0 && styles.btnDisabled]}
@@ -635,6 +639,9 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     marginTop: spacing.xxl,
     marginBottom: spacing.sm,
+  },
+  boundarySection: {
+    marginBottom: spacing.xxl,
   },
   wakeBoundaryLabel: {
     // Quick add section already has marginBottom spacing.lg.
