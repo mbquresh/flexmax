@@ -118,18 +118,21 @@ unaccounted (reported almost every time, including failures), while another had
 6 misses and 15 unaccounted (silently abandoned). The same completion rate would
 have described both. Confronting a miss is accountability. Silence is the drift.
 
-**But the visual encoding must not reward missing.** An earlier version filled
-each day square by the accounting ratio, which meant a fully-missed day and a
-fully-completed day rendered identically — awarding visual credit for work that
-never happened. The two meanings are now separated into two channels:
+**The visual encoding took three attempts.** Filling each square by the
+accounting ratio made a fully-missed day look identical to a fully-completed one
+— awarding visual credit for work that never happened. Adding an outline for
+"accounted" fixed the honesty problem but gave closing out no felt payoff. The
+shipped version is a stacked two-tone fill, bottom to top:
 
-- **Fill height = completion ratio.** Honest achievement. Miss everything, empty
-  square.
-- **Outline = day fully accounted for.** Credit for closing out honestly.
+- **Teal segment** — completed
+- **Neutral segment** — missed (accounted for, didn't happen)
+- **Empty remainder** — unanswered
 
-A day where everything was reported but nothing landed shows an empty square
-with a ring: you showed up and told the truth, nothing got done. No false
-signal, and the accountability still gets visible credit.
+A fully-accounted day fills the square completely regardless of outcome, so
+closing out is visibly rewarded. The teal-vs-neutral split keeps achievement and
+honesty legible as separate things. The missed segment is deliberately NOT coral:
+coral is the destructive color, and a week of coral squares reads as a wall of
+errors — the exact shame signal this product exists to avoid.
 
 Completion rate still exists and is still shown. It is information the engine
 works with, not the thing the user is asked to protect.

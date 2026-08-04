@@ -280,7 +280,7 @@ Still captured but NOT yet read:
 | Behavioral learning v1 (THE flagship)         | 015 + weekly-insight + InsightCard                    |
 | Deterministic recovery copy (AI call REMOVED) | src/lib/recoveryCopy.ts                               |
 | AI onboarding (4-turn chat + profile extract) | onboarding-chat, extract-psychology-profile; OnboardingScreen.tsx — **slated for removal, see Architecture** |
-| Accountability streak (80% threshold)         | stats.ts; two-channel square encoding                 |
+| Accountability streak (80% threshold)         | stats.ts; two-tone square encoding                    |
 | Close-today sweep merged into evening ritual  | plan-tomorrow.tsx + CloseTodayRow; Done/Missed only, preset miss reasons |
 | Preset miss reasons                           | 019 miss_reason_tag; structural labels only, never stored as reflection prose |
 | Cutoff nudges + telemetry                     | blockNotifications.ts; fires at midpoint or end-30, gated on task_detail; 016 nudge_events |
@@ -308,7 +308,7 @@ Still captured but NOT yet read:
 | Screen Time shielding                           | FamilyControls entitlement — STILL UNFILED. Multi-week Apple clock                                                                                           |
 | Dark theme                                      | Design tokens make it feasible                                                                                                                               |
 | Night routine block is hard to answer           | Excluded from the evening sweep (hasn't happened yet) and from bedtime notifications (by design). Drifts to unaccounted unless answered from Today. Candidate fix: a third question on the morning DayBoundaryCard |
-| User instructions page                          | The streak rises on a day where everything was missed. Without a qualifier on the label (removed for width), there is no in-app explanation. Owed |
+| User instructions page                          | The streak rises on a day where everything was missed. The label qualifier was removed for width, so there is no in-app explanation. Owed |
 
 
 ---
@@ -334,11 +334,11 @@ unaccounted — they show up to admit failure. That is the behavior worth
 protecting. Weights shows 6 missed and 15 unaccounted — silent abandonment is
 the real drift, not the miss.
 
-SHIPPED, with a correction. The streak is accounting-based at an 80% daily
-threshold. The day squares originally filled by the accounting ratio, which made
-a fully-missed day look identical to a fully-completed one. Corrected to a
-two-channel encoding: fill height = completion ratio, outline = day accounted
-for. The streak number itself remains accounting-based.
+SHIPPED. The streak is accounting-based at an 80% daily threshold. The square
+encoding went through three iterations — accounting-ratio fill (rewarded
+missing), fill plus outline (no payoff for closing out), and finally a stacked
+two-tone fill: teal for completed, neutral for missed, empty for unanswered.
+A fully-accounted day fills completely. The missed segment must never be coral.
 
 **2. Quality-drift signal in the evidence pack.**
 `completion_rating` (crushed it / partly / lost focus) is captured on every
