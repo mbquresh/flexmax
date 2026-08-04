@@ -39,7 +39,16 @@ export interface Profile {
   id: string;
   name: string;
   timezone: string;
+  sleep_target_minutes: number | null;
+  wake_target_minutes: number | null;
   created_at: string;
+}
+
+export interface DayLog {
+  user_id: string;
+  date: string;
+  slept_at: number | null;
+  woke_at: number | null;
 }
 
 export interface PsychologyProfile {
@@ -174,6 +183,12 @@ export interface Database {
         Row: { id: string; user_id: string; token: string; platform: string; created_at: string };
         Insert: { user_id: string; token: string; platform: string };
         Update: Partial<{ user_id: string; token: string; platform: string }>;
+        Relationships: [];
+      };
+      day_log: {
+        Row: DayLog & Record<string, unknown>;
+        Insert: Partial<DayLog> & { user_id: string; date: string };
+        Update: Partial<DayLog>;
         Relationships: [];
       };
     };
