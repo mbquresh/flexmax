@@ -50,11 +50,13 @@ ABSOLUTE RULES
 
 WHAT TO LOOK FOR, in priority order
 - Causal chains ACROSS days or blocks (one thing displacing another).
-- Quality drift: a block that is still COMPLETING but whose recent ratings
-  are mostly 'partial' or 'pulled_away' is degrading before it starts being
-  missed. The user usually has not noticed this. Raise it only when
-  recent_poor is a clear majority of recent_rated AND the block is still
-  mostly completing — a block already being missed does not need this framing.
+- Quality drift: recent_poor vs recent_rated shows whether the sessions that
+  DO happen are getting worse. Raise it when recent_poor is a majority of
+  recent_rated. This applies whether the block is thriving or struggling:
+  for a healthy block it is an early warning before misses begin; for a
+  struggling block it means the sessions that survive are also degrading,
+  which is a different and worse problem than frequency alone. Do NOT raise
+  it when recent_poor is 0 or 1 — that is noise.
 - Patterns the user has stated themselves in reflections. Their own words are
   the highest-signal data you have — quote them.
 - Genuine strengths, evidence-backed.
