@@ -13,10 +13,11 @@ import {
 import { router } from "expo-router";
 import { generateDailyInstances, supabase } from "../src/lib/supabase";
 import { WEEKDAYS } from "../src/lib/schedule";
-import { getTomorrowLocalDateString, minutesToTime } from "../src/lib/time";
+import { getLocalDateString, getTomorrowLocalDateString, minutesToTime } from "../src/lib/time";
 import { handleError } from "../src/lib/errors";
 import { useAuth } from "../src/providers/AuthProvider";
 import { RequireAuth } from "../src/components/RequireAuth";
+import { CloseTodayRow } from "../src/components/CloseTodayRow";
 import { DailyInstance } from "../src/types/database";
 import { colors, spacing, radii, typography } from "../src/theme";
 
@@ -36,6 +37,8 @@ function PlanTomorrowScreenContent() {
   }, []);
 
   const [instances, setInstances] = useState<DailyInstance[]>([]);
+  const [closeTodayInstances, setCloseTodayInstances] = useState<DailyInstance[]>([]);
+  const [awaitingPresetIds, setAwaitingPresetIds] = useState<Set<string>>(new Set());
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [loadedDetails, setLoadedDetails] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
@@ -48,23 +51,37 @@ function PlanTomorrowScreenContent() {
     try {
       await generateDailyInstances(tomorrowDate);
 
-      const { data, error } = await supabase
-        .from("daily_schedule_instances")
-        .select("*, block:schedule_blocks(*)")
-        .eq("user_id", session.user.id)
-        .eq("date", tomorrowDate)
-        .neq("status", "removed")
-        .order("start_minutes");
+      const todayDate = getLocalDateString();
 
-      if (error) throw error;
+      const [tomorrowResult, closeTodayResult] = await Promise.all([
+        supabase
+          .from("daily_schedule_instances")
+          .select("*, block:schedule_blocks(*)")
+          .eq("user_id", session.user.id)
+          .eq("date", tomorrowDate)
+          .neq("status", "removed")
+          .order("start_minutes"),
+        supabase
+          .from("daily_schedule_instances")
+          .select("*, block:schedule_blocks!inner(*)")
+          .eq("user_id", session.user.id)
+          .eq("date", todayDate)
+          .in("status", ["pending", "active"])
+          .neq("block.category", "wind_down")
+          .order("start_minutes"),
+      ]);
 
-      const rows = data ?? [];
+      if (tomorrowResult.error) throw tomorrowResult.error;
+      if (closeTodayResult.error) throw closeTodayResult.error;
+
+      const rows = tomorrowResult.data ?? [];
       const details: Record<string, string> = {};
       for (const inst of rows) {
         details[inst.id] = inst.task_detail ?? "";
       }
 
       setInstances(rows);
+      setCloseTodayInstances(closeTodayResult.data ?? []);
       setLoadedDetails(details);
       setDrafts({ ...details });
     } catch (err) {
@@ -80,6 +97,79 @@ function PlanTomorrowScreenContent() {
 
   const updateDraft = (instanceId: string, text: string) => {
     setDrafts((prev) => ({ ...prev, [instanceId]: text }));
+  };
+
+  const closeTodayLeft = closeTodayInstances.filter(
+    (i) => i.status === "pending" || i.status === "active"
+  ).length;
+  const showCloseToday = closeTodayLeft > 0 || awaitingPresetIds.size > 0;
+
+  const handleCloseTodayStatus = async (
+    instanceId: string,
+    status: "completed" | "missed" | "skipped"
+  ) => {
+    const previous = closeTodayInstances;
+    setCloseTodayInstances((prev) =>
+      prev.map((i) => (i.id === instanceId ? { ...i, status } : i))
+    );
+
+    if (status === "missed") {
+      setAwaitingPresetIds((prev) => new Set(prev).add(instanceId));
+    } else {
+      setAwaitingPresetIds((prev) => {
+        const next = new Set(prev);
+        next.delete(instanceId);
+        return next;
+      });
+    }
+
+    const { error } = await supabase
+      .from("daily_schedule_instances")
+      .update({ status })
+      .eq("id", instanceId);
+
+    if (error) {
+      setCloseTodayInstances(previous);
+      if (status === "missed") {
+        setAwaitingPresetIds((prev) => {
+          const next = new Set(prev);
+          next.delete(instanceId);
+          return next;
+        });
+      }
+      handleError(error, "closeTodayStatus");
+    }
+  };
+
+  const handlePresetTap = async (instanceId: string, tag: string) => {
+    const previous = closeTodayInstances;
+    setCloseTodayInstances((prev) =>
+      prev.map((i) => (i.id === instanceId ? { ...i, miss_reason_tag: tag } : i))
+    );
+    setAwaitingPresetIds((prev) => {
+      const next = new Set(prev);
+      next.delete(instanceId);
+      return next;
+    });
+
+    const { error } = await supabase
+      .from("daily_schedule_instances")
+      .update({ miss_reason_tag: tag })
+      .eq("id", instanceId);
+
+    if (error) {
+      setCloseTodayInstances(previous);
+      setAwaitingPresetIds((prev) => new Set(prev).add(instanceId));
+      handleError(error, "closeTodayPreset");
+    }
+  };
+
+  const handlePresetSkip = (instanceId: string) => {
+    setAwaitingPresetIds((prev) => {
+      const next = new Set(prev);
+      next.delete(instanceId);
+      return next;
+    });
   };
 
   const handleSave = async () => {
@@ -134,7 +224,7 @@ function PlanTomorrowScreenContent() {
             <Text style={styles.closeBtn}>✕</Text>
           </TouchableOpacity>
           <View style={styles.headerText}>
-            <Text style={styles.title}>Plan tomorrow</Text>
+            <Text style={styles.title}>Tonight</Text>
             <Text style={styles.subtitle}>
               {tomorrowWeekday} · {tomorrowDate}
             </Text>
@@ -151,6 +241,25 @@ function PlanTomorrowScreenContent() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        {showCloseToday ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionHeader}>
+              Close today · {closeTodayLeft} left
+            </Text>
+            {closeTodayInstances.map((instance) => (
+              <CloseTodayRow
+                key={instance.id}
+                instance={instance}
+                onStatusTap={handleCloseTodayStatus}
+                onPresetTap={handlePresetTap}
+                onPresetSkip={handlePresetSkip}
+              />
+            ))}
+          </View>
+        ) : null}
+
+        <View style={styles.section}>
+          <Text style={styles.sectionHeader}>Plan tomorrow</Text>
         {instances.length === 0 ? (
           <View style={styles.empty}>
             <Text style={styles.emptyText}>No blocks scheduled for tomorrow.</Text>
@@ -192,6 +301,7 @@ function PlanTomorrowScreenContent() {
             );
           })
         )}
+        </View>
       </ScrollView>
 
       {instances.length > 0 ? (
@@ -249,7 +359,16 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xxxl,
+    gap: spacing.lg,
+  },
+  section: {
     gap: spacing.md,
+  },
+  sectionHeader: {
+    color: colors.textMuted,
+    ...typography.smallBold,
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
   },
   row: {
     backgroundColor: colors.surface,
