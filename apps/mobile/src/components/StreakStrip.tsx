@@ -45,7 +45,7 @@ export function StreakStrip({
             ? `${stats.streak}-day streak`
             : "No streak yet"}
         </Text>
-        <Text style={styles.streakSub}>{completionRate}% completed this week</Text>
+        <Text style={styles.streakSub}>{completionRate}% this week</Text>
       </View>
       <View style={daySquareStripStyles.weekStrip}>
         {["M", "T", "W", "T", "F", "S", "S"].map((day, i) => {
