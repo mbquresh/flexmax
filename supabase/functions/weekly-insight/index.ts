@@ -184,7 +184,7 @@ serve(async (req) => {
 
     const { data: profile, error: profileError } = await supabase
       .from("psychology_profiles")
-      .select("raw_ai_summary, accountability_tone")
+      .select("accountability_tone")
       .eq("user_id", user.id)
       .maybeSingle();
 

@@ -140,10 +140,15 @@ function AccountScreenContent() {
               </View>
             ) : null}
 
+            {psychologyProfile.raw_ai_summary ? (
+              <>
+                {renderChips("Goals", psychologyProfile.goals)}
+                {renderChips("Sabotage patterns", psychologyProfile.sabotage_triggers)}
+                {renderChips("Avoidance patterns", psychologyProfile.avoidance_patterns)}
+              </>
+            ) : null}
+
             {renderChips("Peak energy", psychologyProfile.peak_energy_times)}
-            {renderChips("Goals", psychologyProfile.goals)}
-            {renderChips("Sabotage patterns", psychologyProfile.sabotage_triggers)}
-            {renderChips("Avoidance patterns", psychologyProfile.avoidance_patterns)}
 
             {psychologyProfile.motivation_style ? (
               <View style={styles.profileBlock}>
