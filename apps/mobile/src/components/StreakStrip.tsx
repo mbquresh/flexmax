@@ -43,7 +43,7 @@ export function StreakStrip({
         <Text style={styles.streakLabel}>
           {stats.streak > 0
             ? `${stats.streak}-day streak`
-            : "No streak yet"}
+            : "Start streak today"}
         </Text>
         <Text style={styles.streakSub}>{completionRate}% this week</Text>
       </View>
