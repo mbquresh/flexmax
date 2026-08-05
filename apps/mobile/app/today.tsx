@@ -1017,6 +1017,13 @@ function TodayScreenContent() {
             },
           },
           {
+            label: "Last week",
+            onPress: () => {
+              setMenuOpen(false);
+              router.push("/weekly-recap");
+            },
+          },
+          {
             label: "Edit schedule",
             onPress: () => {
               setMenuOpen(false);

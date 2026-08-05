@@ -2,6 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { TodayStats } from "../lib/stats";
 import { getLocalDateString } from "../lib/time";
+import { DaySquare, daySquareStripStyles } from "./DaySquare";
 import { colors, spacing, radii, typography } from "../theme";
 
 interface StreakStripProps {
@@ -27,11 +28,6 @@ function getTodayWeekIndex(): number {
   return 0;
 }
 
-function segmentHeightPct(ratio: number): number {
-  if (ratio <= 0) return 0;
-  return Math.max(12, Math.round(ratio * 100));
-}
-
 export function StreakStrip({
   stats,
   todayCompletionRatio,
@@ -51,7 +47,7 @@ export function StreakStrip({
         </Text>
         <Text style={styles.streakSub}>{completionRate}% completed this week</Text>
       </View>
-      <View style={styles.weekStrip}>
+      <View style={daySquareStripStyles.weekStrip}>
         {["M", "T", "W", "T", "F", "S", "S"].map((day, i) => {
           const isToday = i === todayIndex;
           const completionRatio =
@@ -62,52 +58,17 @@ export function StreakStrip({
             isToday && todayMissedRatio !== undefined
               ? todayMissedRatio
               : stats.weekDayMissedRatio[i];
-          const combinedRatio = completionRatio + missedRatio;
-          const combinedPct = segmentHeightPct(combinedRatio);
-          const completedPct = segmentHeightPct(completionRatio);
           const isFuture = i > todayIndex;
-          const isFilledOut = combinedRatio >= 1;
 
           return (
-            <View
+            <DaySquare
               key={i}
-              style={[styles.daySquare, isFuture && styles.daySquareFuture]}
-            >
-              {combinedPct > 0 ? (
-                <View
-                  style={[
-                    styles.fill,
-                    {
-                      height: `${combinedPct}%`,
-                      backgroundColor: colors.streakMissed,
-                    },
-                  ]}
-                />
-              ) : null}
-              {completedPct > 0 ? (
-                <View
-                  style={[
-                    styles.fill,
-                    {
-                      height: `${completedPct}%`,
-                      backgroundColor: colors.streak,
-                    },
-                  ]}
-                />
-              ) : null}
-              {isToday ? <View style={styles.todayRing} pointerEvents="none" /> : null}
-              <View style={styles.dayLetterWrap}>
-                <Text
-                  style={[
-                    styles.daySquareLetter,
-                    isFilledOut && styles.daySquareLetterDone,
-                    isFuture && styles.daySquareLetterFuture,
-                  ]}
-                >
-                  {day}
-                </Text>
-              </View>
-            </View>
+              letter={day}
+              completionRatio={completionRatio}
+              missedRatio={missedRatio}
+              isToday={isToday}
+              isFuture={isFuture}
+            />
           );
         })}
       </View>
@@ -139,52 +100,5 @@ const styles = StyleSheet.create({
   streakSub: {
     color: colors.streakMuted,
     ...typography.caption,
-  },
-  weekStrip: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 6,
-  },
-  daySquare: {
-    flex: 1,
-    aspectRatio: 1,
-    borderRadius: radii.sm,
-    backgroundColor: colors.streakSquare,
-    overflow: "hidden",
-  },
-  fill: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  dayLetterWrap: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  todayRing: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderWidth: 1.5,
-    borderColor: colors.streak,
-    borderRadius: radii.sm,
-  },
-  daySquareFuture: {
-    backgroundColor: colors.streakSquare,
-  },
-  daySquareLetter: {
-    color: colors.streakMuted,
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  daySquareLetterDone: {
-    color: colors.text,
-  },
-  daySquareLetterFuture: {
-    color: colors.streakMuted,
   },
 });
