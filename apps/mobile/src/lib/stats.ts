@@ -10,6 +10,7 @@ export interface TodayStats {
   todayTotal: number; // relevant instances dated today, as fetched
   weekDayCompletionRatio: number[]; // Mon–Sun, 0–1 completed / relevant (fill height)
   weekDayMissedRatio: number[]; // Mon–Sun, 0–1 missed / relevant (fill height)
+  todayCountedInStreak: boolean;
 }
 
 function toLocalDateStr(d: Date): string {
@@ -32,7 +33,7 @@ const EXCLUDED = ["removed", "rescheduled"];
 // A day counts toward the streak at 80%+ accounted. With ~8 blocks that is
 // 7 of 8 — one forgotten block should not erase a day that was otherwise
 // closed out honestly, but a real collapse still breaks the streak.
-const STREAK_THRESHOLD = 0.8;
+export const STREAK_THRESHOLD = 0.8;
 
 export async function fetchTodayStats(userId: string): Promise<TodayStats> {
   // ── Completion rate: current week Mon–Sun ──────────────────────────────
@@ -183,5 +184,6 @@ export async function fetchTodayStats(userId: string): Promise<TodayStats> {
     todayTotal,
     weekDayCompletionRatio,
     weekDayMissedRatio,
+    todayCountedInStreak: accountedDates.has(todayStr),
   };
 }

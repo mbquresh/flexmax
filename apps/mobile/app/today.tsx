@@ -50,6 +50,7 @@ import { AdhocAnytimeRow } from "../src/components/AdhocAnytimeRow";
 import { TimePicker } from "../src/components/TimePicker";
 import { AppMenu, MenuButton } from "../src/components/AppMenu";
 import { useTodayData } from "../src/hooks/useTodayData";
+import { STREAK_THRESHOLD } from "../src/lib/stats";
 import { colors, spacing, radii, typography } from "../src/theme";
 
 function TodayScreenContent() {
@@ -152,6 +153,26 @@ function TodayScreenContent() {
     const weekTotal = stats.totalCount - stats.todayTotal + relevant.length;
 
     return weekTotal > 0 ? Math.round((weekCompleted / weekTotal) * 100) : 0;
+  }, [instances, stats]);
+
+  const liveStreak = useMemo(() => {
+    if (!stats) return 0;
+    const relevant = instances.filter(
+      (i) => i.status !== "removed" && i.status !== "rescheduled"
+    );
+    if (relevant.length === 0) return stats.streak;
+
+    const accounted = relevant.filter((i) =>
+      ["completed", "missed", "skipped"].includes(i.status)
+    ).length;
+    const meetsThreshold = accounted / relevant.length >= STREAK_THRESHOLD;
+
+    // The fetched streak may already include today. Only adjust for the
+    // difference between the fetched state and the live state — a naive +1
+    // would double-count.
+    if (meetsThreshold && !stats.todayCountedInStreak) return stats.streak + 1;
+    if (!meetsThreshold && stats.todayCountedInStreak) return stats.streak - 1;
+    return stats.streak;
   }, [instances, stats]);
 
   const timelineItems = useMemo(() => {
@@ -921,6 +942,7 @@ function TodayScreenContent() {
               todayCompletionRatio={todayCompletionRatio}
               todayMissedRatio={todayMissedRatio}
               liveCompletionRate={liveCompletionRate}
+              liveStreak={liveStreak}
             />
           ) : null}
         </View>

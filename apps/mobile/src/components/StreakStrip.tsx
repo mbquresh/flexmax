@@ -10,6 +10,7 @@ interface StreakStripProps {
   todayCompletionRatio?: number;
   todayMissedRatio?: number;
   liveCompletionRate?: number;
+  liveStreak?: number;
 }
 
 function getTodayWeekIndex(): number {
@@ -33,16 +34,18 @@ export function StreakStrip({
   todayCompletionRatio,
   todayMissedRatio,
   liveCompletionRate,
+  liveStreak,
 }: StreakStripProps) {
   const todayIndex = getTodayWeekIndex();
   const completionRate = liveCompletionRate ?? stats.completionRate;
+  const streak = liveStreak ?? stats.streak;
 
   return (
     <View style={styles.streakContainer}>
       <View style={styles.streakHeader}>
         <Text style={styles.streakLabel}>
-          {stats.streak > 0
-            ? `${stats.streak}-day streak`
+          {streak > 0
+            ? `${streak}-day streak`
             : "Start streak today"}
         </Text>
         <Text style={styles.streakSub}>{completionRate}% this week</Text>
