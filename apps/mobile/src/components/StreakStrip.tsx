@@ -40,7 +40,11 @@ export function StreakStrip({
   return (
     <View style={styles.streakContainer}>
       <View style={styles.streakHeader}>
-        <Text style={styles.streakLabel}>{stats.streak}-day streak</Text>
+        <Text style={styles.streakLabel}>
+          {stats.streak > 0
+            ? `${stats.streak}-day streak`
+            : "No streak yet"}
+        </Text>
         <Text style={styles.streakSub}>{completionRate}% completed this week</Text>
       </View>
       <View style={daySquareStripStyles.weekStrip}>
