@@ -55,6 +55,8 @@ export interface PsychologyProfile {
   id: string;
   user_id: string;
   onboarding_messages: Array<{ role: "user" | "assistant"; content: string }>;
+  planners_abandoned: string | null;
+  past_failure_mode: string | null;
   peak_energy_times: string[] | null;
   avoidance_patterns: string[] | null;
   motivation_style: string | null;
