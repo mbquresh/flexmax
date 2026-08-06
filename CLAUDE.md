@@ -84,6 +84,18 @@ building Structured's feature, not ours. Keep FlexMax's AI focused on
 learning and adapting to the user's demonstrated behavior, not on
 authoring the plan itself.
 
+**Positioning lines that have been proposed and rejected:**
+- "The planner that learns why you quit" — reintroduces the planner category
+  this document explicitly refuses. Any line containing "planner" concedes
+  Structured's ground.
+- Headline recap copy leading with completion percentage — fails the bad-week
+  test. The weekly recap deliberately leads with days accounted for.
+- Any claim of the form "moving X increased completion by N%" — a causal claim
+  requiring a controlled comparison that the data cannot support.
+
+Accepted and still open: "Your schedule keeps failing because it doesn't know
+you." Stays out of the planner category and names the pain directly.
+
 ---
 
 
@@ -308,6 +320,8 @@ Still captured but NOT yet read:
 | Dark theme                                      | Design tokens make it feasible                                                                                                                               |
 | Night routine block is hard to answer           | Excluded from the evening sweep (hasn't happened yet) and from bedtime notifications (by design). Drifts to unaccounted unless answered from Today. Candidate fix: a third question on the morning DayBoundaryCard |
 | User instructions page                          | The streak rises on a day where everything was missed. The label qualifier was removed for width, so there is no in-app explanation. Owed |
+| Onboarding demonstration beat | Onboarding establishes the pain (screens 1-2) and sets the contract (screen 7), but never shows what the product DOES. A stranger goes from "how many planners have you abandoned?" to a $14.99 wall without seeing FlexMax work. Fix: show a REAL generated insight, explicitly labelled as another user's, before the contract screen. Not a claim about them — a demonstration. See rejected approaches below |
+| Showcase page carries the offer | docs/index.html has no pricing and no founding-member framing. With no trial it is the only pre-purchase evaluation surface, and most of the "is this enticing" work happens there and in the App Store listing, not in onboarding |
 
 
 ---
@@ -458,6 +472,26 @@ external testers arrive, not after.
 
 
 
+## Beta success criteria
+
+Four proof points, in order. Everything else is downstream of these, and none
+can be answered without real testers.
+
+1. **Can strangers understand the difference in 10 seconds?** Not "is it good" —
+   can someone who has never heard of it tell FlexMax apart from a planner from
+   the App Store listing and the showcase page alone.
+2. **Will they pay before using it?** The hard paywall is deliberate and filters
+   for the decided cohort, but the conversion floor is unknown.
+3. **Will they reopen after a bad week?** The north-star metric. Instrument it
+   before testers arrive.
+4. **Does the behavioral insight feel surprisingly accurate?** The entire
+   differentiation reduces to this. Validated on n=1 so far.
+
+If 1-4 hold, $14.99 is not the limiting factor. If they do not, more features
+will not fix it.
+
+
+
 ## Pricing & paywall (DECIDED — supersedes all earlier versions)
 
 - **$14.99/month. NO free trial.** Hard paywall.
@@ -521,3 +555,17 @@ to distrust the thing they paid for.
 
 Screen 6 solves the same problem honestly: it reflects the user's own answers
 back without interpreting them. Recognition, not fabrication.
+
+This proposal has now surfaced three times from external strategy sources, each
+time more specific — most recently as a four-line "execution profile" ("You tend
+to overload mornings. Your consistency drops after interruptions. Your best
+completion window is late afternoon."). It keeps recurring because it is the
+obvious answer to "how do you earn a paywall in 90 seconds." It stays rejected
+for the same reason each time: three taps cannot support a behavioral claim, and
+a fabricated day-zero profile that the genuine day-7 insight contradicts teaches
+the user to distrust the product's core output.
+
+The legitimate version of the same instinct is to DEMONSTRATE rather than claim:
+show a real insight the engine actually produced, explicitly labelled as another
+user's, and let it speak for what the product does. See "Onboarding
+demonstration beat" in the roadmap.
