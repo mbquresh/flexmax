@@ -203,6 +203,44 @@ them feel like a failure. Therefore the narrator MUST:
   `GROUP BY` finds the patterns that matter. Revisit when real multi-user data
   can calibrate the parameters.
 
+### Why onboarding stopped using AI
+
+The original onboarding was a four-turn Claude conversation that produced a
+psychology profile — peak energy times, avoidance patterns, sabotage triggers,
+a prose summary. It was deleted.
+
+Three reasons, in order of weight:
+
+**It contradicted the product thesis.** The engine is built on the premise that
+what a user says on day zero is noise and what they do over 30 days is signal.
+Every data-integrity rule in this document exists because self-reported and
+inferred claims turned out to be wrong. An AI-generated profile from a
+four-message conversation is exactly the kind of claim the rest of the system
+refuses to make.
+
+**It was superseded within a week.** Whatever the profile guessed about
+avoidance patterns, the behavioral evidence pack discovers properly from actual
+completion data, swap history, and the user's own reflections written in
+context. The profile was a placeholder for intelligence the system produces on
+its own.
+
+**It was the only unbounded cost and the only real abuse surface.** Onboarding
+fired multiple Claude calls per signup with no completion gate, so a single
+account could re-onboard repeatedly and any number of throwaway accounts could
+run up API spend before a cent of revenue.
+
+What replaced it captures the two things that are actually used —
+`accountability_tone`, which the weekly narrator reads directly, and
+`peak_energy_times` — plus recognition questions whose job is not data at all.
+Asking "how many planners have you abandoned?" and "what usually kills it?"
+before making any claim about the user is positioning, not extraction. The flow
+ends by stating what the product actually offers: it learns from what happens,
+so give it a week.
+
+Deliberately NOT rebuilt: any generated "insight" derived from onboarding
+answers. Three taps cannot support a behavioral claim, and presenting one would
+reintroduce the exact failure the deletion was meant to fix.
+
 ## Why it exists
 
 Every popular planner works well when you're already doing well. The 
@@ -220,7 +258,8 @@ offers the next real slot in the day.
 
 ## Core loop
 
-1. Conversational AI onboarding builds a psychology profile (4 turns)
+1. Seven-beat onboarding: two recognition questions, three preference
+   questions, an answer playback, and a contract screen. No AI, no typing.
 2. You build a schedule of time blocks — some flexible, some fixed anchors
 3. Tips from your own answers shape the schedule as you build it
 4. Timezone-aware notifications through the day
@@ -232,7 +271,7 @@ offers the next real slot in the day.
 
 **v1.4 — on TestFlight, internal testing.** Built solo.
 
-Working: AI onboarding and psychology profile, schedule builder with 
+Working: preset onboarding and preference profile, schedule builder with
 drag-to-swap and fixed anchors, check-ins, miss reflections, missed-block 
 recovery with reschedule, push notifications in each user's local 
 timezone, rate-limited AI endpoints with the API key server-side only.
@@ -263,8 +302,7 @@ apps/mobile/          Expo app
 packages/ai/          Claude wrappers + prompt system
 supabase/
   migrations/         schema
-  functions/          onboarding-chat, extract-psychology-profile,
-                      generate-schedule-tips, missed-block-recovery, nightly-notify
+  functions/          missed-block-recovery, nightly-notify, weekly-insight
 docs/index.html       the interactive demo published above
 ```
 
