@@ -279,7 +279,7 @@ Still captured but NOT yet read:
 | Retroactive bedtime capture                   | 014 actual_end_minutes (legacy column; data migrated to day_log) |
 | Behavioral learning v1 (THE flagship)         | 015 + weekly-insight + InsightCard                    |
 | Deterministic recovery copy (AI call REMOVED) | src/lib/recoveryCopy.ts                               |
-| AI onboarding (4-turn chat + profile extract) | onboarding-chat, extract-psychology-profile; OnboardingScreen.tsx — **slated for removal, see Architecture** |
+| Seven-beat preset onboarding | Replaces 4-turn AI chat. Recognition screens, tone/energy/pattern questions, answer playback, contract screen. Deletes onboarding-chat, extract-psychology-profile, generate-schedule-tips |
 | Accountability streak (80% threshold)         | stats.ts; two-tone square encoding                    |
 | Close-today sweep merged into evening ritual  | plan-tomorrow.tsx + CloseTodayRow; Done/Missed only, preset miss reasons |
 | Preset miss reasons                           | 019 miss_reason_tag; structural labels only, never stored as reflection prose |
@@ -300,8 +300,7 @@ Still captured but NOT yet read:
 | Presence-aware nudges (block-start + mid-block) | The "smart notification suite". User requested this in their OWN reflections 3x: "harder cutoffs", "need enforcements", "maybe you can do something to help" |
 | Shareable weekly recap card                     | The weekly scorecard. Growth primitive                                                                                                                       |
 | Day-3 first observation                         | New users currently see NOTHING for 5+ days (weekly-insight gates at engaged_days < 5). Week one is when they decide to keep the app                         |
-| Onboarding revamp — replace 4-turn AI chat with preset questions | Deletes `onboarding-chat` and `extract-psychology-profile`. Drops per-signup AI cost to ~zero and removes the ONLY unbounded abuse surface (a fake account could burn 30 onboarding calls/hour). `accountability_tone` comes from a direct preset answer instead of being inferred from chat |
-| Paywall + RevenueCat                            | Hard paywall $14.99/mo — paywall placement OPEN, see **Pricing & paywall**                                                                                   |
+| Paywall + RevenueCat                            | Hard paywall $14.99/mo, fires after onboarding screen 7. Placement RESOLVED.                                                                                   |
 | "Ask me about yourself" conversational surface  | Reads get_behavior_evidence with the narrator's tone rules                                                                                                   |
 | reflection_improve UX fix                       | 31% fill rate on the highest-signal field in the DB                                                                                                          |
 | External TestFlight                             | Needs Beta App Review (~1 day) + a demo account or auto-rejection                                                                                            |
@@ -469,6 +468,12 @@ external testers arrive, not after.
   must be explicit copy on the paywall and account screen, not implied. At $14.99
   this is a materially stronger retention lever than at $9.99.
 
+**Founding-member framing.** For the first 100-500 users, present the annual
+plan as founding membership rather than a discount: "Founding members: $99/year,
+locked forever." Same price, different frame — it creates urgency and positions
+early buyers as participants in something being built rather than customers of
+something finished. Consistent with the contract screen's framing.
+
 **Rationale for no trial at this stage:** every free user costs real Anthropic
 spend; payment is itself the first commitment device in an accountability
 product; direct buyers outperform trial-converted users on LTV in productivity;
@@ -479,13 +484,40 @@ later, once the insight engine is proven.
 **Accepted cost:** some "paywalled instantly, didn't get to try it" reviews.
 That is the tax of the approach, not a signal something is broken.
 
-**OPEN QUESTION — paywall placement.** Earlier strategy placed the wall
-immediately after the 4-turn AI onboarding, "right after the psychology profile
-is shown." That anchor is being DELETED (see onboarding revamp). A $14.99 wall
-behind a preset questionnaire proves nothing. Resolve before RevenueCat work.
+**Paywall placement (RESOLVED).** The wall fires immediately after onboarding
+completes — after screen 7 of the seven-beat preset flow. Earlier strategy
+anchored it to the AI onboarding's psychology-profile reveal; that flow was
+deleted, and the replacement earns the ask differently:
+
+- Screens 1-2 are RECOGNITION ("how many planners have you abandoned?", "what
+  usually kills it?"). They name the user's failure history before the pitch.
+- Screen 6 plays their answers back as declarative fragments. Proof of
+  listening, with zero fabrication.
+- Screen 7 is the contract: "FlexMax learns from what actually happens. The
+  patterns come from what you do, not what you say. Give it a week."
+
+That last screen reframes the $14.99 honestly — the user is funding an
+observation period, not buying a finished product. That is the true version of
+the aha the AI conversation used to fake.
 
 **DEPENDENCY — docs/index.html is now commercially load-bearing.** With no trial,
 the public showcase is the only place a prospective payer can evaluate the
 product before paying. It currently carries no pricing and no founding-member
 framing. It must stay in sync with the shipped app AND carry the offer.
 
+### Rejected: generating an "insight" from onboarding answers
+
+An external strategy suggestion proposed showing a personalized finding at the
+paywall, derived from the preset answers — e.g. "Based on your answers, your
+biggest risk is overloading mornings and relying on motivation after missed
+blocks."
+
+**Rejected.** Three taps cannot support a behavioral claim. This is the exact
+failure the AI onboarding was deleted to eliminate: a day-zero guess presented
+as intelligence. It violates the engine's founding rule (nothing is claimed that
+the data does not support), and it creates a promise the product must then honor
+— if the genuine day-7 insight contradicts the fabricated one, the user learns
+to distrust the thing they paid for.
+
+Screen 6 solves the same problem honestly: it reflects the user's own answers
+back without interpreting them. Recognition, not fabrication.
