@@ -234,33 +234,15 @@ ${JSON.stringify(evidence)}`,
       });
     }
 
-    const { error: supersedeError } = await supabase
-      .from("behavioral_insights")
-      .update({ superseded: true })
-      .eq("user_id", user.id)
-      .eq("superseded", false);
+    const { data: inserted, error: replaceError } = await supabase.rpc(
+      "replace_behavioral_insights",
+      {
+        p_user_id: user.id,
+        p_insights: parsed,
+      }
+    );
 
-    if (supersedeError) throw supersedeError;
-
-    const rows = parsed.map((item, i) => ({
-      user_id: user.id,
-      kind: item.kind,
-      belief: item.belief,
-      evidence: item.evidence,
-      suggestion: item.suggestion ?? null,
-      related_blocks: item.related_blocks ?? [],
-      nudge_line: item.nudge_line ?? null,
-      rank: i + 1,
-      superseded: false,
-    }));
-
-    const { data: inserted, error: insertError } = await supabase
-      .from("behavioral_insights")
-      .insert(rows)
-      .select("*")
-      .order("rank");
-
-    if (insertError) throw insertError;
+    if (replaceError) throw replaceError;
 
     return new Response(JSON.stringify({ insights: inserted, cached: false }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
