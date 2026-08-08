@@ -415,6 +415,79 @@ it is recorded as a standing copy rule.
 
 ---
 
+## UI depth — diagnosis and build order (2026-08-08)
+
+Audit of the Today screen and its components against the design language.
+Verdict: the UI reads as static and generic. The cause is NOT that the design
+language is too restrained. The cause is that restraint was implemented as
+absence.
+
+### The distinction that governs this work
+
+"Static" and "generic" are two separate problems and neither is fixed by
+decoration. The no-gradient / no-shadow / no-glow / no-emoji /
+no-celebration-animation rules stay binding and are not relitigated here.
+
+What was conflated: **flat is not motionless, and restrained is not
+low-contrast.** Apple's restraint is heavily motion-driven. Porsche's restraint
+is proportion and material, not emptiness. Having forbidden ourselves color,
+ornament, and depth, the remaining differentiation axes are TYPOGRAPHY, MOTION,
+HAPTICS, and PROPORTION — and as of this audit all four are untouched.
+
+If a future session tries to fix "generic" by adding gradients, shadows, accent
+colors, or celebratory animation, it has misdiagnosed the problem. The fix
+direction is physical feedback and typographic hierarchy, not visual noise.
+
+Motion added under this section is STATE TRANSITION and PHYSICS — a status
+changing, a card settling, a list reflowing. It is not celebration. The
+no-confetti / no-cheerleading rule is unaffected.
+
+### Evidence found in code
+
+- `expo-haptics` is not in `apps/mobile/package.json`. There are zero haptics in
+  the app. Every check-in, swipe-open, swap commit, rating tap and sheet
+  dismissal is silent.
+- `expo-font` is absent and no `fontFamily` appears anywhere. All type is system
+  SF at default weights.
+- `theme.ts` defines a `typography` scale that `BlockCard.tsx` ignores —
+  `fontSize: 16 / 14 / 13` and `fontWeight` are hardcoded in its StyleSheet.
+  The scale is not internally consistent.
+- 16 text glyphs are used as icons across components: `🔒` ×4, `✕` ×6, `✓` ×3,
+  `→` ×2, `⠿` ×1. The four lock emoji directly violate the standing "no emoji
+  anywhere in the UI" rule and render in full color on a deliberately greyscale
+  screen. `@expo/vector-icons` ships with Expo — no new dependency required.
+- No state transitions. Check-in snaps the status bar color, circle fill and
+  border instantly. Swaps teleport. Removals jump. Reanimated 4 is installed and
+  barely used.
+- The only block-card animation is a border that blinks 5× (`triggerFlash`),
+  which reads as a validation error rather than a confirmation.
+- All press feedback is stock `TouchableOpacity` opacity.
+- Drag lift is imperceptible: `scale: 1.03` is below threshold, and the
+  accompanying `elevation: 8` is Android-only, so a dragged card does not lift
+  on iPhone at all.
+- Greyscale stack runs a 13-point luminance gap (`#DCDCDC` background /
+  `#EDEDED` surface) with a 0.5px border.
+
+### Build order — one commit each, in sequence
+
+| # | Work | Notes |
+|---|------|-------|
+| 1 | Haptics pass | Add `expo-haptics` (works in Expo Go). Wire ~8 call sites: check-in commit, rating select, swipe-open detent, swap commit, mark-missed, remove confirm, sheet open/dismiss. Highest feel-delta per line of code in the app |
+| 2 | Icon + emoji purge | Replace all 16 text glyphs with `@expo/vector-icons`. Enforces an existing rule; kills the loudest wrong note on the screen |
+| 3 | Typography system | Load a face via `expo-font` OR commit to system SF with deliberate weight/tracking discipline — DECISION REQUIRED before this starts. Then make every component consume `theme.typography` and delete hardcoded sizes from `BlockCard` |
+| 4 | State transitions | Animate status change, circle fill, and card settle. Replace the 5× blink flash. Layout animation on swap / removal / add so the list reflows instead of jumping |
+| 5 | Press states + proportion | Deliberate scale/background press response; revisit the luminance gap and drag lift |
+
+### Open decisions
+
+- **Typeface (blocks item 3).** Custom face vs. system SF with real tracking and
+  weight discipline. Changes the shape of the work substantially.
+- **Drag shadow exception.** A shadow present ONLY during an active drag is a
+  physics affordance, not decoration — the no-shadow rule exists to prevent
+  decorative depth. Unresolved whether the drag state earns the exception.
+
+---
+
 ## v2-issues.md deferred items
 
 1. AI rate limiting on edge functions (priority: HIGH before public launch)
