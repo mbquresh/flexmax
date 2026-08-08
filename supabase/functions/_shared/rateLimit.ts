@@ -1,10 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const LIMITS: Record<string, number> = {
-  "onboarding-chat": 30,
-  "extract-psychology-profile": 5,
-  "generate-schedule-tips": 5,
-  "missed-block-recovery": 15,
   "weekly-insight": 3,
 };
 
