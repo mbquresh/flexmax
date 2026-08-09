@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo } from "react";
 import { router } from "expo-router";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { useAuth } from "../providers/AuthProvider";
 import { useTheme } from "../providers/ThemeProvider";
+import { BrandLoader } from "./BrandLoader";
 import { Colors } from "../theme";
 
 interface RequireAuthProps {
@@ -37,7 +38,7 @@ export function RequireAuth({
   if (!authReady) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color={colors.primary} />
+        <BrandLoader size={56} />
       </View>
     );
   }

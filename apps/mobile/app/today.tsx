@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  ActivityIndicator,
   TouchableOpacity,
   Pressable,
   Modal,
@@ -37,6 +36,7 @@ import { minutesToTime, getLocalDateString } from "../src/lib/time";
 import { scheduleTodayBlockNotifications } from "../src/lib/blockNotifications";
 import { getInitials } from "../src/lib/format";
 import { RequireAuth } from "../src/components/RequireAuth";
+import { BrandLoader } from "../src/components/BrandLoader";
 import { StreakStrip } from "../src/components/StreakStrip";
 import { CheckInSheet } from "../src/components/CheckInSheet";
 import { TaskDetailSheet } from "../src/components/TaskDetailSheet";
@@ -907,7 +907,7 @@ function TodayScreenContent() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color={colors.primary} />
+        <BrandLoader size={56} />
       </View>
     );
   }

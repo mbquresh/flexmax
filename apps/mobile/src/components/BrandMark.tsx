@@ -2,13 +2,13 @@ import React from "react";
 import Svg, { Rect, Path } from "react-native-svg";
 import { useTheme } from "../providers/ThemeProvider";
 
-const W = 442;
-const H = 545;
+export const MARK_W = 442;
+export const MARK_H = 545;
 
 export function BrandMark({ size = 64 }: { size?: number }) {
   const { colors } = useTheme();
   return (
-    <Svg width={(size * W) / H} height={size} viewBox={`0 0 ${W} ${H}`}>
+    <Svg width={(size * MARK_W) / MARK_H} height={size} viewBox={`0 0 ${MARK_W} ${MARK_H}`}>
       {/* stem */}
       <Rect x={0} y={0} width={128} height={545} rx={64} fill={colors.menuBarBlue} />
       {/* top arm */}

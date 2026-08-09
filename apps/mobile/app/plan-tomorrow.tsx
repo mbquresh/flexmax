@@ -19,6 +19,7 @@ import { handleError } from "../src/lib/errors";
 import { useAuth } from "../src/providers/AuthProvider";
 import { useTheme } from "../src/providers/ThemeProvider";
 import { RequireAuth } from "../src/components/RequireAuth";
+import { BrandLoader } from "../src/components/BrandLoader";
 import { CloseTodayRow } from "../src/components/CloseTodayRow";
 import { DailyInstance } from "../src/types/database";
 import { Colors, spacing, radii, typography, iconSizes } from "../src/theme";
@@ -218,7 +219,7 @@ function PlanTomorrowScreenContent() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color={colors.primary} />
+        <BrandLoader size={56} />
       </View>
     );
   }

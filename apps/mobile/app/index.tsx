@@ -1,8 +1,9 @@
 import { useMemo } from "react";
 import { Redirect } from "expo-router";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { useAuth } from "../src/providers/AuthProvider";
 import { useTheme } from "../src/providers/ThemeProvider";
+import { BrandLoader } from "../src/components/BrandLoader";
 import { Colors } from "../src/theme";
 
 export default function Index() {
@@ -13,7 +14,7 @@ export default function Index() {
   if (loading) {
     return (
       <View style={styles.container}>
-        <ActivityIndicator size="large" color={colors.primary} />
+        <BrandLoader size={56} />
       </View>
     );
   }

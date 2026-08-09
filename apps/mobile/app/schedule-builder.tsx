@@ -34,6 +34,7 @@ import { TimePicker } from "../src/components/TimePicker";
 import { handleError, getErrorMessage } from "../src/lib/errors";
 
 import { RequireAuth } from "../src/components/RequireAuth";
+import { BrandLoader } from "../src/components/BrandLoader";
 import { BoundaryRow } from "../src/components/BoundaryRow";
 import { Colors, spacing, radii, typography, iconSizes } from "../src/theme";
 
@@ -474,7 +475,7 @@ function ScheduleBuilderScreenContent() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color={colors.primary} />
+        <BrandLoader size={56} />
       </View>
     );
   }

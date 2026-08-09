@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  ActivityIndicator,
 } from "react-native";
 import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
@@ -13,6 +12,7 @@ import { getLocalDateString } from "../src/lib/time";
 import { handleError } from "../src/lib/errors";
 import { useAuth } from "../src/providers/AuthProvider";
 import { RequireAuth } from "../src/components/RequireAuth";
+import { BrandLoader } from "../src/components/BrandLoader";
 import { DaySquare, daySquareStripStyles } from "../src/components/DaySquare";
 import { BehavioralInsight } from "../src/types/database";
 import { Colors, spacing, radii, iconSizes } from "../src/theme";
@@ -198,7 +198,7 @@ function WeeklyRecapScreenContent() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator color={colors.primary} />
+        <BrandLoader size={56} />
       </View>
     );
   }
