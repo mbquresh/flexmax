@@ -43,6 +43,7 @@ const makeStyles = (c: Colors) =>
       paddingVertical: spacing.sm,
       paddingHorizontal: spacing.md,
       borderRadius: radii.md,
+      ...c.shadowRest,
     },
     rowDone: {
       opacity: 0.55,

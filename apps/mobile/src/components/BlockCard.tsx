@@ -4,6 +4,7 @@ import { Feather } from "@expo/vector-icons";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   Easing,
+  interpolate,
   interpolateColor,
   runOnJS,
   useAnimatedStyle,
@@ -211,7 +212,18 @@ export function BlockCard({
   const wrapperAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }, { scale: scale.value }],
     zIndex: isDragging.value ? 100 : 1,
-    elevation: isDragging.value ? 8 : 0,
+    shadowColor: colors.shadowRest.shadowColor,
+    shadowOffset: colors.shadowRest.shadowOffset,
+    shadowOpacity: interpolate(
+      isDragging.value,
+      [0, 1],
+      [colors.shadowRest.shadowOpacity, colors.shadowLift.shadowOpacity]
+    ),
+    shadowRadius: interpolate(
+      isDragging.value,
+      [0, 1],
+      [colors.shadowRest.shadowRadius, colors.shadowLift.shadowRadius]
+    ),
   }));
 
   const slideAnimatedStyle = useAnimatedStyle(() => ({
@@ -387,6 +399,7 @@ const makeStyles = (c: Colors) =>
       position: "relative",
       overflow: "hidden",
       borderRadius: radii.lg,
+      ...c.shadowRest,
     },
     actionsBehind: {
       position: "absolute",

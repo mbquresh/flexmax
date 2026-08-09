@@ -105,6 +105,7 @@ const makeStyles = (c: Colors) =>
       paddingHorizontal: spacing.xxl,
       paddingBottom: Platform.OS === "ios" ? 36 : 24,
       paddingTop: spacing.xxl,
+      ...c.shadowRest,
     },
     taskSheetHeader: {
       flexDirection: "row",

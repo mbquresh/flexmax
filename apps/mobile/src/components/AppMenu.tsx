@@ -204,6 +204,7 @@ const makeStyles = (c: Colors) =>
       paddingHorizontal: spacing.xl,
       paddingBottom: Platform.OS === "ios" ? 36 : 24,
       paddingTop: 10,
+      ...c.shadowRest,
     },
     sheetHandleWrap: {
       alignSelf: "center",

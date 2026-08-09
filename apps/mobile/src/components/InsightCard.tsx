@@ -52,6 +52,7 @@ const makeStyles = (c: Colors) =>
       marginBottom: spacing.lg,
       borderLeftWidth: 3,
       borderLeftColor: c.primary,
+      ...c.shadowRest,
     },
     label: {
       color: c.textMuted,

@@ -55,6 +55,7 @@ const makeStyles = (c: Colors) =>
       overflow: "hidden",
       borderWidth: 1,
       borderColor: c.dangerTint,
+      ...c.shadowRest,
     },
     cardDone: {
       opacity: 0.55,

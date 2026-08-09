@@ -253,6 +253,7 @@ const makeStyles = (c: Colors) =>
       padding: spacing.lg,
       borderWidth: 0.5,
       borderColor: c.border,
+      ...c.shadowRest,
     },
     sectionGap: {
       height: spacing.lg,

@@ -429,8 +429,12 @@ absence.
 ### The distinction that governs this work
 
 "Static" and "generic" are two separate problems and neither is fixed by
-decoration. The no-gradient / no-shadow / no-glow / no-emoji /
-no-celebration-animation rules stay binding and are not relitigated here.
+decoration. The no-gradient / no-glow / no-emoji / no-celebration-animation
+rules stay binding and are not relitigated here. Elevation is shadow-based in
+light and luminance-based in dark — `shadowRest` / `shadowLift` tokens in
+theme.ts. Shadows apply to cards and sheets only; the no-shadow rule still
+holds for nested surfaces, inputs, rows inside cards, and controls in both
+modes. If everything floats, nothing does.
 
 What was conflated: **flat is not motionless, and restrained is not
 low-contrast.** Apple's restraint is heavily motion-driven. Porsche's restraint
@@ -438,9 +442,10 @@ is proportion and material, not emptiness. Having forbidden ourselves color,
 ornament, and depth, the remaining differentiation axes are TYPOGRAPHY, MOTION,
 HAPTICS, and PROPORTION — and as of this audit all four are untouched.
 
-If a future session tries to fix "generic" by adding gradients, shadows, accent
+If a future session tries to fix "generic" by adding gradients, glow, accent
 colors, or celebratory animation, it has misdiagnosed the problem. The fix
 direction is physical feedback and typographic hierarchy, not visual noise.
+Card and sheet elevation in light mode is the one permitted shadow use.
 
 Motion added under this section is STATE TRANSITION and PHYSICS — a status
 changing, a card settling, a list reflowing. It is not celebration. The
@@ -495,6 +500,11 @@ carries the drag transform. Low value against real risk to the most-iterated
 logic in the app. REVIVAL CONDITION: only if list mutations become frequent or
 large enough that jumping reads as a bug rather than a non-event.
 
+**Drag shadow exception (2026-08-09).** Resolved as part of light-mode elevation.
+`shadowRest` on cards at rest; `shadowLift` interpolated during BlockCard drag.
+Dark tokens carry `shadowOpacity: 0` — elevation stays luminance-based there.
+Physics affordance, not decoration; light-mode only.
+
 **Custom typeface (2026-08-08).** System SF with disciplined tracking, a
 collapsed 7-step scale, and tabular figures closed the gap. A custom face would
 add licensing, font loading, FOUT in Expo Go, and bundle weight. The token layer
@@ -502,11 +512,6 @@ makes it a one-line swap in theme.ts if ever revisited.
 
 ### Still open
 
-- **Drag shadow exception.** Whether a shadow present only during an active drag
-  is a physics affordance rather than decoration. Unresolved. Note: shadows do
-  almost nothing in dark mode — a shadow is darkness cast on a surface, and
-  there is little darker than the dark background. Any shadow work is a
-  light-mode-only benefit.
 - **hapticCommit placement.** Fires after the swap RPC returns, contradicting the
   rule in haptics.ts that haptics confirm input, not network results. Moving it
   earlier closes a perceptual dead zone but makes a small optimistic promise,
@@ -529,11 +534,11 @@ type, `ThemeProvider` with three-way System/Light/Dark persisted to AsyncStorage
 static `colors` alias has been deleted — a file reaching for a static palette
 now fails to compile rather than silently rendering light on a dark screen.
 
-`Colors` is a mapped type (`{ [K in keyof typeof lightColors]: string }`), NOT
+`Colors` is a mapped type (`{ [K in keyof typeof lightColors]: typeof lightColors[K] }`), NOT
 `typeof lightColors`. Under `as const` the latter would make values literal
 types and darkColors could not compile with different hex. The mapped type keeps
-key-completeness enforcement while widening values to string — so a missing dark
-token is a compile error.
+key-completeness enforcement while preserving each token's value type — strings,
+shadow objects, etc. — so a missing dark token is a compile error.
 
 ### Palette reasoning — do not undo without reading this
 

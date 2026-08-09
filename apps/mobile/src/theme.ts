@@ -64,9 +64,43 @@ export const lightColors = {
   menuBarCoral: "#CE7358",
 
   overlayScrim: "#000000",
+
+  // Elevation is shadow-based in light, luminance-based in dark. A shadow is
+  // darkness cast on a surface; at L* 15 the dark background has nothing
+  // darker to receive it, so dark uses surface lightness instead. This mirrors
+  // how iOS and Material handle the same problem.
+  shadowRest: {
+    shadowColor: "#2B2822",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+  },
+  shadowLift: {
+    shadowColor: "#2B2822",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.16,
+    shadowRadius: 16,
+  },
 } as const;
 
-export type Colors = { [K in keyof typeof lightColors]: string };
+type WidenColorValue<T> = T extends string
+  ? string
+  : T extends {
+      shadowColor: string;
+      shadowOffset: { width: number; height: number };
+      shadowOpacity: number;
+      shadowRadius: number;
+    }
+    ? {
+        shadowColor: string;
+        shadowOffset: { width: number; height: number };
+        shadowOpacity: number;
+        shadowRadius: number;
+      }
+    : T;
+
+// Mapped from lightColors keys; strings widen to string so dark hex differs.
+export type Colors = { [K in keyof typeof lightColors]: WidenColorValue<typeof lightColors[K]> };
 
 // Typed as Colors so TypeScript enforces key-for-key completeness.
 // A missing token fails `npx tsc --noEmit` rather than rendering as undefined.
@@ -132,6 +166,19 @@ export const darkColors: Colors = {
   menuBarCoral: "#DE8567",
 
   overlayScrim: "#000000",
+
+  shadowRest: {
+    shadowColor: "#2B2822",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+  },
+  shadowLift: {
+    shadowColor: "#2B2822",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+  },
 };
 
 export const spacing = {
