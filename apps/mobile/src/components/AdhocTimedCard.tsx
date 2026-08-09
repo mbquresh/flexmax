@@ -1,8 +1,9 @@
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import { AdhocTask } from "../types/database";
 import { minutesToTime } from "../lib/time";
-import { colors, spacing, radii } from "../theme";
+import { colors, spacing, radii, iconSizes } from "../theme";
 
 interface AdhocTimedCardProps {
   task: AdhocTask;
@@ -25,7 +26,9 @@ export function AdhocTimedCard({ task, onToggle }: AdhocTimedCardProps) {
             {task.name}
           </Text>
           <View style={[styles.actionCircle, isDone && styles.actionCircleDone]}>
-            {isDone ? <Text style={styles.actionCheck}>✓</Text> : null}
+            {isDone ? (
+              <Feather name="check" size={iconSizes.md} color={colors.text} />
+            ) : null}
           </View>
         </View>
         <Text style={styles.meta}>
@@ -99,10 +102,5 @@ const styles = StyleSheet.create({
   actionCircleDone: {
     borderColor: colors.success,
     backgroundColor: colors.success,
-  },
-  actionCheck: {
-    color: colors.text,
-    fontSize: 16,
-    fontWeight: "700",
   },
 });

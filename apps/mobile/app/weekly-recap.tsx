@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { router } from "expo-router";
+import { Feather } from "@expo/vector-icons";
 import { supabase } from "../src/lib/supabase";
 import { getLocalDateString } from "../src/lib/time";
 import { handleError } from "../src/lib/errors";
@@ -14,7 +15,7 @@ import { useAuth } from "../src/providers/AuthProvider";
 import { RequireAuth } from "../src/components/RequireAuth";
 import { DaySquare, daySquareStripStyles } from "../src/components/DaySquare";
 import { BehavioralInsight } from "../src/types/database";
-import { colors, spacing, radii } from "../src/theme";
+import { colors, spacing, radii, iconSizes } from "../src/theme";
 
 const DAY_LETTERS = ["M", "T", "W", "T", "F", "S", "S"];
 const MONTHS = [
@@ -208,7 +209,7 @@ function WeeklyRecapScreenContent() {
           hitSlop={8}
           accessibilityLabel="Close"
         >
-          <Text style={styles.closeText}>✕</Text>
+          <Feather name="x" size={iconSizes.md} color={colors.textMuted} />
         </TouchableOpacity>
         <Text style={styles.empty}>Not enough from last week yet.</Text>
       </View>
@@ -223,7 +224,7 @@ function WeeklyRecapScreenContent() {
         hitSlop={8}
         accessibilityLabel="Close"
       >
-        <Text style={styles.closeText}>✕</Text>
+        <Feather name="x" size={iconSizes.md} color={colors.textMuted} />
       </TouchableOpacity>
 
       <Text style={styles.title}>Last week</Text>
@@ -285,11 +286,6 @@ const styles = StyleSheet.create({
   close: {
     alignSelf: "flex-end",
     marginBottom: spacing.lg,
-  },
-  closeText: {
-    color: colors.textMuted,
-    fontSize: 18,
-    lineHeight: 22,
   },
   title: {
     color: colors.text,

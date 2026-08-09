@@ -12,8 +12,9 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import { DailyInstance } from "../types/database";
-import { colors, spacing, radii, typography } from "../theme";
+import { colors, spacing, radii, typography, iconSizes } from "../theme";
 
 interface TaskDetailSheetProps {
   instance: DailyInstance | null;
@@ -49,7 +50,7 @@ export function TaskDetailSheet({
               <Text style={styles.taskSheetSubtitle}>What will you actually do?</Text>
             </View>
             <TouchableOpacity onPress={onClose} hitSlop={8}>
-              <Text style={styles.taskSheetClose}>✕</Text>
+              <Feather name="x" size={iconSizes.md} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
 
@@ -112,7 +113,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   taskSheetSubtitle: { color: colors.textMuted, fontSize: 14, marginTop: spacing.xs },
-  taskSheetClose: { color: colors.textMuted, fontSize: 20, lineHeight: 22, marginLeft: spacing.md },
   taskDetailInput: {
     backgroundColor: colors.surfaceNested,
     borderWidth: 0.5,

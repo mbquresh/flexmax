@@ -1,7 +1,8 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import { BehavioralInsight } from "../types/database";
-import { colors, spacing, radii } from "../theme";
+import { colors, spacing, radii, iconSizes } from "../theme";
 
 interface Props {
   insight: BehavioralInsight;
@@ -17,7 +18,7 @@ export function InsightCard({ insight, onDismiss }: Props) {
         hitSlop={8}
         accessibilityLabel="Dismiss insight"
       >
-        <Text style={styles.dismissText}>✕</Text>
+        <Feather name="x" size={iconSizes.lg} color={colors.textMuted} />
       </TouchableOpacity>
 
       <Text style={styles.label}>What I'm seeing</Text>
@@ -70,10 +71,5 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: spacing.xxl,
     right: spacing.xxl,
-  },
-  dismissText: {
-    color: colors.textMuted,
-    fontSize: 18,
-    lineHeight: 22,
   },
 });

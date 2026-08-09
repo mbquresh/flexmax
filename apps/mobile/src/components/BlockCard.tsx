@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Pressable } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   runOnJS,
@@ -12,8 +13,9 @@ import Animated, {
 import { BlockStatus, DailyInstance } from "../types/database";
 import { minutesToTime } from "../lib/time";
 import { hapticPickUp, hapticDetent } from "../lib/haptics";
+import { DragHandle } from "./DragHandle";
 import { useStore } from "../store";
-import { colors, spacing, radii } from "../theme";
+import { colors, spacing, radii, iconSizes } from "../theme";
 
 const ACTION_BUTTON_WIDTH = 80;
 const REVEAL_WIDTH_PENDING = 160;
@@ -274,12 +276,12 @@ export function BlockCard({
         {!isFixed ? (
           <GestureDetector gesture={dragGesture}>
             <View style={styles.dragHandleZone} hitSlop={8}>
-              <Text style={styles.dragHandleText}>⠿</Text>
+              <DragHandle />
             </View>
           </GestureDetector>
         ) : (
           <View style={styles.dragHandleZone}>
-            <Text style={styles.lockIcon}>🔒</Text>
+            <Feather name="lock" size={iconSizes.sm} color={colors.textMuted} />
           </View>
         )}
 
@@ -291,7 +293,9 @@ export function BlockCard({
             <View style={styles.cardMain}>
               <View style={styles.blockNameRow}>
                 <Text style={styles.blockName}>{instance.block?.name ?? "Block"}</Text>
-                {isFixed ? <Text style={styles.lockIcon}>🔒</Text> : null}
+                {isFixed ? (
+                  <Feather name="lock" size={iconSizes.sm} color={colors.textMuted} />
+                ) : null}
               </View>
               <Text style={styles.meta}>
                 {minutesToTime(instance.start_minutes)} – {minutesToTime(instance.end_minutes)}
@@ -300,7 +304,10 @@ export function BlockCard({
                 {instance.task_detail ? (
                   <Text style={styles.task}>{instance.task_detail}</Text>
                 ) : (
-                  <Text style={styles.taskAdd}>Add task →</Text>
+                  <View style={styles.taskAddRow}>
+                    <Text style={styles.taskAdd}>Add task</Text>
+                    <Feather name="arrow-right" size={iconSizes.xs} color={colors.primary} />
+                  </View>
                 )}
               </TouchableOpacity>
             </View>
@@ -316,9 +323,9 @@ export function BlockCard({
               hitSlop={8}
             >
               {isDone ? (
-                <Text style={styles.actionCircleCheck}>✓</Text>
+                <Feather name="check" size={iconSizes.md} color={colors.text} />
               ) : isMissed ? (
-                <Text style={styles.actionCircleMissedIcon}>!</Text>
+                <Feather name="minus" size={iconSizes.md} color={colors.danger} />
               ) : null}
             </TouchableOpacity>
 
@@ -387,14 +394,6 @@ const styles = StyleSheet.create({
     borderRightWidth: 1,
     borderRightColor: colors.border,
   },
-  dragHandleText: {
-    color: colors.textDisabled,
-    fontSize: 18,
-    lineHeight: 18,
-    textAlignVertical: "center",
-    includeFontPadding: false,
-    marginTop: 6,
-  },
   statusBar: { width: 4 },
   cardBody: {
     flex: 1,
@@ -408,10 +407,15 @@ const styles = StyleSheet.create({
   cardMain: { flex: 1 },
   blockNameRow: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
   blockName: { color: colors.text, fontSize: 16, fontWeight: "600" },
-  lockIcon: { fontSize: 14 },
   meta: { color: colors.textMuted, fontSize: 13, marginTop: spacing.xs },
   task: { color: colors.textSecondary, fontSize: 14, marginTop: spacing.sm },
-  taskAdd: { color: colors.primary, fontSize: 13, marginTop: spacing.sm, fontWeight: "500" },
+  taskAddRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+  },
+  taskAdd: { color: colors.primary, fontSize: 13, fontWeight: "500" },
   actionCircle: {
     width: 32,
     height: 32,
@@ -430,6 +434,4 @@ const styles = StyleSheet.create({
     borderColor: colors.danger,
     backgroundColor: "transparent",
   },
-  actionCircleCheck: { color: colors.text, fontSize: 16, fontWeight: "700" },
-  actionCircleMissedIcon: { color: colors.danger, fontSize: 16, fontWeight: "700" },
 });

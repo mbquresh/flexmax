@@ -1,7 +1,8 @@
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import { AdhocTask } from "../types/database";
-import { colors, spacing, radii } from "../theme";
+import { colors, spacing, radii, iconSizes } from "../theme";
 
 interface AdhocAnytimeRowProps {
   task: AdhocTask;
@@ -18,7 +19,7 @@ export function AdhocAnytimeRow({ task, onToggle }: AdhocAnytimeRowProps) {
       activeOpacity={0.85}
     >
       <View style={[styles.circle, isDone && styles.circleDone]}>
-        {isDone ? <Text style={styles.check}>✓</Text> : null}
+        {isDone ? <Feather name="check" size={iconSizes.md} color={colors.text} /> : null}
       </View>
       <Text style={[styles.name, isDone && styles.nameDone]} numberOfLines={2}>
         {task.name}
@@ -51,11 +52,6 @@ const styles = StyleSheet.create({
   circleDone: {
     borderColor: colors.success,
     backgroundColor: colors.success,
-  },
-  check: {
-    color: colors.text,
-    fontSize: 13,
-    fontWeight: "700",
   },
   name: {
     flex: 1,

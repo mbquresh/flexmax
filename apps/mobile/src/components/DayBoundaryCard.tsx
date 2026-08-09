@@ -8,7 +8,8 @@ import {
   ActivityIndicator,
 } from "react-native";
 import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
-import { colors, spacing, radii, typography } from "../theme";
+import { Feather } from "@expo/vector-icons";
+import { colors, spacing, radii, typography, iconSizes } from "../theme";
 
 interface Props {
   sleepTargetMinutes: number;
@@ -230,7 +231,7 @@ export function DayBoundaryCard({
       <View style={styles.footer}>
         <View />
         <TouchableOpacity onPress={onDismiss} disabled={saving} hitSlop={8}>
-          <Text style={styles.dismiss}>✕</Text>
+          <Feather name="x" size={iconSizes.md} color={colors.textMuted} />
         </TouchableOpacity>
       </View>
     </View>
@@ -296,11 +297,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     marginTop: spacing.md,
-  },
-  dismiss: {
-    color: colors.textMuted,
-    fontSize: 18,
-    lineHeight: 22,
   },
   pickerWrap: {
     marginTop: spacing.sm,

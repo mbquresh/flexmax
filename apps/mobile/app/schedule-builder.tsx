@@ -13,6 +13,7 @@ import {
   Keyboard,
 } from "react-native";
 import { router } from "expo-router";
+import { Feather } from "@expo/vector-icons";
 import { supabase } from "../src/lib/supabase";
 import {
   ALL_DAYS,
@@ -33,7 +34,7 @@ import { handleError, getErrorMessage } from "../src/lib/errors";
 
 import { RequireAuth } from "../src/components/RequireAuth";
 import { BoundaryRow } from "../src/components/BoundaryRow";
-import { colors, spacing, radii, typography } from "../src/theme";
+import { colors, spacing, radii, typography, iconSizes } from "../src/theme";
 
 function ScheduleBuilderScreenContent() {
   const { session, refreshProfile } = useAuth();
@@ -383,7 +384,13 @@ function ScheduleBuilderScreenContent() {
       <Text style={styles.blockMeta}>
         {minutesToTime(item.start_minutes)} – {minutesToTime(item.end_minutes)} ·{" "}
         {item.category.replace("_", " ")}
-        {item.is_fixed ? " · 🔒 Fixed" : ""}
+        {item.is_fixed ? (
+          <>
+            {" · "}
+            <Feather name="lock" size={iconSizes.sm} color={colors.textMuted} />
+            {" Fixed"}
+          </>
+        ) : null}
       </Text>
       <Text style={styles.blockRepeats}>Repeats: {formatDays(item.days_of_week)}</Text>
 
@@ -536,7 +543,10 @@ function ScheduleBuilderScreenContent() {
               onPress={() => router.replace("/today")}
               disabled={blocks.length === 0}
             >
-              <Text style={styles.primaryBtnText}>Continue to today →</Text>
+              <View style={styles.primaryBtnRow}>
+                <Text style={styles.primaryBtnText}>Continue to today</Text>
+                <Feather name="arrow-right" size={iconSizes.xs} color={colors.onPrimary} />
+              </View>
             </TouchableOpacity>
           </>
         }
@@ -715,6 +725,11 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     paddingVertical: spacing.lg,
     alignItems: "center",
+  },
+  primaryBtnRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
   },
   primaryBtnText: { color: colors.onPrimary, fontSize: 16, fontWeight: "600" },
   btnDisabled: { opacity: 0.5 },

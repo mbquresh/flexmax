@@ -11,6 +11,7 @@ import {
   Platform,
 } from "react-native";
 import { router } from "expo-router";
+import { Feather } from "@expo/vector-icons";
 import { generateDailyInstances, supabase } from "../src/lib/supabase";
 import { WEEKDAYS } from "../src/lib/schedule";
 import { getLocalDateString, getTomorrowLocalDateString, minutesToTime } from "../src/lib/time";
@@ -19,7 +20,7 @@ import { useAuth } from "../src/providers/AuthProvider";
 import { RequireAuth } from "../src/components/RequireAuth";
 import { CloseTodayRow } from "../src/components/CloseTodayRow";
 import { DailyInstance } from "../src/types/database";
-import { colors, spacing, radii, typography } from "../src/theme";
+import { colors, spacing, radii, typography, iconSizes } from "../src/theme";
 
 function isInstanceFixed(instance: DailyInstance): boolean {
   return instance.is_fixed || !!instance.block?.is_fixed;
@@ -227,7 +228,7 @@ function PlanTomorrowScreenContent() {
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <TouchableOpacity onPress={() => router.replace("/today")} hitSlop={8}>
-            <Text style={styles.closeBtn}>✕</Text>
+            <Feather name="x" size={iconSizes.md} color={colors.textMuted} />
           </TouchableOpacity>
           <View style={styles.headerText}>
             <Text style={styles.title}>Tonight</Text>
@@ -288,7 +289,9 @@ function PlanTomorrowScreenContent() {
                   <Text style={styles.blockName}>
                     {instance.block?.name ?? "Block"}
                   </Text>
-                  {fixed ? <Text style={styles.lockIcon}>🔒</Text> : null}
+                  {fixed ? (
+                    <Feather name="lock" size={iconSizes.sm} color={colors.textMuted} />
+                  ) : null}
                 </View>
                 <Text style={styles.blockTime}>
                   {minutesToTime(instance.start_minutes)} –{" "}
@@ -357,7 +360,6 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   headerText: { flex: 1 },
-  closeBtn: { color: colors.textMuted, fontSize: 20, lineHeight: 22 },
   skipBtn: { color: colors.primary, ...typography.body },
   title: { fontSize: 24, fontWeight: "600", color: colors.text },
   subtitle: { fontSize: 14, color: colors.textMuted, marginTop: spacing.xs },
@@ -391,7 +393,6 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   blockName: { color: colors.text, fontSize: 16, fontWeight: "600" },
-  lockIcon: { fontSize: 14 },
   blockTime: { color: colors.textMuted, fontSize: 13 },
   taskInput: {
     backgroundColor: colors.surfaceNested,

@@ -88,6 +88,13 @@ export const radii = {
   round: 20,
 } as const;
 
+export const iconSizes = {
+  xs: 12,   // inline with body/small text
+  sm: 14,   // lock badges, inline meta
+  md: 16,   // action circles, close buttons
+  lg: 18,   // prominent dismiss
+} as const;
+
 export const typography = {
   title: { fontSize: 22, fontWeight: "600" as const },
   heading: { fontSize: 17, fontWeight: "600" as const },
