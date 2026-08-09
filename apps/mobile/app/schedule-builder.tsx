@@ -374,7 +374,14 @@ function ScheduleBuilderScreenContent() {
   );
 
   const renderBlock = ({ item }: { item: ScheduleBlock }) => (
-    <View style={styles.blockCard}>
+    <PressableScale
+      variant="highlight"
+      baseColor={colors.surface}
+      highlightColor={colors.surfaceNested}
+      style={styles.blockCard}
+      onPress={() => openEditBlock(item)}
+      disabled={saving}
+    >
       <View style={styles.blockHeader}>
         <Text style={styles.blockName}>{item.name}</Text>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
@@ -470,7 +477,7 @@ function ScheduleBuilderScreenContent() {
           </TouchableOpacity>
         </View>
       ) : null}
-    </View>
+    </PressableScale>
   );
 
   if (loading) {
@@ -623,7 +630,6 @@ const makeStyles = (c: Colors) =>
     },
     presetText: { color: c.onPrimary, fontSize: 14 },
     blockCard: {
-      backgroundColor: c.surface,
       borderRadius: radii.lg,
       padding: spacing.lg,
       marginBottom: 10,

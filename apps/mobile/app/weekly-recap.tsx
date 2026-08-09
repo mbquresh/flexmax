@@ -14,6 +14,7 @@ import { useAuth } from "../src/providers/AuthProvider";
 import { RequireAuth } from "../src/components/RequireAuth";
 import { BrandLoader } from "../src/components/BrandLoader";
 import { DaySquare, daySquareStripStyles } from "../src/components/DaySquare";
+import { PressableScale } from "../src/components/PressableScale";
 import { BehavioralInsight } from "../src/types/database";
 import { Colors, spacing, radii, iconSizes } from "../src/theme";
 import { useTheme } from "../src/providers/ThemeProvider";
@@ -261,6 +262,10 @@ function WeeklyRecapScreenContent() {
           ) : null}
         </>
       ) : null}
+
+      <PressableScale style={styles.doneBtn} onPress={() => router.back()}>
+        <Text style={styles.doneBtnText}>Done</Text>
+      </PressableScale>
     </View>
   );
 }
@@ -341,5 +346,18 @@ const makeStyles = (c: Colors) =>
       fontSize: 15,
       textAlign: "center",
       marginTop: spacing.xxxl,
+    },
+    doneBtn: {
+      backgroundColor: c.primary,
+      borderRadius: radii.lg,
+      paddingVertical: spacing.lg,
+      alignItems: "center",
+      marginTop: "auto",
+      marginBottom: spacing.xxxl,
+    },
+    doneBtnText: {
+      color: c.onPrimary,
+      fontSize: 16,
+      fontWeight: "600",
     },
   });

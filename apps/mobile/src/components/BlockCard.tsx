@@ -16,6 +16,7 @@ import { DailyInstance } from "../types/database";
 import { minutesToTime } from "../lib/time";
 import { hapticPickUp, hapticDetent } from "../lib/haptics";
 import { DragHandle } from "./DragHandle";
+import { PressableScale } from "./PressableScale";
 import { useStore } from "../store";
 import { Colors, spacing, radii, iconSizes, typography, numeric } from "../theme";
 import { useTheme } from "../providers/ThemeProvider";
@@ -355,11 +356,11 @@ export function BlockCard({
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity
+            <PressableScale
               onPress={handleActionPress}
               disabled={saving}
+              scaleTo={0.9}
               hitSlop={8}
-              activeOpacity={1}
             >
               <Animated.View style={[styles.actionCircle, circleAnimatedStyle]}>
                 <Animated.View style={actionIconStyle}>
@@ -370,7 +371,7 @@ export function BlockCard({
                   ) : null}
                 </Animated.View>
               </Animated.View>
-            </TouchableOpacity>
+            </PressableScale>
           </Pressable>
         </GestureDetector>
         <Animated.View style={flashStyle} pointerEvents="none" />

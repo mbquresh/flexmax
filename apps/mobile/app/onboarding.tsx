@@ -14,6 +14,7 @@ import { useTheme } from "../src/providers/ThemeProvider";
 import { useStore } from "../src/store";
 import { RequireAuth } from "../src/components/RequireAuth";
 import { BrandMark } from "../src/components/BrandMark";
+import { PressableScale } from "../src/components/PressableScale";
 import { handleError } from "../src/lib/errors";
 import { Colors, spacing, radii, typography } from "../src/theme";
 
@@ -298,12 +299,12 @@ function OnboardingContent() {
             <Text style={styles.payoffLine}>{toneLine}</Text>
             <Text style={styles.payoffLine}>{energyLine}</Text>
             <Text style={styles.payoffLine}>{patternLine}</Text>
-            <TouchableOpacity
+            <PressableScale
               style={styles.actionBtn}
               onPress={() => setStep(6)}
             >
               <Text style={styles.actionBtnText}>Continue</Text>
-            </TouchableOpacity>
+            </PressableScale>
           </>
         ) : null}
 
@@ -314,8 +315,8 @@ function OnboardingContent() {
               The first days are just living your schedule and closing out your days. The
               patterns come from what you do, not what you say. Give it a week.
             </Text>
-            <TouchableOpacity
-              style={[styles.actionBtn, saving && styles.actionBtnDisabled]}
+            <PressableScale
+              style={styles.actionBtn}
               onPress={handleStart}
               disabled={saving}
             >
@@ -324,7 +325,7 @@ function OnboardingContent() {
               ) : (
                 <Text style={styles.actionBtnText}>Start</Text>
               )}
-            </TouchableOpacity>
+            </PressableScale>
             <View style={styles.footerMark}>
               <BrandMark size={28} />
             </View>
@@ -436,9 +437,6 @@ const makeStyles = (c: Colors) =>
       paddingVertical: spacing.lg,
       alignItems: "center",
       marginTop: spacing.lg,
-    },
-    actionBtnDisabled: {
-      backgroundColor: c.primaryDisabled,
     },
     actionBtnText: {
       color: c.onPrimary,

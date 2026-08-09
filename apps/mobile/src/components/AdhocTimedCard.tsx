@@ -1,10 +1,11 @@
 import React, { useMemo } from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { AdhocTask } from "../types/database";
 import { minutesToTime } from "../lib/time";
 import { Colors, spacing, radii, iconSizes } from "../theme";
 import { useTheme } from "../providers/ThemeProvider";
+import { PressableScale } from "./PressableScale";
 
 interface AdhocTimedCardProps {
   task: AdhocTask;
@@ -17,10 +18,12 @@ export function AdhocTimedCard({ task, onToggle }: AdhocTimedCardProps) {
   const isDone = task.status === "completed";
 
   return (
-    <TouchableOpacity
+    <PressableScale
+      variant="highlight"
+      baseColor={colors.surface}
+      highlightColor={colors.surfaceNested}
       style={[styles.card, isDone && styles.cardDone]}
       onPress={() => onToggle(task)}
-      activeOpacity={0.85}
     >
       <View style={styles.accent} />
       <View style={styles.body}>
@@ -39,7 +42,7 @@ export function AdhocTimedCard({ task, onToggle }: AdhocTimedCardProps) {
         </Text>
         <Text style={styles.tag}>One-off</Text>
       </View>
-    </TouchableOpacity>
+    </PressableScale>
   );
 }
 
@@ -47,7 +50,6 @@ const makeStyles = (c: Colors) =>
   StyleSheet.create({
     card: {
       flexDirection: "row",
-      backgroundColor: c.surface,
       borderRadius: radii.lg,
       marginBottom: 10,
       overflow: "hidden",

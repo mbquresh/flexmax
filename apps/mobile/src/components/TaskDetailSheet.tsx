@@ -16,6 +16,7 @@ import { Feather } from "@expo/vector-icons";
 import { DailyInstance } from "../types/database";
 import { Colors, spacing, radii, typography, iconSizes } from "../theme";
 import { useTheme } from "../providers/ThemeProvider";
+import { PressableScale } from "./PressableScale";
 
 interface TaskDetailSheetProps {
   instance: DailyInstance | null;
@@ -70,8 +71,8 @@ export function TaskDetailSheet({
             textAlignVertical="top"
           />
 
-          <TouchableOpacity
-            style={[styles.taskSaveBtn, saving && styles.btnDisabled]}
+          <PressableScale
+            style={styles.taskSaveBtn}
             onPress={onSave}
             disabled={saving}
           >
@@ -80,7 +81,7 @@ export function TaskDetailSheet({
             ) : (
               <Text style={styles.taskSaveBtnText}>Save</Text>
             )}
-          </TouchableOpacity>
+          </PressableScale>
         </RNAnimated.View>
       </KeyboardAvoidingView>
     </Modal>
@@ -139,5 +140,4 @@ const makeStyles = (c: Colors) =>
       alignItems: "center",
     },
     taskSaveBtnText: { color: c.onPrimary, ...typography.bodyBold },
-    btnDisabled: { opacity: 0.5 },
   });

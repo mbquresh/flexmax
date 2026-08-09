@@ -15,6 +15,7 @@ import { useAuth } from "../src/providers/AuthProvider";
 import { useTheme } from "../src/providers/ThemeProvider";
 import { handleError, getErrorMessage } from "../src/lib/errors";
 import { BrandMark } from "../src/components/BrandMark";
+import { PressableScale } from "../src/components/PressableScale";
 import { Colors, spacing, radii, typography } from "../src/theme";
 
 export default function SignInScreen() {
@@ -128,8 +129,8 @@ export default function SignInScreen() {
           onSubmitEditing={handleSubmit}
         />
 
-        <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
+        <PressableScale
+          style={styles.button}
           onPress={handleSubmit}
           disabled={loading}
         >
@@ -140,7 +141,7 @@ export default function SignInScreen() {
               {mode === "sign-in" ? "Sign in" : "Sign up"}
             </Text>
           )}
-        </TouchableOpacity>
+        </PressableScale>
 
         <TouchableOpacity
           onPress={() => {
@@ -199,7 +200,6 @@ const makeStyles = (c: Colors) =>
       alignItems: "center",
       marginTop: spacing.sm,
     },
-    buttonDisabled: { opacity: 0.6 },
     buttonText: { color: c.onPrimary, fontSize: 16, fontWeight: "600" },
     toggle: { color: c.textMuted, textAlign: "center", marginTop: spacing.lg, fontSize: 14 },
     footerMark: { marginTop: spacing.xxxl, opacity: 0.4, alignItems: "center" },

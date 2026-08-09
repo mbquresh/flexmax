@@ -14,6 +14,7 @@ import { Feather } from "@expo/vector-icons";
 import { Colors, spacing, radii, typography, iconSizes } from "../theme";
 import { useTheme } from "../providers/ThemeProvider";
 import { hapticSelect } from "../lib/haptics";
+import { PressableScale } from "./PressableScale";
 
 export interface AppMenuItem {
   label: string;
@@ -43,10 +44,9 @@ export function MenuButton({ onPress }: MenuButtonProps) {
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   return (
-    <TouchableOpacity
+    <PressableScale
       style={styles.menuButton}
       onPress={onPress}
-      activeOpacity={0.7}
       hitSlop={8}
       accessibilityRole="button"
       accessibilityLabel="Open menu"
@@ -54,7 +54,7 @@ export function MenuButton({ onPress }: MenuButtonProps) {
       <View style={[styles.menuBar, { backgroundColor: colors.menuBarBlue }]} />
       <View style={[styles.menuBar, { backgroundColor: colors.menuBarInk }]} />
       <View style={[styles.menuBar, { backgroundColor: colors.menuBarCoral }]} />
-    </TouchableOpacity>
+    </PressableScale>
   );
 }
 

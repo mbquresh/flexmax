@@ -1,9 +1,10 @@
 import React, { useMemo, useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import { DailyInstance } from "../types/database";
 import { minutesToTime } from "../lib/time";
 import { Colors, spacing, radii } from "../theme";
 import { useTheme } from "../providers/ThemeProvider";
+import { PressableScale } from "./PressableScale";
 
 const MISS_REASON_PRESETS = [
   "Ran out of time",
@@ -49,26 +50,30 @@ export function CloseTodayRow({
         </View>
         <View style={styles.presetWrap}>
           {MISS_REASON_PRESETS.map((label) => (
-            <TouchableOpacity
+            <PressableScale
               key={label}
+              variant="highlight"
+              baseColor={colors.surface}
+              highlightColor={colors.surfaceNested}
               style={styles.presetBtn}
               onPress={() => onPresetTap(instance.id, label)}
-              activeOpacity={0.85}
             >
               <Text style={styles.presetBtnText}>{label}</Text>
-            </TouchableOpacity>
+            </PressableScale>
           ))}
         </View>
-        <TouchableOpacity
+        <PressableScale
+          variant="highlight"
+          baseColor={colors.surface}
+          highlightColor={colors.surfaceNested}
           onPress={() => {
             setPresetsDismissed(true);
             onPresetSkip(instance.id);
           }}
           hitSlop={8}
-          activeOpacity={0.7}
         >
           <Text style={styles.skipLink}>skip</Text>
-        </TouchableOpacity>
+        </PressableScale>
       </View>
     );
   }
@@ -78,20 +83,24 @@ export function CloseTodayRow({
       <Text style={styles.blockName}>{blockName}</Text>
       <Text style={styles.blockTime}>{timeRange}</Text>
       <View style={styles.actionRow}>
-        <TouchableOpacity
+        <PressableScale
+          variant="highlight"
+          baseColor={colors.surface}
+          highlightColor={colors.surfaceNested}
           style={[styles.actionBtn, styles.doneBtn]}
           onPress={() => onStatusTap(instance.id, "completed")}
-          activeOpacity={0.85}
         >
           <Text style={styles.doneBtnText}>Done</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
+        </PressableScale>
+        <PressableScale
+          variant="highlight"
+          baseColor={colors.surface}
+          highlightColor={colors.surfaceNested}
           style={[styles.actionBtn, styles.neutralBtn]}
           onPress={() => onStatusTap(instance.id, "missed")}
-          activeOpacity={0.85}
         >
           <Text style={styles.neutralBtnText}>Missed</Text>
-        </TouchableOpacity>
+        </PressableScale>
       </View>
     </View>
   );
@@ -127,7 +136,6 @@ const makeStyles = (c: Colors) =>
       alignItems: "center",
     },
     doneBtn: {
-      backgroundColor: c.successTint,
       borderColor: c.success,
     },
     doneBtnText: {
@@ -136,7 +144,6 @@ const makeStyles = (c: Colors) =>
       fontWeight: "600",
     },
     neutralBtn: {
-      backgroundColor: c.surfaceNested,
       borderColor: c.border,
     },
     neutralBtnText: {
@@ -161,7 +168,6 @@ const makeStyles = (c: Colors) =>
       gap: spacing.sm,
     },
     presetBtn: {
-      backgroundColor: c.surfaceNested,
       borderWidth: 0.5,
       borderColor: c.border,
       borderRadius: radii.pill,

@@ -1,9 +1,10 @@
 import React, { useMemo } from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { AdhocTask } from "../types/database";
 import { Colors, spacing, radii, iconSizes } from "../theme";
 import { useTheme } from "../providers/ThemeProvider";
+import { PressableScale } from "./PressableScale";
 
 interface AdhocAnytimeRowProps {
   task: AdhocTask;
@@ -16,10 +17,12 @@ export function AdhocAnytimeRow({ task, onToggle }: AdhocAnytimeRowProps) {
   const isDone = task.status === "completed";
 
   return (
-    <TouchableOpacity
+    <PressableScale
+      variant="highlight"
+      baseColor={colors.surface}
+      highlightColor={colors.surfaceNested}
       style={[styles.row, isDone && styles.rowDone]}
       onPress={() => onToggle(task)}
-      activeOpacity={0.85}
     >
       <View style={[styles.circle, isDone && styles.circleDone]}>
         {isDone ? <Feather name="check" size={iconSizes.md} color={colors.text} /> : null}
@@ -27,7 +30,7 @@ export function AdhocAnytimeRow({ task, onToggle }: AdhocAnytimeRowProps) {
       <Text style={[styles.name, isDone && styles.nameDone]} numberOfLines={2}>
         {task.name}
       </Text>
-    </TouchableOpacity>
+    </PressableScale>
   );
 }
 

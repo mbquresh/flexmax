@@ -49,6 +49,7 @@ import { AdhocTimedCard } from "../src/components/AdhocTimedCard";
 import { AdhocAnytimeRow } from "../src/components/AdhocAnytimeRow";
 import { TimePicker } from "../src/components/TimePicker";
 import { AppMenu, MenuButton } from "../src/components/AppMenu";
+import { PressableScale } from "../src/components/PressableScale";
 import { useTodayData } from "../src/hooks/useTodayData";
 import { STREAK_THRESHOLD } from "../src/lib/stats";
 import {
@@ -935,14 +936,14 @@ function TodayScreenContent() {
             </View>
             <View style={styles.headerRight}>
               <MenuButton onPress={() => setMenuOpen(true)} />
-              <TouchableOpacity
+              <PressableScale
                 style={styles.avatar}
                 onPress={() => router.push("/account")}
               >
                 <Text style={styles.avatarText}>
                   {getInitials(profile?.name ?? "U")}
                 </Text>
-              </TouchableOpacity>
+              </PressableScale>
             </View>
           </View>
           {boundaryPrompt && !boundaryDismissed ? (
@@ -1005,9 +1006,9 @@ function TodayScreenContent() {
             )
           )}
 
-          <TouchableOpacity style={styles.addAdhocPill} onPress={openAddTask} activeOpacity={0.85}>
+          <PressableScale style={styles.addAdhocPill} onPress={openAddTask}>
             <Text style={styles.addAdhocPlus}>+</Text>
-          </TouchableOpacity>
+          </PressableScale>
 
           {anytimeAdhoc.length > 0 ? (
             <View style={styles.anytimeTray}>
@@ -1120,7 +1121,10 @@ function TodayScreenContent() {
       >
         <Pressable style={styles.overlay} onPress={() => setUndoInstance(null)}>
           <Pressable style={styles.undoSheet} onPress={(e) => e.stopPropagation()}>
-            <TouchableOpacity
+            <PressableScale
+              variant="highlight"
+              baseColor={colors.surface}
+              highlightColor={colors.surfaceNested}
               style={styles.undoOption}
               onPress={() => {
                 if (!undoInstance) return;
@@ -1132,13 +1136,16 @@ function TodayScreenContent() {
               <Text style={styles.undoOptionDestructive}>
                 {undoInstance?.status === "missed" ? "Undo missed" : "Undo completion"}
               </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+            </PressableScale>
+            <PressableScale
+              variant="highlight"
+              baseColor={colors.surface}
+              highlightColor={colors.surfaceNested}
               style={[styles.undoOption, styles.undoOptionLast]}
               onPress={() => setUndoInstance(null)}
             >
               <Text style={styles.undoOptionCancel}>Cancel</Text>
-            </TouchableOpacity>
+            </PressableScale>
           </Pressable>
         </Pressable>
       </Modal>
@@ -1179,17 +1186,20 @@ function TodayScreenContent() {
               placeholderTextColor={colors.textPlaceholder}
               multiline
             />
-            <TouchableOpacity style={styles.removeConfirmBtn} onPress={handleRemove}>
+            <PressableScale style={styles.removeConfirmBtn} onPress={handleRemove}>
               <Text style={styles.removeConfirmText}>Remove</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+            </PressableScale>
+            <PressableScale
+              variant="highlight"
+              baseColor={colors.surface}
+              highlightColor={colors.surfaceNested}
               onPress={() => {
                 setRemoveInstance(null);
                 setRemoveReason("");
               }}
             >
               <Text style={styles.removeCancelText}>Cancel</Text>
-            </TouchableOpacity>
+            </PressableScale>
           </Pressable>
         </KeyboardAvoidingView>
       </Modal>

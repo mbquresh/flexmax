@@ -4,6 +4,7 @@ import { Feather } from "@expo/vector-icons";
 import { BehavioralInsight } from "../types/database";
 import { Colors, spacing, radii, iconSizes, typography } from "../theme";
 import { useTheme } from "../providers/ThemeProvider";
+import { PressableScale } from "./PressableScale";
 
 interface Props {
   insight: BehavioralInsight;
@@ -15,7 +16,12 @@ export function InsightCard({ insight, onDismiss }: Props) {
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   return (
-    <View style={styles.card}>
+    <PressableScale
+      variant="highlight"
+      baseColor={colors.surface}
+      highlightColor={colors.surfaceNested}
+      style={styles.card}
+    >
       <TouchableOpacity
         style={styles.dismiss}
         onPress={onDismiss}
@@ -34,14 +40,13 @@ export function InsightCard({ insight, onDismiss }: Props) {
           <Text style={styles.suggestion}>{insight.suggestion}</Text>
         </>
       ) : null}
-    </View>
+    </PressableScale>
   );
 }
 
 const makeStyles = (c: Colors) =>
   StyleSheet.create({
     card: {
-      backgroundColor: c.surface,
       borderRadius: radii.xl,
       padding: spacing.xxl,
       marginBottom: spacing.lg,
