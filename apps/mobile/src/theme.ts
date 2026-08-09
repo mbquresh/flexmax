@@ -4,70 +4,141 @@
  * No hardcoded hex values or magic numbers in StyleSheets — import from here.
  */
 
-export const colors = {
-  // Backgrounds
-  background: "#DCDCDC",        // main screen background
-  surface: "#EDEDED",           // cards, sheets, inputs
-  surfaceNested: "#E4E4E4",     // nested surfaces inside cards
-  surfaceDim: "#D0D0D0",        // de-emphasized surfaces
+export const lightColors = {
+  // Backgrounds — warm neutrals. Surfaces sit ABOVE the background,
+  // de-emphasized surfaces sit BELOW it.
+  background: "#E0DBD2",
+  surface: "#EFEBE4",
+  surfaceNested: "#E7E2D9",
+  surfaceDim: "#D4CEC4",
 
-  // Primary (blue)
-  primary: "#3B6EA5",           // buttons, links, active states
-  primaryBright: "#5B9BD5",     // highlights
-  primaryDeep: "#2C4A6E",       // avatar, deep accents
-  primaryDisabled: "#A8C0DC",
-  primaryTint: "#DCE6F2",       // tinted card backgrounds (tips, summary)
-  onPrimary: "#FFFFFF",         // text on primary buttons
+  // Primary — dusted blue. Lower saturation than v1 so it reads as a
+  // deliberate cool accent against warm neutrals rather than a clash.
+  primary: "#43698F",
+  primaryBright: "#6494BE",
+  primaryDeep: "#33526F",
+  primaryDisabled: "#A9BCCE",
+  primaryTint: "#DCE3EA",
+  onPrimary: "#FFFFFF",
 
-  // Text
-  text: "#1E1E1E",              // primary text
-  textSecondary: "#333333",
-  textMuted: "#666666",
-  textFaint: "#888888",
-  textPlaceholder: "#999999",
-  textDisabled: "#AAAAAA",
+  text: "#211F1B",
+  textSecondary: "#38352F",
+  textMuted: "#6B655B",
+  textFaint: "#8C8578",
+  textPlaceholder: "#9C9488",
+  textDisabled: "#ADA69A",
 
-  // Borders
-  border: "#C4C4C4",
-  borderLight: "#CCCCCC",
+  border: "#C7C0B4",
+  borderLight: "#CFC9BE",
 
-  // Status
-  success: "#5DCAA5",           // completed
-  successTint: "#DFF3EA",       // reschedule box bg
-  danger: "#D9694A",            // missed
-  dangerTint: "#F8E5E0",
-  error: "#B03030",
-  errorTint: "#F8E0E0",
-  errorBorder: "#D99999",
+  success: "#57BF9B",
+  successTint: "#DCEFE5",
+  danger: "#D9694A",
+  dangerTint: "#F6E3DC",
+  error: "#AF3630",
+  errorTint: "#F6DFD9",
+  errorBorder: "#D89C90",
 
-  // Streak (teal earned / neutral housing)
-  streak: "#5DCAA5",
-  streakMissed: "#A8B4BE", // muted slate — accounted but not completed
-  streakHousing: "#EDEDED",
-  streakBorder: "#C4C4C4",
-  streakMuted: "#666666",
-  streakSquare: "#E0E0E0",
-  streakSquareToday: "#E4E4E4",
+  streak: "#57BF9B",
+  streakMissed: "#B3ADA2",
+  streakHousing: "#EFEBE4",
+  streakBorder: "#C7C0B4",
+  streakMuted: "#6B655B",
+  streakSquare: "#E2DDD4",
+  streakSquareToday: "#E7E2D9",
 
-  // Pale semantic fills for check-in ratings
-  ratingGoodBg: "#D8EFD8",     // pale green — crushed it
+  ratingGoodBg: "#D9EFD6",
   ratingGoodText: "#2E7D32",
-  ratingOkayBg: "#FBF3D0",     // pale yellow — partly
+  ratingOkayBg: "#FAF2CC",
   ratingOkayText: "#9A7B0A",
-  ratingBadBg: "#F8DEDE",      // pale red — lost focus
+  ratingBadBg: "#F7DDD8",
   ratingBadText: "#B03030",
-  ratingGoodBorder: "#00C853",   // neon green — crushed it
-  ratingOkayBorder: "#FFD600",   // neon yellow — partly
-  ratingBadBorder: "#FF1744",   // neon red — lost focus
+  // Signal vocabulary — identical in both modes. The block card status bar
+  // depends on these matching the check-in sheet exactly.
+  ratingGoodBorder: "#00C853",
+  ratingOkayBorder: "#FFD600",
+  ratingBadBorder: "#FF1744",
 
-  // Menu button bars
-  menuBarBlue: "#4B79AC",
-  menuBarInk: "#2A2A2A",
+  menuBarBlue: "#4E7599",
+  menuBarInk: "#2B2822",
   menuBarCoral: "#CE7358",
 
-  // Modal scrim (opacity animated on top)
   overlayScrim: "#000000",
 } as const;
+
+export type Colors = { [K in keyof typeof lightColors]: string };
+
+// Typed as Colors so TypeScript enforces key-for-key completeness.
+// A missing token fails `npx tsc --noEmit` rather than rendering as undefined.
+export const darkColors: Colors = {
+  // Warm charcoal, not black. Keeping the background off zero is what gives
+  // surfaceDim room to sit BELOW it — on #000 it would be indistinguishable.
+  background: "#1A1815",
+  surface: "#262320",
+  surfaceNested: "#302C28",
+  surfaceDim: "#131110",
+
+  primary: "#7FA8CE",
+  primaryBright: "#9DC0DE",
+  primaryDeep: "#5B84A8",
+  primaryDisabled: "#4A5A69",
+  primaryTint: "#23303C",
+  // Dark text on a light blue button — white would be low contrast here.
+  onPrimary: "#1A1815",
+
+  // Never pure white. #FFF on dark halates on OLED.
+  text: "#EAE5DC",
+  textSecondary: "#D2CCC2",
+  textMuted: "#9B948A",
+  textFaint: "#837C72",
+  textPlaceholder: "#6F685F",
+  textDisabled: "#565049",
+
+  border: "#3A3630",
+  borderLight: "#454039",
+
+  success: "#5FCBA6",
+  successTint: "#14312A",
+  danger: "#E07C5E",
+  dangerTint: "#3A211A",
+  error: "#E0685C",
+  errorTint: "#3A1E1A",
+  errorBorder: "#7A4038",
+
+  streak: "#5FCBA6",
+  streakMissed: "#7C766C",
+  streakHousing: "#262320",
+  streakBorder: "#3A3630",
+  streakMuted: "#9B948A",
+  streakSquare: "#302C28",
+  streakSquareToday: "#3A3630",
+
+  // Fills invert; text lightens so it reads on them.
+  ratingGoodBg: "#16301A",
+  ratingGoodText: "#6FD47A",
+  ratingOkayBg: "#332C0C",
+  ratingOkayText: "#E3C44A",
+  ratingBadBg: "#3A1C1C",
+  ratingBadText: "#F0736B",
+  // Identical to light — see note above.
+  ratingGoodBorder: "#00C853",
+  ratingOkayBorder: "#FFD600",
+  ratingBadBorder: "#FF1744",
+
+  menuBarBlue: "#6E9AC4",
+  // Was #2B2822 in light. On a dark field the ink bar of the brand mark must
+  // invert or the tricolor logo loses a stripe entirely.
+  menuBarInk: "#EAE5DC",
+  menuBarCoral: "#DE8567",
+
+  overlayScrim: "#000000",
+};
+
+// Back-compat alias. Every unconverted file still imports `colors` and keeps
+// rendering the light palette, so the migration can proceed file by file
+// without breaking anything. Remove this only after all 25 styled files have
+// been converted to makeStyles(c).
+export const colors = lightColors;
 
 export const spacing = {
   xs: 4,

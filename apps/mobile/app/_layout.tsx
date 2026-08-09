@@ -3,12 +3,12 @@ import { Stack, router } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import * as Notifications from "expo-notifications";
 import { AuthProvider } from "../src/providers/AuthProvider";
+import { ThemeProvider, useTheme } from "../src/providers/ThemeProvider";
 import { supabase } from "../src/lib/supabase";
 import {
   registerNotificationCategories,
   scheduleFollowUpNudge,
 } from "../src/lib/blockNotifications";
-import { colors } from "../src/theme";
 
 function handleNotificationResponse(response: Notifications.NotificationResponse) {
   const action = response.actionIdentifier;
@@ -52,6 +52,18 @@ function handleNotificationResponse(response: Notifications.NotificationResponse
   }
 }
 
+function ThemedStack() {
+  const { colors } = useTheme();
+  return (
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    />
+  );
+}
+
 export default function RootLayout() {
   const responseListener = useRef<Notifications.Subscription | null>(null);
 
@@ -80,14 +92,11 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <AuthProvider>
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: colors.background },
-          }}
-        />
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <ThemedStack />
+        </AuthProvider>
+      </ThemeProvider>
     </GestureHandlerRootView>
   );
 }
