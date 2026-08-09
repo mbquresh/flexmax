@@ -140,23 +140,33 @@ export const BLOCK_PRESETS = [
 
 export function findRescheduleSlot(
   missedInstance: DailyInstance,
-  allInstances: DailyInstance[]
+  allInstances: DailyInstance[],
+  sleepTargetMinutes?: number | null
 ): { start_minutes: number; end_minutes: number } | null {
   const duration = missedInstance.end_minutes - missedInstance.start_minutes;
   const nowMinutes = new Date().getHours() * 60 + new Date().getMinutes();
   const bufferMinutes = nowMinutes + 30;
 
+  // Day ends at bedtime, not midnight. Falls back to midnight only when the
+  // user has no sleep target set.
+  const dayEnd = sleepTargetMinutes ?? 1440;
+
   const occupied = allInstances
-    .filter((i) => i.id !== missedInstance.id && i.status !== "skipped")
-    .map((i) => ({ start: i.start_minutes, end: i.end_minutes }))
-    .sort((a, b) => a.start - b.start);
+    .filter(
+      (i) =>
+        i.id !== missedInstance.id &&
+        i.status !== "skipped" &&
+        i.status !== "removed" &&
+        i.status !== "rescheduled"
+    )
+    .map((i) => ({ start: i.start_minutes, end: i.end_minutes }));
 
   const candidates = [bufferMinutes, ...occupied.map((o) => o.end)];
 
   for (const start of candidates) {
     if (start < bufferMinutes) continue;
     const end = start + duration;
-    if (end > 1440) continue;
+    if (end > dayEnd) continue;
 
     const conflicts = occupied.some((o) => start < o.end && end > o.start);
     if (!conflicts) return { start_minutes: start, end_minutes: end };

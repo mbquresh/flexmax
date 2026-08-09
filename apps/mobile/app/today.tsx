@@ -647,7 +647,8 @@ function TodayScreenContent() {
 
     const slot = findRescheduleSlot(
       { ...instance, status: "missed" },
-      useStore.getState().todayInstances
+      useStore.getState().todayInstances,
+      profile?.sleep_target_minutes ?? null
     );
     setRescheduleSlot(slot);
 
@@ -731,6 +732,10 @@ function TodayScreenContent() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleAdjustSlot = (start: number, end: number) => {
+    setRescheduleSlot({ start_minutes: start, end_minutes: end });
   };
 
   const handleReschedule = async () => {
@@ -1031,9 +1036,11 @@ function TodayScreenContent() {
         reflectionWhy={reflectionWhy}
         reflectionImprove={reflectionImprove}
         rescheduleSlot={rescheduleSlot}
+        sleepTargetMinutes={profile?.sleep_target_minutes ?? null}
         saving={saving}
         onSaveRecovery={handleSaveRecovery}
         onReschedule={handleReschedule}
+        onAdjustSlot={handleAdjustSlot}
         onChangeWhy={setReflectionWhy}
         onChangeImprove={setReflectionImprove}
         onClose={closeRecovery}

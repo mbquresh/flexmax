@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import { minutesToTime } from "../lib/time";
 import { hapticSelect } from "../lib/haptics";
 import { Colors, spacing, radii, typography } from "../theme";
 import { useTheme } from "../providers/ThemeProvider";
+import { TimePicker } from "./TimePicker";
 
 const IMPROVE_CHIPS = [
   "Start earlier",
@@ -36,9 +37,11 @@ interface RecoverySheetProps {
   reflectionWhy: string;
   reflectionImprove: string;
   rescheduleSlot: RescheduleSlot | null;
+  sleepTargetMinutes: number | null;
   saving: boolean;
   onSaveRecovery: () => void;
   onReschedule: () => void;
+  onAdjustSlot: (start: number, end: number) => void;
   onChangeWhy: (text: string) => void;
   onChangeImprove: (text: string) => void;
   onClose: () => void;
@@ -50,9 +53,11 @@ export function RecoverySheet({
   reflectionWhy,
   reflectionImprove,
   rescheduleSlot,
+  sleepTargetMinutes,
   saving,
   onSaveRecovery,
   onReschedule,
+  onAdjustSlot,
   onChangeWhy,
   onChangeImprove,
   onClose,
@@ -60,6 +65,26 @@ export function RecoverySheet({
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [improveOther, setImproveOther] = useState(false);
+  const [adjustOpen, setAdjustOpen] = useState(false);
+
+  useEffect(() => {
+    setAdjustOpen(false);
+  }, [recoveryInstance?.id]);
+
+  const blockDuration =
+    recoveryInstance != null
+      ? recoveryInstance.end_minutes - recoveryInstance.start_minutes
+      : 0;
+
+  const handleStartAdjust = (start: number) => {
+    hapticSelect();
+    onAdjustSlot(start, start + blockDuration);
+  };
+
+  const pastBedtime =
+    sleepTargetMinutes != null &&
+    rescheduleSlot != null &&
+    rescheduleSlot.end_minutes > sleepTargetMinutes;
 
   const handleChipPress = (chipLabel: string) => {
     hapticSelect();
@@ -174,10 +199,32 @@ export function RecoverySheet({
             {rescheduleSlot ? (
               <View style={styles.rescheduleBox}>
                 <Text style={styles.rescheduleLabel}>Available slot today</Text>
-                <Text style={styles.rescheduleTime}>
-                  {minutesToTime(rescheduleSlot.start_minutes)} —{" "}
-                  {minutesToTime(rescheduleSlot.end_minutes)}
-                </Text>
+                <View style={styles.rescheduleTimeRow}>
+                  <Text style={styles.rescheduleTime}>
+                    {minutesToTime(rescheduleSlot.start_minutes)} —{" "}
+                    {minutesToTime(rescheduleSlot.end_minutes)}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => setAdjustOpen((open) => !open)}
+                    hitSlop={8}
+                  >
+                    <Text style={styles.adjustLink}>Adjust</Text>
+                  </TouchableOpacity>
+                </View>
+                {adjustOpen ? (
+                  <TimePicker
+                    label="Starts"
+                    valueMinutes={rescheduleSlot.start_minutes}
+                    onChange={handleStartAdjust}
+                  />
+                ) : null}
+                {pastBedtime ? (
+                  <View style={styles.bedtimeNote}>
+                    <Text style={styles.bedtimeNoteText}>
+                      This runs past your usual bedtime.
+                    </Text>
+                  </View>
+                ) : null}
                 <TouchableOpacity
                   style={styles.rescheduleBtn}
                   onPress={onReschedule}
@@ -328,7 +375,22 @@ const makeStyles = (c: Colors) =>
       marginBottom: spacing.lg,
     },
     rescheduleLabel: { color: c.success, fontSize: 12, fontWeight: "600" },
-    rescheduleTime: { color: c.text, ...typography.bodyBold },
+    rescheduleTimeRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: spacing.md,
+    },
+    rescheduleTime: { color: c.text, ...typography.bodyBold, flex: 1 },
+    adjustLink: { color: c.primary, ...typography.smallBold },
+    bedtimeNote: {
+      backgroundColor: c.surfaceNested,
+      borderLeftWidth: 2,
+      borderLeftColor: c.primary,
+      borderRadius: radii.sm,
+      padding: spacing.md,
+    },
+    bedtimeNoteText: { color: c.text, fontSize: 13, lineHeight: 20 },
     rescheduleBtn: {
       backgroundColor: c.success,
       borderRadius: radii.sm,
