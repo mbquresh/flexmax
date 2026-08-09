@@ -3,14 +3,16 @@ import { View, Text, StyleSheet, TouchableOpacity, Pressable } from "react-nativ
 import { Feather } from "@expo/vector-icons";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
+  Easing,
+  interpolateColor,
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
-  withRepeat,
+  withDelay,
   withSequence,
   withTiming,
 } from "react-native-reanimated";
-import { BlockStatus, DailyInstance } from "../types/database";
+import { DailyInstance } from "../types/database";
 import { minutesToTime } from "../lib/time";
 import { hapticPickUp, hapticDetent } from "../lib/haptics";
 import { DragHandle } from "./DragHandle";
@@ -20,20 +22,6 @@ import { colors, spacing, radii, iconSizes, typography, numeric } from "../theme
 const ACTION_BUTTON_WIDTH = 80;
 const REVEAL_WIDTH_PENDING = 160;
 const REVEAL_WIDTH_SINGLE = 80;
-
-const STATUS_COLORS = {
-  pending: colors.border,
-  active: colors.border,
-  completed: colors.success,
-  missed: colors.danger,
-  skipped: colors.textPlaceholder,
-  rescheduled: colors.textPlaceholder,
-  removed: colors.textPlaceholder,
-} as Record<BlockStatus, string>;
-
-function getStatusColor(status: BlockStatus): string {
-  return STATUS_COLORS[status] ?? STATUS_COLORS.pending;
-}
 
 function isInstanceFixed(instance: DailyInstance): boolean {
   return instance.is_fixed || !!instance.block?.is_fixed;
@@ -87,16 +75,13 @@ export function BlockCard({
     instance.status === "completed" ||
     instance.status === "missed" ||
     instance.status === "skipped";
+  const statusFade = useSharedValue(isAnswered ? 1 : 0);
   const revealWidth = isUnanswered ? REVEAL_WIDTH_PENDING : REVEAL_WIDTH_SINGLE;
 
   const triggerFlash = () => {
-    flashOpacity.value = withRepeat(
-      withSequence(
-        withTiming(1, { duration: 100 }),
-        withTiming(0, { duration: 150 })
-      ),
-      3,
-      false
+    flashOpacity.value = withSequence(
+      withTiming(1, { duration: 120, easing: Easing.out(Easing.quad) }),
+      withDelay(160, withTiming(0, { duration: 420, easing: Easing.in(Easing.quad) }))
     );
   };
 
@@ -112,6 +97,13 @@ export function BlockCard({
       isOpen.value = 0;
       translateX.value = withTiming(0, { duration: 150 });
     }
+  }, [isAnswered]);
+
+  useEffect(() => {
+    statusFade.value = withTiming(isAnswered ? 1 : 0, {
+      duration: 260,
+      easing: Easing.out(Easing.cubic),
+    });
   }, [isAnswered]);
 
   const findSwapTarget = useCallback(
@@ -222,15 +214,43 @@ export function BlockCard({
   }));
 
   const flashStyle = useAnimatedStyle(() => ({
-    opacity: flashOpacity.value,
+    opacity: flashOpacity.value * 0.14,
     position: "absolute",
     top: 0,
     right: 0,
     bottom: 0,
     left: 0,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: colors.streak,
+    borderRadius: radii.lg,
+    backgroundColor: colors.primary,
+  }));
+
+  const statusBarOverlayColor = isDone
+    ? colors.success
+    : isMissed
+      ? colors.danger
+      : colors.border;
+
+  const statusBarOverlayStyle = useAnimatedStyle(() => ({
+    opacity: statusFade.value,
+    backgroundColor: statusBarOverlayColor,
+  }));
+
+  const actionCircleBorderStyle = useAnimatedStyle(() => ({
+    borderColor: interpolateColor(
+      statusFade.value,
+      [0, 1],
+      [colors.primary, isDone ? colors.success : isMissed ? colors.danger : colors.primary]
+    ),
+  }));
+
+  const actionCircleFillStyle = useAnimatedStyle(() => ({
+    opacity: statusFade.value,
+    backgroundColor: isDone ? colors.success : "transparent",
+  }));
+
+  const actionIconStyle = useAnimatedStyle(() => ({
+    opacity: statusFade.value,
+    transform: [{ scale: 0.85 + statusFade.value * 0.15 }],
   }));
 
   return (
@@ -287,9 +307,12 @@ export function BlockCard({
 
         <GestureDetector gesture={swipeGesture}>
           <Pressable style={styles.cardBody} onPress={onCardPress}>
-            <View
-              style={[styles.statusBar, { backgroundColor: getStatusColor(instance.status) }]}
-            />
+            <View style={styles.statusBar}>
+              <Animated.View
+                style={[styles.statusBarOverlay, statusBarOverlayStyle]}
+                pointerEvents="none"
+              />
+            </View>
             <View style={styles.cardMain}>
               <View style={styles.blockNameRow}>
                 <Text style={styles.blockName}>{instance.block?.name ?? "Block"}</Text>
@@ -313,20 +336,24 @@ export function BlockCard({
             </View>
 
             <TouchableOpacity
-              style={[
-                styles.actionCircle,
-                isDone && styles.actionCircleDone,
-                isMissed && styles.actionCircleMissed,
-              ]}
               onPress={handleActionPress}
               disabled={saving}
               hitSlop={8}
+              activeOpacity={1}
             >
-              {isDone ? (
-                <Feather name="check" size={iconSizes.md} color={colors.text} />
-              ) : isMissed ? (
-                <Feather name="minus" size={iconSizes.md} color={colors.danger} />
-              ) : null}
+              <Animated.View style={[styles.actionCircle, actionCircleBorderStyle]}>
+                <Animated.View
+                  style={[styles.actionCircleFill, actionCircleFillStyle]}
+                  pointerEvents="none"
+                />
+                <Animated.View style={actionIconStyle}>
+                  {isDone ? (
+                    <Feather name="check" size={iconSizes.md} color={colors.text} />
+                  ) : isMissed ? (
+                    <Feather name="minus" size={iconSizes.md} color={colors.danger} />
+                  ) : null}
+                </Animated.View>
+              </Animated.View>
             </TouchableOpacity>
 
             <Animated.View style={flashStyle} pointerEvents="none" />
@@ -393,7 +420,18 @@ const styles = StyleSheet.create({
     borderRightWidth: 1,
     borderRightColor: colors.border,
   },
-  statusBar: { width: 4 },
+  statusBar: {
+    width: 4,
+    backgroundColor: colors.border,
+    position: "relative",
+  },
+  statusBarOverlay: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+  },
   cardBody: {
     flex: 1,
     flexDirection: "row",
@@ -424,13 +462,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginTop: 2,
+    overflow: "hidden",
   },
-  actionCircleDone: {
-    borderColor: colors.success,
-    backgroundColor: colors.success,
-  },
-  actionCircleMissed: {
-    borderColor: colors.danger,
-    backgroundColor: "transparent",
+  actionCircleFill: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    borderRadius: radii.pill,
   },
 });
