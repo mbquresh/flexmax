@@ -73,7 +73,7 @@ export type Colors = { [K in keyof typeof lightColors]: string };
 export const darkColors: Colors = {
   // Warm charcoal, not black. Keeping the background off zero is what gives
   // surfaceDim room to sit BELOW it — on #000 it would be indistinguishable.
-  background: "#1A1815",
+  background: "#1E1C19",
   surface: "#262320",
   surfaceNested: "#302C28",
   surfaceDim: "#131110",
@@ -106,7 +106,7 @@ export const darkColors: Colors = {
   errorBorder: "#7A4038",
 
   streak: "#5FCBA6",
-  streakMissed: "#7C766C",
+  streakMissed: "#5E594F",
   streakHousing: "#262320",
   streakBorder: "#3A3630",
   streakMuted: "#9B948A",
@@ -133,12 +133,6 @@ export const darkColors: Colors = {
 
   overlayScrim: "#000000",
 };
-
-// Back-compat alias. Every unconverted file still imports `colors` and keeps
-// rendering the light palette, so the migration can proceed file by file
-// without breaking anything. Remove this only after all 25 styled files have
-// been converted to makeStyles(c).
-export const colors = lightColors;
 
 export const spacing = {
   xs: 4,
