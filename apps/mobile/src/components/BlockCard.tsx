@@ -235,17 +235,24 @@ export function BlockCard({
     backgroundColor: statusBarOverlayColor,
   }));
 
-  const actionCircleBorderStyle = useAnimatedStyle(() => ({
+  const targetBorder = isDone
+    ? colors.success
+    : isMissed
+      ? colors.danger
+      : colors.primary;
+  const targetFill = isDone ? colors.success : colors.surface;
+
+  const circleAnimatedStyle = useAnimatedStyle(() => ({
     borderColor: interpolateColor(
       statusFade.value,
       [0, 1],
-      [colors.primary, isDone ? colors.success : isMissed ? colors.danger : colors.primary]
+      [colors.primary, targetBorder]
     ),
-  }));
-
-  const actionCircleFillStyle = useAnimatedStyle(() => ({
-    opacity: statusFade.value,
-    backgroundColor: isDone ? colors.success : "transparent",
+    backgroundColor: interpolateColor(
+      statusFade.value,
+      [0, 1],
+      [colors.surface, targetFill]
+    ),
   }));
 
   const actionIconStyle = useAnimatedStyle(() => ({
@@ -341,11 +348,7 @@ export function BlockCard({
               hitSlop={8}
               activeOpacity={1}
             >
-              <Animated.View style={[styles.actionCircle, actionCircleBorderStyle]}>
-                <Animated.View
-                  style={[styles.actionCircleFill, actionCircleFillStyle]}
-                  pointerEvents="none"
-                />
+              <Animated.View style={[styles.actionCircle, circleAnimatedStyle]}>
                 <Animated.View style={actionIconStyle}>
                   {isDone ? (
                     <Feather name="check" size={iconSizes.md} color={colors.text} />
@@ -355,10 +358,9 @@ export function BlockCard({
                 </Animated.View>
               </Animated.View>
             </TouchableOpacity>
-
-            <Animated.View style={flashStyle} pointerEvents="none" />
           </Pressable>
         </GestureDetector>
+        <Animated.View style={flashStyle} pointerEvents="none" />
       </Animated.View>
     </Animated.View>
   );
@@ -462,14 +464,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginTop: 2,
-    overflow: "hidden",
-  },
-  actionCircleFill: {
-    position: "absolute",
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-    borderRadius: radii.pill,
   },
 });
