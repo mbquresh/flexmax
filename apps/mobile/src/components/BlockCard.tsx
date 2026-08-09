@@ -209,7 +209,9 @@ export function BlockCard({
       }
     });
 
-  const cardShadowAnimatedStyle = useAnimatedStyle(() => ({
+  const wrapperAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }, { scale: scale.value }],
+    zIndex: isDragging.value ? 100 : 1,
     shadowColor: colors.shadowRest.shadowColor,
     shadowOffset: colors.shadowRest.shadowOffset,
     shadowOpacity: interpolate(
@@ -222,11 +224,6 @@ export function BlockCard({
       [0, 1],
       [colors.shadowRest.shadowRadius, colors.shadowLift.shadowRadius]
     ),
-  }));
-
-  const wrapperAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }, { scale: scale.value }],
-    zIndex: isDragging.value ? 100 : 1,
   }));
 
   const slideAnimatedStyle = useAnimatedStyle(() => ({
@@ -290,14 +287,13 @@ export function BlockCard({
   }));
 
   return (
-    <Animated.View style={[styles.cardShadow, cardShadowAnimatedStyle]}>
-      <Animated.View
-        style={[styles.cardWrapper, wrapperAnimatedStyle]}
-        onLayout={(e) => {
-          const { y, height } = e.nativeEvent.layout;
-          onLayout(instance.id, y, height);
-        }}
-      >
+    <Animated.View
+      style={[styles.cardWrapper, wrapperAnimatedStyle]}
+      onLayout={(e) => {
+        const { y, height } = e.nativeEvent.layout;
+        onLayout(instance.id, y, height);
+      }}
+    >
       <View style={styles.actionsBehind}>
         {isUnanswered && (
           <TouchableOpacity
@@ -392,23 +388,18 @@ export function BlockCard({
         </GestureDetector>
         <Animated.View style={flashStyle} pointerEvents="none" />
       </Animated.View>
-      </Animated.View>
     </Animated.View>
   );
 }
 
 const makeStyles = (c: Colors) =>
   StyleSheet.create({
-    cardShadow: {
-      backgroundColor: c.surface,
-      borderRadius: radii.lg,
-      marginBottom: 10,
-      ...c.shadowRest,
-    },
     cardWrapper: {
+      marginBottom: 10,
       position: "relative",
       overflow: "hidden",
       borderRadius: radii.lg,
+      ...c.shadowRest,
     },
     actionsBehind: {
       position: "absolute",

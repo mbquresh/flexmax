@@ -72,7 +72,7 @@ export const lightColors = {
   shadowRest: {
     shadowColor: "#2B2822",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.10,
+    shadowOpacity: 0.06,
     shadowRadius: 8,
   },
   shadowLift: {
