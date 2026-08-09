@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -13,8 +13,17 @@ import {
 import { DailyInstance } from "../types/database";
 import { RecoveryCopy } from "../lib/recoveryCopy";
 import { minutesToTime } from "../lib/time";
+import { hapticSelect } from "../lib/haptics";
 import { Colors, spacing, radii, typography } from "../theme";
 import { useTheme } from "../providers/ThemeProvider";
+
+const IMPROVE_CHIPS = [
+  "Start earlier",
+  "Make it shorter",
+  "Different time of day",
+  "Prep the night before",
+  "Break it into steps",
+] as const;
 
 export interface RescheduleSlot {
   start_minutes: number;
@@ -50,6 +59,23 @@ export function RecoverySheet({
 }: RecoverySheetProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const [improveOther, setImproveOther] = useState(false);
+
+  const handleChipPress = (chipLabel: string) => {
+    hapticSelect();
+    if (reflectionImprove === chipLabel) {
+      onChangeImprove("");
+    } else {
+      onChangeImprove(chipLabel);
+      setImproveOther(false);
+    }
+  };
+
+  const handleSomethingElsePress = () => {
+    hapticSelect();
+    setImproveOther(true);
+    onChangeImprove("");
+  };
 
   return (
     <Modal
@@ -94,20 +120,56 @@ export function RecoverySheet({
               style={styles.reflectionInput}
               value={reflectionWhy}
               onChangeText={onChangeWhy}
-              placeholder="Be honest..."
+              placeholder="What happened?"
               placeholderTextColor={colors.textPlaceholder}
               multiline
             />
 
             <Text style={styles.reflectionLabel}>One thing you'd change next time?</Text>
-            <TextInput
-              style={styles.reflectionInput}
-              value={reflectionImprove}
-              onChangeText={onChangeImprove}
-              placeholder="Even something small..."
-              placeholderTextColor={colors.textPlaceholder}
-              multiline
-            />
+            <View style={[styles.chipRow, !improveOther && styles.chipRowTrailing]}>
+              {IMPROVE_CHIPS.map((chip) => {
+                const selected = reflectionImprove === chip;
+                return (
+                  <TouchableOpacity
+                    key={chip}
+                    style={[styles.chip, selected ? styles.chipSelected : styles.chipUnselected]}
+                    onPress={() => handleChipPress(chip)}
+                  >
+                    <Text
+                      style={[
+                        styles.chipText,
+                        selected ? styles.chipTextSelected : styles.chipTextUnselected,
+                      ]}
+                    >
+                      {chip}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+              <TouchableOpacity
+                style={[styles.chip, improveOther ? styles.chipSelected : styles.chipUnselected]}
+                onPress={handleSomethingElsePress}
+              >
+                <Text
+                  style={[
+                    styles.chipText,
+                    improveOther ? styles.chipTextSelected : styles.chipTextUnselected,
+                  ]}
+                >
+                  Something else
+                </Text>
+              </TouchableOpacity>
+            </View>
+            {improveOther ? (
+              <TextInput
+                style={styles.reflectionInput}
+                value={reflectionImprove}
+                onChangeText={onChangeImprove}
+                placeholder="Even something small..."
+                placeholderTextColor={colors.textPlaceholder}
+                multiline
+              />
+            ) : null}
 
             {rescheduleSlot ? (
               <View style={styles.rescheduleBox}>
@@ -225,6 +287,38 @@ const makeStyles = (c: Colors) =>
       minHeight: 80,
       lineHeight: 20,
       marginBottom: spacing.xl,
+    },
+    chipRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: spacing.sm,
+      marginBottom: spacing.sm,
+    },
+    chipRowTrailing: {
+      marginBottom: spacing.xl,
+    },
+    chip: {
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+      borderRadius: radii.pill,
+      borderWidth: 1,
+    },
+    chipSelected: {
+      backgroundColor: c.primaryTint,
+      borderColor: c.primary,
+    },
+    chipUnselected: {
+      backgroundColor: c.surfaceNested,
+      borderColor: c.border,
+    },
+    chipText: {
+      ...typography.small,
+    },
+    chipTextSelected: {
+      color: c.primary,
+    },
+    chipTextUnselected: {
+      color: c.textSecondary,
     },
     rescheduleBox: {
       backgroundColor: c.successTint,
