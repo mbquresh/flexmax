@@ -447,6 +447,24 @@ colors, or celebratory animation, it has misdiagnosed the problem. The fix
 direction is physical feedback and typographic hierarchy, not visual noise.
 Card and sheet elevation in light mode is the one permitted shadow use.
 
+**Block cards cannot have drop shadows. Do not attempt this again.**
+An attempt on 2026-08-09 broke drag-to-swap and was reverted. The chain:
+`cardWrapper` cannot cast a shadow itself, because `overflow: "hidden"` (needed
+for the swipe reveal) sets `clipsToBounds` on iOS, which clips the layer's own
+shadow — not only its children's — and because it has no `backgroundColor`, the
+fill living on `slidingRow` inside it. Casting a shadow therefore requires a new
+outer wrapper, which changes the coordinate space `onLayout` reports against.
+`cardPositions` then holds y values measured from the new parent instead of the
+list container, and `findSwapTarget` resolves against meaningless geometry.
+Block card elevation is luminance-based only: `surface` sits above `background`
+in both modes. This is the same coordinate-space hazard that got 4b rejected.
+
+NOTE: BlockCard still contains inert shadow code — `...c.shadowRest` on
+cardWrapper and shadow interpolation in wrapperAnimatedStyle. Both render
+nothing. Left in place deliberately rather than reopening a gesture-critical
+file for a cosmetic cleanup. Remove only alongside other work in that file, and
+never add a wrapper around cardWrapper.
+
 Motion added under this section is STATE TRANSITION and PHYSICS — a status
 changing, a card settling, a list reflowing. It is not celebration. The
 no-confetti / no-cheerleading rule is unaffected.
