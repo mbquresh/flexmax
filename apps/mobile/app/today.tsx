@@ -1051,6 +1051,7 @@ function TodayScreenContent() {
         items={[
           {
             label: "Plan tomorrow",
+            icon: "calendar",
             onPress: () => {
               setMenuOpen(false);
               router.push("/plan-tomorrow");
@@ -1058,6 +1059,7 @@ function TodayScreenContent() {
           },
           {
             label: "Last week",
+            icon: "bar-chart-2",
             onPress: () => {
               setMenuOpen(false);
               router.push("/weekly-recap");
@@ -1065,6 +1067,7 @@ function TodayScreenContent() {
           },
           {
             label: "Edit schedule",
+            icon: "sliders",
             onPress: () => {
               setMenuOpen(false);
               router.push("/schedule-builder");
@@ -1072,6 +1075,7 @@ function TodayScreenContent() {
           },
           {
             label: "Reset today",
+            icon: "rotate-ccw",
             danger: true,
             onPress: () => {
               setMenuOpen(false);

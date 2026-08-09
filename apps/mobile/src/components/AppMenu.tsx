@@ -10,11 +10,14 @@ import {
   Easing,
   Platform,
 } from "react-native";
-import { Colors, spacing, radii, typography } from "../theme";
+import { Feather } from "@expo/vector-icons";
+import { Colors, spacing, radii, typography, iconSizes } from "../theme";
 import { useTheme } from "../providers/ThemeProvider";
+import { hapticSelect } from "../lib/haptics";
 
 export interface AppMenuItem {
   label: string;
+  icon: React.ComponentProps<typeof Feather>["name"];
   danger?: boolean;
   onPress: () => void;
 }
@@ -32,6 +35,8 @@ interface MenuButtonProps {
 const SHEET_OFFSET = 400;
 const OPEN_DURATION = 220;
 const CLOSE_DURATION = 180;
+const SCRIM_OPACITY_LIGHT = 0.4;
+const SCRIM_OPACITY_DARK = 0.6;
 
 export function MenuButton({ onPress }: MenuButtonProps) {
   const { colors } = useTheme();
@@ -54,10 +59,11 @@ export function MenuButton({ onPress }: MenuButtonProps) {
 }
 
 export function AppMenu({ visible, onClose, items }: AppMenuProps) {
-  const { colors } = useTheme();
+  const { colors, scheme } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const slideAnim = useRef(new RNAnimated.Value(SHEET_OFFSET)).current;
   const scrimAnim = useRef(new RNAnimated.Value(0)).current;
+  const scrimOpacity = scheme === "dark" ? SCRIM_OPACITY_DARK : SCRIM_OPACITY_LIGHT;
 
   useEffect(() => {
     if (visible) {
@@ -71,14 +77,14 @@ export function AppMenu({ visible, onClose, items }: AppMenuProps) {
           useNativeDriver: true,
         }),
         RNAnimated.timing(scrimAnim, {
-          toValue: 0.4,
+          toValue: scrimOpacity,
           duration: OPEN_DURATION,
           easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
       ]).start();
     }
-  }, [visible, slideAnim, scrimAnim]);
+  }, [visible, slideAnim, scrimAnim, scrimOpacity]);
 
   const handleClose = () => {
     RNAnimated.parallel([
@@ -124,13 +130,28 @@ export function AppMenu({ visible, onClose, items }: AppMenuProps) {
                       styles.menuRow,
                       pressed && styles.menuRowPressed,
                     ]}
-                    onPress={item.onPress}
+                    onPress={() => {
+                      hapticSelect();
+                      item.onPress();
+                    }}
                   >
+                    <Feather
+                      name={item.icon}
+                      size={iconSizes.md}
+                      color={item.danger ? colors.danger : colors.textMuted}
+                    />
                     <Text
                       style={[styles.menuRowText, item.danger && styles.menuRowTextDanger]}
                     >
                       {item.label}
                     </Text>
+                    {!item.danger ? (
+                      <Feather
+                        name="chevron-right"
+                        size={iconSizes.sm}
+                        color={colors.textFaint}
+                      />
+                    ) : null}
                   </Pressable>
                 </React.Fragment>
               ))}
@@ -176,6 +197,10 @@ const makeStyles = (c: Colors) =>
       backgroundColor: c.surface,
       borderTopLeftRadius: radii.pill,
       borderTopRightRadius: radii.pill,
+      borderTopWidth: 0.5,
+      borderLeftWidth: 0.5,
+      borderRightWidth: 0.5,
+      borderColor: c.border,
       paddingHorizontal: spacing.xl,
       paddingBottom: Platform.OS === "ios" ? 36 : 24,
       paddingTop: 10,
@@ -196,14 +221,18 @@ const makeStyles = (c: Colors) =>
       marginBottom: spacing.xs,
     },
     menuRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.md,
       paddingVertical: 16,
-      paddingHorizontal: spacing.xs,
+      paddingHorizontal: spacing.md,
       borderRadius: radii.sm,
     },
     menuRowPressed: {
       backgroundColor: c.surfaceNested,
     },
     menuRowText: {
+      flex: 1,
       color: c.text,
       ...typography.body,
       textAlign: "left",
