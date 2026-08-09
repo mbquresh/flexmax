@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -9,7 +9,8 @@ import {
 } from "react-native";
 import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { Feather } from "@expo/vector-icons";
-import { colors, spacing, radii, typography, iconSizes } from "../theme";
+import { Colors, spacing, radii, typography, iconSizes } from "../theme";
+import { useTheme } from "../providers/ThemeProvider";
 
 interface Props {
   sleepTargetMinutes: number;
@@ -62,6 +63,8 @@ export function DayBoundaryCard({
   onDismiss,
   saving,
 }: Props) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [showSleepExact, setShowSleepExact] = useState(false);
   const [showWakeExact, setShowWakeExact] = useState(false);
   const [sleepPickerDate, setSleepPickerDate] = useState(() =>
@@ -238,76 +241,77 @@ export function DayBoundaryCard({
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    marginHorizontal: spacing.xl,
-    marginTop: spacing.md,
-    marginBottom: spacing.xs,
-    backgroundColor: colors.surface,
-    borderRadius: radii.xl,
-    padding: spacing.lg,
-    borderWidth: 0.5,
-    borderColor: colors.border,
-  },
-  sectionGap: {
-    height: spacing.lg,
-  },
-  eyebrow: {
-    color: colors.textMuted,
-    ...typography.caption,
-    marginBottom: spacing.xs,
-  },
-  question: {
-    color: colors.text,
-    ...typography.bodyBold,
-    marginBottom: spacing.md,
-  },
-  answered: {
-    color: colors.textFaint,
-    ...typography.small,
-  },
-  bucketRow: {
-    flexDirection: "row",
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  bucket: {
-    flex: 1,
-    backgroundColor: colors.surfaceNested,
-    borderRadius: radii.lg,
-    borderWidth: 0.5,
-    borderColor: colors.border,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.sm,
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: 44,
-  },
-  bucketText: {
-    color: colors.text,
-    ...typography.smallBold,
-    textAlign: "center",
-  },
-  exactLink: {
-    color: colors.primary,
-    ...typography.caption,
-  },
-  footer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: spacing.md,
-  },
-  pickerWrap: {
-    marginTop: spacing.sm,
-  },
-  doneBtn: {
-    alignSelf: "flex-end",
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-  },
-  doneText: {
-    color: colors.primary,
-    ...typography.bodyBold,
-  },
-});
+const makeStyles = (c: Colors) =>
+  StyleSheet.create({
+    card: {
+      marginHorizontal: spacing.xl,
+      marginTop: spacing.md,
+      marginBottom: spacing.xs,
+      backgroundColor: c.surface,
+      borderRadius: radii.xl,
+      padding: spacing.lg,
+      borderWidth: 0.5,
+      borderColor: c.border,
+    },
+    sectionGap: {
+      height: spacing.lg,
+    },
+    eyebrow: {
+      color: c.textMuted,
+      ...typography.caption,
+      marginBottom: spacing.xs,
+    },
+    question: {
+      color: c.text,
+      ...typography.bodyBold,
+      marginBottom: spacing.md,
+    },
+    answered: {
+      color: c.textFaint,
+      ...typography.small,
+    },
+    bucketRow: {
+      flexDirection: "row",
+      gap: spacing.sm,
+      marginBottom: spacing.md,
+    },
+    bucket: {
+      flex: 1,
+      backgroundColor: c.surfaceNested,
+      borderRadius: radii.lg,
+      borderWidth: 0.5,
+      borderColor: c.border,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.sm,
+      alignItems: "center",
+      justifyContent: "center",
+      minHeight: 44,
+    },
+    bucketText: {
+      color: c.text,
+      ...typography.smallBold,
+      textAlign: "center",
+    },
+    exactLink: {
+      color: c.primary,
+      ...typography.caption,
+    },
+    footer: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginTop: spacing.md,
+    },
+    pickerWrap: {
+      marginTop: spacing.sm,
+    },
+    doneBtn: {
+      alignSelf: "flex-end",
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+    },
+    doneText: {
+      color: c.primary,
+      ...typography.bodyBold,
+    },
+  });

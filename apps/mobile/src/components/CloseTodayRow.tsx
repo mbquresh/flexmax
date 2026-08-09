@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { DailyInstance } from "../types/database";
 import { minutesToTime } from "../lib/time";
-import { colors, spacing, radii } from "../theme";
+import { Colors, spacing, radii } from "../theme";
+import { useTheme } from "../providers/ThemeProvider";
 
 const MISS_REASON_PRESETS = [
   "Ran out of time",
@@ -28,6 +29,8 @@ export function CloseTodayRow({
   onPresetTap,
   onPresetSkip,
 }: CloseTodayRowProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [presetsDismissed, setPresetsDismissed] = useState(false);
 
   const blockName = instance.block?.name ?? "Block";
@@ -94,83 +97,84 @@ export function CloseTodayRow({
   );
 }
 
-const styles = StyleSheet.create({
-  row: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.lg,
-    padding: spacing.lg,
-    gap: spacing.sm,
-  },
-  blockName: {
-    color: colors.text,
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  blockTime: {
-    color: colors.textMuted,
-    fontSize: 13,
-  },
-  actionRow: {
-    flexDirection: "row",
-    gap: spacing.sm,
-    marginTop: spacing.xs,
-  },
-  actionBtn: {
-    flex: 1,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    paddingVertical: spacing.sm,
-    alignItems: "center",
-  },
-  doneBtn: {
-    backgroundColor: colors.successTint,
-    borderColor: colors.success,
-  },
-  doneBtnText: {
-    color: colors.text,
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  neutralBtn: {
-    backgroundColor: colors.surfaceNested,
-    borderColor: colors.border,
-  },
-  neutralBtnText: {
-    color: colors.textSecondary,
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  presetHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: spacing.md,
-  },
-  missedBadge: {
-    color: colors.textMuted,
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  presetWrap: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.sm,
-  },
-  presetBtn: {
-    backgroundColor: colors.surfaceNested,
-    borderWidth: 0.5,
-    borderColor: colors.border,
-    borderRadius: radii.pill,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  presetBtnText: {
-    color: colors.textSecondary,
-    fontSize: 13,
-  },
-  skipLink: {
-    color: colors.textFaint,
-    fontSize: 13,
-    alignSelf: "flex-start",
-  },
-});
+const makeStyles = (c: Colors) =>
+  StyleSheet.create({
+    row: {
+      backgroundColor: c.surface,
+      borderRadius: radii.lg,
+      padding: spacing.lg,
+      gap: spacing.sm,
+    },
+    blockName: {
+      color: c.text,
+      fontSize: 16,
+      fontWeight: "600",
+    },
+    blockTime: {
+      color: c.textMuted,
+      fontSize: 13,
+    },
+    actionRow: {
+      flexDirection: "row",
+      gap: spacing.sm,
+      marginTop: spacing.xs,
+    },
+    actionBtn: {
+      flex: 1,
+      borderRadius: radii.md,
+      borderWidth: 1,
+      paddingVertical: spacing.sm,
+      alignItems: "center",
+    },
+    doneBtn: {
+      backgroundColor: c.successTint,
+      borderColor: c.success,
+    },
+    doneBtnText: {
+      color: c.text,
+      fontSize: 13,
+      fontWeight: "600",
+    },
+    neutralBtn: {
+      backgroundColor: c.surfaceNested,
+      borderColor: c.border,
+    },
+    neutralBtnText: {
+      color: c.textSecondary,
+      fontSize: 13,
+      fontWeight: "600",
+    },
+    presetHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: spacing.md,
+    },
+    missedBadge: {
+      color: c.textMuted,
+      fontSize: 13,
+      fontWeight: "600",
+    },
+    presetWrap: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: spacing.sm,
+    },
+    presetBtn: {
+      backgroundColor: c.surfaceNested,
+      borderWidth: 0.5,
+      borderColor: c.border,
+      borderRadius: radii.pill,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+    },
+    presetBtnText: {
+      color: c.textSecondary,
+      fontSize: 13,
+    },
+    skipLink: {
+      color: c.textFaint,
+      fontSize: 13,
+      alignSelf: "flex-start",
+    },
+  });

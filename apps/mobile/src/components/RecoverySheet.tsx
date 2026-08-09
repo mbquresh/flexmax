@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   View,
   Text,
@@ -13,7 +13,8 @@ import {
 import { DailyInstance } from "../types/database";
 import { RecoveryCopy } from "../lib/recoveryCopy";
 import { minutesToTime } from "../lib/time";
-import { colors, spacing, radii, typography } from "../theme";
+import { Colors, spacing, radii, typography } from "../theme";
+import { useTheme } from "../providers/ThemeProvider";
 
 export interface RescheduleSlot {
   start_minutes: number;
@@ -47,6 +48,9 @@ export function RecoverySheet({
   onChangeImprove,
   onClose,
 }: RecoverySheetProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
   return (
     <Modal
       visible={!!recoveryInstance}
@@ -143,120 +147,121 @@ export function RecoverySheet({
   );
 }
 
-const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    justifyContent: "flex-end",
-    backgroundColor: "rgba(0,0,0,0.6)",
-  },
-  recoverySheet: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.round,
-    padding: spacing.xxl,
-    paddingBottom: 40,
-    maxHeight: "85%",
-  },
-  sheetHandle: {
-    alignSelf: "center",
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.textDisabled,
-    marginBottom: spacing.lg,
-  },
-  recoveryTitle: {
-    color: colors.text,
-    ...typography.heading,
-    marginBottom: spacing.sm,
-  },
-  recoveryAck: {
-    color: colors.textSecondary,
-    fontSize: 14,
-    lineHeight: 22,
-    marginBottom: spacing.xl,
-  },
-  patternNote: {
-    backgroundColor: colors.surfaceNested,
-    borderLeftWidth: 2,
-    borderLeftColor: colors.primary,
-    borderRadius: radii.sm,
-    padding: spacing.lg,
-    marginBottom: spacing.xl,
-  },
-  patternNoteText: { color: colors.text, fontSize: 13, lineHeight: 20 },
-  lastIntention: {
-    backgroundColor: colors.surfaceNested,
-    borderRadius: radii.sm,
-    padding: spacing.lg,
-    marginBottom: spacing.xl,
-  },
-  lastIntentionLabel: {
-    color: colors.textMuted,
-    fontSize: 11,
-    fontWeight: "600",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-    marginBottom: spacing.sm,
-  },
-  lastIntentionText: {
-    color: colors.text,
-    fontSize: 14,
-    lineHeight: 21,
-    fontStyle: "italic",
-  },
-  reflectionLabel: {
-    color: colors.textMuted,
-    ...typography.smallBold,
-    marginBottom: spacing.sm,
-  },
-  reflectionInput: {
-    backgroundColor: colors.surfaceNested,
-    borderWidth: 0.5,
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    padding: spacing.md,
-    color: colors.text,
-    fontSize: 14,
-    minHeight: 80,
-    lineHeight: 20,
-    marginBottom: spacing.xl,
-  },
-  rescheduleBox: {
-    backgroundColor: colors.successTint,
-    borderRadius: radii.md,
-    padding: 14,
-    gap: 6,
-    marginBottom: spacing.lg,
-  },
-  rescheduleLabel: { color: colors.success, fontSize: 12, fontWeight: "600" },
-  rescheduleTime: { color: colors.text, ...typography.bodyBold },
-  rescheduleBtn: {
-    backgroundColor: colors.success,
-    borderRadius: radii.sm,
-    paddingVertical: 10,
-    alignItems: "center",
-    marginTop: spacing.xs,
-  },
-  rescheduleBtnText: { color: colors.text, fontSize: 14, fontWeight: "600" },
-  noSlot: {
-    color: colors.textPlaceholder,
-    fontSize: 13,
-    fontStyle: "italic",
-    marginBottom: spacing.lg,
-  },
-  recoveryActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: spacing.xs,
-  },
-  saveBtn: {
-    backgroundColor: colors.primary,
-    borderRadius: radii.md,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xxl,
-  },
-  saveBtnText: { color: colors.onPrimary, ...typography.bodyBold },
-  skipText: { color: colors.textPlaceholder, fontSize: 14 },
-  btnDisabled: { opacity: 0.5 },
-});
+const makeStyles = (c: Colors) =>
+  StyleSheet.create({
+    modalOverlay: {
+      flex: 1,
+      justifyContent: "flex-end",
+      backgroundColor: "rgba(0,0,0,0.6)",
+    },
+    recoverySheet: {
+      backgroundColor: c.surface,
+      borderRadius: radii.round,
+      padding: spacing.xxl,
+      paddingBottom: 40,
+      maxHeight: "85%",
+    },
+    sheetHandle: {
+      alignSelf: "center",
+      width: 36,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: c.textDisabled,
+      marginBottom: spacing.lg,
+    },
+    recoveryTitle: {
+      color: c.text,
+      ...typography.heading,
+      marginBottom: spacing.sm,
+    },
+    recoveryAck: {
+      color: c.textSecondary,
+      fontSize: 14,
+      lineHeight: 22,
+      marginBottom: spacing.xl,
+    },
+    patternNote: {
+      backgroundColor: c.surfaceNested,
+      borderLeftWidth: 2,
+      borderLeftColor: c.primary,
+      borderRadius: radii.sm,
+      padding: spacing.lg,
+      marginBottom: spacing.xl,
+    },
+    patternNoteText: { color: c.text, fontSize: 13, lineHeight: 20 },
+    lastIntention: {
+      backgroundColor: c.surfaceNested,
+      borderRadius: radii.sm,
+      padding: spacing.lg,
+      marginBottom: spacing.xl,
+    },
+    lastIntentionLabel: {
+      color: c.textMuted,
+      fontSize: 11,
+      fontWeight: "600",
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+      marginBottom: spacing.sm,
+    },
+    lastIntentionText: {
+      color: c.text,
+      fontSize: 14,
+      lineHeight: 21,
+      fontStyle: "italic",
+    },
+    reflectionLabel: {
+      color: c.textMuted,
+      ...typography.smallBold,
+      marginBottom: spacing.sm,
+    },
+    reflectionInput: {
+      backgroundColor: c.surfaceNested,
+      borderWidth: 0.5,
+      borderColor: c.border,
+      borderRadius: radii.md,
+      padding: spacing.md,
+      color: c.text,
+      fontSize: 14,
+      minHeight: 80,
+      lineHeight: 20,
+      marginBottom: spacing.xl,
+    },
+    rescheduleBox: {
+      backgroundColor: c.successTint,
+      borderRadius: radii.md,
+      padding: 14,
+      gap: 6,
+      marginBottom: spacing.lg,
+    },
+    rescheduleLabel: { color: c.success, fontSize: 12, fontWeight: "600" },
+    rescheduleTime: { color: c.text, ...typography.bodyBold },
+    rescheduleBtn: {
+      backgroundColor: c.success,
+      borderRadius: radii.sm,
+      paddingVertical: 10,
+      alignItems: "center",
+      marginTop: spacing.xs,
+    },
+    rescheduleBtnText: { color: c.text, fontSize: 14, fontWeight: "600" },
+    noSlot: {
+      color: c.textPlaceholder,
+      fontSize: 13,
+      fontStyle: "italic",
+      marginBottom: spacing.lg,
+    },
+    recoveryActions: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginTop: spacing.xs,
+    },
+    saveBtn: {
+      backgroundColor: c.primary,
+      borderRadius: radii.md,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.xxl,
+    },
+    saveBtnText: { color: c.onPrimary, ...typography.bodyBold },
+    skipText: { color: c.textPlaceholder, fontSize: 14 },
+    btnDisabled: { opacity: 0.5 },
+  });

@@ -1,8 +1,9 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import { router } from "expo-router";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { useAuth } from "../providers/AuthProvider";
-import { colors } from "../theme";
+import { useTheme } from "../providers/ThemeProvider";
+import { Colors } from "../theme";
 
 interface RequireAuthProps {
   children: React.ReactNode;
@@ -14,6 +15,8 @@ export function RequireAuth({
   children,
   requireOnboarding = true,
 }: RequireAuthProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { session, psychologyProfile, loading, profileLoaded } = useAuth();
 
   const authReady = !loading && (!session || profileLoaded);
@@ -50,11 +53,12 @@ export function RequireAuth({
   return <>{children}</>;
 }
 
-const styles = StyleSheet.create({
-  centered: {
-    flex: 1,
-    backgroundColor: colors.background,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-});
+const makeStyles = (c: Colors) =>
+  StyleSheet.create({
+    centered: {
+      flex: 1,
+      backgroundColor: c.background,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+  });

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import {
   View,
   Text,
@@ -10,7 +10,8 @@ import {
   Easing,
   Platform,
 } from "react-native";
-import { colors, spacing, radii, typography } from "../theme";
+import { Colors, spacing, radii, typography } from "../theme";
+import { useTheme } from "../providers/ThemeProvider";
 
 export interface AppMenuItem {
   label: string;
@@ -33,6 +34,9 @@ const OPEN_DURATION = 220;
 const CLOSE_DURATION = 180;
 
 export function MenuButton({ onPress }: MenuButtonProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
   return (
     <TouchableOpacity
       style={styles.menuButton}
@@ -50,6 +54,8 @@ export function MenuButton({ onPress }: MenuButtonProps) {
 }
 
 export function AppMenu({ visible, onClose, items }: AppMenuProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const slideAnim = useRef(new RNAnimated.Value(SHEET_OFFSET)).current;
   const scrimAnim = useRef(new RNAnimated.Value(0)).current;
 
@@ -136,72 +142,73 @@ export function AppMenu({ visible, onClose, items }: AppMenuProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  menuButton: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: colors.surface,
-    borderWidth: 0.5,
-    borderColor: colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  menuBar: {
-    width: 18,
-    height: 2,
-    borderRadius: 1,
-    marginVertical: 1.5,
-  },
-  root: {
-    flex: 1,
-    justifyContent: "flex-end",
-  },
-  scrim: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: colors.overlayScrim,
-  },
-  overlayPressable: {
-    flex: 1,
-    justifyContent: "flex-end",
-  },
-  sheet: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radii.pill,
-    borderTopRightRadius: radii.pill,
-    paddingHorizontal: spacing.xl,
-    paddingBottom: Platform.OS === "ios" ? 36 : 24,
-    paddingTop: 10,
-  },
-  sheetHandleWrap: {
-    alignSelf: "center",
-    paddingBottom: spacing.lg,
-  },
-  sheetHandle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.border,
-  },
-  divider: {
-    height: 0.5,
-    backgroundColor: colors.border,
-    marginBottom: spacing.xs,
-  },
-  menuRow: {
-    paddingVertical: 16,
-    paddingHorizontal: spacing.xs,
-    borderRadius: radii.sm,
-  },
-  menuRowPressed: {
-    backgroundColor: colors.surfaceNested,
-  },
-  menuRowText: {
-    color: colors.text,
-    ...typography.body,
-    textAlign: "left",
-  },
-  menuRowTextDanger: {
-    color: colors.danger,
-  },
-});
+const makeStyles = (c: Colors) =>
+  StyleSheet.create({
+    menuButton: {
+      width: 46,
+      height: 46,
+      borderRadius: 23,
+      backgroundColor: c.surface,
+      borderWidth: 0.5,
+      borderColor: c.border,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    menuBar: {
+      width: 18,
+      height: 2,
+      borderRadius: 1,
+      marginVertical: 1.5,
+    },
+    root: {
+      flex: 1,
+      justifyContent: "flex-end",
+    },
+    scrim: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: c.overlayScrim,
+    },
+    overlayPressable: {
+      flex: 1,
+      justifyContent: "flex-end",
+    },
+    sheet: {
+      backgroundColor: c.surface,
+      borderTopLeftRadius: radii.pill,
+      borderTopRightRadius: radii.pill,
+      paddingHorizontal: spacing.xl,
+      paddingBottom: Platform.OS === "ios" ? 36 : 24,
+      paddingTop: 10,
+    },
+    sheetHandleWrap: {
+      alignSelf: "center",
+      paddingBottom: spacing.lg,
+    },
+    sheetHandle: {
+      width: 36,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: c.border,
+    },
+    divider: {
+      height: 0.5,
+      backgroundColor: c.border,
+      marginBottom: spacing.xs,
+    },
+    menuRow: {
+      paddingVertical: 16,
+      paddingHorizontal: spacing.xs,
+      borderRadius: radii.sm,
+    },
+    menuRowPressed: {
+      backgroundColor: c.surfaceNested,
+    },
+    menuRowText: {
+      color: c.text,
+      ...typography.body,
+      textAlign: "left",
+    },
+    menuRowTextDanger: {
+      color: c.danger,
+    },
+  });

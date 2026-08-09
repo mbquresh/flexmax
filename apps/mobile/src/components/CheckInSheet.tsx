@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   View,
   Text,
@@ -12,35 +12,36 @@ import {
 import { CompletionRating, DailyInstance } from "../types/database";
 import { hapticSelect } from "../lib/haptics";
 import { minutesToTime } from "../lib/time";
-import { colors, spacing, radii, typography, numeric } from "../theme";
+import { Colors, spacing, radii, typography, numeric } from "../theme";
+import { useTheme } from "../providers/ThemeProvider";
 
-const RATING_OPTIONS: {
+const makeRatingOptions = (c: Colors): {
   value: CompletionRating;
   label: string;
   bg: string;
   text: string;
   border: string;
-}[] = [
+}[] => [
   {
     value: "crushed",
     label: "Crushed it",
-    bg: colors.ratingGoodBg,
-    text: colors.ratingGoodText,
-    border: colors.ratingGoodBorder,
+    bg: c.ratingGoodBg,
+    text: c.ratingGoodText,
+    border: c.ratingGoodBorder,
   },
   {
     value: "partial",
     label: "Partly",
-    bg: colors.ratingOkayBg,
-    text: colors.ratingOkayText,
-    border: colors.ratingOkayBorder,
+    bg: c.ratingOkayBg,
+    text: c.ratingOkayText,
+    border: c.ratingOkayBorder,
   },
   {
     value: "pulled_away",
     label: "Lost focus",
-    bg: colors.ratingBadBg,
-    text: colors.ratingBadText,
-    border: colors.ratingBadBorder,
+    bg: c.ratingBadBg,
+    text: c.ratingBadText,
+    border: c.ratingBadBorder,
   },
 ];
 
@@ -61,6 +62,10 @@ export function CheckInSheet({
   onRate,
   onClose,
 }: CheckInSheetProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const ratingOptions = useMemo(() => makeRatingOptions(colors), [colors]);
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={styles.overlay} onPress={onClose}>
@@ -79,7 +84,7 @@ export function CheckInSheet({
             ) : null}
 
             <View style={styles.ratingRow}>
-              {RATING_OPTIONS.map((opt) => (
+              {ratingOptions.map((opt) => (
                 <Pressable
                   key={opt.value}
                   style={({ pressed }) => [
@@ -111,48 +116,49 @@ export function CheckInSheet({
   );
 }
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.55)",
-    justifyContent: "flex-end",
-  },
-  sheet: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radii.pill,
-    borderTopRightRadius: radii.pill,
-    paddingHorizontal: spacing.xxl,
-    paddingBottom: Platform.OS === "ios" ? 36 : 24,
-    paddingTop: 10,
-  },
-  sheetHandle: {
-    alignSelf: "center",
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: colors.textDisabled,
-    marginBottom: spacing.lg,
-  },
-  sheetTitle: {
-    color: colors.text,
-    ...typography.heading,
-  },
-  sheetTime: { color: colors.textMuted, ...typography.small, ...numeric, marginBottom: spacing.xl, marginTop: 6 },
-  ratingRow: { flexDirection: "row", gap: spacing.sm },
-  ratingBtn: {
-    flex: 1,
-    borderWidth: 2,
-    borderRadius: radii.md,
-    paddingVertical: 14,
-    paddingHorizontal: 6,
-    alignItems: "center",
-  },
-  ratingBtnPressed: {
-    opacity: 0.85,
-  },
-  ratingBtnText: {
-    ...typography.smallBold,
-    textAlign: "center",
-  },
-  sheetSaving: { marginTop: spacing.lg },
-});
+const makeStyles = (c: Colors) =>
+  StyleSheet.create({
+    overlay: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.55)",
+      justifyContent: "flex-end",
+    },
+    sheet: {
+      backgroundColor: c.surface,
+      borderTopLeftRadius: radii.pill,
+      borderTopRightRadius: radii.pill,
+      paddingHorizontal: spacing.xxl,
+      paddingBottom: Platform.OS === "ios" ? 36 : 24,
+      paddingTop: 10,
+    },
+    sheetHandle: {
+      alignSelf: "center",
+      width: 36,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: c.textDisabled,
+      marginBottom: spacing.lg,
+    },
+    sheetTitle: {
+      color: c.text,
+      ...typography.heading,
+    },
+    sheetTime: { color: c.textMuted, ...typography.small, ...numeric, marginBottom: spacing.xl, marginTop: 6 },
+    ratingRow: { flexDirection: "row", gap: spacing.sm },
+    ratingBtn: {
+      flex: 1,
+      borderWidth: 2,
+      borderRadius: radii.md,
+      paddingVertical: 14,
+      paddingHorizontal: 6,
+      alignItems: "center",
+    },
+    ratingBtnPressed: {
+      opacity: 0.85,
+    },
+    ratingBtnText: {
+      ...typography.smallBold,
+      textAlign: "center",
+    },
+    sheetSaving: { marginTop: spacing.lg },
+  });

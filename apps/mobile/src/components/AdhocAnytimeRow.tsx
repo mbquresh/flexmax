@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { AdhocTask } from "../types/database";
-import { colors, spacing, radii, iconSizes } from "../theme";
+import { Colors, spacing, radii, iconSizes } from "../theme";
+import { useTheme } from "../providers/ThemeProvider";
 
 interface AdhocAnytimeRowProps {
   task: AdhocTask;
@@ -10,6 +11,8 @@ interface AdhocAnytimeRowProps {
 }
 
 export function AdhocAnytimeRow({ task, onToggle }: AdhocAnytimeRowProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const isDone = task.status === "completed";
 
   return (
@@ -28,38 +31,39 @@ export function AdhocAnytimeRow({ task, onToggle }: AdhocAnytimeRowProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.md,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: radii.md,
-  },
-  rowDone: {
-    opacity: 0.55,
-  },
-  circle: {
-    width: 24,
-    height: 24,
-    borderRadius: radii.pill,
-    borderWidth: 1.5,
-    borderColor: colors.textMuted,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  circleDone: {
-    borderColor: colors.success,
-    backgroundColor: colors.success,
-  },
-  name: {
-    flex: 1,
-    color: colors.textSecondary,
-    fontSize: 14,
-  },
-  nameDone: {
-    textDecorationLine: "line-through",
-    color: colors.textMuted,
-  },
-});
+const makeStyles = (c: Colors) =>
+  StyleSheet.create({
+    row: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.md,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+      borderRadius: radii.md,
+    },
+    rowDone: {
+      opacity: 0.55,
+    },
+    circle: {
+      width: 24,
+      height: 24,
+      borderRadius: radii.pill,
+      borderWidth: 1.5,
+      borderColor: c.textMuted,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    circleDone: {
+      borderColor: c.success,
+      backgroundColor: c.success,
+    },
+    name: {
+      flex: 1,
+      color: c.textSecondary,
+      fontSize: 14,
+    },
+    nameDone: {
+      textDecorationLine: "line-through",
+      color: c.textMuted,
+    },
+  });

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -8,7 +8,8 @@ import {
 } from "react-native";
 import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { minutesToTime } from "../lib/time";
-import { colors, spacing, radii, typography } from "../theme";
+import { Colors, spacing, radii, typography } from "../theme";
+import { useTheme } from "../providers/ThemeProvider";
 
 interface BoundaryRowProps {
   label: string;
@@ -27,6 +28,8 @@ function dateToMinutes(date: Date): number {
 }
 
 export function BoundaryRow({ label, minutes, onChange }: BoundaryRowProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [showPicker, setShowPicker] = useState(false);
   const [pickerDate, setPickerDate] = useState(() =>
     minutesToDate(minutes ?? 6 * 60)
@@ -99,51 +102,52 @@ export function BoundaryRow({ label, minutes, onChange }: BoundaryRowProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: colors.surface,
-    borderRadius: radii.lg,
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.xl,
-  },
-  rowPressed: {
-    opacity: 0.85,
-  },
-  label: {
-    color: colors.text,
-    ...typography.bodyBold,
-  },
-  right: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-  },
-  time: {
-    color: colors.primary,
-    ...typography.bodyBold,
-  },
-  placeholder: {
-    color: colors.textMuted,
-    ...typography.body,
-  },
-  chevron: {
-    color: colors.primary,
-    fontSize: 18,
-    lineHeight: 20,
-  },
-  pickerWrap: {
-    marginTop: spacing.sm,
-  },
-  doneBtn: {
-    alignSelf: "flex-end",
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-  },
-  doneText: {
-    color: colors.primary,
-    ...typography.bodyBold,
-  },
-});
+const makeStyles = (c: Colors) =>
+  StyleSheet.create({
+    row: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      backgroundColor: c.surface,
+      borderRadius: radii.lg,
+      paddingVertical: spacing.lg,
+      paddingHorizontal: spacing.xl,
+    },
+    rowPressed: {
+      opacity: 0.85,
+    },
+    label: {
+      color: c.text,
+      ...typography.bodyBold,
+    },
+    right: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.xs,
+    },
+    time: {
+      color: c.primary,
+      ...typography.bodyBold,
+    },
+    placeholder: {
+      color: c.textMuted,
+      ...typography.body,
+    },
+    chevron: {
+      color: c.primary,
+      fontSize: 18,
+      lineHeight: 20,
+    },
+    pickerWrap: {
+      marginTop: spacing.sm,
+    },
+    doneBtn: {
+      alignSelf: "flex-end",
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+    },
+    doneText: {
+      color: c.primary,
+      ...typography.bodyBold,
+    },
+  });

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -8,7 +8,8 @@ import {
   StyleSheet,
 } from "react-native";
 import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
-import { colors, spacing, radii, typography } from "../theme";
+import { Colors, spacing, radii, typography } from "../theme";
+import { useTheme } from "../providers/ThemeProvider";
 import { minutesToTime } from "../lib/time";
 
 interface Props {
@@ -28,6 +29,8 @@ function dateToMinutes(d: Date): number {
 }
 
 export function TimePicker({ label, valueMinutes, onChange }: Props) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [showAndroid, setShowAndroid] = useState(false);
   const [iosOpen, setIosOpen] = useState(false);
 
@@ -92,36 +95,37 @@ export function TimePicker({ label, valueMinutes, onChange }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: spacing.sm,
-  },
-  label: { color: colors.textMuted, ...typography.body },
-  pill: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radii.pill,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
-  },
-  pillText: { color: colors.primary, ...typography.bodyBold },
-  iosOverlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.4)" },
-  iosSheet: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radii.xl,
-    borderTopRightRadius: radii.xl,
-    paddingBottom: spacing.xxl,
-  },
-  iosHeader: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    padding: spacing.lg,
-    borderBottomWidth: 0.5,
-    borderBottomColor: colors.border,
-  },
-  iosDone: { color: colors.primary, ...typography.bodyBold },
-});
+const makeStyles = (c: Colors) =>
+  StyleSheet.create({
+    row: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingVertical: spacing.sm,
+    },
+    label: { color: c.textMuted, ...typography.body },
+    pill: {
+      backgroundColor: c.surface,
+      borderWidth: 1,
+      borderColor: c.border,
+      borderRadius: radii.pill,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.lg,
+    },
+    pillText: { color: c.primary, ...typography.bodyBold },
+    iosOverlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.4)" },
+    iosSheet: {
+      backgroundColor: c.surface,
+      borderTopLeftRadius: radii.xl,
+      borderTopRightRadius: radii.xl,
+      paddingBottom: spacing.xxl,
+    },
+    iosHeader: {
+      flexDirection: "row",
+      justifyContent: "flex-end",
+      padding: spacing.lg,
+      borderBottomWidth: 0.5,
+      borderBottomColor: c.border,
+    },
+    iosDone: { color: c.primary, ...typography.bodyBold },
+  });

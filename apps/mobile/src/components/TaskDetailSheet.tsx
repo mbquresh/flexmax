@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   View,
   Text,
@@ -14,7 +14,8 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { DailyInstance } from "../types/database";
-import { colors, spacing, radii, typography, iconSizes } from "../theme";
+import { Colors, spacing, radii, typography, iconSizes } from "../theme";
+import { useTheme } from "../providers/ThemeProvider";
 
 interface TaskDetailSheetProps {
   instance: DailyInstance | null;
@@ -37,6 +38,9 @@ export function TaskDetailSheet({
   onSave,
   onClose,
 }: TaskDetailSheetProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <KeyboardAvoidingView style={styles.overlay} behavior="padding">
@@ -83,56 +87,57 @@ export function TaskDetailSheet({
   );
 }
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.55)",
-    justifyContent: "flex-end",
-  },
-  overlayDismiss: {
-    flex: 1,
-  },
-  taskSheet: {
-    backgroundColor: colors.surface,
-    borderTopLeftRadius: radii.pill,
-    borderTopRightRadius: radii.pill,
-    paddingHorizontal: spacing.xxl,
-    paddingBottom: Platform.OS === "ios" ? 36 : 24,
-    paddingTop: spacing.xxl,
-  },
-  taskSheetHeader: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    marginBottom: spacing.sm,
-  },
-  taskSheetHeaderText: { flex: 1 },
-  sheetTitle: {
-    color: colors.text,
-    fontSize: 18,
-    fontWeight: "600",
-  },
-  taskSheetSubtitle: { color: colors.textMuted, fontSize: 14, marginTop: spacing.xs },
-  taskDetailInput: {
-    backgroundColor: colors.surfaceNested,
-    borderWidth: 0.5,
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    paddingHorizontal: 14,
-    paddingVertical: spacing.md,
-    color: colors.text,
-    fontSize: 15,
-    minHeight: 88,
-    maxHeight: 88,
-    marginBottom: spacing.xl,
-  },
-  taskSaveBtn: {
-    marginTop: spacing.lg,
-    backgroundColor: colors.primary,
-    borderRadius: radii.lg,
-    paddingVertical: 14,
-    alignItems: "center",
-  },
-  taskSaveBtnText: { color: colors.onPrimary, ...typography.bodyBold },
-  btnDisabled: { opacity: 0.5 },
-});
+const makeStyles = (c: Colors) =>
+  StyleSheet.create({
+    overlay: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.55)",
+      justifyContent: "flex-end",
+    },
+    overlayDismiss: {
+      flex: 1,
+    },
+    taskSheet: {
+      backgroundColor: c.surface,
+      borderTopLeftRadius: radii.pill,
+      borderTopRightRadius: radii.pill,
+      paddingHorizontal: spacing.xxl,
+      paddingBottom: Platform.OS === "ios" ? 36 : 24,
+      paddingTop: spacing.xxl,
+    },
+    taskSheetHeader: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      justifyContent: "space-between",
+      marginBottom: spacing.sm,
+    },
+    taskSheetHeaderText: { flex: 1 },
+    sheetTitle: {
+      color: c.text,
+      fontSize: 18,
+      fontWeight: "600",
+    },
+    taskSheetSubtitle: { color: c.textMuted, fontSize: 14, marginTop: spacing.xs },
+    taskDetailInput: {
+      backgroundColor: c.surfaceNested,
+      borderWidth: 0.5,
+      borderColor: c.border,
+      borderRadius: radii.md,
+      paddingHorizontal: 14,
+      paddingVertical: spacing.md,
+      color: c.text,
+      fontSize: 15,
+      minHeight: 88,
+      maxHeight: 88,
+      marginBottom: spacing.xl,
+    },
+    taskSaveBtn: {
+      marginTop: spacing.lg,
+      backgroundColor: c.primary,
+      borderRadius: radii.lg,
+      paddingVertical: 14,
+      alignItems: "center",
+    },
+    taskSaveBtnText: { color: c.onPrimary, ...typography.bodyBold },
+    btnDisabled: { opacity: 0.5 },
+  });
