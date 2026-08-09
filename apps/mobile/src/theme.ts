@@ -96,12 +96,31 @@ export const iconSizes = {
 } as const;
 
 export const typography = {
-  title: { fontSize: 22, fontWeight: "600" as const },
-  heading: { fontSize: 17, fontWeight: "600" as const },
-  body: { fontSize: 15, fontWeight: "400" as const },
-  bodyBold: { fontSize: 15, fontWeight: "600" as const },
-  small: { fontSize: 13, fontWeight: "400" as const },
-  smallBold: { fontSize: 13, fontWeight: "600" as const },
-  caption: { fontSize: 12, fontWeight: "500" as const },
-  label: { fontSize: 11, fontWeight: "600" as const },
+  // Negative tracking is what separates a designed headline from a default
+  // bold one — SF sets loose at display sizes.
+  display:   { fontSize: 28, fontWeight: "700" as const, letterSpacing: -0.6 },
+  title:     { fontSize: 22, fontWeight: "600" as const, letterSpacing: -0.4 },
+  heading:   { fontSize: 17, fontWeight: "600" as const, letterSpacing: -0.2 },
+
+  body:      { fontSize: 15, fontWeight: "400" as const, lineHeight: 22 },
+  bodyBold:  { fontSize: 15, fontWeight: "600" as const, lineHeight: 22 },
+
+  small:     { fontSize: 13, fontWeight: "400" as const, lineHeight: 19 },
+  smallBold: { fontSize: 13, fontWeight: "600" as const, lineHeight: 19 },
+
+  // For paragraphs of body copy inside sheets and modals, where 19 is tight.
+  smallRelaxed: { fontSize: 13, fontWeight: "400" as const, lineHeight: 20 },
+
+  caption:   { fontSize: 12, fontWeight: "500" as const, letterSpacing: 0.1 },
+  label:     { fontSize: 11, fontWeight: "600" as const, letterSpacing: 0.5 },
 } as const;
+
+/**
+ * Tabular figures. Spread AFTER a typography token on any text containing
+ * numbers in a vertical list — times, percentages, counts. Without this,
+ * proportional numerals give "9:00" and "11:00" different widths and nothing
+ * aligns down a column.
+ *
+ *   style={[styles.meta, numeric]}
+ */
+export const numeric = { fontVariant: ["tabular-nums"] as ("tabular-nums")[] };

@@ -12,7 +12,7 @@ import {
 import { CompletionRating, DailyInstance } from "../types/database";
 import { hapticSelect } from "../lib/haptics";
 import { minutesToTime } from "../lib/time";
-import { colors, spacing, radii, typography } from "../theme";
+import { colors, spacing, radii, typography, numeric } from "../theme";
 
 const RATING_OPTIONS: {
   value: CompletionRating;
@@ -135,10 +135,9 @@ const styles = StyleSheet.create({
   },
   sheetTitle: {
     color: colors.text,
-    fontSize: 18,
-    fontWeight: "600",
+    ...typography.heading,
   },
-  sheetTime: { color: colors.textMuted, fontSize: 14, marginBottom: spacing.xl, marginTop: 6 },
+  sheetTime: { color: colors.textMuted, ...typography.small, ...numeric, marginBottom: spacing.xl, marginTop: 6 },
   ratingRow: { flexDirection: "row", gap: spacing.sm },
   ratingBtn: {
     flex: 1,

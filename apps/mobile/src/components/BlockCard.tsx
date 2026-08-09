@@ -15,7 +15,7 @@ import { minutesToTime } from "../lib/time";
 import { hapticPickUp, hapticDetent } from "../lib/haptics";
 import { DragHandle } from "./DragHandle";
 import { useStore } from "../store";
-import { colors, spacing, radii, iconSizes } from "../theme";
+import { colors, spacing, radii, iconSizes, typography, numeric } from "../theme";
 
 const ACTION_BUTTON_WIDTH = 80;
 const REVEAL_WIDTH_PENDING = 160;
@@ -372,8 +372,7 @@ const styles = StyleSheet.create({
   },
   actionText: {
     color: colors.onPrimary,
-    fontSize: 14,
-    fontWeight: "600",
+    ...typography.smallBold,
   },
   slidingRow: {
     flexDirection: "row",
@@ -406,16 +405,16 @@ const styles = StyleSheet.create({
   },
   cardMain: { flex: 1 },
   blockNameRow: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
-  blockName: { color: colors.text, fontSize: 16, fontWeight: "600" },
-  meta: { color: colors.textMuted, fontSize: 13, marginTop: spacing.xs },
-  task: { color: colors.textSecondary, fontSize: 14, marginTop: spacing.sm },
+  blockName: { color: colors.text, ...typography.bodyBold },
+  meta: { color: colors.textMuted, ...typography.small, ...numeric, marginTop: spacing.xs },
+  task: { color: colors.textSecondary, ...typography.small, marginTop: spacing.sm },
   taskAddRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.xs,
     marginTop: spacing.sm,
   },
-  taskAdd: { color: colors.primary, fontSize: 13, fontWeight: "500" },
+  taskAdd: { color: colors.primary, ...typography.smallBold },
   actionCircle: {
     width: 32,
     height: 32,

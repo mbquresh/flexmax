@@ -3,7 +3,7 @@ import { View, Text, StyleSheet } from "react-native";
 import { TodayStats } from "../lib/stats";
 import { getLocalDateString } from "../lib/time";
 import { DaySquare, daySquareStripStyles } from "./DaySquare";
-import { colors, spacing, radii, typography } from "../theme";
+import { colors, spacing, radii, typography, numeric } from "../theme";
 
 interface StreakStripProps {
   stats: TodayStats;
@@ -99,9 +99,11 @@ const styles = StyleSheet.create({
   streakLabel: {
     color: colors.text,
     ...typography.smallBold,
+    ...numeric,
   },
   streakSub: {
     color: colors.streakMuted,
     ...typography.caption,
+    ...numeric,
   },
 });

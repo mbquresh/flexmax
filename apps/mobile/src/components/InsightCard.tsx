@@ -2,7 +2,7 @@ import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { BehavioralInsight } from "../types/database";
-import { colors, spacing, radii, iconSizes } from "../theme";
+import { colors, spacing, radii, iconSizes, typography } from "../theme";
 
 interface Props {
   insight: BehavioralInsight;
@@ -45,17 +45,14 @@ const styles = StyleSheet.create({
   },
   label: {
     color: colors.textMuted,
-    fontSize: 11,
-    fontWeight: "600",
+    ...typography.label,
     textTransform: "uppercase",
-    letterSpacing: 0.5,
     marginBottom: spacing.sm,
     paddingRight: spacing.xxl,
   },
   belief: {
     color: colors.text,
-    fontSize: 15,
-    lineHeight: 22,
+    ...typography.body,
   },
   divider: {
     height: 0.5,
@@ -64,8 +61,7 @@ const styles = StyleSheet.create({
   },
   suggestion: {
     color: colors.textSecondary,
-    fontSize: 14,
-    lineHeight: 21,
+    ...typography.smallRelaxed,
   },
   dismiss: {
     position: "absolute",

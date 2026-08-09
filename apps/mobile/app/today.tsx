@@ -57,7 +57,7 @@ import {
   hapticReject,
   hapticSelect,
 } from "../src/lib/haptics";
-import { colors, spacing, radii, typography } from "../src/theme";
+import { colors, spacing, radii, typography, numeric } from "../src/theme";
 
 function TodayScreenContent() {
   const { session, psychologyProfile, profile } = useAuth();
@@ -1297,12 +1297,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   avatarText: { color: colors.primary, ...typography.bodyBold },
-  title: { fontSize: 28, fontWeight: "700", color: colors.text },
-  date: { fontSize: 14, color: colors.textMuted, marginTop: spacing.xs },
+  title: { ...typography.display, color: colors.text },
+  date: { ...typography.small, ...numeric, color: colors.textMuted, marginTop: spacing.xs },
   list: { padding: spacing.lg, paddingBottom: 100 },
   scroll: { flex: 1 },
   scrollContent: { flexGrow: 1 },
-  empty: { color: colors.textFaint, textAlign: "center", marginTop: 40, lineHeight: 22 },
+  empty: { color: colors.textFaint, textAlign: "center", marginTop: 40, ...typography.body },
   addAdhocPill: {
     backgroundColor: colors.primary,
     borderRadius: radii.pill,
@@ -1330,16 +1330,14 @@ const styles = StyleSheet.create({
   },
   anytimeTitle: {
     color: colors.textMuted,
-    fontSize: 12,
-    fontWeight: "600",
+    ...typography.label,
     textTransform: "uppercase",
-    letterSpacing: 0.5,
     paddingHorizontal: spacing.sm,
     marginBottom: spacing.xs,
   },
   sleepFooter: {
     color: colors.textMuted,
-    fontSize: 13,
+    ...typography.small,
     textAlign: "center",
     marginTop: spacing.xl,
     marginBottom: spacing.xxl,
@@ -1363,7 +1361,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: spacing.md,
     color: colors.text,
-    fontSize: 16,
+    ...typography.body,
   },
   modeToggle: {
     flexDirection: "row",
@@ -1384,8 +1382,7 @@ const styles = StyleSheet.create({
   },
   modeBtnText: {
     color: colors.textMuted,
-    fontSize: 14,
-    fontWeight: "600",
+    ...typography.smallBold,
   },
   modeBtnTextActive: {
     color: colors.onPrimary,
@@ -1395,8 +1392,7 @@ const styles = StyleSheet.create({
   },
   anytimeHelper: {
     color: colors.textMuted,
-    fontSize: 14,
-    lineHeight: 20,
+    ...typography.smallRelaxed,
   },
   addTaskConfirmBtn: {
     backgroundColor: colors.primary,
@@ -1410,8 +1406,7 @@ const styles = StyleSheet.create({
   addTaskConfirmText: { color: colors.onPrimary, ...typography.bodyBold },
   addTaskCancelText: {
     color: colors.textMuted,
-    fontSize: 16,
-    fontWeight: "500",
+    ...typography.bodyBold,
     textAlign: "center",
     paddingVertical: spacing.sm,
   },
@@ -1427,7 +1422,7 @@ const styles = StyleSheet.create({
     borderLeftWidth: 3,
     borderLeftColor: colors.streak,
   },
-  toastText: { color: colors.text, fontSize: 14 },
+  toastText: { color: colors.text, ...typography.small },
   overlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.55)",
@@ -1451,8 +1446,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   undoOptionLast: { borderBottomWidth: 0 },
-  undoOptionDestructive: { color: colors.danger, fontSize: 16, fontWeight: "600" },
-  undoOptionCancel: { color: colors.textMuted, fontSize: 16, fontWeight: "500" },
+  undoOptionDestructive: { color: colors.danger, ...typography.bodyBold },
+  undoOptionCancel: { color: colors.textMuted, ...typography.body },
   removeSheet: {
     backgroundColor: colors.surface,
     borderTopLeftRadius: radii.pill,
@@ -1464,7 +1459,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   removeTitle: { color: colors.text, ...typography.heading },
-  removeBody: { color: colors.textMuted, fontSize: 14, lineHeight: 22 },
+  removeBody: { color: colors.textMuted, ...typography.smallRelaxed },
   removeLabel: { color: colors.textMuted, ...typography.smallBold },
   removeInput: {
     backgroundColor: colors.surface,
@@ -1474,7 +1469,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: spacing.md,
     color: colors.text,
-    fontSize: 14,
+    ...typography.small,
     minHeight: 60,
   },
   removeConfirmBtn: {
@@ -1486,8 +1481,7 @@ const styles = StyleSheet.create({
   removeConfirmText: { color: colors.onPrimary, ...typography.bodyBold },
   removeCancelText: {
     color: colors.textMuted,
-    fontSize: 16,
-    fontWeight: "500",
+    ...typography.bodyBold,
     textAlign: "center",
     paddingVertical: spacing.sm,
   },

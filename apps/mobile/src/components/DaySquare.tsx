@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { colors, radii } from "../theme";
+import { colors, radii, typography } from "../theme";
 
 export function segmentHeightPct(ratio: number): number {
   if (ratio <= 0) return 0;
@@ -109,8 +109,7 @@ const styles = StyleSheet.create({
   },
   daySquareLetter: {
     color: colors.streakMuted,
-    fontSize: 13,
-    fontWeight: "700",
+    ...typography.smallBold,
   },
   daySquareLetterDone: {
     color: colors.text,
