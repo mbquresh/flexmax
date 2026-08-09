@@ -300,6 +300,11 @@ Still captured but NOT yet read:
 | nudge_line on insights                        | 017; notification-sized restatement, written in the same weekly AI call |
 | Day boundaries (sleep/wake)                   | 020 day_log; replaces BedtimeCard; wake/sleep rows on schedule builder |
 | Morning InsightCard                           | Rank-1 non-strength insight, dismissed per-insight, 8-day expiry |
+| Dark theme                                    | lightColors / darkColors, ThemeProvider, System/Light/Dark toggle |
+| Brand mark and loader                         | BrandMark SVG, BrandLoader on six full-screen loads |
+| Press feedback system                         | PressableScale scale + highlight variants |
+| reflection_improve chips                      | Five presets + "Something else" escape hatch in RecoverySheet |
+| Reschedule sleep boundary                     | findRescheduleSlot respects sleep_target_minutes; manual adjust in RecoverySheet |
 
 
 
@@ -317,7 +322,6 @@ Still captured but NOT yet read:
 | reflection_improve UX fix                       | 31% fill rate on the highest-signal field in the DB                                                                                                          |
 | External TestFlight                             | Needs Beta App Review (~1 day) + a demo account or auto-rejection                                                                                            |
 | Screen Time shielding                           | FamilyControls entitlement — STILL UNFILED. Multi-week Apple clock                                                                                           |
-| Dark theme                                      | Design tokens make it feasible                                                                                                                               |
 | Night routine block is hard to answer           | Excluded from the evening sweep (hasn't happened yet) and from bedtime notifications (by design). Drifts to unaccounted unless answered from Today. Candidate fix: a third question on the morning DayBoundaryCard |
 | User instructions page                          | The streak rises on a day where everything was missed. The label qualifier was removed for width, so there is no in-app explanation. Owed |
 | Onboarding demonstration beat | Onboarding establishes the pain (screens 1-2) and sets the contract (screen 7), but never shows what the product DOES. A stranger goes from "how many planners have you abandoned?" to a $14.99 wall without seeing FlexMax work. Fix: show a REAL generated insight, explicitly labelled as another user's, before the contract screen. Not a claim about them — a demonstration. See rejected approaches below |
@@ -470,21 +474,166 @@ no-confetti / no-cheerleading rule is unaffected.
 
 ### Build order — one commit each, in sequence
 
-| # | Work | Notes |
-|---|------|-------|
-| 1 | Haptics pass | Add `expo-haptics` (works in Expo Go). Wire ~8 call sites: check-in commit, rating select, swipe-open detent, swap commit, mark-missed, remove confirm, sheet open/dismiss. Highest feel-delta per line of code in the app |
-| 2 | Icon + emoji purge | Replace all 16 text glyphs with `@expo/vector-icons`. Enforces an existing rule; kills the loudest wrong note on the screen |
-| 3 | Typography system | Load a face via `expo-font` OR commit to system SF with deliberate weight/tracking discipline — DECISION REQUIRED before this starts. Then make every component consume `theme.typography` and delete hardcoded sizes from `BlockCard` |
-| 4 | State transitions | Animate status change, circle fill, and card settle. Replace the 5× blink flash. Layout animation on swap / removal / add so the list reflows instead of jumping |
-| 5 | Press states + proportion | Deliberate scale/background press response; revisit the luminance gap and drag lift |
+| # | Work | Status |
+|---|------|--------|
+| 1 | Haptics vocabulary + 8 sites | SHIPPED |
+| 2 | Feather icons, 17 glyphs purged | SHIPPED |
+| 3 | Typography scale, tracking, tabular figures | SHIPPED — system SF, no custom face |
+| 4a | Card state transitions | SHIPPED |
+| 4b | List reflow animation | REJECTED — see below |
+| 5 | Press feedback across buttons and rows | SHIPPED |
 
-### Open decisions
+### Rejected — do not re-propose
 
-- **Typeface (blocks item 3).** Custom face vs. system SF with real tracking and
-  weight discipline. Changes the shape of the work substantially.
-- **Drag shadow exception.** A shadow present ONLY during an active drag is a
-  physics affordance, not decoration — the no-shadow rule exists to prevent
-  decorative depth. Unresolved whether the drag state earns the exception.
+**4b, list reflow animation (2026-08-09).** Animating card positions after a
+swap or removal buys roughly 300ms of glide on an action that already carries a
+haptic, a toast, and a highlight wash. The cost: `findSwapTarget` resolves drop
+targets from `cardPositions`, populated by `onLayout` on the card wrapper.
+Layout animation requires moving `onLayout` to a new outer wrapper that reports
+geometry mid-flight, and layering a `layout` transition onto a view that already
+carries the drag transform. Low value against real risk to the most-iterated
+logic in the app. REVIVAL CONDITION: only if list mutations become frequent or
+large enough that jumping reads as a bug rather than a non-event.
+
+**Custom typeface (2026-08-08).** System SF with disciplined tracking, a
+collapsed 7-step scale, and tabular figures closed the gap. A custom face would
+add licensing, font loading, FOUT in Expo Go, and bundle weight. The token layer
+makes it a one-line swap in theme.ts if ever revisited.
+
+### Still open
+
+- **Drag shadow exception.** Whether a shadow present only during an active drag
+  is a physics affordance rather than decoration. Unresolved. Note: shadows do
+  almost nothing in dark mode — a shadow is darkness cast on a surface, and
+  there is little darker than the dark background. Any shadow work is a
+  light-mode-only benefit.
+- **hapticCommit placement.** Fires after the swap RPC returns, contradicting the
+  rule in haptics.ts that haptics confirm input, not network results. Moving it
+  earlier closes a perceptual dead zone but makes a small optimistic promise,
+  cutting against the rule that optimistic UI only applies after a successful RPC.
+- **Status stripe inset.** Sits ~14px short top and bottom because cardBody has
+  padding: 14. Full-bleed is a different fix (absolute positioning).
+- **Six duplicated sheet close buttons.** Want to be one SheetCloseButton.
+- **Reschedule bound uses intent, not behaviour.** findRescheduleSlot bounds the
+  day by profiles.sleep_target_minutes (stated intent). day_log.slept_at records
+  what actually happened. Whether it should use observed behaviour is a
+  behavioural-engine question.
+
+---
+
+## Theme system (2026-08-08 / 09)
+
+Light and dark both shipped. `lightColors` / `darkColors` in theme.ts, `Colors`
+type, `ThemeProvider` with three-way System/Light/Dark persisted to AsyncStorage,
+`useTheme()` hook. Every styled file uses `makeStyles(c)` under `useMemo`. The
+static `colors` alias has been deleted — a file reaching for a static palette
+now fails to compile rather than silently rendering light on a dark screen.
+
+`Colors` is a mapped type (`{ [K in keyof typeof lightColors]: string }`), NOT
+`typeof lightColors`. Under `as const` the latter would make values literal
+types and darkColors could not compile with different hex. The mapped type keeps
+key-completeness enforcement while widening values to string — so a missing dark
+token is a compile error.
+
+### Palette reasoning — do not undo without reading this
+
+**Warm neutrals, not cool grey.** The brand mark is already warm (menuBarCoral
+#CE7358, danger #D9694A). Cool-grey neutrals were in quiet discord with it.
+
+**Not pure black.** Evaluated and rejected. On #000 the ink bar of the tricolor
+mark disappears, `surfaceDim` has no room to sit below the background, and pure
+white text halates. Warm charcoal preserves all three.
+
+**Dark ladder sits at L\* 9 / 15 / 22 / 29** (surfaceDim / background / surface /
+surfaceNested) with 6-7 point steps. The original sat at L\* 5-14 with correct
+*perceptual* step sizes matching light — but display black-crush and ambient
+light reflecting off the glass add a luminance floor that swallows small
+differences at the bottom of the range. Lifting the ladder off that floor forced
+every border and low-contrast text token up with it, or they collided. Do not
+lower the dark background: at L\* 15 it is already brighter than Material,
+GitHub, and Linear dark modes. Push it further and it becomes grey mode.
+
+**Light brightened 2026-08-09** from L\* 87.6 to 92.7 background, tint halved
+(25.6% to 12.5% saturation on surface). The original #DCDCDC was eight points
+below iOS's own light-mode background; the warm re-skin inherited that luminance
+ladder unquestioned and added tint on top, which read as muddy.
+
+**Rating neons are byte-identical across both modes.** #00C853 / #FFD600 /
+#FF1744 are signal vocabulary, not decoration — the block card status bar
+depends on matching the check-in sheet exactly, so the sheet acts as the legend
+for the card. The rating *text* tokens do differ by mode.
+
+**menuBarInk inverts** (#2B2822 light, #EAE5DC dark) or the tricolor brand mark
+loses a stripe on a dark field.
+
+**KNOWN INCONSISTENCY:** surfaceNested sits above surface in dark (29.2 vs 22.1)
+but below it in light (95.1 vs 97.5), so nested elements read as raised in one
+mode and recessed in the other. Fix pending — dark's nested should drop to ~19.5.
+
+### Measure surface separation in L\*, not WCAG contrast ratio
+
+WCAG ratios are built for text legibility and compress badly at the dark end.
+Equal ratios do not mean equal perceived separation. Use CIELAB L\* for any
+surface, border, or elevation decision. Benchmarking dark against light by
+contrast ratio produced a wrong "this is fine" conclusion once already.
+
+---
+
+## Components and dependencies added (2026-08-08 / 09)
+
+New dependencies: expo-haptics, @expo/vector-icons (Feather), react-native-svg.
+All bundled in Expo Go — no EAS rebuild required for any of them.
+
+New components:
+- `src/lib/haptics.ts` — named semantic haptic vocabulary. Never call
+  expo-haptics directly from a component. Haptics confirm INPUT, not network
+  results: fire at the tap, never after an await. No repeating haptic patterns —
+  a buzz train reads as an alert, not a confirmation.
+- `DragHandle` — six dots drawn as Views. The drag grip is texture, not
+  iconography; also removes a braille character that was a font-rendering
+  liability.
+- `PressableScale` — press feedback with two variants. `scale` for
+  button-shaped controls, `highlight` (animated background wash) for row-shaped
+  controls, because a full-width row shrinking on touch looks like the layout is
+  breaking. CRITICAL: the style prop must land on the Pressable itself, never on
+  an inner Animated.View — layout properties (flex, width, alignSelf) applied to
+  a child are invisible to the parent, which broke the appearance segments.
+- `BrandMark` — the F mark as themed SVG, drawn from the same three brand
+  colors as MenuButton. Geometry measured from assets/icon.png.
+- `BrandLoader` — the mark with opacity travelling through blue, ink, coral on a
+  660ms cycle, floored at 0.35 so the F stays legible. Used on the six
+  full-screen loads only; the eleven inline button spinners stay as
+  ActivityIndicator, since at 200-400ms a branded animation renders as a flicker.
+  THE LETTERFORM MUST NEVER ROTATE. An asymmetric glyph spends most of a
+  rotation upside down and reads as having fallen over.
+
+**Completion quality is a traffic light, not a saturation ramp (2026-08-09).**
+The block card status bar shows crushed/partial/pulled_away as teal / #FFD600 /
+#FF1744, matching the check-in sheet exactly. Claude argued for a single-hue
+saturation ramp on bad-week grounds; Belal overruled on the grounds that a
+three-step ramp on a 4px stripe is illegible and the point is instant
+interpretation. Belal was right.
+
+**Back navigation pops, it does not replace (2026-08-09).** `router.replace()`
+swaps the top route but leaves the entry beneath, so every round trip added a
+permanent stack layer. Use `router.back()`. EXCEPTION: the notification response
+handler in _layout.tsx must stay `replace` — it fires on cold launch where there
+is no stack to pop.
+
+**userInterfaceStyle: "automatic" (2026-08-09).** Required in app.config.ts or
+Expo defaults to "light" and pins the app natively, so useColorScheme() never
+follows the OS. UNVERIFIED: Expo Go supplies its own native config, so this
+cannot be tested there. Must be confirmed on an EAS build before shipping dark
+mode.
+
+**reflection_improve chips (2026-08-09).** Five structural presets plus a
+"Something else" text escape hatch, writing their own label as a string into the
+existing column. No schema change — but the data's character changed from
+all-unique freeform sentences to mostly six repeated strings.
+ARCHITECTURE CHAT MUST DECIDE: whether get_behavior_evidence() and the weekly
+insight should weight canned answers differently from typed ones. Eight
+instances of "Start earlier" may reflect a real pattern or just the easiest chip
+to tap. Cheaper to decide before the data accumulates.
 
 ---
 
