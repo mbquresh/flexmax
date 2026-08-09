@@ -73,52 +73,52 @@ export type Colors = { [K in keyof typeof lightColors]: string };
 export const darkColors: Colors = {
   // Warm charcoal, not black. Keeping the background off zero is what gives
   // surfaceDim room to sit BELOW it — on #000 it would be indistinguishable.
-  background: "#1E1C19",
-  surface: "#262320",
-  surfaceNested: "#302C28",
-  surfaceDim: "#131110",
+  background: "#292621",
+  surface: "#393430",
+  surfaceNested: "#4A443D",
+  surfaceDim: "#1C1917",
 
   primary: "#7FA8CE",
   primaryBright: "#9DC0DE",
   primaryDeep: "#5B84A8",
   primaryDisabled: "#4A5A69",
-  primaryTint: "#23303C",
+  primaryTint: "#283744",
   // Dark text on a light blue button — white would be low contrast here.
   onPrimary: "#1A1815",
 
   // Never pure white. #FFF on dark halates on OLED.
   text: "#EAE5DC",
   textSecondary: "#D2CCC2",
-  textMuted: "#9B948A",
-  textFaint: "#837C72",
-  textPlaceholder: "#6F685F",
-  textDisabled: "#565049",
+  textMuted: "#B3AA9F",
+  textFaint: "#9B9287",
+  textPlaceholder: "#867E73",
+  textDisabled: "#716A60",
 
-  border: "#3A3630",
-  borderLight: "#454039",
+  border: "#625B51",
+  borderLight: "#564F47",
 
   success: "#5FCBA6",
-  successTint: "#14312A",
+  successTint: "#183B32",
   danger: "#E07C5E",
-  dangerTint: "#3A211A",
+  dangerTint: "#4E2C23",
   error: "#E0685C",
-  errorTint: "#3A1E1A",
+  errorTint: "#512A24",
   errorBorder: "#7A4038",
 
   streak: "#5FCBA6",
   streakMissed: "#5E594F",
-  streakHousing: "#262320",
-  streakBorder: "#3A3630",
+  streakHousing: "#393430",
+  streakBorder: "#625B51",
   streakMuted: "#9B948A",
-  streakSquare: "#302C28",
-  streakSquareToday: "#3A3630",
+  streakSquare: "#4A443D",
+  streakSquareToday: "#555047",
 
   // Fills invert; text lightens so it reads on them.
-  ratingGoodBg: "#16301A",
+  ratingGoodBg: "#1E4123",
   ratingGoodText: "#6FD47A",
-  ratingOkayBg: "#332C0C",
+  ratingOkayBg: "#42390F",
   ratingOkayText: "#E3C44A",
-  ratingBadBg: "#3A1C1C",
+  ratingBadBg: "#5A2C2C",
   ratingBadText: "#F0736B",
   // Identical to light — see note above.
   ratingGoodBorder: "#00C853",
