@@ -224,8 +224,19 @@ export function BlockCard({
     backgroundColor: colors.primary,
   }));
 
+  // Completion quality reads as a three-step scale so it can be interpreted
+  // at a glance. Uses the muted *Text* rating tokens, not the *Border* neons —
+  // #FFD600 at 4px against an #EDEDED card has almost no luminance contrast
+  // and reads as a smudge rather than as yellow.
+  const completedColor =
+    instance.completion_rating === "partial"
+      ? colors.ratingOkayText
+      : instance.completion_rating === "pulled_away"
+        ? colors.ratingBadText
+        : colors.success;
+
   const statusBarOverlayColor = isDone
-    ? colors.success
+    ? completedColor
     : isMissed
       ? colors.danger
       : colors.border;
