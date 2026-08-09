@@ -14,7 +14,8 @@ import { router } from "expo-router";
 import { useAuth } from "../src/providers/AuthProvider";
 import { useTheme } from "../src/providers/ThemeProvider";
 import { handleError, getErrorMessage } from "../src/lib/errors";
-import { Colors, spacing, radii } from "../src/theme";
+import { BrandMark } from "../src/components/BrandMark";
+import { Colors, spacing, radii, typography } from "../src/theme";
 
 export default function SignInScreen() {
   const { colors } = useTheme();
@@ -82,7 +83,10 @@ export default function SignInScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.inner}>
-        <Text style={styles.title}>FlexMax</Text>
+        <View style={styles.wordmark}>
+          <BrandMark size={72} />
+          <Text style={styles.title}>FlexMax</Text>
+        </View>
         <Text style={styles.subtitle}>
           {mode === "sign-in" ? "Welcome back" : "Create your account"}
         </Text>
@@ -161,7 +165,8 @@ const makeStyles = (c: Colors) =>
     container: { flex: 1, backgroundColor: c.background },
     scrollContent: { flexGrow: 1, justifyContent: "center" },
     inner: { padding: spacing.xxl, gap: spacing.md },
-    title: { fontSize: 32, fontWeight: "700", color: c.text, marginBottom: spacing.xs },
+    wordmark: { gap: spacing.lg },
+    title: { ...typography.display, color: c.text, marginBottom: spacing.xs },
     subtitle: { fontSize: 15, color: c.textMuted, marginBottom: spacing.xxl },
     errorBox: {
       backgroundColor: c.errorTint,
