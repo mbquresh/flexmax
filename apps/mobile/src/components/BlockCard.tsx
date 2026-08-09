@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from "react";
+import React, { useCallback, useEffect, useMemo } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Pressable } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
@@ -17,7 +17,8 @@ import { minutesToTime } from "../lib/time";
 import { hapticPickUp, hapticDetent } from "../lib/haptics";
 import { DragHandle } from "./DragHandle";
 import { useStore } from "../store";
-import { colors, spacing, radii, iconSizes, typography, numeric } from "../theme";
+import { Colors, spacing, radii, iconSizes, typography, numeric } from "../theme";
+import { useTheme } from "../providers/ThemeProvider";
 
 const ACTION_BUTTON_WIDTH = 80;
 const REVEAL_WIDTH_PENDING = 160;
@@ -56,6 +57,9 @@ export function BlockCard({
   registerFlashTrigger,
   unregisterFlashTrigger,
 }: BlockCardProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
   const translateY = useSharedValue(0);
   const translateX = useSharedValue(0);
   const scale = useSharedValue(1);
@@ -375,106 +379,107 @@ export function BlockCard({
   );
 }
 
-const styles = StyleSheet.create({
-  cardWrapper: {
-    marginBottom: 10,
-    position: "relative",
-    overflow: "hidden",
-    borderRadius: radii.lg,
-  },
-  actionsBehind: {
-    position: "absolute",
-    right: 0,
-    top: 0,
-    bottom: 0,
-    flexDirection: "row",
-  },
-  actionBtn: {
-    width: ACTION_BUTTON_WIDTH,
-    height: "100%",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  missedBtn: {
-    backgroundColor: colors.dangerTint,
-  },
-  actionBtnLeftRounded: {
-    borderTopLeftRadius: radii.lg,
-    borderBottomLeftRadius: radii.lg,
-  },
-  missedBtnText: {
-    color: colors.danger,
-  },
-  removeBtn: {
-    backgroundColor: colors.danger,
-  },
-  actionText: {
-    color: colors.onPrimary,
-    ...typography.smallBold,
-  },
-  slidingRow: {
-    flexDirection: "row",
-    alignItems: "stretch",
-    backgroundColor: colors.surface,
-    borderRadius: radii.lg,
-  },
-  slidingRowFixed: {
-    backgroundColor: colors.surfaceDim,
-    borderLeftWidth: 3,
-    borderLeftColor: colors.textMuted,
-  },
-  dragHandleZone: {
-    width: 28,
-    alignSelf: "stretch",
-    alignItems: "center",
-    justifyContent: "center",
-    borderRightWidth: 1,
-    borderRightColor: colors.border,
-  },
-  statusBar: {
-    width: 4,
-    alignSelf: "stretch",
-    borderRadius: radii.xs,
-    backgroundColor: colors.border,
-    position: "relative",
-  },
-  statusBarOverlay: {
-    position: "absolute",
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-    borderRadius: radii.xs,
-  },
-  cardBody: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "flex-start",
-    padding: 14,
-    paddingLeft: spacing.sm,
-    gap: spacing.md,
-    borderRadius: radii.lg,
-  },
-  cardMain: { flex: 1 },
-  blockNameRow: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
-  blockName: { color: colors.text, ...typography.bodyBold },
-  meta: { color: colors.textMuted, ...typography.small, ...numeric, marginTop: spacing.xs },
-  task: { color: colors.textSecondary, ...typography.small, marginTop: spacing.sm },
-  taskAddRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-    marginTop: spacing.sm,
-  },
-  taskAdd: { color: colors.primary, ...typography.smallBold },
-  actionCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: radii.pill,
-    borderWidth: 1.5,
-    borderColor: colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 2,
-  },
-});
+const makeStyles = (c: Colors) =>
+  StyleSheet.create({
+    cardWrapper: {
+      marginBottom: 10,
+      position: "relative",
+      overflow: "hidden",
+      borderRadius: radii.lg,
+    },
+    actionsBehind: {
+      position: "absolute",
+      right: 0,
+      top: 0,
+      bottom: 0,
+      flexDirection: "row",
+    },
+    actionBtn: {
+      width: ACTION_BUTTON_WIDTH,
+      height: "100%",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    missedBtn: {
+      backgroundColor: c.dangerTint,
+    },
+    actionBtnLeftRounded: {
+      borderTopLeftRadius: radii.lg,
+      borderBottomLeftRadius: radii.lg,
+    },
+    missedBtnText: {
+      color: c.danger,
+    },
+    removeBtn: {
+      backgroundColor: c.danger,
+    },
+    actionText: {
+      color: c.onPrimary,
+      ...typography.smallBold,
+    },
+    slidingRow: {
+      flexDirection: "row",
+      alignItems: "stretch",
+      backgroundColor: c.surface,
+      borderRadius: radii.lg,
+    },
+    slidingRowFixed: {
+      backgroundColor: c.surfaceDim,
+      borderLeftWidth: 3,
+      borderLeftColor: c.textMuted,
+    },
+    dragHandleZone: {
+      width: 28,
+      alignSelf: "stretch",
+      alignItems: "center",
+      justifyContent: "center",
+      borderRightWidth: 1,
+      borderRightColor: c.border,
+    },
+    statusBar: {
+      width: 4,
+      alignSelf: "stretch",
+      borderRadius: radii.xs,
+      backgroundColor: c.border,
+      position: "relative",
+    },
+    statusBarOverlay: {
+      position: "absolute",
+      top: 0,
+      right: 0,
+      bottom: 0,
+      left: 0,
+      borderRadius: radii.xs,
+    },
+    cardBody: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "flex-start",
+      padding: 14,
+      paddingLeft: spacing.sm,
+      gap: spacing.md,
+      borderRadius: radii.lg,
+    },
+    cardMain: { flex: 1 },
+    blockNameRow: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
+    blockName: { color: c.text, ...typography.bodyBold },
+    meta: { color: c.textMuted, ...typography.small, ...numeric, marginTop: spacing.xs },
+    task: { color: c.textSecondary, ...typography.small, marginTop: spacing.sm },
+    taskAddRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.xs,
+      marginTop: spacing.sm,
+    },
+    taskAdd: { color: c.primary, ...typography.smallBold },
+    actionCircle: {
+      width: 32,
+      height: 32,
+      borderRadius: radii.pill,
+      borderWidth: 1.5,
+      borderColor: c.primary,
+      alignItems: "center",
+      justifyContent: "center",
+      marginTop: 2,
+    },
+  });

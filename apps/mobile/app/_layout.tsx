@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Stack, router } from "expo-router";
+import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import * as Notifications from "expo-notifications";
 import { AuthProvider } from "../src/providers/AuthProvider";
@@ -53,14 +54,17 @@ function handleNotificationResponse(response: Notifications.NotificationResponse
 }
 
 function ThemedStack() {
-  const { colors } = useTheme();
+  const { colors, scheme } = useTheme();
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-        contentStyle: { backgroundColor: colors.background },
-      }}
-    />
+    <>
+      <StatusBar style={scheme === "dark" ? "light" : "dark"} />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: colors.background },
+        }}
+      />
+    </>
   );
 }
 

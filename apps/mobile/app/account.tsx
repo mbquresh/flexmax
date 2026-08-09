@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Pressable,
   TextInput,
   Alert,
   Platform,
@@ -12,13 +13,23 @@ import {
 import { router } from "expo-router";
 import { supabase } from "../src/lib/supabase";
 import { useAuth } from "../src/providers/AuthProvider";
+import { useTheme, ThemeMode } from "../src/providers/ThemeProvider";
 import { RequireAuth } from "../src/components/RequireAuth";
-import { colors, spacing, radii, typography } from "../src/theme";
+import { Colors, spacing, radii, typography } from "../src/theme";
 import { getInitials } from "../src/lib/format";
 import { handleError } from "../src/lib/errors";
+import { hapticSelect } from "../src/lib/haptics";
+
+const APPEARANCE_OPTIONS: { label: string; value: ThemeMode }[] = [
+  { label: "System", value: "system" },
+  { label: "Light", value: "light" },
+  { label: "Dark", value: "dark" },
+];
 
 function AccountScreenContent() {
   const { session, profile, psychologyProfile, signOut, refreshProfile } = useAuth();
+  const { colors, mode, setMode } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState(profile?.name ?? "");
   const [saving, setSaving] = useState(false);
@@ -182,6 +193,33 @@ function AccountScreenContent() {
             <Text style={styles.settingLabel}>Timezone</Text>
             <Text style={styles.settingValue}>{profile?.timezone ?? "America/Chicago"}</Text>
           </View>
+          <View style={styles.settingRow}>
+            <Text style={styles.settingLabel}>Appearance</Text>
+          </View>
+          <View style={styles.appearanceSegment}>
+            {APPEARANCE_OPTIONS.map((option) => {
+              const selected = mode === option.value;
+              return (
+                <Pressable
+                  key={option.value}
+                  style={[styles.segment, selected && styles.segmentSelected]}
+                  onPress={() => {
+                    hapticSelect();
+                    setMode(option.value);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.segmentText,
+                      selected ? styles.segmentTextSelected : styles.segmentTextUnselected,
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
         </View>
 
         <TouchableOpacity style={styles.signOutBtn} onPress={confirmSignOut}>
@@ -200,99 +238,128 @@ export default function AccountScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  header: { paddingTop: 60, paddingHorizontal: spacing.xl, paddingBottom: spacing.sm },
-  backLink: { color: colors.primary, fontSize: 15 },
-  scroll: { padding: spacing.xl, paddingBottom: 60, flexGrow: 1 },
-  avatarSection: { alignItems: "center", marginBottom: spacing.xxxl },
-  avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: colors.primaryDeep,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: spacing.md,
-  },
-  avatarText: { color: colors.primary, fontSize: 26, fontWeight: "600" },
-  name: { color: colors.text, ...typography.title, textAlign: "center" },
-  editHint: { color: colors.textPlaceholder, fontSize: 12, textAlign: "center", marginTop: spacing.xs },
-  nameEditRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
-  nameInput: {
-    backgroundColor: colors.surface,
-    borderWidth: 0.5,
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    color: colors.text,
-    fontSize: 18,
-    minWidth: 160,
-  },
-  nameSave: { color: colors.primary, ...typography.bodyBold },
-  section: { marginBottom: 28 },
-  sectionTitle: {
-    color: colors.textMuted,
-    ...typography.smallBold,
-    marginBottom: 14,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  summaryCard: {
-    backgroundColor: colors.primaryTint,
-    borderRadius: radii.lg,
-    padding: 14,
-    borderLeftWidth: 2,
-    borderLeftColor: colors.primary,
-    marginBottom: spacing.lg,
-  },
-  summaryText: { color: colors.textSecondary, fontSize: 14, lineHeight: 22 },
-  profileBlock: { marginBottom: spacing.lg },
-  profileLabel: {
-    color: colors.textFaint,
-    fontSize: 12,
-    fontWeight: "600",
-    marginBottom: spacing.sm,
-    textTransform: "uppercase",
-  },
-  profileValue: { color: colors.textSecondary, fontSize: 15, textTransform: "capitalize" },
-  chipWrap: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
-  chip: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.pill,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 7,
-    borderWidth: 0.5,
-    borderColor: colors.border,
-  },
-  chipText: { color: colors.textSecondary, fontSize: 13 },
-  redoBtn: {
-    marginTop: spacing.sm,
-    borderRadius: radii.md,
-    borderWidth: 0.5,
-    borderColor: colors.primary,
-    paddingVertical: spacing.md,
-    alignItems: "center",
-  },
-  redoBtnText: { color: colors.primary, fontSize: 14, fontWeight: "600" },
-  emptyProfile: { color: colors.textFaint, fontSize: 14, lineHeight: 22 },
-  settingRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: spacing.md,
-    borderBottomWidth: 0.5,
-    borderBottomColor: colors.surface,
-  },
-  settingLabel: { color: colors.textSecondary, fontSize: 15 },
-  settingValue: { color: colors.textFaint, fontSize: 15 },
-  signOutBtn: {
-    marginTop: spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: radii.lg,
-    paddingVertical: spacing.lg,
-    alignItems: "center",
-  },
-  signOutText: { color: colors.danger, ...typography.bodyBold },
-});
+const makeStyles = (c: Colors) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.background },
+    header: { paddingTop: 60, paddingHorizontal: spacing.xl, paddingBottom: spacing.sm },
+    backLink: { color: c.primary, fontSize: 15 },
+    scroll: { padding: spacing.xl, paddingBottom: 60, flexGrow: 1 },
+    avatarSection: { alignItems: "center", marginBottom: spacing.xxxl },
+    avatar: {
+      width: 72,
+      height: 72,
+      borderRadius: 36,
+      backgroundColor: c.primaryDeep,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: spacing.md,
+    },
+    avatarText: { color: c.primary, fontSize: 26, fontWeight: "600" },
+    name: { color: c.text, ...typography.title, textAlign: "center" },
+    editHint: { color: c.textPlaceholder, fontSize: 12, textAlign: "center", marginTop: spacing.xs },
+    nameEditRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+    nameInput: {
+      backgroundColor: c.surface,
+      borderWidth: 0.5,
+      borderColor: c.border,
+      borderRadius: radii.md,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      color: c.text,
+      fontSize: 18,
+      minWidth: 160,
+    },
+    nameSave: { color: c.primary, ...typography.bodyBold },
+    section: { marginBottom: 28 },
+    sectionTitle: {
+      color: c.textMuted,
+      ...typography.smallBold,
+      marginBottom: 14,
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+    },
+    summaryCard: {
+      backgroundColor: c.primaryTint,
+      borderRadius: radii.lg,
+      padding: 14,
+      borderLeftWidth: 2,
+      borderLeftColor: c.primary,
+      marginBottom: spacing.lg,
+    },
+    summaryText: { color: c.textSecondary, fontSize: 14, lineHeight: 22 },
+    profileBlock: { marginBottom: spacing.lg },
+    profileLabel: {
+      color: c.textFaint,
+      fontSize: 12,
+      fontWeight: "600",
+      marginBottom: spacing.sm,
+      textTransform: "uppercase",
+    },
+    profileValue: { color: c.textSecondary, fontSize: 15, textTransform: "capitalize" },
+    chipWrap: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+    chip: {
+      backgroundColor: c.surface,
+      borderRadius: radii.pill,
+      paddingHorizontal: spacing.md,
+      paddingVertical: 7,
+      borderWidth: 0.5,
+      borderColor: c.border,
+    },
+    chipText: { color: c.textSecondary, fontSize: 13 },
+    redoBtn: {
+      marginTop: spacing.sm,
+      borderRadius: radii.md,
+      borderWidth: 0.5,
+      borderColor: c.primary,
+      paddingVertical: spacing.md,
+      alignItems: "center",
+    },
+    redoBtnText: { color: c.primary, fontSize: 14, fontWeight: "600" },
+    emptyProfile: { color: c.textFaint, fontSize: 14, lineHeight: 22 },
+    settingRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingVertical: spacing.md,
+      borderBottomWidth: 0.5,
+      borderBottomColor: c.surface,
+    },
+    settingLabel: { color: c.textSecondary, fontSize: 15 },
+    settingValue: { color: c.textFaint, fontSize: 15 },
+    appearanceSegment: {
+      flexDirection: "row",
+      borderRadius: radii.md,
+      borderWidth: 1,
+      borderColor: c.border,
+      backgroundColor: c.surfaceNested,
+      padding: spacing.sm,
+      gap: spacing.sm,
+      marginBottom: spacing.md,
+    },
+    segment: {
+      flex: 1,
+      borderRadius: radii.sm,
+      paddingVertical: spacing.sm,
+      alignItems: "center",
+    },
+    segmentSelected: {
+      backgroundColor: c.primary,
+    },
+    segmentText: {
+      ...typography.smallBold,
+    },
+    segmentTextSelected: {
+      color: c.onPrimary,
+    },
+    segmentTextUnselected: {
+      color: c.textMuted,
+    },
+    signOutBtn: {
+      marginTop: spacing.md,
+      backgroundColor: c.surface,
+      borderRadius: radii.lg,
+      paddingVertical: spacing.lg,
+      alignItems: "center",
+    },
+    signOutText: { color: c.danger, ...typography.bodyBold },
+  });

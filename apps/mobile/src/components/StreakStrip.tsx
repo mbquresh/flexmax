@@ -1,9 +1,10 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { TodayStats } from "../lib/stats";
 import { getLocalDateString } from "../lib/time";
 import { DaySquare, daySquareStripStyles } from "./DaySquare";
-import { colors, spacing, radii, typography, numeric } from "../theme";
+import { Colors, spacing, radii, typography, numeric } from "../theme";
+import { useTheme } from "../providers/ThemeProvider";
 
 interface StreakStripProps {
   stats: TodayStats;
@@ -36,6 +37,9 @@ export function StreakStrip({
   liveCompletionRate,
   liveStreak,
 }: StreakStripProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
   const todayIndex = getTodayWeekIndex();
   const completionRate = liveCompletionRate ?? stats.completionRate;
   const streak = liveStreak ?? stats.streak;
@@ -79,31 +83,32 @@ export function StreakStrip({
   );
 }
 
-const styles = StyleSheet.create({
-  streakContainer: {
-    marginHorizontal: spacing.xl,
-    marginTop: spacing.md,
-    marginBottom: spacing.xs,
-    backgroundColor: colors.streakHousing,
-    borderRadius: radii.xl,
-    padding: 14,
-    borderWidth: 0.5,
-    borderColor: colors.streakBorder,
-  },
-  streakHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: spacing.md,
-  },
-  streakLabel: {
-    color: colors.text,
-    ...typography.smallBold,
-    ...numeric,
-  },
-  streakSub: {
-    color: colors.streakMuted,
-    ...typography.caption,
-    ...numeric,
-  },
-});
+const makeStyles = (c: Colors) =>
+  StyleSheet.create({
+    streakContainer: {
+      marginHorizontal: spacing.xl,
+      marginTop: spacing.md,
+      marginBottom: spacing.xs,
+      backgroundColor: c.streakHousing,
+      borderRadius: radii.xl,
+      padding: 14,
+      borderWidth: 0.5,
+      borderColor: c.streakBorder,
+    },
+    streakHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginBottom: spacing.md,
+    },
+    streakLabel: {
+      color: c.text,
+      ...typography.smallBold,
+      ...numeric,
+    },
+    streakSub: {
+      color: c.streakMuted,
+      ...typography.caption,
+      ...numeric,
+    },
+  });

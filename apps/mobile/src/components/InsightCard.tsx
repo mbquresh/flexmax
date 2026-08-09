@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { BehavioralInsight } from "../types/database";
-import { colors, spacing, radii, iconSizes, typography } from "../theme";
+import { Colors, spacing, radii, iconSizes, typography } from "../theme";
+import { useTheme } from "../providers/ThemeProvider";
 
 interface Props {
   insight: BehavioralInsight;
@@ -10,6 +11,9 @@ interface Props {
 }
 
 export function InsightCard({ insight, onDismiss }: Props) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
   return (
     <View style={styles.card}>
       <TouchableOpacity
@@ -34,38 +38,39 @@ export function InsightCard({ insight, onDismiss }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.xl,
-    padding: spacing.xxl,
-    marginBottom: spacing.lg,
-    borderLeftWidth: 3,
-    borderLeftColor: colors.primary,
-  },
-  label: {
-    color: colors.textMuted,
-    ...typography.label,
-    textTransform: "uppercase",
-    marginBottom: spacing.sm,
-    paddingRight: spacing.xxl,
-  },
-  belief: {
-    color: colors.text,
-    ...typography.body,
-  },
-  divider: {
-    height: 0.5,
-    backgroundColor: colors.border,
-    marginVertical: spacing.lg,
-  },
-  suggestion: {
-    color: colors.textSecondary,
-    ...typography.smallRelaxed,
-  },
-  dismiss: {
-    position: "absolute",
-    top: spacing.xxl,
-    right: spacing.xxl,
-  },
-});
+const makeStyles = (c: Colors) =>
+  StyleSheet.create({
+    card: {
+      backgroundColor: c.surface,
+      borderRadius: radii.xl,
+      padding: spacing.xxl,
+      marginBottom: spacing.lg,
+      borderLeftWidth: 3,
+      borderLeftColor: c.primary,
+    },
+    label: {
+      color: c.textMuted,
+      ...typography.label,
+      textTransform: "uppercase",
+      marginBottom: spacing.sm,
+      paddingRight: spacing.xxl,
+    },
+    belief: {
+      color: c.text,
+      ...typography.body,
+    },
+    divider: {
+      height: 0.5,
+      backgroundColor: c.border,
+      marginVertical: spacing.lg,
+    },
+    suggestion: {
+      color: c.textSecondary,
+      ...typography.smallRelaxed,
+    },
+    dismiss: {
+      position: "absolute",
+      top: spacing.xxl,
+      right: spacing.xxl,
+    },
+  });

@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { colors, radii, typography } from "../theme";
+import { Colors, radii, typography } from "../theme";
+import { useTheme } from "../providers/ThemeProvider";
 
 export function segmentHeightPct(ratio: number): number {
   if (ratio <= 0) return 0;
@@ -22,6 +23,9 @@ export function DaySquare({
   isToday = false,
   isFuture = false,
 }: DaySquareProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
   const combinedRatio = completionRatio + missedRatio;
   const combinedPct = segmentHeightPct(combinedRatio);
   const completedPct = segmentHeightPct(completionRatio);
@@ -75,46 +79,47 @@ export const daySquareStripStyles = StyleSheet.create({
   },
 });
 
-const styles = StyleSheet.create({
-  daySquare: {
-    flex: 1,
-    aspectRatio: 1,
-    borderRadius: radii.sm,
-    backgroundColor: colors.streakSquare,
-    overflow: "hidden",
-  },
-  fill: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  dayLetterWrap: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  todayRing: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderWidth: 1.5,
-    borderColor: colors.streak,
-    borderRadius: radii.sm,
-  },
-  daySquareFuture: {
-    backgroundColor: colors.streakSquare,
-  },
-  daySquareLetter: {
-    color: colors.streakMuted,
-    ...typography.smallBold,
-  },
-  daySquareLetterDone: {
-    color: colors.text,
-  },
-  daySquareLetterFuture: {
-    color: colors.streakMuted,
-  },
-});
+const makeStyles = (c: Colors) =>
+  StyleSheet.create({
+    daySquare: {
+      flex: 1,
+      aspectRatio: 1,
+      borderRadius: radii.sm,
+      backgroundColor: c.streakSquare,
+      overflow: "hidden",
+    },
+    fill: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      bottom: 0,
+    },
+    dayLetterWrap: {
+      ...StyleSheet.absoluteFillObject,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    todayRing: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      borderWidth: 1.5,
+      borderColor: c.streak,
+      borderRadius: radii.sm,
+    },
+    daySquareFuture: {
+      backgroundColor: c.streakSquare,
+    },
+    daySquareLetter: {
+      color: c.streakMuted,
+      ...typography.smallBold,
+    },
+    daySquareLetterDone: {
+      color: c.text,
+    },
+    daySquareLetterFuture: {
+      color: c.streakMuted,
+    },
+  });
