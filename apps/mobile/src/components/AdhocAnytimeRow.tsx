@@ -37,6 +37,7 @@ export function AdhocAnytimeRow({ task, onToggle }: AdhocAnytimeRowProps) {
 const makeStyles = (c: Colors) =>
   StyleSheet.create({
     row: {
+      backgroundColor: c.surface,
       flexDirection: "row",
       alignItems: "center",
       gap: spacing.md,

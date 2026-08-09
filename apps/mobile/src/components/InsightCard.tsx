@@ -47,6 +47,7 @@ export function InsightCard({ insight, onDismiss }: Props) {
 const makeStyles = (c: Colors) =>
   StyleSheet.create({
     card: {
+      backgroundColor: c.surface,
       borderRadius: radii.xl,
       padding: spacing.xxl,
       marginBottom: spacing.lg,
