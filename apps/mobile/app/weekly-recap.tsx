@@ -15,7 +15,8 @@ import { useAuth } from "../src/providers/AuthProvider";
 import { RequireAuth } from "../src/components/RequireAuth";
 import { DaySquare, daySquareStripStyles } from "../src/components/DaySquare";
 import { BehavioralInsight } from "../src/types/database";
-import { colors, spacing, radii, iconSizes } from "../src/theme";
+import { Colors, spacing, radii, iconSizes } from "../src/theme";
+import { useTheme } from "../src/providers/ThemeProvider";
 
 const DAY_LETTERS = ["M", "T", "W", "T", "F", "S", "S"];
 const MONTHS = [
@@ -125,6 +126,8 @@ function computeWeekShape(instances: WeekInstance[], monday: Date) {
 }
 
 function WeeklyRecapScreenContent() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { session } = useAuth();
   const week = useMemo(() => getLastCompletedWeek(), []);
   const weekLabel = useMemo(
@@ -270,72 +273,73 @@ export default function WeeklyRecapScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-    paddingTop: 60,
-    paddingHorizontal: spacing.xl,
-  },
-  centered: {
-    flex: 1,
-    backgroundColor: colors.background,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  close: {
-    alignSelf: "flex-end",
-    marginBottom: spacing.lg,
-  },
-  title: {
-    color: colors.text,
-    fontSize: 22,
-    fontWeight: "700",
-    marginBottom: spacing.xs,
-  },
-  range: {
-    color: colors.textMuted,
-    fontSize: 13,
-    marginBottom: spacing.xxl,
-  },
-  accounted: {
-    color: colors.text,
-    fontSize: 17,
-    marginTop: spacing.xxl,
-  },
-  sectionDivider: {
-    height: 0.5,
-    backgroundColor: colors.border,
-    marginTop: spacing.xxxl,
-    marginBottom: spacing.xxl,
-  },
-  insightLabel: {
-    color: colors.textMuted,
-    fontSize: 11,
-    fontWeight: "600",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-    marginBottom: spacing.sm,
-  },
-  belief: {
-    color: colors.text,
-    fontSize: 15,
-    lineHeight: 22,
-  },
-  hairline: {
-    height: 0.5,
-    backgroundColor: colors.border,
-    marginVertical: spacing.lg,
-  },
-  suggestion: {
-    color: colors.textSecondary,
-    fontSize: 14,
-    lineHeight: 21,
-  },
-  empty: {
-    color: colors.textMuted,
-    fontSize: 15,
-    textAlign: "center",
-    marginTop: spacing.xxxl,
-  },
-});
+const makeStyles = (c: Colors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: c.background,
+      paddingTop: 60,
+      paddingHorizontal: spacing.xl,
+    },
+    centered: {
+      flex: 1,
+      backgroundColor: c.background,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    close: {
+      alignSelf: "flex-end",
+      marginBottom: spacing.lg,
+    },
+    title: {
+      color: c.text,
+      fontSize: 22,
+      fontWeight: "700",
+      marginBottom: spacing.xs,
+    },
+    range: {
+      color: c.textMuted,
+      fontSize: 13,
+      marginBottom: spacing.xxl,
+    },
+    accounted: {
+      color: c.text,
+      fontSize: 17,
+      marginTop: spacing.xxl,
+    },
+    sectionDivider: {
+      height: 0.5,
+      backgroundColor: c.border,
+      marginTop: spacing.xxxl,
+      marginBottom: spacing.xxl,
+    },
+    insightLabel: {
+      color: c.textMuted,
+      fontSize: 11,
+      fontWeight: "600",
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+      marginBottom: spacing.sm,
+    },
+    belief: {
+      color: c.text,
+      fontSize: 15,
+      lineHeight: 22,
+    },
+    hairline: {
+      height: 0.5,
+      backgroundColor: c.border,
+      marginVertical: spacing.lg,
+    },
+    suggestion: {
+      color: c.textSecondary,
+      fontSize: 14,
+      lineHeight: 21,
+    },
+    empty: {
+      color: c.textMuted,
+      fontSize: 15,
+      textAlign: "center",
+      marginTop: spacing.xxxl,
+    },
+  });

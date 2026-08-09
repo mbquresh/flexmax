@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -26,6 +26,7 @@ import {
   WEEKDAYS,
 } from "../src/lib/schedule";
 import { useAuth } from "../src/providers/AuthProvider";
+import { useTheme } from "../src/providers/ThemeProvider";
 import { useStore } from "../src/store";
 import { BlockCategory, ScheduleBlock } from "../src/types/database";
 import { minutesToTime } from "../src/lib/time";
@@ -34,12 +35,12 @@ import { handleError, getErrorMessage } from "../src/lib/errors";
 
 import { RequireAuth } from "../src/components/RequireAuth";
 import { BoundaryRow } from "../src/components/BoundaryRow";
-import { colors, spacing, radii, typography, iconSizes } from "../src/theme";
+import { Colors, spacing, radii, typography, iconSizes } from "../src/theme";
 
 function ScheduleBuilderScreenContent() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { session, refreshProfile } = useAuth();
-  if (!session) return null;
-
   const { blocks, setBlocks } = useStore();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -64,7 +65,7 @@ function ScheduleBuilderScreenContent() {
   const [sleepTarget, setSleepTarget] = useState<number | null>(null);
 
   const loadBlocks = async () => {
-    if (!session.user.id) {
+    if (!session?.user.id) {
       setLoading(false);
       return;
     }
@@ -104,7 +105,9 @@ function ScheduleBuilderScreenContent() {
 
   useEffect(() => {
     loadBlocks();
-  }, [session.user.id]);
+  }, [session?.user.id]);
+
+  if (!session) return null;
 
   const showError = (message: string) => {
     setError(message);
@@ -563,174 +566,175 @@ export default function ScheduleBuilderScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  centered: {
-    flex: 1,
-    backgroundColor: colors.background,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  header: { paddingTop: 60, paddingHorizontal: spacing.xl, paddingBottom: spacing.md },
-  title: { fontSize: 24, fontWeight: "600", color: colors.text },
-  subtitle: { fontSize: 14, color: colors.textMuted, marginTop: 6 },
-  boundaryLabel: {
-    color: colors.textMuted,
-    fontSize: 11,
-    fontWeight: "600",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-    marginTop: spacing.xxl,
-    marginBottom: spacing.sm,
-  },
-  boundarySection: {
-    marginBottom: spacing.xxl,
-  },
-  wakeBoundaryLabel: {
-    // Quick add section already has marginBottom spacing.lg.
-    marginTop: spacing.xxl - spacing.lg,
-  },
-  sleepBoundaryLabel: {
-    // Block cards already have marginBottom 10.
-    marginTop: spacing.xxl - 10,
-  },
-  errorBox: {
-    marginHorizontal: spacing.xl,
-    marginBottom: spacing.sm,
-    backgroundColor: colors.errorTint,
-    borderColor: colors.errorBorder,
-    borderWidth: 1,
-    borderRadius: radii.md,
-    padding: spacing.md,
-    color: colors.error,
-    fontSize: 14,
-  },
-  list: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxxl },
-  section: { marginBottom: spacing.lg },
-  sectionTitle: { color: colors.textMuted, ...typography.smallBold, marginBottom: 10 },
-  presetChip: {
-    backgroundColor: colors.primaryDeep,
-    borderRadius: radii.round,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    marginRight: spacing.sm,
-  },
-  presetText: { color: colors.onPrimary, fontSize: 14 },
-  blockCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.lg,
-    padding: spacing.lg,
-    marginBottom: 10,
-  },
-  blockHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  blockName: { color: colors.text, fontSize: 16, fontWeight: "600" },
-  editText: { color: colors.primary, fontSize: 13, fontWeight: "600" },
-  removeText: { color: colors.danger, fontSize: 13, fontWeight: "600" },
-  blockMeta: { color: colors.textMuted, fontSize: 13, marginTop: spacing.xs },
-  blockRepeats: { color: colors.textFaint, fontSize: 12, marginTop: 4, marginBottom: 10 },
-  dayRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
-  dayChip: {
-    borderRadius: radii.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 6,
-    backgroundColor: colors.surface,
-    borderWidth: 0.5,
-    borderColor: colors.border,
-  },
-  dayChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  dayChipText: { color: colors.textFaint, fontSize: 12, fontWeight: "600" },
-  dayChipTextActive: { color: colors.onPrimary },
-  fieldLabel: { color: colors.textMuted, ...typography.smallBold },
-  fixedToggleSection: { gap: spacing.xs },
-  fixedPill: {
-    alignSelf: "flex-start",
-    borderRadius: radii.pill,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.surface,
-    borderWidth: 0.5,
-    borderColor: colors.border,
-  },
-  fixedPillActive: {
-    backgroundColor: colors.primaryDeep,
-    borderColor: colors.primary,
-  },
-  fixedPillText: { color: colors.textMuted, fontSize: 13, fontWeight: "600" },
-  fixedPillTextActive: { color: colors.onPrimary },
-  fixedHelper: { color: colors.textFaint, fontSize: 12, lineHeight: 18 },
-  empty: {
-    color: colors.textFaint,
-    textAlign: "center",
-    lineHeight: 22,
-    marginVertical: spacing.xxl,
-    paddingHorizontal: spacing.sm,
-  },
-  addSection: { marginTop: spacing.sm, marginBottom: spacing.md },
-  addToggle: {
-    borderRadius: radii.lg,
-    borderWidth: 0.5,
-    borderColor: colors.border,
-    paddingVertical: 14,
-    alignItems: "center",
-    backgroundColor: colors.surface,
-  },
-  addToggleText: { color: colors.primary, fontSize: 15, fontWeight: "500" },
-  form: {
-    borderRadius: radii.lg,
-    borderWidth: 0.5,
-    borderColor: colors.border,
-    padding: 14,
-    gap: 10,
-    backgroundColor: colors.surfaceNested,
-  },
-  formHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  collapseText: { color: colors.textFaint, fontSize: 13 },
-  input: {
-    backgroundColor: colors.surface,
-    borderWidth: 0.5,
-    borderColor: colors.border,
-    borderRadius: radii.lg,
-    paddingHorizontal: 14,
-    paddingVertical: spacing.md,
-    color: colors.text,
-    fontSize: 15,
-  },
-  chipRow: { flexGrow: 0 },
-  chip: {
-    borderRadius: radii.pill,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    marginRight: spacing.sm,
-    backgroundColor: colors.surface,
-    borderWidth: 0.5,
-    borderColor: colors.border,
-  },
-  chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  chipText: { color: colors.textMuted, fontSize: 13 },
-  chipTextActive: { color: colors.onPrimary },
-  timeStack: { gap: 10 },
-  addBtn: {
-    backgroundColor: colors.primary,
-    borderRadius: radii.lg,
-    paddingVertical: spacing.md,
-    alignItems: "center",
-  },
-  addBtnText: { color: colors.onPrimary, ...typography.bodyBold },
-  primaryBtn: {
-    backgroundColor: colors.primary,
-    borderRadius: radii.lg,
-    paddingVertical: spacing.lg,
-    alignItems: "center",
-  },
-  primaryBtnRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-  },
-  primaryBtnText: { color: colors.onPrimary, fontSize: 16, fontWeight: "600" },
-  btnDisabled: { opacity: 0.5 },
-});
+const makeStyles = (c: Colors) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.background },
+    centered: {
+      flex: 1,
+      backgroundColor: c.background,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    header: { paddingTop: 60, paddingHorizontal: spacing.xl, paddingBottom: spacing.md },
+    title: { fontSize: 24, fontWeight: "600", color: c.text },
+    subtitle: { fontSize: 14, color: c.textMuted, marginTop: 6 },
+    boundaryLabel: {
+      color: c.textMuted,
+      fontSize: 11,
+      fontWeight: "600",
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+      marginTop: spacing.xxl,
+      marginBottom: spacing.sm,
+    },
+    boundarySection: {
+      marginBottom: spacing.xxl,
+    },
+    wakeBoundaryLabel: {
+      // Quick add section already has marginBottom spacing.lg.
+      marginTop: spacing.xxl - spacing.lg,
+    },
+    sleepBoundaryLabel: {
+      // Block cards already have marginBottom 10.
+      marginTop: spacing.xxl - 10,
+    },
+    errorBox: {
+      marginHorizontal: spacing.xl,
+      marginBottom: spacing.sm,
+      backgroundColor: c.errorTint,
+      borderColor: c.errorBorder,
+      borderWidth: 1,
+      borderRadius: radii.md,
+      padding: spacing.md,
+      color: c.error,
+      fontSize: 14,
+    },
+    list: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxxl },
+    section: { marginBottom: spacing.lg },
+    sectionTitle: { color: c.textMuted, ...typography.smallBold, marginBottom: 10 },
+    presetChip: {
+      backgroundColor: c.primaryDeep,
+      borderRadius: radii.round,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      marginRight: spacing.sm,
+    },
+    presetText: { color: c.onPrimary, fontSize: 14 },
+    blockCard: {
+      backgroundColor: c.surface,
+      borderRadius: radii.lg,
+      padding: spacing.lg,
+      marginBottom: 10,
+    },
+    blockHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+    blockName: { color: c.text, fontSize: 16, fontWeight: "600" },
+    editText: { color: c.primary, fontSize: 13, fontWeight: "600" },
+    removeText: { color: c.danger, fontSize: 13, fontWeight: "600" },
+    blockMeta: { color: c.textMuted, fontSize: 13, marginTop: spacing.xs },
+    blockRepeats: { color: c.textFaint, fontSize: 12, marginTop: 4, marginBottom: 10 },
+    dayRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+    dayChip: {
+      borderRadius: radii.sm,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 6,
+      backgroundColor: c.surface,
+      borderWidth: 0.5,
+      borderColor: c.border,
+    },
+    dayChipActive: { backgroundColor: c.primary, borderColor: c.primary },
+    dayChipText: { color: c.textFaint, fontSize: 12, fontWeight: "600" },
+    dayChipTextActive: { color: c.onPrimary },
+    fieldLabel: { color: c.textMuted, ...typography.smallBold },
+    fixedToggleSection: { gap: spacing.xs },
+    fixedPill: {
+      alignSelf: "flex-start",
+      borderRadius: radii.pill,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      backgroundColor: c.surface,
+      borderWidth: 0.5,
+      borderColor: c.border,
+    },
+    fixedPillActive: {
+      backgroundColor: c.primaryDeep,
+      borderColor: c.primary,
+    },
+    fixedPillText: { color: c.textMuted, fontSize: 13, fontWeight: "600" },
+    fixedPillTextActive: { color: c.onPrimary },
+    fixedHelper: { color: c.textFaint, fontSize: 12, lineHeight: 18 },
+    empty: {
+      color: c.textFaint,
+      textAlign: "center",
+      lineHeight: 22,
+      marginVertical: spacing.xxl,
+      paddingHorizontal: spacing.sm,
+    },
+    addSection: { marginTop: spacing.sm, marginBottom: spacing.md },
+    addToggle: {
+      borderRadius: radii.lg,
+      borderWidth: 0.5,
+      borderColor: c.border,
+      paddingVertical: 14,
+      alignItems: "center",
+      backgroundColor: c.surface,
+    },
+    addToggleText: { color: c.primary, fontSize: 15, fontWeight: "500" },
+    form: {
+      borderRadius: radii.lg,
+      borderWidth: 0.5,
+      borderColor: c.border,
+      padding: 14,
+      gap: 10,
+      backgroundColor: c.surfaceNested,
+    },
+    formHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    collapseText: { color: c.textFaint, fontSize: 13 },
+    input: {
+      backgroundColor: c.surface,
+      borderWidth: 0.5,
+      borderColor: c.border,
+      borderRadius: radii.lg,
+      paddingHorizontal: 14,
+      paddingVertical: spacing.md,
+      color: c.text,
+      fontSize: 15,
+    },
+    chipRow: { flexGrow: 0 },
+    chip: {
+      borderRadius: radii.pill,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      marginRight: spacing.sm,
+      backgroundColor: c.surface,
+      borderWidth: 0.5,
+      borderColor: c.border,
+    },
+    chipActive: { backgroundColor: c.primary, borderColor: c.primary },
+    chipText: { color: c.textMuted, fontSize: 13 },
+    chipTextActive: { color: c.onPrimary },
+    timeStack: { gap: 10 },
+    addBtn: {
+      backgroundColor: c.primary,
+      borderRadius: radii.lg,
+      paddingVertical: spacing.md,
+      alignItems: "center",
+    },
+    addBtnText: { color: c.onPrimary, ...typography.bodyBold },
+    primaryBtn: {
+      backgroundColor: c.primary,
+      borderRadius: radii.lg,
+      paddingVertical: spacing.lg,
+      alignItems: "center",
+    },
+    primaryBtnRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.xs,
+    },
+    primaryBtnText: { color: c.onPrimary, fontSize: 16, fontWeight: "600" },
+    btnDisabled: { opacity: 0.5 },
+  });

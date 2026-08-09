@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -10,10 +10,11 @@ import {
 import { router } from "expo-router";
 import { supabase } from "../src/lib/supabase";
 import { useAuth } from "../src/providers/AuthProvider";
+import { useTheme } from "../src/providers/ThemeProvider";
 import { useStore } from "../src/store";
 import { RequireAuth } from "../src/components/RequireAuth";
 import { handleError } from "../src/lib/errors";
-import { colors, spacing, radii, typography } from "../src/theme";
+import { Colors, spacing, radii, typography } from "../src/theme";
 
 type Option = { label: string; value: string | string[] };
 
@@ -81,6 +82,9 @@ function OptionRow({
   selected: boolean;
   onPress: () => void;
 }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
   return (
     <TouchableOpacity
       style={[styles.option, selected && styles.optionSelected]}
@@ -93,6 +97,8 @@ function OptionRow({
 }
 
 function OnboardingContent() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { session, refreshProfile } = useAuth();
   const { setPsychologyProfile } = useStore();
   const userId = session?.user.id;
@@ -333,104 +339,105 @@ export default function OnboardingRoute() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-    paddingTop: 60,
-  },
-  topBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.xxl,
-  },
-  back: {
-    width: 32,
-  },
-  backPlaceholder: {
-    width: 32,
-  },
-  backText: {
-    color: colors.textMuted,
-    fontSize: 28,
-    lineHeight: 28,
-  },
-  dots: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: spacing.sm,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.border,
-  },
-  dotActive: {
-    backgroundColor: colors.primary,
-  },
-  scroll: {
-    paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.xxxl,
-  },
-  question: {
-    color: colors.text,
-    ...typography.title,
-    marginBottom: spacing.xxl,
-  },
-  option: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.lg,
-    padding: spacing.xl,
-    borderWidth: 0.5,
-    borderColor: colors.border,
-    marginBottom: spacing.md,
-  },
-  optionSelected: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primaryTint,
-  },
-  optionText: {
-    color: colors.text,
-    fontSize: 15,
-    lineHeight: 22,
-  },
-  payoffTitle: {
-    color: colors.text,
-    ...typography.title,
-    marginBottom: spacing.xxl,
-  },
-  payoffLine: {
-    color: colors.text,
-    fontSize: 17,
-    lineHeight: 26,
-    marginBottom: spacing.md,
-  },
-  contractTitle: {
-    color: colors.text,
-    ...typography.title,
-    marginBottom: spacing.lg,
-  },
-  contractBody: {
-    color: colors.textSecondary,
-    fontSize: 15,
-    lineHeight: 22,
-    marginBottom: spacing.xxxl,
-  },
-  actionBtn: {
-    backgroundColor: colors.primary,
-    borderRadius: radii.lg,
-    paddingVertical: spacing.lg,
-    alignItems: "center",
-    marginTop: spacing.lg,
-  },
-  actionBtnDisabled: {
-    backgroundColor: colors.primaryDisabled,
-  },
-  actionBtnText: {
-    color: colors.onPrimary,
-    ...typography.bodyBold,
-  },
-});
+const makeStyles = (c: Colors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: c.background,
+      paddingTop: 60,
+    },
+    topBar: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: spacing.xl,
+      paddingBottom: spacing.xxl,
+    },
+    back: {
+      width: 32,
+    },
+    backPlaceholder: {
+      width: 32,
+    },
+    backText: {
+      color: c.textMuted,
+      fontSize: 28,
+      lineHeight: 28,
+    },
+    dots: {
+      flexDirection: "row",
+      justifyContent: "center",
+      gap: spacing.sm,
+    },
+    dot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: c.border,
+    },
+    dotActive: {
+      backgroundColor: c.primary,
+    },
+    scroll: {
+      paddingHorizontal: spacing.xl,
+      paddingBottom: spacing.xxxl,
+    },
+    question: {
+      color: c.text,
+      ...typography.title,
+      marginBottom: spacing.xxl,
+    },
+    option: {
+      backgroundColor: c.surface,
+      borderRadius: radii.lg,
+      padding: spacing.xl,
+      borderWidth: 0.5,
+      borderColor: c.border,
+      marginBottom: spacing.md,
+    },
+    optionSelected: {
+      borderColor: c.primary,
+      backgroundColor: c.primaryTint,
+    },
+    optionText: {
+      color: c.text,
+      fontSize: 15,
+      lineHeight: 22,
+    },
+    payoffTitle: {
+      color: c.text,
+      ...typography.title,
+      marginBottom: spacing.xxl,
+    },
+    payoffLine: {
+      color: c.text,
+      fontSize: 17,
+      lineHeight: 26,
+      marginBottom: spacing.md,
+    },
+    contractTitle: {
+      color: c.text,
+      ...typography.title,
+      marginBottom: spacing.lg,
+    },
+    contractBody: {
+      color: c.textSecondary,
+      fontSize: 15,
+      lineHeight: 22,
+      marginBottom: spacing.xxxl,
+    },
+    actionBtn: {
+      backgroundColor: c.primary,
+      borderRadius: radii.lg,
+      paddingVertical: spacing.lg,
+      alignItems: "center",
+      marginTop: spacing.lg,
+    },
+    actionBtnDisabled: {
+      backgroundColor: c.primaryDisabled,
+    },
+    actionBtnText: {
+      color: c.onPrimary,
+      ...typography.bodyBold,
+    },
+  });

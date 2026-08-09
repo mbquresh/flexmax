@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -12,10 +12,13 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { useAuth } from "../src/providers/AuthProvider";
+import { useTheme } from "../src/providers/ThemeProvider";
 import { handleError, getErrorMessage } from "../src/lib/errors";
-import { colors, spacing, radii } from "../src/theme";
+import { Colors, spacing, radii } from "../src/theme";
 
 export default function SignInScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { signIn, signUp, session, loading: authLoading } = useAuth();
   const [mode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
   const [name, setName] = useState("");
@@ -153,40 +156,41 @@ export default function SignInScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  scrollContent: { flexGrow: 1, justifyContent: "center" },
-  inner: { padding: spacing.xxl, gap: spacing.md },
-  title: { fontSize: 32, fontWeight: "700", color: colors.text, marginBottom: spacing.xs },
-  subtitle: { fontSize: 15, color: colors.textMuted, marginBottom: spacing.xxl },
-  errorBox: {
-    backgroundColor: colors.errorTint,
-    borderColor: colors.errorBorder,
-    borderWidth: 1,
-    borderRadius: radii.md,
-    padding: spacing.md,
-    color: colors.error,
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  input: {
-    backgroundColor: colors.surface,
-    borderWidth: 0.5,
-    borderColor: colors.border,
-    borderRadius: radii.lg,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: 14,
-    color: colors.text,
-    fontSize: 16,
-  },
-  button: {
-    backgroundColor: colors.primary,
-    borderRadius: radii.lg,
-    paddingVertical: spacing.lg,
-    alignItems: "center",
-    marginTop: spacing.sm,
-  },
-  buttonDisabled: { opacity: 0.6 },
-  buttonText: { color: colors.onPrimary, fontSize: 16, fontWeight: "600" },
-  toggle: { color: colors.textMuted, textAlign: "center", marginTop: spacing.lg, fontSize: 14 },
-});
+const makeStyles = (c: Colors) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.background },
+    scrollContent: { flexGrow: 1, justifyContent: "center" },
+    inner: { padding: spacing.xxl, gap: spacing.md },
+    title: { fontSize: 32, fontWeight: "700", color: c.text, marginBottom: spacing.xs },
+    subtitle: { fontSize: 15, color: c.textMuted, marginBottom: spacing.xxl },
+    errorBox: {
+      backgroundColor: c.errorTint,
+      borderColor: c.errorBorder,
+      borderWidth: 1,
+      borderRadius: radii.md,
+      padding: spacing.md,
+      color: c.error,
+      fontSize: 14,
+      lineHeight: 20,
+    },
+    input: {
+      backgroundColor: c.surface,
+      borderWidth: 0.5,
+      borderColor: c.border,
+      borderRadius: radii.lg,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: 14,
+      color: c.text,
+      fontSize: 16,
+    },
+    button: {
+      backgroundColor: c.primary,
+      borderRadius: radii.lg,
+      paddingVertical: spacing.lg,
+      alignItems: "center",
+      marginTop: spacing.sm,
+    },
+    buttonDisabled: { opacity: 0.6 },
+    buttonText: { color: c.onPrimary, fontSize: 16, fontWeight: "600" },
+    toggle: { color: c.textMuted, textAlign: "center", marginTop: spacing.lg, fontSize: 14 },
+  });

@@ -1,9 +1,13 @@
+import { useMemo } from "react";
 import { Redirect } from "expo-router";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { useAuth } from "../src/providers/AuthProvider";
-import { colors } from "../src/theme";
+import { useTheme } from "../src/providers/ThemeProvider";
+import { Colors } from "../src/theme";
 
 export default function Index() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { session, psychologyProfile, loading } = useAuth();
 
   if (loading) {
@@ -20,11 +24,12 @@ export default function Index() {
   return <Redirect href="/today" />;
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-});
+const makeStyles = (c: Colors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: c.background,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+  });

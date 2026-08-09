@@ -17,19 +17,20 @@ import { WEEKDAYS } from "../src/lib/schedule";
 import { getLocalDateString, getTomorrowLocalDateString, minutesToTime } from "../src/lib/time";
 import { handleError } from "../src/lib/errors";
 import { useAuth } from "../src/providers/AuthProvider";
+import { useTheme } from "../src/providers/ThemeProvider";
 import { RequireAuth } from "../src/components/RequireAuth";
 import { CloseTodayRow } from "../src/components/CloseTodayRow";
 import { DailyInstance } from "../src/types/database";
-import { colors, spacing, radii, typography, iconSizes } from "../src/theme";
+import { Colors, spacing, radii, typography, iconSizes } from "../src/theme";
 
 function isInstanceFixed(instance: DailyInstance): boolean {
   return instance.is_fixed || !!instance.block?.is_fixed;
 }
 
 function PlanTomorrowScreenContent() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { session } = useAuth();
-  if (!session) return null;
-
   const tomorrowDate = useMemo(() => getTomorrowLocalDateString(), []);
   const tomorrowWeekday = useMemo(() => {
     const t = new Date();
@@ -46,7 +47,7 @@ function PlanTomorrowScreenContent() {
   const [saving, setSaving] = useState(false);
 
   const loadPlan = useCallback(async () => {
-    if (!session.user.id) return;
+    if (!session?.user.id) return;
 
     setLoading(true);
     try {
@@ -90,7 +91,7 @@ function PlanTomorrowScreenContent() {
     } finally {
       setLoading(false);
     }
-  }, [session.user.id, tomorrowDate]);
+  }, [session?.user.id, tomorrowDate]);
 
   useEffect(() => {
     loadPlan();
@@ -211,6 +212,8 @@ function PlanTomorrowScreenContent() {
       setSaving(false);
     }
   };
+
+  if (!session) return null;
 
   if (loading) {
     return (
@@ -340,101 +343,102 @@ export default function PlanTomorrowScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  centered: {
-    flex: 1,
-    backgroundColor: colors.background,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  header: {
-    paddingTop: 60,
-    paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.md,
-  },
-  headerTop: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: spacing.md,
-  },
-  headerText: { flex: 1 },
-  skipBtn: { color: colors.primary, ...typography.body },
-  title: { fontSize: 24, fontWeight: "600", color: colors.text },
-  subtitle: { fontSize: 14, color: colors.textMuted, marginTop: spacing.xs },
-  scroll: { flex: 1 },
-  scrollContent: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xxxl,
-    gap: spacing.lg,
-  },
-  section: {
-    gap: spacing.md,
-  },
-  sectionHeader: {
-    color: colors.textMuted,
-    ...typography.smallBold,
-    textTransform: "uppercase",
-    letterSpacing: 0.6,
-  },
-  row: {
-    backgroundColor: colors.surface,
-    borderRadius: radii.lg,
-    padding: spacing.lg,
-    gap: spacing.sm,
-  },
-  rowFixed: {
-    backgroundColor: colors.surfaceDim,
-  },
-  rowHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-  },
-  blockName: { color: colors.text, fontSize: 16, fontWeight: "600" },
-  blockTime: { color: colors.textMuted, fontSize: 13 },
-  taskInput: {
-    backgroundColor: colors.surfaceNested,
-    borderWidth: 0.5,
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    paddingHorizontal: 14,
-    paddingVertical: spacing.md,
-    color: colors.text,
-    fontSize: 15,
-    minHeight: 72,
-  },
-  empty: {
-    alignItems: "center",
-    marginTop: spacing.xxxl,
-    gap: spacing.lg,
-    paddingHorizontal: spacing.lg,
-  },
-  emptyText: {
-    color: colors.textFaint,
-    fontSize: 15,
-    textAlign: "center",
-    lineHeight: 22,
-  },
-  emptyBtn: {
-    backgroundColor: colors.primary,
-    borderRadius: radii.lg,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xl,
-  },
-  emptyBtnText: { color: colors.onPrimary, ...typography.bodyBold },
-  footer: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: Platform.OS === "ios" ? 36 : spacing.xl,
-    paddingTop: spacing.md,
-  },
-  saveBtn: {
-    backgroundColor: colors.primary,
-    borderRadius: radii.lg,
-    paddingVertical: spacing.lg,
-    alignItems: "center",
-  },
-  saveBtnText: { color: colors.onPrimary, fontSize: 16, fontWeight: "600" },
-  btnDisabled: { opacity: 0.5 },
-});
+const makeStyles = (c: Colors) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: c.background },
+    centered: {
+      flex: 1,
+      backgroundColor: c.background,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    header: {
+      paddingTop: 60,
+      paddingHorizontal: spacing.xl,
+      paddingBottom: spacing.md,
+    },
+    headerTop: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      justifyContent: "space-between",
+      gap: spacing.md,
+    },
+    headerText: { flex: 1 },
+    skipBtn: { color: c.primary, ...typography.body },
+    title: { fontSize: 24, fontWeight: "600", color: c.text },
+    subtitle: { fontSize: 14, color: c.textMuted, marginTop: spacing.xs },
+    scroll: { flex: 1 },
+    scrollContent: {
+      paddingHorizontal: spacing.lg,
+      paddingBottom: spacing.xxxl,
+      gap: spacing.lg,
+    },
+    section: {
+      gap: spacing.md,
+    },
+    sectionHeader: {
+      color: c.textMuted,
+      ...typography.smallBold,
+      textTransform: "uppercase",
+      letterSpacing: 0.6,
+    },
+    row: {
+      backgroundColor: c.surface,
+      borderRadius: radii.lg,
+      padding: spacing.lg,
+      gap: spacing.sm,
+    },
+    rowFixed: {
+      backgroundColor: c.surfaceDim,
+    },
+    rowHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.xs,
+    },
+    blockName: { color: c.text, fontSize: 16, fontWeight: "600" },
+    blockTime: { color: c.textMuted, fontSize: 13 },
+    taskInput: {
+      backgroundColor: c.surfaceNested,
+      borderWidth: 0.5,
+      borderColor: c.border,
+      borderRadius: radii.md,
+      paddingHorizontal: 14,
+      paddingVertical: spacing.md,
+      color: c.text,
+      fontSize: 15,
+      minHeight: 72,
+    },
+    empty: {
+      alignItems: "center",
+      marginTop: spacing.xxxl,
+      gap: spacing.lg,
+      paddingHorizontal: spacing.lg,
+    },
+    emptyText: {
+      color: c.textFaint,
+      fontSize: 15,
+      textAlign: "center",
+      lineHeight: 22,
+    },
+    emptyBtn: {
+      backgroundColor: c.primary,
+      borderRadius: radii.lg,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.xl,
+    },
+    emptyBtnText: { color: c.onPrimary, ...typography.bodyBold },
+    footer: {
+      paddingHorizontal: spacing.lg,
+      paddingBottom: Platform.OS === "ios" ? 36 : spacing.xl,
+      paddingTop: spacing.md,
+    },
+    saveBtn: {
+      backgroundColor: c.primary,
+      borderRadius: radii.lg,
+      paddingVertical: spacing.lg,
+      alignItems: "center",
+    },
+    saveBtnText: { color: c.onPrimary, fontSize: 16, fontWeight: "600" },
+    btnDisabled: { opacity: 0.5 },
+  });
