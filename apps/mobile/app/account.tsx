@@ -81,7 +81,7 @@ function AccountScreenContent() {
         { text: "Cancel", style: "cancel" },
         {
           text: "Redo",
-          onPress: () => router.push("/onboarding"),
+          onPress: () => router.replace("/onboarding"),
         },
       ]
     );

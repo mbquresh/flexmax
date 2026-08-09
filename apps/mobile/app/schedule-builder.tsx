@@ -544,7 +544,7 @@ function ScheduleBuilderScreenContent() {
             {renderAddForm()}
             <TouchableOpacity
               style={[styles.primaryBtn, blocks.length === 0 && styles.btnDisabled]}
-              onPress={() => router.replace("/today")}
+              onPress={() => router.back()}
               disabled={blocks.length === 0}
             >
               <View style={styles.primaryBtnRow}>

@@ -189,7 +189,7 @@ function PlanTomorrowScreenContent() {
     });
 
     if (!changed.length) {
-      router.replace("/today");
+      router.back();
       return;
     }
 
@@ -206,7 +206,7 @@ function PlanTomorrowScreenContent() {
       );
       const failed = results.find((r) => r.error);
       if (failed?.error) throw failed.error;
-      router.replace("/today");
+      router.back();
     } catch (err) {
       handleError(err, "savePlanTomorrow", "Could not save tomorrow's plan");
     } finally {
@@ -231,7 +231,7 @@ function PlanTomorrowScreenContent() {
     >
       <View style={styles.header}>
         <View style={styles.headerTop}>
-          <TouchableOpacity onPress={() => router.replace("/today")} hitSlop={8}>
+          <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
             <Feather name="x" size={iconSizes.md} color={colors.textMuted} />
           </TouchableOpacity>
           <View style={styles.headerText}>
@@ -240,7 +240,7 @@ function PlanTomorrowScreenContent() {
               {tomorrowWeekday} · {tomorrowDate}
             </Text>
           </View>
-          <TouchableOpacity onPress={() => router.replace("/today")} hitSlop={8}>
+          <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
             <Text style={styles.skipBtn}>Skip</Text>
           </TouchableOpacity>
         </View>
@@ -276,7 +276,7 @@ function PlanTomorrowScreenContent() {
             <Text style={styles.emptyText}>No blocks scheduled for tomorrow.</Text>
             <TouchableOpacity
               style={styles.emptyBtn}
-              onPress={() => router.push("/schedule-builder")}
+              onPress={() => router.replace("/schedule-builder")}
             >
               <Text style={styles.emptyBtnText}>Edit schedule</Text>
             </TouchableOpacity>

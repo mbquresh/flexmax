@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppState } from "react-native";
+import { useFocusEffect } from "expo-router";
 import { generateDailyInstances, supabase } from "../lib/supabase";
 import { scheduleTodayBlockNotifications } from "../lib/blockNotifications";
 import { fetchTodayStats, TodayStats } from "../lib/stats";
@@ -33,13 +34,15 @@ export function useTodayData(userId: string | undefined) {
   }, []);
 
   const loadToday = useCallback(
-    async (dateOverride?: string) => {
+    async (dateOverride?: string, options?: { silent?: boolean }) => {
       if (!userId) return;
 
       const targetDate = dateOverride ?? getLocalDateString();
       setDisplayDate(targetDate);
       currentDateRef.current = targetDate;
-      setLoading(true);
+      if (!options?.silent) {
+        setLoading(true);
+      }
 
       await generateDailyInstances(targetDate);
 
@@ -127,7 +130,9 @@ export function useTodayData(userId: string | undefined) {
         setInsights(insightsData ?? []);
       }
 
-      setLoading(false);
+      if (!options?.silent) {
+        setLoading(false);
+      }
 
       // Fire-and-forget. Returns cached insights without an AI call if a fresh
       // set exists, so this is cheap to call on every load.
@@ -142,9 +147,21 @@ export function useTodayData(userId: string | undefined) {
     [userId, setTodayInstances]
   );
 
+  const isFirstFocus = useRef(true);
+
   useEffect(() => {
     loadToday();
   }, [userId, loadToday]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (isFirstFocus.current) {
+        isFirstFocus.current = false;
+        return;
+      }
+      loadToday(undefined, { silent: true });
+    }, [loadToday])
+  );
 
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (nextState) => {
