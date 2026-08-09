@@ -10,6 +10,7 @@ import {
   Platform,
 } from "react-native";
 import { CompletionRating, DailyInstance } from "../types/database";
+import { hapticSelect } from "../lib/haptics";
 import { minutesToTime } from "../lib/time";
 import { colors, spacing, radii, typography } from "../theme";
 
@@ -89,7 +90,10 @@ export function CheckInSheet({
                     },
                     pressed && styles.ratingBtnPressed,
                   ]}
-                  onPress={() => onRate(opt.value)}
+                  onPress={() => {
+                    hapticSelect();
+                    onRate(opt.value);
+                  }}
                   disabled={saving}
                 >
                   <Text style={[styles.ratingBtnText, { color: opt.text }]}>{opt.label}</Text>

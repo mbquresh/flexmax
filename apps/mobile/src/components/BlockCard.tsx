@@ -11,6 +11,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { BlockStatus, DailyInstance } from "../types/database";
 import { minutesToTime } from "../lib/time";
+import { hapticPickUp, hapticDetent } from "../lib/haptics";
 import { useStore } from "../store";
 import { colors, spacing, radii } from "../theme";
 
@@ -174,6 +175,7 @@ export function BlockCard({
     .onStart(() => {
       isDragging.value = 1;
       scale.value = withTiming(1.03, { duration: 120 });
+      runOnJS(hapticPickUp)();
     })
     .onUpdate((e) => {
       translateY.value = e.translationY;
@@ -202,6 +204,9 @@ export function BlockCard({
       const shouldOpen = translateX.value < -revealWidth / 2;
       isOpen.value = shouldOpen ? 1 : 0;
       translateX.value = withTiming(shouldOpen ? -revealWidth : 0, { duration: 150 });
+      if (shouldOpen) {
+        runOnJS(hapticDetent)();
+      }
     });
 
   const wrapperAnimatedStyle = useAnimatedStyle(() => ({

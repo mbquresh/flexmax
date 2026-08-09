@@ -51,6 +51,12 @@ import { TimePicker } from "../src/components/TimePicker";
 import { AppMenu, MenuButton } from "../src/components/AppMenu";
 import { useTodayData } from "../src/hooks/useTodayData";
 import { STREAK_THRESHOLD } from "../src/lib/stats";
+import {
+  hapticCommit,
+  hapticMissed,
+  hapticReject,
+  hapticSelect,
+} from "../src/lib/haptics";
 import { colors, spacing, radii, typography } from "../src/theme";
 
 function TodayScreenContent() {
@@ -391,6 +397,7 @@ function TodayScreenContent() {
         collides(newAStart, newAEnd, other) || collides(newBStart, newBEnd, other)
     );
     if (conflict) {
+      hapticReject();
       showToast(`Can't swap — would overlap ${conflict.block?.name ?? "another block"}`);
       return;
     }
@@ -408,6 +415,8 @@ function TodayScreenContent() {
       handleError(swapError, "handleSwap", "Couldn't swap the blocks — please try again");
       return;
     }
+
+    hapticCommit();
 
     const updated = instances
       .map((inst) => {
@@ -439,6 +448,7 @@ function TodayScreenContent() {
         .update({ status: "removed", removed_reason: removeReason.trim() || null })
         .eq("id", removeInstance.id);
       if (error) throw error;
+      hapticCommit();
       updateInstance(removeInstance.id, {
         status: "removed",
         removed_reason: removeReason.trim() || null,
@@ -509,6 +519,7 @@ function TodayScreenContent() {
   };
 
   const toggleAdhocComplete = async (task: AdhocTask) => {
+    hapticSelect();
     const newStatus = task.status === "completed" ? "pending" : "completed";
     updateAdhocTask(task.id, { status: newStatus });
     try {
@@ -614,6 +625,7 @@ function TodayScreenContent() {
   };
 
   const handleMarkMissed = async (instance: DailyInstance) => {
+    hapticMissed();
     setSaving(true);
     try {
       const { error } = await supabase
