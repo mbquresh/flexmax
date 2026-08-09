@@ -11,6 +11,7 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Animated as RNAnimated,
+  Easing,
   Keyboard,
   Platform,
   ActionSheetIOS,
@@ -21,6 +22,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { router } from "expo-router";
+import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "../src/lib/supabase";
 import { findRescheduleSlot, getTodayLabel } from "../src/lib/schedule";
@@ -59,10 +61,16 @@ import {
   hapticSelect,
 } from "../src/lib/haptics";
 import { useTheme } from "../src/providers/ThemeProvider";
-import { Colors, spacing, radii, typography, numeric } from "../src/theme";
+import { Colors, spacing, radii, typography, numeric, iconSizes } from "../src/theme";
+
+const UNDO_SHEET_OFFSET = 400;
+const UNDO_OPEN_DURATION = 220;
+const UNDO_CLOSE_DURATION = 180;
+const UNDO_SCRIM_OPACITY_LIGHT = 0.4;
+const UNDO_SCRIM_OPACITY_DARK = 0.6;
 
 function TodayScreenContent() {
-  const { colors } = useTheme();
+  const { colors, scheme } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { session, psychologyProfile, profile } = useAuth();
   const {
@@ -110,6 +118,10 @@ function TodayScreenContent() {
   const [saving, setSaving] = useState(false);
   const checkInSlideAnim = useRef(new RNAnimated.Value(400)).current;
   const taskSlideAnim = useRef(new RNAnimated.Value(400)).current;
+  const undoSlideAnim = useRef(new RNAnimated.Value(UNDO_SHEET_OFFSET)).current;
+  const undoScrimAnim = useRef(new RNAnimated.Value(0)).current;
+  const undoScrimOpacity =
+    scheme === "dark" ? UNDO_SCRIM_OPACITY_DARK : UNDO_SCRIM_OPACITY_LIGHT;
   const toastOpacity = useSharedValue(0);
   const toastY = useSharedValue(60);
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -286,6 +298,45 @@ function TodayScreenContent() {
       }).start();
     }
   }, [activeTaskDetailInstance, taskSlideAnim]);
+
+  useEffect(() => {
+    if (undoInstance) {
+      undoSlideAnim.setValue(UNDO_SHEET_OFFSET);
+      undoScrimAnim.setValue(0);
+      RNAnimated.parallel([
+        RNAnimated.timing(undoSlideAnim, {
+          toValue: 0,
+          duration: UNDO_OPEN_DURATION,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        RNAnimated.timing(undoScrimAnim, {
+          toValue: undoScrimOpacity,
+          duration: UNDO_OPEN_DURATION,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [undoInstance, undoSlideAnim, undoScrimAnim, undoScrimOpacity]);
+
+  const closeUndoSheet = useCallback((onClosed?: () => void) => {
+    RNAnimated.parallel([
+      RNAnimated.timing(undoSlideAnim, {
+        toValue: UNDO_SHEET_OFFSET,
+        duration: UNDO_CLOSE_DURATION,
+        useNativeDriver: true,
+      }),
+      RNAnimated.timing(undoScrimAnim, {
+        toValue: 0,
+        duration: UNDO_CLOSE_DURATION,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setUndoInstance(null);
+      onClosed?.();
+    });
+  }, [undoSlideAnim, undoScrimAnim]);
 
   const confirmReset = () => {
     if (Platform.OS === "web") {
@@ -1116,38 +1167,54 @@ function TodayScreenContent() {
       <Modal
         visible={!!undoInstance}
         transparent
-        animationType="fade"
-        onRequestClose={() => setUndoInstance(null)}
+        animationType="none"
+        onRequestClose={() => closeUndoSheet()}
       >
-        <Pressable style={styles.overlay} onPress={() => setUndoInstance(null)}>
-          <Pressable style={styles.undoSheet} onPress={(e) => e.stopPropagation()}>
-            <PressableScale
-              variant="highlight"
-              baseColor={colors.surface}
-              highlightColor={colors.surfaceNested}
-              style={styles.undoOption}
-              onPress={() => {
-                if (!undoInstance) return;
-                if (undoInstance.status === "missed") handleUndoMissed(undoInstance.id);
-                else handleUndoCompletion(undoInstance.id);
-              }}
-              disabled={saving}
-            >
-              <Text style={styles.undoOptionDestructive}>
-                {undoInstance?.status === "missed" ? "Undo missed" : "Undo completion"}
-              </Text>
-            </PressableScale>
-            <PressableScale
-              variant="highlight"
-              baseColor={colors.surface}
-              highlightColor={colors.surfaceNested}
-              style={[styles.undoOption, styles.undoOptionLast]}
-              onPress={() => setUndoInstance(null)}
-            >
-              <Text style={styles.undoOptionCancel}>Cancel</Text>
-            </PressableScale>
+        <View style={styles.undoRoot}>
+          <RNAnimated.View
+            style={[styles.undoScrim, { opacity: undoScrimAnim }]}
+            pointerEvents="none"
+          />
+          <Pressable style={styles.undoOverlayPressable} onPress={() => closeUndoSheet()}>
+            <Pressable onPress={(e) => e.stopPropagation()}>
+              <RNAnimated.View
+                style={[styles.undoSheet, { transform: [{ translateY: undoSlideAnim }] }]}
+              >
+                <PressableScale
+                  variant="highlight"
+                  baseColor={colors.surface}
+                  highlightColor={colors.surfaceNested}
+                  style={styles.undoOption}
+                  onPress={() => {
+                    hapticSelect();
+                    if (!undoInstance) return;
+                    const inst = undoInstance;
+                    closeUndoSheet(() => {
+                      if (inst.status === "missed") handleUndoMissed(inst.id);
+                      else handleUndoCompletion(inst.id);
+                    });
+                  }}
+                  disabled={saving}
+                >
+                  <Feather name="rotate-ccw" size={iconSizes.md} color={colors.textMuted} />
+                  <Text style={styles.undoOptionPrimary}>
+                    {undoInstance?.status === "missed" ? "Undo missed" : "Undo completion"}
+                  </Text>
+                </PressableScale>
+                <PressableScale
+                  variant="highlight"
+                  baseColor={colors.surface}
+                  highlightColor={colors.surfaceNested}
+                  style={styles.undoOption}
+                  onPress={() => closeUndoSheet()}
+                >
+                  <Feather name="x" size={iconSizes.md} color={colors.textMuted} />
+                  <Text style={styles.undoOptionCancel}>Cancel</Text>
+                </PressableScale>
+              </RNAnimated.View>
+            </Pressable>
           </Pressable>
-        </Pressable>
+        </View>
       </Modal>
 
       <Modal
@@ -1459,23 +1526,36 @@ const makeStyles = (c: Colors) =>
     overlayDismiss: {
       flex: 1,
     },
+    undoRoot: {
+      flex: 1,
+      justifyContent: "flex-end",
+    },
+    undoScrim: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: c.overlayScrim,
+    },
+    undoOverlayPressable: {
+      flex: 1,
+      justifyContent: "flex-end",
+    },
     undoSheet: {
       backgroundColor: c.surface,
       borderTopLeftRadius: radii.pill,
       borderTopRightRadius: radii.pill,
-      marginTop: "auto",
+      paddingHorizontal: spacing.md,
       paddingBottom: Platform.OS === "ios" ? 36 : 24,
+      paddingTop: spacing.sm,
     },
     undoOption: {
-      paddingVertical: 18,
-      paddingHorizontal: spacing.xl,
-      borderBottomWidth: 0.5,
-      borderBottomColor: c.border,
+      flexDirection: "row",
       alignItems: "center",
+      gap: spacing.md,
+      paddingVertical: 16,
+      paddingHorizontal: spacing.md,
+      borderRadius: radii.sm,
     },
-    undoOptionLast: { borderBottomWidth: 0 },
-    undoOptionDestructive: { color: c.danger, ...typography.bodyBold },
-    undoOptionCancel: { color: c.textMuted, ...typography.body },
+    undoOptionPrimary: { flex: 1, color: c.text, ...typography.bodyBold },
+    undoOptionCancel: { flex: 1, color: c.textMuted, ...typography.body },
     removeSheet: {
       backgroundColor: c.surface,
       borderTopLeftRadius: radii.pill,

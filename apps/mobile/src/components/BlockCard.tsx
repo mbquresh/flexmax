@@ -107,7 +107,7 @@ export function BlockCard({
 
   useEffect(() => {
     statusFade.value = withTiming(isAnswered ? 1 : 0, {
-      duration: 260,
+      duration: 400,
       easing: Easing.out(Easing.cubic),
     });
   }, [isAnswered]);
@@ -289,7 +289,7 @@ export function BlockCard({
 
   const actionIconStyle = useAnimatedStyle(() => ({
     opacity: statusFade.value,
-    transform: [{ scale: 0.85 + statusFade.value * 0.15 }],
+    transform: [{ scale: 0.5 + statusFade.value * 0.5 }],
   }));
 
   return (
