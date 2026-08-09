@@ -154,6 +154,10 @@ export default function SignInScreen() {
               : "Already have an account? Sign in"}
           </Text>
         </TouchableOpacity>
+
+        <View style={styles.footerMark}>
+          <BrandMark size={28} />
+        </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -198,4 +202,5 @@ const makeStyles = (c: Colors) =>
     buttonDisabled: { opacity: 0.6 },
     buttonText: { color: c.onPrimary, fontSize: 16, fontWeight: "600" },
     toggle: { color: c.textMuted, textAlign: "center", marginTop: spacing.lg, fontSize: 14 },
+    footerMark: { marginTop: spacing.xxxl, opacity: 0.4, alignItems: "center" },
   });

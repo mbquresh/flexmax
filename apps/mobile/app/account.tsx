@@ -15,6 +15,7 @@ import { supabase } from "../src/lib/supabase";
 import { useAuth } from "../src/providers/AuthProvider";
 import { useTheme, ThemeMode } from "../src/providers/ThemeProvider";
 import { RequireAuth } from "../src/components/RequireAuth";
+import { BrandMark } from "../src/components/BrandMark";
 import { Colors, spacing, radii, typography } from "../src/theme";
 import { getInitials } from "../src/lib/format";
 import { handleError } from "../src/lib/errors";
@@ -225,6 +226,10 @@ function AccountScreenContent() {
         <TouchableOpacity style={styles.signOutBtn} onPress={confirmSignOut}>
           <Text style={styles.signOutText}>Sign out</Text>
         </TouchableOpacity>
+
+        <View style={styles.footerMark}>
+          <BrandMark size={28} />
+        </View>
       </ScrollView>
     </View>
   );
@@ -362,4 +367,5 @@ const makeStyles = (c: Colors) =>
       alignItems: "center",
     },
     signOutText: { color: c.danger, ...typography.bodyBold },
+    footerMark: { marginTop: spacing.xxxl, opacity: 0.4, alignItems: "center" },
   });

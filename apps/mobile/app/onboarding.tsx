@@ -13,6 +13,7 @@ import { useAuth } from "../src/providers/AuthProvider";
 import { useTheme } from "../src/providers/ThemeProvider";
 import { useStore } from "../src/store";
 import { RequireAuth } from "../src/components/RequireAuth";
+import { BrandMark } from "../src/components/BrandMark";
 import { handleError } from "../src/lib/errors";
 import { Colors, spacing, radii, typography } from "../src/theme";
 
@@ -324,6 +325,9 @@ function OnboardingContent() {
                 <Text style={styles.actionBtnText}>Start</Text>
               )}
             </TouchableOpacity>
+            <View style={styles.footerMark}>
+              <BrandMark size={28} />
+            </View>
           </>
         ) : null}
       </ScrollView>
@@ -440,4 +444,5 @@ const makeStyles = (c: Colors) =>
       color: c.onPrimary,
       ...typography.bodyBold,
     },
+    footerMark: { marginTop: spacing.xxxl, opacity: 0.4, alignItems: "center" },
   });
