@@ -7,11 +7,12 @@ export default ({ config }: ConfigContext): ExpoConfig & { eas?: { projectId: st
   scheme: "flexmax",
   version: "0.1.0",
   orientation: "portrait",
+  userInterfaceStyle: "automatic",
   icon: "./assets/icon.png",
   splash: {
     image: "./assets/splash.png",
     resizeMode: "contain",
-    backgroundColor: "#DCDCDC",
+    backgroundColor: "#E0DBD2",
   },
   ios: {
     supportsTablet: false,
@@ -26,7 +27,7 @@ export default ({ config }: ConfigContext): ExpoConfig & { eas?: { projectId: st
   android: {
     adaptiveIcon: {
       foregroundImage: "./assets/adaptive-icon.png",
-      backgroundColor: "#DCDCDC",
+      backgroundColor: "#E0DBD2",
     },
     package: "com.flexmax.app",
   },
@@ -37,7 +38,7 @@ export default ({ config }: ConfigContext): ExpoConfig & { eas?: { projectId: st
       "expo-notifications",
       {
         icon: "./assets/notification-icon.png",
-        color: "#3B6EA5",
+        color: "#43698F",
         sounds: [],
       },
     ],
