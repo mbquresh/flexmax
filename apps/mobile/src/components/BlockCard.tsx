@@ -424,6 +424,7 @@ const styles = StyleSheet.create({
   },
   statusBar: {
     width: 4,
+    alignSelf: "stretch",
     backgroundColor: colors.border,
     position: "relative",
   },
