@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Pressable,
   TextInput,
   Alert,
   Platform,
@@ -16,6 +15,7 @@ import { useAuth } from "../src/providers/AuthProvider";
 import { useTheme, ThemeMode } from "../src/providers/ThemeProvider";
 import { RequireAuth } from "../src/components/RequireAuth";
 import { BrandMark } from "../src/components/BrandMark";
+import { PressableScale } from "../src/components/PressableScale";
 import { Colors, spacing, radii, typography } from "../src/theme";
 import { getInitials } from "../src/lib/format";
 import { handleError } from "../src/lib/errors";
@@ -201,7 +201,7 @@ function AccountScreenContent() {
             {APPEARANCE_OPTIONS.map((option) => {
               const selected = mode === option.value;
               return (
-                <Pressable
+                <PressableScale
                   key={option.value}
                   style={[styles.segment, selected && styles.segmentSelected]}
                   onPress={() => {
@@ -217,15 +217,15 @@ function AccountScreenContent() {
                   >
                     {option.label}
                   </Text>
-                </Pressable>
+                </PressableScale>
               );
             })}
           </View>
         </View>
 
-        <TouchableOpacity style={styles.signOutBtn} onPress={confirmSignOut}>
+        <PressableScale style={styles.signOutBtn} onPress={confirmSignOut}>
           <Text style={styles.signOutText}>Sign out</Text>
-        </TouchableOpacity>
+        </PressableScale>
 
         <View style={styles.footerMark}>
           <BrandMark size={28} />

@@ -35,6 +35,7 @@ import { handleError, getErrorMessage } from "../src/lib/errors";
 
 import { RequireAuth } from "../src/components/RequireAuth";
 import { BrandLoader } from "../src/components/BrandLoader";
+import { PressableScale } from "../src/components/PressableScale";
 import { BoundaryRow } from "../src/components/BoundaryRow";
 import { Colors, spacing, radii, typography, iconSizes } from "../src/theme";
 
@@ -303,9 +304,9 @@ function ScheduleBuilderScreenContent() {
   const renderAddForm = () => (
     <View style={styles.addSection}>
       {!addOpen ? (
-        <TouchableOpacity style={styles.addToggle} onPress={() => setAddOpen(true)}>
+        <PressableScale style={styles.addToggle} onPress={() => setAddOpen(true)}>
           <Text style={styles.addToggleText}>+ Add custom block</Text>
-        </TouchableOpacity>
+        </PressableScale>
       ) : (
         <View style={styles.form}>
           <View style={styles.formHeader}>
@@ -356,8 +357,8 @@ function ScheduleBuilderScreenContent() {
             <TimePicker label="Ends" valueMinutes={endMinutes} onChange={setEndMinutes} />
           </View>
           {renderFixedToggle(isFixed, () => setIsFixed((prev) => !prev))}
-          <TouchableOpacity
-            style={[styles.addBtn, saving && styles.btnDisabled]}
+          <PressableScale
+            style={styles.addBtn}
             onPress={() => handleAddBlock()}
             disabled={saving}
           >
@@ -366,7 +367,7 @@ function ScheduleBuilderScreenContent() {
             ) : (
               <Text style={styles.addBtnText}>Add block</Text>
             )}
-          </TouchableOpacity>
+          </PressableScale>
         </View>
       )}
     </View>
@@ -453,8 +454,8 @@ function ScheduleBuilderScreenContent() {
             />
           </View>
           {renderFixedToggle(editIsFixed, () => setEditIsFixed((prev) => !prev))}
-          <TouchableOpacity
-            style={[styles.addBtn, saving && styles.btnDisabled]}
+          <PressableScale
+            style={styles.addBtn}
             onPress={() => handleSaveEdit(item.id)}
             disabled={saving}
           >
@@ -463,7 +464,7 @@ function ScheduleBuilderScreenContent() {
             ) : (
               <Text style={styles.addBtnText}>Save changes</Text>
             )}
-          </TouchableOpacity>
+          </PressableScale>
           <TouchableOpacity onPress={cancelEdit} disabled={saving}>
             <Text style={styles.collapseText}>Cancel</Text>
           </TouchableOpacity>
@@ -504,14 +505,14 @@ function ScheduleBuilderScreenContent() {
               <Text style={styles.sectionTitle}>Quick add</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 {BLOCK_PRESETS.map((preset) => (
-                  <TouchableOpacity
+                  <PressableScale
                     key={preset.name}
                     style={styles.presetChip}
                     onPress={() => handleAddBlock(preset)}
                     disabled={saving}
                   >
                     <Text style={styles.presetText}>{preset.name}</Text>
-                  </TouchableOpacity>
+                  </PressableScale>
                 ))}
               </ScrollView>
             </View>
@@ -542,8 +543,8 @@ function ScheduleBuilderScreenContent() {
               />
             </View>
             {renderAddForm()}
-            <TouchableOpacity
-              style={[styles.primaryBtn, blocks.length === 0 && styles.btnDisabled]}
+            <PressableScale
+              style={styles.primaryBtn}
               onPress={() => router.back()}
               disabled={blocks.length === 0}
             >
@@ -551,7 +552,7 @@ function ScheduleBuilderScreenContent() {
                 <Text style={styles.primaryBtnText}>Continue to today</Text>
                 <Feather name="arrow-right" size={iconSizes.xs} color={colors.onPrimary} />
               </View>
-            </TouchableOpacity>
+            </PressableScale>
           </>
         }
       />
@@ -737,5 +738,4 @@ const makeStyles = (c: Colors) =>
       gap: spacing.xs,
     },
     primaryBtnText: { color: c.onPrimary, fontSize: 16, fontWeight: "600" },
-    btnDisabled: { opacity: 0.5 },
   });

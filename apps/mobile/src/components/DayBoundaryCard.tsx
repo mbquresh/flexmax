@@ -11,6 +11,7 @@ import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/dat
 import { Feather } from "@expo/vector-icons";
 import { Colors, spacing, radii, typography, iconSizes } from "../theme";
 import { useTheme } from "../providers/ThemeProvider";
+import { PressableScale } from "./PressableScale";
 
 interface Props {
   sleepTargetMinutes: number;
@@ -158,13 +159,13 @@ export function DayBoundaryCard({
                 textColor={colors.text}
               />
               {Platform.OS === "ios" ? (
-                <TouchableOpacity
+                <PressableScale
                   style={styles.doneBtn}
                   onPress={() => onSaveSleep(sleepWallClockToMinutes(sleepPickerDate))}
                   disabled={saving}
                 >
                   <Text style={styles.doneText}>Done</Text>
-                </TouchableOpacity>
+                </PressableScale>
               ) : null}
             </View>
           ) : null}
@@ -218,13 +219,13 @@ export function DayBoundaryCard({
                 textColor={colors.text}
               />
               {Platform.OS === "ios" ? (
-                <TouchableOpacity
+                <PressableScale
                   style={styles.doneBtn}
                   onPress={() => onSaveWake(wakeWallClockToMinutes(wakePickerDate))}
                   disabled={saving}
                 >
                   <Text style={styles.doneText}>Done</Text>
-                </TouchableOpacity>
+                </PressableScale>
               ) : null}
             </View>
           ) : null}

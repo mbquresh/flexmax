@@ -20,6 +20,7 @@ import { useAuth } from "../src/providers/AuthProvider";
 import { useTheme } from "../src/providers/ThemeProvider";
 import { RequireAuth } from "../src/components/RequireAuth";
 import { BrandLoader } from "../src/components/BrandLoader";
+import { PressableScale } from "../src/components/PressableScale";
 import { CloseTodayRow } from "../src/components/CloseTodayRow";
 import { DailyInstance } from "../src/types/database";
 import { Colors, spacing, radii, typography, iconSizes } from "../src/theme";
@@ -240,9 +241,9 @@ function PlanTomorrowScreenContent() {
               {tomorrowWeekday} · {tomorrowDate}
             </Text>
           </View>
-          <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
+          <PressableScale onPress={() => router.back()} hitSlop={8}>
             <Text style={styles.skipBtn}>Skip</Text>
-          </TouchableOpacity>
+          </PressableScale>
         </View>
       </View>
 
@@ -274,12 +275,12 @@ function PlanTomorrowScreenContent() {
         {instances.length === 0 ? (
           <View style={styles.empty}>
             <Text style={styles.emptyText}>No blocks scheduled for tomorrow.</Text>
-            <TouchableOpacity
+            <PressableScale
               style={styles.emptyBtn}
               onPress={() => router.replace("/schedule-builder")}
             >
               <Text style={styles.emptyBtnText}>Edit schedule</Text>
-            </TouchableOpacity>
+            </PressableScale>
           </View>
         ) : (
           instances.map((instance) => {
@@ -319,8 +320,8 @@ function PlanTomorrowScreenContent() {
 
       {instances.length > 0 ? (
         <View style={styles.footer}>
-          <TouchableOpacity
-            style={[styles.saveBtn, saving && styles.btnDisabled]}
+          <PressableScale
+            style={styles.saveBtn}
             onPress={handleSave}
             disabled={saving}
           >
@@ -329,7 +330,7 @@ function PlanTomorrowScreenContent() {
             ) : (
               <Text style={styles.saveBtnText}>Save tomorrow's plan</Text>
             )}
-          </TouchableOpacity>
+          </PressableScale>
         </View>
       ) : null}
     </KeyboardAvoidingView>
@@ -441,5 +442,4 @@ const makeStyles = (c: Colors) =>
       alignItems: "center",
     },
     saveBtnText: { color: c.onPrimary, fontSize: 16, fontWeight: "600" },
-    btnDisabled: { opacity: 0.5 },
   });

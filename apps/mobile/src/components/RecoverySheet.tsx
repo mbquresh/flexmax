@@ -17,6 +17,7 @@ import { hapticSelect } from "../lib/haptics";
 import { Colors, spacing, radii, typography } from "../theme";
 import { useTheme } from "../providers/ThemeProvider";
 import { TimePicker } from "./TimePicker";
+import { PressableScale } from "./PressableScale";
 
 const IMPROVE_CHIPS = [
   "Start earlier",
@@ -225,13 +226,13 @@ export function RecoverySheet({
                     </Text>
                   </View>
                 ) : null}
-                <TouchableOpacity
+                <PressableScale
                   style={styles.rescheduleBtn}
                   onPress={onReschedule}
                   disabled={saving}
                 >
                   <Text style={styles.rescheduleBtnText}>Reschedule to this slot</Text>
-                </TouchableOpacity>
+                </PressableScale>
               </View>
             ) : (
               <Text style={styles.noSlot}>No open slots remaining today.</Text>
@@ -239,16 +240,16 @@ export function RecoverySheet({
           </ScrollView>
 
           <View style={styles.recoveryActions}>
-            <TouchableOpacity
-              style={[styles.saveBtn, saving && styles.btnDisabled]}
+            <PressableScale
+              style={styles.saveBtn}
               onPress={onSaveRecovery}
               disabled={saving}
             >
               <Text style={styles.saveBtnText}>Save reflection</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={onClose}>
+            </PressableScale>
+            <PressableScale onPress={onClose}>
               <Text style={styles.skipText}>Skip</Text>
-            </TouchableOpacity>
+            </PressableScale>
           </View>
         </View>
       </KeyboardAvoidingView>
@@ -419,5 +420,4 @@ const makeStyles = (c: Colors) =>
     },
     saveBtnText: { color: c.onPrimary, ...typography.bodyBold },
     skipText: { color: c.textPlaceholder, fontSize: 14 },
-    btnDisabled: { opacity: 0.5 },
   });
