@@ -12,6 +12,8 @@ const PRESS_OUT_MS = 150;
 const DISABLED_OPACITY = 0.55;
 const DISABLED_MS = 160;
 
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
 type PressableScaleProps = Omit<PressableProps, "style"> & {
   style?: StyleProp<ViewStyle>;
   disabled?: boolean;
@@ -42,9 +44,10 @@ export function PressableScale({
   }));
 
   return (
-    <Pressable
+    <AnimatedPressable
       {...rest}
       disabled={disabled}
+      style={[style, animatedStyle]}
       onPressIn={(event) => {
         if (!disabled) {
           scale.value = withTiming(PRESS_SCALE, { duration: PRESS_IN_MS });
@@ -58,7 +61,7 @@ export function PressableScale({
         onPressOut?.(event);
       }}
     >
-      <Animated.View style={[style, animatedStyle]}>{children}</Animated.View>
-    </Pressable>
+      {children}
+    </AnimatedPressable>
   );
 }
