@@ -209,24 +209,28 @@ export function BlockCard({
       }
     });
 
-  const shadowAnimatedStyle = useAnimatedStyle(() => ({
-    zIndex: isDragging.value ? 100 : 1,
-    backgroundColor: interpolateColor(
-      isDragging.value,
-      [0, 1],
-      [colors.surface, "rgba(0,0,0,0)"]
-    ),
-    shadowOpacity: interpolate(
-      isDragging.value,
-      [0, 1],
-      [colors.shadowRest.shadowOpacity, colors.shadowLift.shadowOpacity]
-    ),
-    shadowRadius: interpolate(
-      isDragging.value,
-      [0, 1],
-      [colors.shadowRest.shadowRadius, colors.shadowLift.shadowRadius]
-    ),
-  }));
+  const shadowAnimatedStyle = useAnimatedStyle(() => {
+    const displaced = Math.min(Math.abs(translateY.value) / 4, 1);
+
+    return {
+      zIndex: isDragging.value ? 100 : 1,
+      backgroundColor: interpolateColor(
+        displaced,
+        [0, 1],
+        [colors.surface, "rgba(0,0,0,0)"]
+      ),
+      shadowOpacity: interpolate(
+        isDragging.value,
+        [0, 1],
+        [colors.shadowRest.shadowOpacity, colors.shadowLift.shadowOpacity]
+      ),
+      shadowRadius: interpolate(
+        isDragging.value,
+        [0, 1],
+        [colors.shadowRest.shadowRadius, colors.shadowLift.shadowRadius]
+      ),
+    };
+  });
 
   const wrapperAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }, { scale: scale.value }],
