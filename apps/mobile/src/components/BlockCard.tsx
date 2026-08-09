@@ -92,10 +92,10 @@ export function BlockCard({
   const triggerFlash = () => {
     flashOpacity.value = withRepeat(
       withSequence(
-        withTiming(1, { duration: 200 }),
-        withTiming(0, { duration: 200 })
+        withTiming(1, { duration: 100 }),
+        withTiming(0, { duration: 150 })
       ),
-      5,
+      3,
       false
     );
   };
