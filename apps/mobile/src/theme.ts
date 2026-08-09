@@ -80,6 +80,7 @@ export const spacing = {
 } as const;
 
 export const radii = {
+  xs: 2,     // caps on hairline bars
   sm: 8,
   md: 10,
   lg: 12,

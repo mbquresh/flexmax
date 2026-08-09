@@ -425,6 +425,7 @@ const styles = StyleSheet.create({
   statusBar: {
     width: 4,
     alignSelf: "stretch",
+    borderRadius: radii.xs,
     backgroundColor: colors.border,
     position: "relative",
   },
@@ -434,6 +435,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     left: 0,
+    borderRadius: radii.xs,
   },
   cardBody: {
     flex: 1,
