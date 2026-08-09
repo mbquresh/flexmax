@@ -658,26 +658,29 @@ function TodayScreenContent() {
     // Separate, wider lookup: the user's most recent forward-looking note on
     // this block, however long ago. The 14-row streak window is far too narrow
     // — intentions are written rarely (~1 in 3 misses) and stay relevant.
-    const { data: lastIntentionRow } = await supabase
+    const { data: lastNoteRow } = await supabase
       .from("daily_schedule_instances")
-      .select("date, reflection_improve")
+      .select("date, reflection_why, reflection_improve")
+      .eq("user_id", session!.user.id)
       .eq("block_id", instance.block_id)
-      .not("reflection_improve", "is", null)
-      .neq("date", getLocalDateString())
+      .neq("id", instance.id)
+      .or("reflection_why.not.is.null,reflection_improve.not.is.null")
       .order("date", { ascending: false })
       .limit(1)
       .maybeSingle();
+
+    // Prefer the forward-looking note; fall back to the cause. Both are the
+    // user's own words, which is what makes this land.
+    const noteText =
+      lastNoteRow?.reflection_improve?.trim() ||
+      lastNoteRow?.reflection_why?.trim() ||
+      null;
 
     const copy = buildRecoveryCopy(
       instance.block?.name ?? "this block",
       recent ?? [],
       getLocalDateString(),
-      lastIntentionRow?.reflection_improve
-        ? {
-            text: lastIntentionRow.reflection_improve.trim(),
-            date: lastIntentionRow.date,
-          }
-        : null
+      noteText ? { text: noteText, date: lastNoteRow!.date } : null
     );
     const insight = copy.suppressInsight
       ? null
