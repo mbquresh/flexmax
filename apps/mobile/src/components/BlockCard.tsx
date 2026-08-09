@@ -211,6 +211,11 @@ export function BlockCard({
 
   const shadowAnimatedStyle = useAnimatedStyle(() => ({
     zIndex: isDragging.value ? 100 : 1,
+    backgroundColor: interpolateColor(
+      isDragging.value,
+      [0, 1],
+      [colors.surface, "rgba(0,0,0,0)"]
+    ),
     shadowOpacity: interpolate(
       isDragging.value,
       [0, 1],
@@ -398,7 +403,6 @@ export function BlockCard({
 const makeStyles = (c: Colors) =>
   StyleSheet.create({
     cardShadow: {
-      backgroundColor: c.surface,
       borderRadius: radii.lg,
       marginBottom: 10,
       ...c.shadowRest,
