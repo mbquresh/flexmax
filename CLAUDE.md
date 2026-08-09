@@ -544,14 +544,22 @@ token is a compile error.
 mark disappears, `surfaceDim` has no room to sit below the background, and pure
 white text halates. Warm charcoal preserves all three.
 
-**Dark ladder sits at L\* 9 / 15 / 22 / 29** (surfaceDim / background / surface /
-surfaceNested) with 6-7 point steps. The original sat at L\* 5-14 with correct
+**Dark ladder sits at L\* 9 / 15 / 20 / 27** (surfaceDim / background /
+surfaceNested / surface) with 4-7 point steps. The original sat at L\* 5-14 with correct
 *perceptual* step sizes matching light — but display black-crush and ambient
 light reflecting off the glass add a luminance floor that swallows small
 differences at the bottom of the range. Lifting the ladder off that floor forced
 every border and low-contrast text token up with it, or they collided. Do not
-lower the dark background: at L\* 15 it is already brighter than Material,
+raise the dark background: at L\* 15 it is already brighter than Material,
 GitHub, and Linear dark modes. Push it further and it becomes grey mode.
+Widen surface separation instead — the eye adapts to room brightness, so a dark
+screen sits below the adaptation point and its internal differences compress.
+
+**Surface order is consistent across modes (2026-08-09).** Both run
+dim < background < nested < surface:
+  dark   dim 9.0  <  bg 15.3  <  nested 19.7  <  surface 26.5
+  light  dim 88.0 <  bg 92.7  <  nested 95.1  <  surface 97.5
+Nested elements read as recessed in both modes.
 
 **Light brightened 2026-08-09** from L\* 87.6 to 92.7 background, tint halved
 (25.6% to 12.5% saturation on surface). The original #DCDCDC was eight points
@@ -565,10 +573,6 @@ for the card. The rating *text* tokens do differ by mode.
 
 **menuBarInk inverts** (#2B2822 light, #EAE5DC dark) or the tricolor brand mark
 loses a stripe on a dark field.
-
-**KNOWN INCONSISTENCY:** surfaceNested sits above surface in dark (29.2 vs 22.1)
-but below it in light (95.1 vs 97.5), so nested elements read as raised in one
-mode and recessed in the other. Fix pending — dark's nested should drop to ~19.5.
 
 ### Measure surface separation in L\*, not WCAG contrast ratio
 

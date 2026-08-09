@@ -74,15 +74,15 @@ export const darkColors: Colors = {
   // Warm charcoal, not black. Keeping the background off zero is what gives
   // surfaceDim room to sit BELOW it — on #000 it would be indistinguishable.
   background: "#292621",
-  surface: "#393430",
-  surfaceNested: "#4A443D",
+  surface: "#433E39",
+  surfaceNested: "#332F2A",
   surfaceDim: "#1C1917",
 
   primary: "#7FA8CE",
   primaryBright: "#9DC0DE",
   primaryDeep: "#5B84A8",
   primaryDisabled: "#4A5A69",
-  primaryTint: "#283744",
+  primaryTint: "#24323D",
   // Dark text on a light blue button — white would be low contrast here.
   onPrimary: "#1A1815",
 
@@ -98,27 +98,27 @@ export const darkColors: Colors = {
   borderLight: "#564F47",
 
   success: "#5FCBA6",
-  successTint: "#183B32",
+  successTint: "#16362D",
   danger: "#E07C5E",
-  dangerTint: "#4E2C23",
+  dangerTint: "#482820",
   error: "#E0685C",
-  errorTint: "#512A24",
+  errorTint: "#4A2721",
   errorBorder: "#7A4038",
 
   streak: "#5FCBA6",
   streakMissed: "#5E594F",
-  streakHousing: "#393430",
+  streakHousing: "#433E39",
   streakBorder: "#625B51",
   streakMuted: "#9B948A",
-  streakSquare: "#4A443D",
-  streakSquareToday: "#555047",
+  streakSquare: "#332F2A",
+  streakSquareToday: "#3A3730",
 
   // Fills invert; text lightens so it reads on them.
-  ratingGoodBg: "#1E4123",
+  ratingGoodBg: "#19371D",
   ratingGoodText: "#6FD47A",
-  ratingOkayBg: "#42390F",
+  ratingOkayBg: "#38310D",
   ratingOkayText: "#E3C44A",
-  ratingBadBg: "#5A2C2C",
+  ratingBadBg: "#4C2525",
   ratingBadText: "#F0736B",
   // Identical to light — see note above.
   ratingGoodBorder: "#00C853",
