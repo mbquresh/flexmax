@@ -7,10 +7,10 @@
 export const lightColors = {
   // Backgrounds — warm neutrals. Surfaces sit ABOVE the background,
   // de-emphasized surfaces sit BELOW it.
-  background: "#E0DBD2",
-  surface: "#EFEBE4",
-  surfaceNested: "#E7E2D9",
-  surfaceDim: "#D4CEC4",
+  background: "#ECEAE6",
+  surface: "#F8F8F6",
+  surfaceNested: "#F2F1EE",
+  surfaceDim: "#E1DCD7",
 
   // Primary — dusted blue. Lower saturation than v1 so it reads as a
   // deliberate cool accent against warm neutrals rather than a clash.
@@ -28,8 +28,8 @@ export const lightColors = {
   textPlaceholder: "#9C9488",
   textDisabled: "#ADA69A",
 
-  border: "#C7C0B4",
-  borderLight: "#CFC9BE",
+  border: "#D4CEC6",
+  borderLight: "#E1DCD7",
 
   success: "#57BF9B",
   successTint: "#DCEFE5",
@@ -41,11 +41,11 @@ export const lightColors = {
 
   streak: "#57BF9B",
   streakMissed: "#B3ADA2",
-  streakHousing: "#EFEBE4",
-  streakBorder: "#C7C0B4",
+  streakHousing: "#F8F8F6",
+  streakBorder: "#D4CEC6",
   streakMuted: "#6B655B",
-  streakSquare: "#E2DDD4",
-  streakSquareToday: "#E7E2D9",
+  streakSquare: "#EFEEEA",
+  streakSquareToday: "#F2F1EE",
 
   ratingGoodBg: "#D9EFD6",
   ratingGoodText: "#2E7D32",
