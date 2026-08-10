@@ -692,7 +692,7 @@ correction.
 `statusFade`, so the fill and unfill are both perceptible. Never exceed scale 1 —
 overshoot reads as celebration.
 
-**Light shadows:** `shadowRest` at 0.10 opacity, `shadowLift` at 0.16, both zero
+**Light shadows:** `shadowRest` at 0.20 opacity, `shadowLift` at 0.32, both zero
 in dark. Elevation is shadow-based in light and luminance-based in dark, because
 a shadow is darkness cast on a surface and at L\* 15 the dark background has
 nothing darker to receive it. Every shadowed view needs an explicit
