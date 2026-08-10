@@ -35,6 +35,25 @@ export function isTransportError(err: unknown): boolean {
   ) {
     return true;
   }
+  // supabase-js catches transport failures internally and returns them as
+  // { error }, which callers rethrow — so they arrive here as PLAIN OBJECTS,
+  // not Error instances. PostgREST errors carry a populated `code`
+  // ("42501" RLS, "23505" unique violation); transport failures do not.
+  if (err && typeof err === "object") {
+    const e = err as { code?: string; message?: string; name?: string };
+    const hasPostgrestCode = typeof e.code === "string" && e.code.length > 0;
+    if (hasPostgrestCode) return false;
+
+    const text = `${e.name ?? ""} ${e.message ?? ""}`;
+    if (
+      text.includes("AbortError") ||
+      text.includes("Network request failed") ||
+      text.includes("Failed to fetch") ||
+      text.includes("Aborted")
+    ) {
+      return true;
+    }
+  }
   return false;
 }
 

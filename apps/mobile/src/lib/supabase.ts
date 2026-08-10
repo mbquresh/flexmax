@@ -5,7 +5,9 @@ import { Database } from "../types/database";
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
 
-const REQUEST_TIMEOUT_MS = 12_000;
+// Governs user-initiated writes: perceived responsiveness matters more than
+// tolerating a very slow network. This fetch also serves auth token refresh.
+const REQUEST_TIMEOUT_MS = 5_000;
 
 const fetchWithTimeout: typeof fetch = (input, init) => {
   const controller = new AbortController();

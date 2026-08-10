@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "./supabase";
-import { isTransportError, isTransportErrorResult } from "./errors";
+import { isTransportError } from "./errors";
 import { AdhocTask, DailyInstance } from "../types/database";
 
 const STORAGE_KEY = "write_queue";
@@ -129,7 +129,7 @@ export async function flush(): Promise<void> {
                 .eq("id", entry.rowId);
 
         if (error) {
-          if (isTransportErrorResult(error)) {
+          if (isTransportError(error)) {
             if (dirty) await persist();
             return;
           }
