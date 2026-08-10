@@ -138,11 +138,10 @@ export function useTodayData(userId: string | undefined) {
         // set exists, so this is cheap to call on every load.
         supabase.functions
           .invoke("weekly-insight")
-          .then(({ data, error }) => {
-            if (error) console.log("[weekly-insight] error:", JSON.stringify(error));
-            else console.log("[weekly-insight] ok:", JSON.stringify(data));
+          .then(({ error }) => {
+            if (error) handleError(error, "weekly-insight");
           })
-          .catch((e) => console.log("[weekly-insight] threw:", String(e)));
+          .catch((e) => handleError(e, "weekly-insight"));
       } catch (err) {
         handleError(err, "loadToday");
         setLoadFailed(true);
@@ -176,10 +175,7 @@ export function useTodayData(userId: string | undefined) {
       const prev = appStateRef.current;
       appStateRef.current = nextState;
 
-      if (
-        nextState === "active" &&
-        (prev === "background" || prev === "inactive")
-      ) {
+      if (nextState === "active" && prev === "background") {
         const freshDate = getLocalDateString();
         if (freshDate !== currentDateRef.current) {
           currentDateRef.current = freshDate;
