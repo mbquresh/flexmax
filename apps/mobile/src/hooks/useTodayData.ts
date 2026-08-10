@@ -20,6 +20,7 @@ export function useTodayData(userId: string | undefined) {
   const [insights, setInsights] = useState<BehavioralInsight[]>([]);
   const currentDateRef = useRef(getLocalDateString());
   const appStateRef = useRef(AppState.currentState);
+  const lastLoadCompletedAtRef = useRef<number | null>(null);
 
   const timedAdhoc = useMemo(
     () => adhocTasks.filter((t) => t.start_minutes != null),
@@ -146,6 +147,7 @@ export function useTodayData(userId: string | undefined) {
         handleError(err, "loadToday");
         setLoadFailed(true);
       } finally {
+        lastLoadCompletedAtRef.current = Date.now();
         if (!options?.silent) {
           setLoading(false);
         }
@@ -166,7 +168,13 @@ export function useTodayData(userId: string | undefined) {
         isFirstFocus.current = false;
         return;
       }
-      loadToday(undefined, { silent: true });
+      const freshDate = getLocalDateString();
+      const dateChanged = freshDate !== currentDateRef.current;
+      const stale =
+        lastLoadCompletedAtRef.current == null ||
+        Date.now() - lastLoadCompletedAtRef.current > 60_000;
+      if (!dateChanged && !stale) return;
+      loadToday(dateChanged ? freshDate : undefined, { silent: true });
     }, [loadToday])
   );
 
