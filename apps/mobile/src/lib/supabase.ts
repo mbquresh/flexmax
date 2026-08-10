@@ -5,13 +5,21 @@ import { Database } from "../types/database";
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY!;
 
-// Governs user-initiated writes: perceived responsiveness matters more than
-// tolerating a very slow network. This fetch also serves auth token refresh.
-const REQUEST_TIMEOUT_MS = 5_000;
+// Data writes: perceived responsiveness matters more than tolerating a
+// slow network — offline taps should fall through to the write queue fast.
+const DATA_TIMEOUT_MS = 5_000;
+
+// Auth: token refresh runs on cold start and BLOCKS app render. A timeout
+// here does not degrade gracefully, it prevents the app from opening.
+const AUTH_TIMEOUT_MS = 20_000;
 
 const fetchWithTimeout: typeof fetch = (input, init) => {
+  const url = typeof input === "string" ? input : input.toString();
+  const isAuth = url.includes("/auth/v1/");
+  const timeout = isAuth ? AUTH_TIMEOUT_MS : DATA_TIMEOUT_MS;
+
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
 
   if (init?.signal) {
     if (init.signal.aborted) {
