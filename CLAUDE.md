@@ -271,6 +271,12 @@ Still captured but NOT yet read:
 
 ## v2 roadmap — status as of commit b1bca42
 
+> **UNBLOCKED ACTION — file the FamilyControls entitlement requests now, for
+> every bundle ID (main app and each planned extension).** This has never been
+> confirmed as submitted. It is free, it is Apple's clock not ours, approval
+> takes days to weeks, and filing does not commit us to building anything.
+> Requests get stuck; filing early is the only mitigation.
+
 
 
 ### Shipped
@@ -321,7 +327,7 @@ Still captured but NOT yet read:
 | "Ask me about yourself" conversational surface  | Reads get_behavior_evidence with the narrator's tone rules                                                                                                   |
 | reflection_improve UX fix                       | 31% fill rate on the highest-signal field in the DB                                                                                                          |
 | External TestFlight                             | Needs Beta App Review (~1 day) + a demo account or auto-rejection                                                                                            |
-| Screen Time shielding                           | FamilyControls entitlement — STILL UNFILED. Multi-week Apple clock                                                                                           |
+| Device activity detection (Screen Time) | Policy-verified design: user self-selects distraction apps via FamilyActivityPicker → OPAQUE TOKENS, so FlexMax structurally cannot know which apps were chosen. Each focus block registers a DeviceActivitySchedule with a threshold event (e.g. 5 cumulative minutes); eventDidReachThreshold fires a local notification reusing the existing **Notification action buttons** (018 nudge_response) infrastructure. The extension records to an App Group store; the app syncs a minimal derived record only — drift occurred, duration bucket, response, block outcome. Never raw usage. NOTE: DeviceActivityReport data is render-only and not readable programmatically, so the threshold event IS the data model — and it happens to be exactly the intervention→response→outcome shape. CONSTRAINTS: entitlement is per bundle ID, main app AND every extension; unrequested extension IDs fail signing at distribution. Requires native Swift extensions — config plugin (react-native-device-activity) or prebuild. Approval takes days to weeks. See UNBLOCKED ACTION above. |
 | Night routine block is hard to answer           | Excluded from the evening sweep (hasn't happened yet) and from bedtime notifications (by design). Drifts to unaccounted unless answered from Today. Candidate fix: a third question on the morning DayBoundaryCard |
 | User instructions page                          | The streak rises on a day where everything was missed. The label qualifier was removed for width, so there is no in-app explanation. Owed |
 | Onboarding demonstration beat | Onboarding establishes the pain (screens 1-2) and sets the contract (screen 7), but never shows what the product DOES. A stranger goes from "how many planners have you abandoned?" to a $14.99 wall without seeing FlexMax work. Fix: show a REAL generated insight, explicitly labelled as another user's, before the contract screen. Not a claim about them — a demonstration. See rejected approaches below |
@@ -737,12 +743,44 @@ the acceptance criterion, not a nice-to-have.
 
 ---
 
-## v2-issues.md deferred items
+## Retention Architecture v1 — remaining work, in order
 
-1. AI rate limiting on edge functions (priority: HIGH before public launch)
-2. Stack-trace / service-role audit on edge functions
-3. CHECK constraints on status columns
-4. Stale-request guard on loadToday
+Ordering logic, so future sessions understand why: un-backfillable before
+valuable; ledger integrity before features; anything the falsifiable test
+depends on before anything that only makes the app feel smarter.
+
+### Tier 1 — before external users
+Things that corrupt the ledger or lose data permanently.
+
+1. **acknowledged_at on status transitions** (024). Un-backfillable. rated_at
+   stamps only on completion; reflected_at only when text is written (~31% of
+   misses). Without this, recovery time — deviation to acknowledgment — cannot
+   be computed, and it is the metric that tests the falsifiable hypothesis.
+2. **CHECK constraints on status and completion_rating** (025). The status set
+   already drifted once. A bad value written now is corrupt forever.
+3. **loadToday stale-request guard.** A slower earlier request landing after a
+   newer one shows wrong state the user then acts on.
+4. **Tests on stats.ts and recoveryCopy.ts.** Pure functions, repeatedly
+   rewritten, computing the numbers the user sees. See the offline queue
+   postmortem (Known issues) for what shipping unverified logic costs.
+
+### Tier 2 — instrument now, build later
+5. **Intervention→outcome and miss_reason_tag into the evidence pack.**
+   **Cutoff nudges + telemetry** (016 nudge_events) already carries instance_id,
+   response, and scheduled_for; joined to the instance's final status that IS
+   intervention → response → outcome. The moat data is already accumulating
+   and read by nothing. **Preset miss reasons** (019 miss_reason_tag) is in
+   the same state. ~25 lines of SQL, no new schema, no AI cost.
+6. **Intention-reliability metric.** Planned vs. completed minutes over time —
+   are the user's plans becoming more accurate. Pure SQL.
+7. **DeviceActivity drift-event table.** Schema only, no extension, so the shape
+   exists when the entitlement lands.
+
+### Tier 3 — do not build yet
+- **Offline write queue.** Built and reverted 2026-08-09; see Known issues.
+  Revisit only if real testers report lost writes.
+- **DeviceActivity extension**, autonomous intervention, voice input, email,
+  third-party integrations, richer AI.
 
 ---
 
@@ -754,6 +792,16 @@ the acceptance criterion, not a nice-to-have.
 Notion/Habitica/planners, ADHD-adjacent segment deliberately valuable, converts
 Sunday evening, pays $10/mo, allergic to toxic-positivity AND shame, Apple-polish taste.
 
+**External ICP definition: high intention × low execution reliability.**
+"Capable Drifter" remains the internal archetype and shapes tone decisions. The
+market-facing definition is behavioral, not psychological, because the pain is
+self-recognizable without a diagnosis. The external pain sentence:
+
+> "I know what I need to do — why can't I consistently make myself do it?"
+
+**Core promise: closing the gap between intention and execution.** Never "AI
+productivity" — that category is crowded and it is not what this does.
+
 **Day-planning competitor:** Structured — see **Competitive positioning** above.
 
 **Habit-tracker competitor:** Me+ Lifestyle Routine (Enerjoy) — 21M downloads, 4.79 stars.
@@ -763,8 +811,10 @@ Compete ONLY on adaptive intelligence + flexibility axis. Never on templates or 
 
 **Pricing:** See **Pricing & paywall** below.
 
-**The moat:** accumulated per-user behavioral understanding. Switching cost grows
-every week of use. Models commoditize; behavioral history doesn't.
+**The moat:** intervention → response → outcome — six months of what actually
+works on this specific person. History is copyable given time; a record of which
+interventions moved this individual is not. Switching cost grows every week of
+use. Models commoditize; intervention efficacy on *this* user does not.
 
 **The retention risk:** shame-churn. Users who fail may avoid reopening the app.
 Recovery-without-judgment is the design bet. Instrument this in the beta.
@@ -774,6 +824,16 @@ Recovery-without-judgment is the design bet. Instrument this in the beta.
 
 
 ## Honest risks (carry these — do not let them drift)
+
+**The falsifiable test.** FlexMax must make execution measurably better, not
+merely make the user feel understood. Stated plainly so it can be failed:
+
+> If users love the insights but don't execute better, FlexMax is a
+> sophisticated productivity journal.
+
+Everything in the roadmap is subordinate to this. A feature that improves how
+smart the app feels without improving whether the user follows through is not
+progress.
 
 - **Everything is validated on n=1.** Every filter, threshold, and tone rule was
 tuned against the author's own month of data — an unusually diligent
