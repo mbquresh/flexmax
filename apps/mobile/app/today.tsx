@@ -63,11 +63,53 @@ import {
 import { useTheme } from "../src/providers/ThemeProvider";
 import { Colors, spacing, radii, typography, numeric, iconSizes } from "../src/theme";
 
-const UNDO_SHEET_OFFSET = 400;
-const UNDO_OPEN_DURATION = 220;
-const UNDO_CLOSE_DURATION = 180;
-const UNDO_SCRIM_OPACITY_LIGHT = 0.4;
-const UNDO_SCRIM_OPACITY_DARK = 0.6;
+const BOTTOM_SHEET_OFFSET = 400;
+const BOTTOM_SHEET_OPEN_DURATION = 220;
+const BOTTOM_SHEET_CLOSE_DURATION = 180;
+const BOTTOM_SHEET_SCRIM_OPACITY_LIGHT = 0.4;
+const BOTTOM_SHEET_SCRIM_OPACITY_DARK = 0.6;
+
+function openBottomSheet(
+  slideAnim: RNAnimated.Value,
+  scrimAnim: RNAnimated.Value,
+  scrimOpacity: number
+) {
+  slideAnim.setValue(BOTTOM_SHEET_OFFSET);
+  scrimAnim.setValue(0);
+  RNAnimated.parallel([
+    RNAnimated.timing(slideAnim, {
+      toValue: 0,
+      duration: BOTTOM_SHEET_OPEN_DURATION,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }),
+    RNAnimated.timing(scrimAnim, {
+      toValue: scrimOpacity,
+      duration: BOTTOM_SHEET_OPEN_DURATION,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }),
+  ]).start();
+}
+
+function closeBottomSheet(
+  slideAnim: RNAnimated.Value,
+  scrimAnim: RNAnimated.Value,
+  onClosed?: () => void
+) {
+  RNAnimated.parallel([
+    RNAnimated.timing(slideAnim, {
+      toValue: BOTTOM_SHEET_OFFSET,
+      duration: BOTTOM_SHEET_CLOSE_DURATION,
+      useNativeDriver: true,
+    }),
+    RNAnimated.timing(scrimAnim, {
+      toValue: 0,
+      duration: BOTTOM_SHEET_CLOSE_DURATION,
+      useNativeDriver: true,
+    }),
+  ]).start(() => onClosed?.());
+}
 
 function TodayScreenContent() {
   const { colors, scheme } = useTheme();
@@ -118,10 +160,14 @@ function TodayScreenContent() {
   const [saving, setSaving] = useState(false);
   const checkInSlideAnim = useRef(new RNAnimated.Value(400)).current;
   const taskSlideAnim = useRef(new RNAnimated.Value(400)).current;
-  const undoSlideAnim = useRef(new RNAnimated.Value(UNDO_SHEET_OFFSET)).current;
+  const undoSlideAnim = useRef(new RNAnimated.Value(BOTTOM_SHEET_OFFSET)).current;
   const undoScrimAnim = useRef(new RNAnimated.Value(0)).current;
-  const undoScrimOpacity =
-    scheme === "dark" ? UNDO_SCRIM_OPACITY_DARK : UNDO_SCRIM_OPACITY_LIGHT;
+  const removeSlideAnim = useRef(new RNAnimated.Value(BOTTOM_SHEET_OFFSET)).current;
+  const removeScrimAnim = useRef(new RNAnimated.Value(0)).current;
+  const addTaskSlideAnim = useRef(new RNAnimated.Value(BOTTOM_SHEET_OFFSET)).current;
+  const addTaskScrimAnim = useRef(new RNAnimated.Value(0)).current;
+  const bottomSheetScrimOpacity =
+    scheme === "dark" ? BOTTOM_SHEET_SCRIM_OPACITY_DARK : BOTTOM_SHEET_SCRIM_OPACITY_LIGHT;
   const toastOpacity = useSharedValue(0);
   const toastY = useSharedValue(60);
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -302,42 +348,47 @@ function TodayScreenContent() {
 
   useEffect(() => {
     if (undoInstance) {
-      undoSlideAnim.setValue(UNDO_SHEET_OFFSET);
-      undoScrimAnim.setValue(0);
-      RNAnimated.parallel([
-        RNAnimated.timing(undoSlideAnim, {
-          toValue: 0,
-          duration: UNDO_OPEN_DURATION,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-        RNAnimated.timing(undoScrimAnim, {
-          toValue: undoScrimOpacity,
-          duration: UNDO_OPEN_DURATION,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-      ]).start();
+      openBottomSheet(undoSlideAnim, undoScrimAnim, bottomSheetScrimOpacity);
     }
-  }, [undoInstance, undoSlideAnim, undoScrimAnim, undoScrimOpacity]);
+  }, [undoInstance, undoSlideAnim, undoScrimAnim, bottomSheetScrimOpacity]);
+
+  useEffect(() => {
+    if (removeInstance) {
+      openBottomSheet(removeSlideAnim, removeScrimAnim, bottomSheetScrimOpacity);
+    }
+  }, [removeInstance, removeSlideAnim, removeScrimAnim, bottomSheetScrimOpacity]);
+
+  useEffect(() => {
+    if (addTaskOpen) {
+      openBottomSheet(addTaskSlideAnim, addTaskScrimAnim, bottomSheetScrimOpacity);
+    }
+  }, [addTaskOpen, addTaskSlideAnim, addTaskScrimAnim, bottomSheetScrimOpacity]);
 
   const closeUndoSheet = useCallback((onClosed?: () => void) => {
-    RNAnimated.parallel([
-      RNAnimated.timing(undoSlideAnim, {
-        toValue: UNDO_SHEET_OFFSET,
-        duration: UNDO_CLOSE_DURATION,
-        useNativeDriver: true,
-      }),
-      RNAnimated.timing(undoScrimAnim, {
-        toValue: 0,
-        duration: UNDO_CLOSE_DURATION,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
+    closeBottomSheet(undoSlideAnim, undoScrimAnim, () => {
       setUndoInstance(null);
       onClosed?.();
     });
   }, [undoSlideAnim, undoScrimAnim]);
+
+  const closeRemoveSheet = useCallback((onClosed?: () => void) => {
+    closeBottomSheet(removeSlideAnim, removeScrimAnim, () => {
+      setRemoveInstance(null);
+      setRemoveReason("");
+      onClosed?.();
+    });
+  }, [removeSlideAnim, removeScrimAnim]);
+
+  const closeAddTask = useCallback((onClosed?: () => void) => {
+    closeBottomSheet(addTaskSlideAnim, addTaskScrimAnim, () => {
+      setAddTaskOpen(false);
+      setAddTaskName("");
+      setAddTaskMode("timed");
+      setAddTaskStartMinutes(9 * 60);
+      setAddTaskEndMinutes(9 * 60 + 30);
+      onClosed?.();
+    });
+  }, [addTaskSlideAnim, addTaskScrimAnim]);
 
   const confirmReset = () => {
     if (Platform.OS === "web") {
@@ -514,8 +565,7 @@ function TodayScreenContent() {
     } catch (err) {
       handleError(err, "handleRemove", "Could not remove the block");
     } finally {
-      setRemoveInstance(null);
-      setRemoveReason("");
+      closeRemoveSheet();
     }
   };
 
@@ -525,14 +575,6 @@ function TodayScreenContent() {
     setAddTaskStartMinutes(9 * 60);
     setAddTaskEndMinutes(9 * 60 + 30);
     setAddTaskOpen(true);
-  };
-
-  const closeAddTask = () => {
-    setAddTaskOpen(false);
-    setAddTaskName("");
-    setAddTaskMode("timed");
-    setAddTaskStartMinutes(9 * 60);
-    setAddTaskEndMinutes(9 * 60 + 30);
   };
 
   const handleAddTask = async () => {
@@ -1178,12 +1220,12 @@ function TodayScreenContent() {
         animationType="none"
         onRequestClose={() => closeUndoSheet()}
       >
-        <View style={styles.undoRoot}>
+        <View style={styles.bottomSheetRoot}>
           <RNAnimated.View
-            style={[styles.undoScrim, { opacity: undoScrimAnim }]}
+            style={[styles.bottomSheetScrim, { opacity: undoScrimAnim }]}
             pointerEvents="none"
           />
-          <Pressable style={styles.undoOverlayPressable} onPress={() => closeUndoSheet()}>
+          <Pressable style={styles.bottomSheetOverlayPressable} onPress={() => closeUndoSheet()}>
             <Pressable onPress={(e) => e.stopPropagation()}>
               <RNAnimated.View
                 style={[styles.undoSheet, { transform: [{ translateY: undoSlideAnim }] }]}
@@ -1222,24 +1264,26 @@ function TodayScreenContent() {
       <Modal
         visible={!!removeInstance}
         transparent
-        animationType="fade"
-        onRequestClose={() => {
-          setRemoveInstance(null);
-          setRemoveReason("");
-        }}
+        animationType="none"
+        onRequestClose={() => closeRemoveSheet()}
       >
-        <KeyboardAvoidingView
-          style={styles.overlay}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-        >
-          <Pressable
-            style={styles.overlayDismiss}
-            onPress={() => {
-              setRemoveInstance(null);
-              setRemoveReason("");
-            }}
+        <View style={styles.bottomSheetRoot}>
+          <RNAnimated.View
+            style={[styles.bottomSheetScrim, { opacity: removeScrimAnim }]}
+            pointerEvents="none"
           />
-          <Pressable style={styles.removeSheet} onPress={(e) => e.stopPropagation()}>
+          <KeyboardAvoidingView
+            style={styles.bottomSheetOverlayPressable}
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+          >
+            <Pressable style={styles.bottomSheetDismiss} onPress={() => closeRemoveSheet()} />
+            <Pressable onPress={(e) => e.stopPropagation()}>
+              <RNAnimated.View
+                style={[
+                  styles.removeSheet,
+                  { transform: [{ translateY: removeSlideAnim }] },
+                ]}
+              >
             <Text style={styles.removeTitle}>
               Remove "{removeInstance?.block?.name ?? "Block"}" from today?
             </Text>
@@ -1262,29 +1306,39 @@ function TodayScreenContent() {
               variant="highlight"
               baseColor={colors.surface}
               highlightColor={colors.surfaceNested}
-              onPress={() => {
-                setRemoveInstance(null);
-                setRemoveReason("");
-              }}
+              onPress={() => closeRemoveSheet()}
             >
               <Text style={styles.removeCancelText}>Cancel</Text>
             </PressableScale>
-          </Pressable>
-        </KeyboardAvoidingView>
+              </RNAnimated.View>
+            </Pressable>
+          </KeyboardAvoidingView>
+        </View>
       </Modal>
 
       <Modal
         visible={addTaskOpen}
         transparent
-        animationType="fade"
-        onRequestClose={closeAddTask}
+        animationType="none"
+        onRequestClose={() => closeAddTask()}
       >
-        <KeyboardAvoidingView
-          style={styles.overlay}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-        >
-          <Pressable style={styles.overlayDismiss} onPress={closeAddTask} />
-          <Pressable style={styles.addTaskSheet} onPress={(e) => e.stopPropagation()}>
+        <View style={styles.bottomSheetRoot}>
+          <RNAnimated.View
+            style={[styles.bottomSheetScrim, { opacity: addTaskScrimAnim }]}
+            pointerEvents="none"
+          />
+          <KeyboardAvoidingView
+            style={styles.bottomSheetOverlayPressable}
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+          >
+            <Pressable style={styles.bottomSheetDismiss} onPress={() => closeAddTask()} />
+            <Pressable onPress={(e) => e.stopPropagation()}>
+              <RNAnimated.View
+                style={[
+                  styles.addTaskSheet,
+                  { transform: [{ translateY: addTaskSlideAnim }] },
+                ]}
+              >
             <Text style={styles.addTaskTitle}>Add task</Text>
             <TextInput
               style={styles.addTaskInput}
@@ -1347,11 +1401,13 @@ function TodayScreenContent() {
             >
               <Text style={styles.addTaskConfirmText}>Add</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={closeAddTask} disabled={saving}>
+            <TouchableOpacity onPress={() => closeAddTask()} disabled={saving}>
               <Text style={styles.addTaskCancelText}>Cancel</Text>
             </TouchableOpacity>
-          </Pressable>
-        </KeyboardAvoidingView>
+              </RNAnimated.View>
+            </Pressable>
+          </KeyboardAvoidingView>
+        </View>
       </Modal>
     </View>
   );
@@ -1443,7 +1499,6 @@ const makeStyles = (c: Colors) =>
       backgroundColor: c.surface,
       borderTopLeftRadius: radii.pill,
       borderTopRightRadius: radii.pill,
-      marginTop: "auto",
       paddingHorizontal: spacing.xl,
       paddingTop: spacing.lg,
       paddingBottom: Platform.OS === "ios" ? 36 : 24,
@@ -1528,17 +1583,20 @@ const makeStyles = (c: Colors) =>
     overlayDismiss: {
       flex: 1,
     },
-    undoRoot: {
+    bottomSheetRoot: {
       flex: 1,
       justifyContent: "flex-end",
     },
-    undoScrim: {
+    bottomSheetScrim: {
       ...StyleSheet.absoluteFillObject,
       backgroundColor: c.overlayScrim,
     },
-    undoOverlayPressable: {
+    bottomSheetOverlayPressable: {
       flex: 1,
       justifyContent: "flex-end",
+    },
+    bottomSheetDismiss: {
+      flex: 1,
     },
     undoSheet: {
       backgroundColor: c.surface,
@@ -1593,7 +1651,6 @@ const makeStyles = (c: Colors) =>
       backgroundColor: c.surface,
       borderTopLeftRadius: radii.pill,
       borderTopRightRadius: radii.pill,
-      marginTop: "auto",
       paddingHorizontal: spacing.xl,
       paddingTop: spacing.lg,
       paddingBottom: Platform.OS === "ios" ? 36 : 24,

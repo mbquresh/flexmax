@@ -55,7 +55,8 @@ const makeStyles = (c: Colors) =>
       overflow: "hidden",
       borderWidth: 1,
       borderColor: c.dangerTint,
-      ...c.shadowRest,
+      // No shadow. Adhoc cards stay flat to differentiate them from schedule
+      // blocks, which are elevated. Do not add shadowRest here.
     },
     cardDone: {
       opacity: 0.55,
