@@ -715,64 +715,25 @@ usable and does the user's intent survive. Not: is the debugger clean.
 
 ---
 
-## Offline and network resilience (2026-08-09)
+## Known issues
 
-### THE THING OTHER WORKSTREAMS NEED TO KNOW
+**Offline write queue — attempted and reverted (2026-08-09).**
+A write queue with an AsyncStorage-backed retry buffer was built, documented,
+and reverted the same day. Two failures compounded: (1) transport errors were
+never detected, because supabase-js catches fetch failures internally and
+returns them as `{ error }` which callers rethrew as PLAIN OBJECTS — the
+`instanceof Error` checks in `isTransportError` all returned false, so every
+offline write was rolled back instead of queued; (2) the global fetch timeout
+was lowered to 5s to reduce offline stalls, which also governed Supabase auth
+token refresh, so a slow cold-start refresh aborted and the app failed to
+open at all.
 
-Status writes can now arrive HOURS LATE. A check-in made without connectivity is
-queued locally and flushed on reconnect or foreground. Consequences for anything
-reading `daily_schedule_instances`:
-- A block may flip from `unaccounted` to `completed` long after the day closed.
-- A weekly insight generated between the miss and the flush will have read data
-  that later changed.
-- `get_behavior_evidence()` may therefore see a different history on a second
-  run than it saw on the first.
-
-This is judged correct — a late truth beats a preserved falsehood, and network
-flakiness was previously being recorded as disengagement, which is a much worse
-error. But it is a property, not an accident, and the behavioural engine should
-know it holds.
-
-Late writes land on the RIGHT DAY regardless of flush time: the row already
-carries its date and only `status` is patched. No timestamp handling needed.
-
-### Write queue design
-
-`src/lib/writeQueue.ts`, AsyncStorage-backed, plus
-`@react-native-community/netinfo`.
-
-QUEUED (five paths, all `UPDATE ... WHERE id = ?`, idempotent, last-write-wins):
-handleCheckIn, handleMarkMissed, handleUndoCompletion, handleUndoMissed,
-toggleAdhocComplete.
-
-DELIBERATELY NOT QUEUED — do not extend the queue to these:
-- **Swaps.** `swap_instance_times` is an RPC with a server-side conflict check.
-  Replaying one against a schedule that has since changed corrupts the day.
-- **Adds.** Inserts duplicate on partial flush unless UUIDs are generated
-  client-side.
-- **Removes.** Destructive.
-These three fail fast and tell the user.
-
-ONLY enqueue on TRANSPORT failure (`isTransportError` in `src/lib/errors.ts` —
-true for "Network request failed" and AbortError). A Supabase error object means
-the server responded and refused; queueing that retries a doomed write forever.
-This is the single most important rule in the queue.
-
-`enqueue` COLLAPSES by table+rowId, merging patches field-wise. Check in offline
-then undo offline resolves to one correct write, not two conflicting ones.
-`flush` stops on the first transport failure rather than burning the queue
-against a dead connection, and DROPS entries the server rejects. Entries older
-than 7 days are discarded on load.
-
-UNVERIFIED: the collapse and flush-stop behaviours have not been confirmed on
-device. Test before relying on them.
-
-### Supabase request timeout
-
-`createClient` uses a custom fetch with an `AbortController` at 12s. Without it
-iOS holds a request against its own default (~60s) with no connectivity, which
-froze the check-in sheet for the full duration. Do not lower below 10s — this
-fetch also serves auth token refresh.
+The feature shipped, was documented, and never worked once — it was never
+tested with the network actually off. Preserved on branch
+`offline-queue-attempt`. If revisited: auth and data need separate timeouts,
+transport detection must handle plain objects (PostgREST errors carry a
+populated `code`; transport failures do not), and the airplane-mode test is
+the acceptance criterion, not a nice-to-have.
 
 ---
 
