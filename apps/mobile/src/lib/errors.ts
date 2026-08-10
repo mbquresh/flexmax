@@ -20,6 +20,24 @@ export function getErrorMessage(err: unknown): string {
   return "An unknown error occurred";
 }
 
+/** True for network/timeout failures. False for Supabase server rejections. */
+export function isTransportError(err: unknown): boolean {
+  if (err instanceof TypeError && err.message === "Network request failed") {
+    return true;
+  }
+  if (err instanceof Error && err.name === "AbortError") {
+    return true;
+  }
+  if (
+    typeof DOMException !== "undefined" &&
+    err instanceof DOMException &&
+    err.name === "AbortError"
+  ) {
+    return true;
+  }
+  return false;
+}
+
 /**
  * Standard error handler. Logs for debugging and optionally shows the user
  * a friendly message via Alert.
