@@ -12,12 +12,14 @@ import { useStore } from "../store";
 export function useTodayData(userId: string | undefined) {
   const { todayInstances, setTodayInstances } = useStore();
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [totalBlocks, setTotalBlocks] = useState(0);
   const [displayDate, setDisplayDate] = useState(getLocalDateString());
   const [stats, setStats] = useState<TodayStats | null>(null);
   const [adhocTasks, setAdhocTasks] = useState<AdhocTask[]>([]);
   const [insights, setInsights] = useState<BehavioralInsight[]>([]);
   const currentDateRef = useRef(getLocalDateString());
+  const appStateRef = useRef(AppState.currentState);
 
   const timedAdhoc = useMemo(
     () => adhocTasks.filter((t) => t.start_minutes != null),
@@ -43,106 +45,112 @@ export function useTodayData(userId: string | undefined) {
       if (!options?.silent) {
         setLoading(true);
       }
+      setLoadFailed(false);
 
-      await generateDailyInstances(targetDate);
+      try {
+        await generateDailyInstances(targetDate);
 
-      fetchTodayStats(userId)
-        .then(setStats)
-        .catch((err) => handleError(err, "fetchTodayStats"));
+        fetchTodayStats(userId)
+          .then(setStats)
+          .catch((err) => handleError(err, "fetchTodayStats"));
 
-      const { count } = await supabase
-        .from("schedule_blocks")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", userId);
+        const { count } = await supabase
+          .from("schedule_blocks")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", userId);
 
-      setTotalBlocks(count ?? 0);
+        setTotalBlocks(count ?? 0);
 
-      const { data, error } = await supabase
-        .from("daily_schedule_instances")
-        .select("*, block:schedule_blocks(*)")
-        .eq("user_id", userId)
-        .eq("date", targetDate)
-        .neq("status", "removed")
-        .order("start_minutes");
+        const { data, error } = await supabase
+          .from("daily_schedule_instances")
+          .select("*, block:schedule_blocks(*)")
+          .eq("user_id", userId)
+          .eq("date", targetDate)
+          .neq("status", "removed")
+          .order("start_minutes");
 
-      const { data: adhoc, error: adhocError } = await supabase
-        .from("adhoc_tasks")
-        .select("*")
-        .eq("user_id", userId)
-        .eq("date", targetDate)
-        .neq("status", "removed")
-        .order("start_minutes", { nullsFirst: false });
+        const { data: adhoc, error: adhocError } = await supabase
+          .from("adhoc_tasks")
+          .select("*")
+          .eq("user_id", userId)
+          .eq("date", targetDate)
+          .neq("status", "removed")
+          .order("start_minutes", { nullsFirst: false });
 
-      const { data: insightsData, error: insightsError } = await (
-        supabase as typeof supabase & {
-          from: (table: "behavioral_insights") => ReturnType<typeof supabase.from>;
-        }
-      )
-        .from("behavioral_insights")
-        .select("id, kind, belief, suggestion, related_blocks, rank, generated_at, nudge_line")
-        .eq("superseded", false)
-        .order("rank") as { data: BehavioralInsight[] | null; error: Error | null };
+        const { data: insightsData, error: insightsError } = await (
+          supabase as typeof supabase & {
+            from: (table: "behavioral_insights") => ReturnType<typeof supabase.from>;
+          }
+        )
+          .from("behavioral_insights")
+          .select("id, kind, belief, suggestion, related_blocks, rank, generated_at, nudge_line")
+          .eq("superseded", false)
+          .order("rank") as { data: BehavioralInsight[] | null; error: Error | null };
 
-      if (error) {
-        handleError(error, "loadToday");
-      } else {
-        setTodayInstances(data ?? []);
-        if (data?.length) {
-          try {
-            const cutoffs = await scheduleTodayBlockNotifications(
-              data,
-              targetDate,
-              insightsData ?? []
-            );
-            if (cutoffs.length > 0) {
-              const { error: nudgeError } = await (
-                supabase as typeof supabase & {
-                  from: (table: "nudge_events") => ReturnType<typeof supabase.from>;
-                }
-              )
-                .from("nudge_events")
-                .upsert(
-                  cutoffs.map((c) => ({
-                    user_id: userId,
-                    instance_id: c.instanceId,
-                    kind: "cutoff",
-                    scheduled_for: c.scheduledFor.toISOString(),
-                  })),
-                  { onConflict: "instance_id,kind" }
-                );
-              if (nudgeError) throw nudgeError;
+        if (error) {
+          handleError(error, "loadToday");
+        } else {
+          setTodayInstances(data ?? []);
+          if (data?.length) {
+            try {
+              const cutoffs = await scheduleTodayBlockNotifications(
+                data,
+                targetDate,
+                insightsData ?? []
+              );
+              if (cutoffs.length > 0) {
+                const { error: nudgeError } = await (
+                  supabase as typeof supabase & {
+                    from: (table: "nudge_events") => ReturnType<typeof supabase.from>;
+                  }
+                )
+                  .from("nudge_events")
+                  .upsert(
+                    cutoffs.map((c) => ({
+                      user_id: userId,
+                      instance_id: c.instanceId,
+                      kind: "cutoff",
+                      scheduled_for: c.scheduledFor.toISOString(),
+                    })),
+                    { onConflict: "instance_id,kind" }
+                  );
+                if (nudgeError) throw nudgeError;
+              }
+            } catch (err) {
+              handleError(err, "scheduleBlockNotifications");
             }
-          } catch (err) {
-            handleError(err, "scheduleBlockNotifications");
           }
         }
-      }
 
-      if (adhocError) {
-        handleError(adhocError, "loadToday adhoc");
-      } else {
-        setAdhocTasks(adhoc ?? []);
-      }
+        if (adhocError) {
+          handleError(adhocError, "loadToday adhoc");
+        } else {
+          setAdhocTasks(adhoc ?? []);
+        }
 
-      if (insightsError) {
-        handleError(insightsError, "loadToday insights");
-      } else {
-        setInsights(insightsData ?? []);
-      }
+        if (insightsError) {
+          handleError(insightsError, "loadToday insights");
+        } else {
+          setInsights(insightsData ?? []);
+        }
 
-      if (!options?.silent) {
-        setLoading(false);
+        // Fire-and-forget. Returns cached insights without an AI call if a fresh
+        // set exists, so this is cheap to call on every load.
+        supabase.functions
+          .invoke("weekly-insight")
+          .then(({ data, error }) => {
+            if (error) console.log("[weekly-insight] error:", JSON.stringify(error));
+            else console.log("[weekly-insight] ok:", JSON.stringify(data));
+          })
+          .catch((e) => console.log("[weekly-insight] threw:", String(e)));
+      } catch (err) {
+        handleError(err, "loadToday");
+        setLoadFailed(true);
+      } finally {
+        if (!options?.silent) {
+          setLoading(false);
+        }
       }
-
-      // Fire-and-forget. Returns cached insights without an AI call if a fresh
-      // set exists, so this is cheap to call on every load.
-      supabase.functions
-        .invoke("weekly-insight")
-        .then(({ data, error }) => {
-          if (error) console.log("[weekly-insight] error:", JSON.stringify(error));
-          else console.log("[weekly-insight] ok:", JSON.stringify(data));
-        })
-        .catch((e) => console.log("[weekly-insight] threw:", String(e)));
     },
     [userId, setTodayInstances]
   );
@@ -165,7 +173,13 @@ export function useTodayData(userId: string | undefined) {
 
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (nextState) => {
-      if (nextState === "active") {
+      const prev = appStateRef.current;
+      appStateRef.current = nextState;
+
+      if (
+        nextState === "active" &&
+        (prev === "background" || prev === "inactive")
+      ) {
         const freshDate = getLocalDateString();
         if (freshDate !== currentDateRef.current) {
           currentDateRef.current = freshDate;
@@ -207,6 +221,7 @@ export function useTodayData(userId: string | undefined) {
     totalBlocks,
     stats,
     loading,
+    loadFailed,
     reload: loadToday,
     resetToday,
     adhocTasks,

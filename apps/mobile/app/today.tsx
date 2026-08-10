@@ -89,6 +89,7 @@ function TodayScreenContent() {
     totalBlocks,
     stats,
     loading,
+    loadFailed,
     reload,
     resetToday,
     timedAdhoc,
@@ -1088,6 +1089,17 @@ function TodayScreenContent() {
     );
   }
 
+  if (loadFailed && instances.length === 0) {
+    return (
+      <View style={styles.centered}>
+        <Text style={styles.loadFailedText}>Couldn't load today — check your connection</Text>
+        <PressableScale style={styles.loadFailedBtn} onPress={() => reload()}>
+          <Text style={styles.loadFailedBtnText}>Try again</Text>
+        </PressableScale>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <ScrollView
@@ -1495,6 +1507,23 @@ const makeStyles = (c: Colors) =>
       backgroundColor: c.background,
       alignItems: "center",
       justifyContent: "center",
+      paddingHorizontal: spacing.xl,
+    },
+    loadFailedText: {
+      ...typography.body,
+      color: c.textMuted,
+      textAlign: "center",
+      marginBottom: spacing.lg,
+    },
+    loadFailedBtn: {
+      backgroundColor: c.primary,
+      borderRadius: radii.lg,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.xl,
+    },
+    loadFailedBtnText: {
+      color: c.onPrimary,
+      ...typography.bodyBold,
     },
     header: { paddingTop: 60, paddingHorizontal: spacing.xl, paddingBottom: spacing.lg },
     headerTop: {
