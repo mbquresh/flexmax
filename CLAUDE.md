@@ -447,23 +447,31 @@ colors, or celebratory animation, it has misdiagnosed the problem. The fix
 direction is physical feedback and typographic hierarchy, not visual noise.
 Card and sheet elevation in light mode is the one permitted shadow use.
 
-**Block cards cannot have drop shadows. Do not attempt this again.**
-An attempt on 2026-08-09 broke drag-to-swap and was reverted. The chain:
-`cardWrapper` cannot cast a shadow itself, because `overflow: "hidden"` (needed
-for the swipe reveal) sets `clipsToBounds` on iOS, which clips the layer's own
-shadow — not only its children's — and because it has no `backgroundColor`, the
-fill living on `slidingRow` inside it. Casting a shadow therefore requires a new
-outer wrapper, which changes the coordinate space `onLayout` reports against.
-`cardPositions` then holds y values measured from the new parent instead of the
-list container, and `findSwapTarget` resolves against meaningless geometry.
-Block card elevation is luminance-based only: `surface` sits above `background`
-in both modes. This is the same coordinate-space hazard that got 4b rejected.
+**Block card shadows: the working recipe (2026-08-09).**
+Block cards DO have light-mode shadows. A first attempt broke drag-to-swap and
+was reverted; the second worked. The constraint is real but surmountable.
 
-NOTE: BlockCard still contains inert shadow code — `...c.shadowRest` on
-cardWrapper and shadow interpolation in wrapperAnimatedStyle. Both render
-nothing. Left in place deliberately rather than reopening a gesture-critical
-file for a cosmetic cleanup. Remove only alongside other work in that file, and
-never add a wrapper around cardWrapper.
+`cardWrapper` cannot cast a shadow itself: `overflow: "hidden"` (needed for the
+swipe reveal) sets `clipsToBounds` on iOS, which clips the layer's OWN shadow,
+and it has no `backgroundColor` — the fill lives on `slidingRow` inside it. iOS
+derives the shadow path from the background, so a transparent view casts nothing.
+
+The shadow therefore lives on a new outer `cardShadow` wrapper. THREE properties
+must move to it together, and the first attempt failed by moving only some:
+  - `onLayout` — MUST move. Left on `cardWrapper` after wrapping, its `y` is
+    reported relative to the new parent instead of the list container, so every
+    value in `cardPositions` goes to ~0 and `findSwapTarget` resolves against
+    meaningless geometry. This is what broke swap.
+  - `zIndex` — MUST move. Wrapping creates a new stacking context, so a `zIndex`
+    on the inner view cannot raise a dragged card above its siblings.
+  - `marginBottom` — moves, so the outer wrapper owns list spacing.
+`wrapperAnimatedStyle` keeps `translateY` and `scale` only.
+
+The wrapper's `backgroundColor` is driven by DISPLACEMENT, not by `isDragging`.
+`isDragging` resets on release while `translateY` is still animating home, which
+repaints the wrapper's fill under a card still in flight — a blank card flashing
+after every drag and swap. Interpolate on `Math.min(Math.abs(translateY)/4, 1)`
+instead. It is self-correcting and has no timing to keep in sync.
 
 Motion added under this section is STATE TRANSITION and PHYSICS — a status
 changing, a card settling, a list reflowing. It is not celebration. The
@@ -572,17 +580,20 @@ surfaceNested / surface) with 4-7 point steps. The original sat at L\* 5-14 with
 *perceptual* step sizes matching light — but display black-crush and ambient
 light reflecting off the glass add a luminance floor that swallows small
 differences at the bottom of the range. Lifting the ladder off that floor forced
-every border and low-contrast text token up with it, or they collided. Do not
-raise the dark background: at L\* 15 it is already brighter than Material,
-GitHub, and Linear dark modes. Push it further and it becomes grey mode.
-Widen surface separation instead — the eye adapts to room brightness, so a dark
-screen sits below the adaptation point and its internal differences compress.
+every border and low-contrast text token up with it, or they collided.
 
-**Surface order is consistent across modes (2026-08-09).** Both run
-dim < background < nested < surface:
+**Surface order — RESOLVED 2026-08-09.** Both modes now run
+dim < background < nested < surface. Dark sits at L\* 9.0 / 15.3 / 19.7 / 26.5.
+Surface separation was widened from 6.8 to 11.2 L\* while holding the background
+fixed — the background must NOT be raised further; at L\* 15 it is already
+brighter than Material, GitHub, and Linear dark modes.
   dark   dim 9.0  <  bg 15.3  <  nested 19.7  <  surface 26.5
   light  dim 88.0 <  bg 92.7  <  nested 95.1  <  surface 97.5
 Nested elements read as recessed in both modes.
+
+Tints and rating fills sit at ~L\* 20, deliberately recessed from surface. At
+their previous L\* 24 they fell within 2.5 points of the new surface and the
+check-in sheet's rating buttons lost their fills entirely.
 
 **Light brightened 2026-08-09** from L\* 87.6 to 92.7 background, tint halved
 (25.6% to 12.5% saturation on surface). The original #DCDCDC was eight points
@@ -661,6 +672,107 @@ ARCHITECTURE CHAT MUST DECIDE: whether get_behavior_evidence() and the weekly
 insight should weight canned answers differently from typed ones. Eight
 instances of "Start earlier" may reflect a real pattern or just the easiest chip
 to tap. Cheaper to decide before the data accumulates.
+
+**All modals slide, none fade.** `animationType="none"` with scrim opacity and
+sheet translateY animated together, ~220ms open with `Easing.out(Easing.cubic)`,
+~180ms close. The sheet stays fully opaque — animate the scrim's opacity and the
+sheet's position, never the sheet's own opacity.
+
+**Undo is not destructive.** The undo sheet's primary action uses `c.text`, not
+`c.danger`. Coral is reserved for Remove and Missed. Undoing a completion is a
+correction.
+
+**Check-in transition runs at 400ms** with the icon scaling 0.5 -> 1 on
+`statusFade`, so the fill and unfill are both perceptible. Never exceed scale 1 —
+overshoot reads as celebration.
+
+**Light shadows:** `shadowRest` at 0.10 opacity, `shadowLift` at 0.16, both zero
+in dark. Elevation is shadow-based in light and luminance-based in dark, because
+a shadow is darkness cast on a surface and at L\* 15 the dark background has
+nothing darker to receive it. Every shadowed view needs an explicit
+`backgroundColor` or it casts nothing on iOS.
+
+---
+
+## Design rules
+
+**Any function that sets a loading flag must clear it in `finally`.**
+`useTodayData`'s load set `loading` true, then threw at
+`await generateDailyInstances()` before reaching `setLoading(false)`, locking the
+Today screen on a spinner permanently with an unhandled rejection. Also give
+failed loads a distinct retry state — a failed load rendering the empty state
+tells the user they have no blocks, which is a worse lie than an error.
+
+**Do not reload on every focus or AppState change.** `useFocusEffect` fires on
+any focus regain, including after a Control Center swipe — which is how airplane
+mode is toggled. Gate on date change or elapsed time. Gate AppState on
+`background -> active` only; iOS emits `inactive` for Control Center, the
+notification shade, and the app switcher.
+
+**A console error is not a user-facing bug.** Four commits were spent chasing a
+logged network failure that no user could see. The bar is: does the screen stay
+usable and does the user's intent survive. Not: is the debugger clean.
+
+---
+
+## Offline and network resilience (2026-08-09)
+
+### THE THING OTHER WORKSTREAMS NEED TO KNOW
+
+Status writes can now arrive HOURS LATE. A check-in made without connectivity is
+queued locally and flushed on reconnect or foreground. Consequences for anything
+reading `daily_schedule_instances`:
+- A block may flip from `unaccounted` to `completed` long after the day closed.
+- A weekly insight generated between the miss and the flush will have read data
+  that later changed.
+- `get_behavior_evidence()` may therefore see a different history on a second
+  run than it saw on the first.
+
+This is judged correct — a late truth beats a preserved falsehood, and network
+flakiness was previously being recorded as disengagement, which is a much worse
+error. But it is a property, not an accident, and the behavioural engine should
+know it holds.
+
+Late writes land on the RIGHT DAY regardless of flush time: the row already
+carries its date and only `status` is patched. No timestamp handling needed.
+
+### Write queue design
+
+`src/lib/writeQueue.ts`, AsyncStorage-backed, plus
+`@react-native-community/netinfo`.
+
+QUEUED (five paths, all `UPDATE ... WHERE id = ?`, idempotent, last-write-wins):
+handleCheckIn, handleMarkMissed, handleUndoCompletion, handleUndoMissed,
+toggleAdhocComplete.
+
+DELIBERATELY NOT QUEUED — do not extend the queue to these:
+- **Swaps.** `swap_instance_times` is an RPC with a server-side conflict check.
+  Replaying one against a schedule that has since changed corrupts the day.
+- **Adds.** Inserts duplicate on partial flush unless UUIDs are generated
+  client-side.
+- **Removes.** Destructive.
+These three fail fast and tell the user.
+
+ONLY enqueue on TRANSPORT failure (`isTransportError` in `src/lib/errors.ts` —
+true for "Network request failed" and AbortError). A Supabase error object means
+the server responded and refused; queueing that retries a doomed write forever.
+This is the single most important rule in the queue.
+
+`enqueue` COLLAPSES by table+rowId, merging patches field-wise. Check in offline
+then undo offline resolves to one correct write, not two conflicting ones.
+`flush` stops on the first transport failure rather than burning the queue
+against a dead connection, and DROPS entries the server rejects. Entries older
+than 7 days are discarded on load.
+
+UNVERIFIED: the collapse and flush-stop behaviours have not been confirmed on
+device. Test before relying on them.
+
+### Supabase request timeout
+
+`createClient` uses a custom fetch with an `AbortController` at 12s. Without it
+iOS holds a request against its own default (~60s) with no connectivity, which
+froze the check-in sheet for the full duration. Do not lower below 10s — this
+fetch also serves auth token refresh.
 
 ---
 
