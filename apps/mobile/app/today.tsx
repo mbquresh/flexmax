@@ -1188,11 +1188,12 @@ function TodayScreenContent() {
               <RNAnimated.View
                 style={[styles.undoSheet, { transform: [{ translateY: undoSlideAnim }] }]}
               >
+                <View style={styles.undoHandle} />
+                <Text style={styles.undoTitle}>
+                  {undoInstance?.block?.name ?? "Block"}
+                </Text>
                 <PressableScale
-                  variant="highlight"
-                  baseColor={colors.surface}
-                  highlightColor={colors.surfaceNested}
-                  style={styles.undoOption}
+                  style={styles.undoActionButton}
                   onPress={() => {
                     hapticSelect();
                     if (!undoInstance) return;
@@ -1204,21 +1205,14 @@ function TodayScreenContent() {
                   }}
                   disabled={saving}
                 >
-                  <Feather name="rotate-ccw" size={iconSizes.md} color={colors.textMuted} />
-                  <Text style={styles.undoOptionPrimary}>
+                  <Feather name="rotate-ccw" size={iconSizes.md} color={colors.onPrimary} />
+                  <Text style={styles.undoActionText}>
                     {undoInstance?.status === "missed" ? "Undo missed" : "Undo completion"}
                   </Text>
                 </PressableScale>
-                <PressableScale
-                  variant="highlight"
-                  baseColor={colors.surface}
-                  highlightColor={colors.surfaceNested}
-                  style={styles.undoOption}
-                  onPress={() => closeUndoSheet()}
-                >
-                  <Feather name="x" size={iconSizes.md} color={colors.textMuted} />
-                  <Text style={styles.undoOptionCancel}>Cancel</Text>
-                </PressableScale>
+                <Pressable onPress={() => closeUndoSheet()} style={styles.undoCancelButton}>
+                  <Text style={styles.undoCancelText}>Cancel</Text>
+                </Pressable>
               </RNAnimated.View>
             </Pressable>
           </Pressable>
@@ -1553,17 +1547,48 @@ const makeStyles = (c: Colors) =>
       paddingHorizontal: spacing.md,
       paddingBottom: Platform.OS === "ios" ? 36 : 24,
       paddingTop: spacing.sm,
+      ...c.shadowLift,
+      shadowOffset: { width: 0, height: -4 },
     },
-    undoOption: {
+    undoHandle: {
+      width: 36,
+      height: 4,
+      borderRadius: radii.xs,
+      backgroundColor: c.borderLight,
+      alignSelf: "center",
+      marginBottom: spacing.md,
+    },
+    undoTitle: {
+      ...typography.smallBold,
+      color: c.textMuted,
+      textAlign: "center",
+      marginBottom: spacing.md,
+    },
+    undoActionButton: {
       flexDirection: "row",
       alignItems: "center",
-      gap: spacing.md,
-      paddingVertical: 16,
-      paddingHorizontal: spacing.md,
-      borderRadius: radii.sm,
+      justifyContent: "center",
+      gap: spacing.sm,
+      backgroundColor: c.primary,
+      borderRadius: radii.md,
+      paddingVertical: 14,
+      paddingHorizontal: spacing.lg,
+      marginHorizontal: spacing.md,
     },
-    undoOptionPrimary: { flex: 1, color: c.text, ...typography.bodyBold },
-    undoOptionCancel: { flex: 1, color: c.textMuted, ...typography.body },
+    undoActionText: {
+      color: c.onPrimary,
+      ...typography.bodyBold,
+    },
+    undoCancelButton: {
+      paddingVertical: 14,
+      marginTop: spacing.sm,
+      alignItems: "center",
+    },
+    undoCancelText: {
+      color: c.textMuted,
+      ...typography.body,
+      textAlign: "center",
+    },
     removeSheet: {
       backgroundColor: c.surface,
       borderTopLeftRadius: radii.pill,

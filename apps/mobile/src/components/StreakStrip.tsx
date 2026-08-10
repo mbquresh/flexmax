@@ -92,8 +92,9 @@ const makeStyles = (c: Colors) =>
       backgroundColor: c.streakHousing,
       borderRadius: radii.xl,
       padding: 14,
-      borderWidth: 0.5,
+      borderWidth: 0,
       borderColor: c.streakBorder,
+      ...c.shadowRest,
     },
     streakHeader: {
       flexDirection: "row",
