@@ -125,6 +125,7 @@ function TodayScreenContent() {
   const toastOpacity = useSharedValue(0);
   const toastY = useSharedValue(60);
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const adhocToggleInFlight = useRef<Set<string>>(new Set());
   const cardPositions = useRef<Record<string, { y: number; height: number }>>({});
   const flashTriggers = useRef<Record<string, () => void>>({});
   const todayLabel = getTodayLabel();
@@ -575,6 +576,9 @@ function TodayScreenContent() {
 
   const toggleAdhocComplete = async (task: AdhocTask) => {
     hapticSelect();
+    if (adhocToggleInFlight.current.has(task.id)) return;
+
+    adhocToggleInFlight.current.add(task.id);
     const newStatus = task.status === "completed" ? "pending" : "completed";
     updateAdhocTask(task.id, { status: newStatus });
     try {
@@ -585,7 +589,10 @@ function TodayScreenContent() {
       if (error) throw error;
     } catch (err) {
       updateAdhocTask(task.id, { status: task.status });
-      handleError(err, "toggleAdhocComplete", "Could not update task");
+      handleError(err, "toggleAdhocComplete");
+      showToast("Couldn't update — check your connection");
+    } finally {
+      adhocToggleInFlight.current.delete(task.id);
     }
   };
 
@@ -858,7 +865,8 @@ function TodayScreenContent() {
       });
       closeCheckIn();
     } catch (err) {
-      handleError(err, "handleCheckIn", "Could not save check-in");
+      handleError(err, "handleCheckIn");
+      showToast("Couldn't save — check your connection");
     } finally {
       setSaving(false);
     }
