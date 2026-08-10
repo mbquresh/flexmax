@@ -15,7 +15,6 @@ import {
   Keyboard,
   Platform,
   ActionSheetIOS,
-  AppState,
 } from "react-native";
 import Animated, {
   useAnimatedStyle,
@@ -25,18 +24,9 @@ import Animated, {
 import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import NetInfo from "@react-native-community/netinfo";
 import { supabase } from "../src/lib/supabase";
 import { findRescheduleSlot, getTodayLabel } from "../src/lib/schedule";
-import { handleError, isTransportError } from "../src/lib/errors";
-import {
-  enqueue,
-  flush,
-  getPending,
-  initWriteQueue,
-  setDropHandler,
-  subscribe,
-} from "../src/lib/writeQueue";
+import { handleError } from "../src/lib/errors";
 import { useAuth } from "../src/providers/AuthProvider";
 import { useStore } from "../src/store";
 import {
@@ -78,7 +68,6 @@ const UNDO_OPEN_DURATION = 220;
 const UNDO_CLOSE_DURATION = 180;
 const UNDO_SCRIM_OPACITY_LIGHT = 0.4;
 const UNDO_SCRIM_OPACITY_DARK = 0.6;
-const OFFLINE_SAVED_TOAST = "Saved on this device — will sync when you're back online";
 
 function TodayScreenContent() {
   const { colors, scheme } = useTheme();
@@ -90,7 +79,6 @@ function TodayScreenContent() {
     totalBlocks,
     stats,
     loading,
-    loadFailed,
     reload,
     resetToday,
     timedAdhoc,
@@ -127,7 +115,6 @@ function TodayScreenContent() {
   const [boundaryDismissed, setBoundaryDismissed] = useState(true);
   const [insightDismissed, setInsightDismissed] = useState(true);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [pendingWriteCount, setPendingWriteCount] = useState(0);
   const [saving, setSaving] = useState(false);
   const checkInSlideAnim = useRef(new RNAnimated.Value(400)).current;
   const taskSlideAnim = useRef(new RNAnimated.Value(400)).current;
@@ -388,57 +375,6 @@ function TodayScreenContent() {
     }, 2000);
   };
 
-  const syncPendingCount = useCallback(() => {
-    setPendingWriteCount(getPending().length);
-  }, []);
-
-  const runFlush = useCallback(async () => {
-    await flush();
-    await reload();
-    syncPendingCount();
-  }, [reload, syncPendingCount]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    setDropHandler(() => {
-      showToast("A change didn't save. Check the block.");
-    });
-
-    (async () => {
-      await initWriteQueue();
-      if (!cancelled) syncPendingCount();
-      await runFlush();
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [runFlush, syncPendingCount]);
-
-  useEffect(() => subscribe(syncPendingCount), [syncPendingCount]);
-
-  useEffect(() => {
-    const sub = AppState.addEventListener("change", (state) => {
-      if (state === "active") {
-        runFlush();
-      }
-    });
-    return () => sub.remove();
-  }, [runFlush]);
-
-  useEffect(() => {
-    let wasConnected = true;
-    const unsub = NetInfo.addEventListener((state) => {
-      const connected = state.isConnected ?? false;
-      if (!wasConnected && connected) {
-        runFlush();
-      }
-      wasConnected = connected;
-    });
-    return unsub;
-  }, [runFlush]);
-
   const registerFlashTrigger = useCallback((id: string, trigger: () => void) => {
     flashTriggers.current[id] = trigger;
   }, []);
@@ -532,8 +468,7 @@ function TodayScreenContent() {
     });
 
     if (swapError) {
-      handleError(swapError, "handleSwap");
-      showToast("Couldn't swap — check your connection");
+      handleError(swapError, "handleSwap", "Couldn't swap the blocks — please try again");
       return;
     }
 
@@ -577,8 +512,7 @@ function TodayScreenContent() {
       setTodayInstances(instances.filter((i) => i.id !== removeInstance.id));
       showToast(`${removeInstance.block?.name ?? "Block"} removed from today`);
     } catch (err) {
-      handleError(err, "handleRemove");
-      showToast("Couldn't remove — check your connection");
+      handleError(err, "handleRemove", "Could not remove the block");
     } finally {
       setRemoveInstance(null);
       setRemoveReason("");
@@ -634,8 +568,7 @@ function TodayScreenContent() {
         addTaskMode === "timed" ? "Task added to timeline" : "Task added to Anytime today"
       );
     } catch (err) {
-      handleError(err, "handleAddTask");
-      showToast("Couldn't add task — check your connection");
+      handleError(err, "handleAddTask", "Could not add task");
     } finally {
       setSaving(false);
     }
@@ -647,23 +580,17 @@ function TodayScreenContent() {
 
     adhocToggleInFlight.current.add(task.id);
     const newStatus = task.status === "completed" ? "pending" : "completed";
-    const patch = { status: newStatus as AdhocTask["status"] };
-    updateAdhocTask(task.id, patch);
+    updateAdhocTask(task.id, { status: newStatus });
     try {
       const { error } = await supabase
         .from("adhoc_tasks")
-        .update(patch)
+        .update({ status: newStatus })
         .eq("id", task.id);
       if (error) throw error;
     } catch (err) {
-      if (isTransportError(err)) {
-        await enqueue("adhoc_tasks", task.id, patch);
-        showToast(OFFLINE_SAVED_TOAST);
-      } else {
-        updateAdhocTask(task.id, { status: task.status });
-        handleError(err, "toggleAdhocComplete");
-        showToast("Couldn't update — check your connection");
-      }
+      updateAdhocTask(task.id, { status: task.status });
+      handleError(err, "toggleAdhocComplete");
+      showToast("Couldn't update — check your connection");
     } finally {
       adhocToggleInFlight.current.delete(task.id);
     }
@@ -720,32 +647,20 @@ function TodayScreenContent() {
 
   const handleUndoCompletion = async (instanceId: string) => {
     setSaving(true);
-    const existing = useStore.getState().todayInstances.find((i) => i.id === instanceId);
-    const previous = existing
-      ? { status: existing.status, completion_rating: existing.completion_rating }
-      : null;
-    const patch = { status: "pending" as const, completion_rating: null };
-
-    updateInstance(instanceId, patch);
     try {
       const { error } = await supabase
         .from("daily_schedule_instances")
-        .update(patch)
+        .update({ status: "pending", completion_rating: null })
         .eq("id", instanceId);
 
       if (error) throw error;
+
+      updateInstance(instanceId, {
+        status: "pending",
+        completion_rating: null,
+      });
     } catch (err) {
-      if (isTransportError(err)) {
-        await enqueue("daily_schedule_instances", instanceId, patch);
-        showToast(OFFLINE_SAVED_TOAST);
-      } else if (previous) {
-        updateInstance(instanceId, previous);
-        handleError(err, "handleUndoCompletion");
-        showToast("Couldn't undo completion — check your connection");
-      } else {
-        handleError(err, "handleUndoCompletion");
-        showToast("Couldn't undo completion — check your connection");
-      }
+      handleError(err, "handleUndoCompletion", "Could not undo completion");
     } finally {
       setSaving(false);
       setUndoInstance(null);
@@ -754,30 +669,17 @@ function TodayScreenContent() {
 
   const handleUndoMissed = async (instanceId: string) => {
     setSaving(true);
-    const existing = useStore.getState().todayInstances.find((i) => i.id === instanceId);
-    const previousStatus = existing?.status;
-    const patch = { status: "pending" as const };
-
-    updateInstance(instanceId, patch);
     try {
       const { error } = await supabase
         .from("daily_schedule_instances")
-        .update(patch)
+        .update({ status: "pending" })
         .eq("id", instanceId);
 
       if (error) throw error;
+
+      updateInstance(instanceId, { status: "pending" });
     } catch (err) {
-      if (isTransportError(err)) {
-        await enqueue("daily_schedule_instances", instanceId, patch);
-        showToast(OFFLINE_SAVED_TOAST);
-      } else if (previousStatus) {
-        updateInstance(instanceId, { status: previousStatus });
-        handleError(err, "handleUndoMissed");
-        showToast("Couldn't undo missed — check your connection");
-      } else {
-        handleError(err, "handleUndoMissed");
-        showToast("Couldn't undo missed — check your connection");
-      }
+      handleError(err, "handleUndoMissed", "Could not undo missed");
     } finally {
       setSaving(false);
       setUndoInstance(null);
@@ -787,25 +689,17 @@ function TodayScreenContent() {
   const handleMarkMissed = async (instance: DailyInstance) => {
     hapticMissed();
     setSaving(true);
-    const patch = { status: "missed" as const };
-    updateInstance(instance.id, patch);
     try {
       const { error } = await supabase
         .from("daily_schedule_instances")
-        .update(patch)
+        .update({ status: "missed" })
         .eq("id", instance.id);
 
       if (error) throw error;
+      updateInstance(instance.id, { status: "missed" });
     } catch (err) {
-      if (isTransportError(err)) {
-        await enqueue("daily_schedule_instances", instance.id, patch);
-        showToast(OFFLINE_SAVED_TOAST);
-      } else {
-        updateInstance(instance.id, { status: instance.status });
-        handleError(err, "handleMarkMissed");
-        showToast("Couldn't mark missed — check your connection");
-        return;
-      }
+      handleError(err, "handleMarkMissed", "Could not mark missed");
+      return;
     } finally {
       setSaving(false);
     }
@@ -951,39 +845,28 @@ function TodayScreenContent() {
   const handleCheckIn = async (rating: CompletionRating) => {
     if (!checkInInstance) return;
 
-    const instanceId = checkInInstance.id;
-    const previous = {
-      status: checkInInstance.status,
-      completion_rating: checkInInstance.completion_rating,
-      miss_reason_tag: checkInInstance.miss_reason_tag,
-    };
-    const patch = {
-      status: "completed" as const,
-      completion_rating: rating,
-      miss_reason_tag: null,
-    };
-
     setSaving(true);
-    updateInstance(instanceId, patch);
     try {
       const { error } = await supabase
         .from("daily_schedule_instances")
-        .update(patch)
-        .eq("id", instanceId);
+        .update({
+          status: "completed",
+          completion_rating: rating,
+          miss_reason_tag: null,
+        })
+        .eq("id", checkInInstance.id);
 
       if (error) throw error;
 
+      updateInstance(checkInInstance.id, {
+        status: "completed",
+        completion_rating: rating,
+        miss_reason_tag: null,
+      });
       closeCheckIn();
     } catch (err) {
-      if (isTransportError(err)) {
-        await enqueue("daily_schedule_instances", instanceId, patch);
-        showToast(OFFLINE_SAVED_TOAST);
-        closeCheckIn();
-      } else {
-        updateInstance(instanceId, previous);
-        handleError(err, "handleCheckIn");
-        showToast("Couldn't save — check your connection");
-      }
+      handleError(err, "handleCheckIn");
+      showToast("Couldn't save — check your connection");
     } finally {
       setSaving(false);
     }
@@ -1094,17 +977,6 @@ function TodayScreenContent() {
     );
   }
 
-  if (loadFailed && instances.length === 0) {
-    return (
-      <View style={styles.centered}>
-        <Text style={styles.loadFailedText}>Couldn't load today — check your connection</Text>
-        <PressableScale style={styles.loadFailedBtn} onPress={() => reload()}>
-          <Text style={styles.loadFailedBtnText}>Try again</Text>
-        </PressableScale>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
       <ScrollView
@@ -1120,11 +992,6 @@ function TodayScreenContent() {
               <Text style={styles.date}>
                 {displayDate} · {todayLabel}
               </Text>
-              {pendingWriteCount > 0 ? (
-                <Text style={styles.pendingSync}>
-                  {pendingWriteCount} change{pendingWriteCount === 1 ? "" : "s"} waiting to sync
-                </Text>
-              ) : null}
             </View>
             <View style={styles.headerRight}>
               <MenuButton onPress={() => setMenuOpen(true)} />
@@ -1512,23 +1379,6 @@ const makeStyles = (c: Colors) =>
       backgroundColor: c.background,
       alignItems: "center",
       justifyContent: "center",
-      paddingHorizontal: spacing.xl,
-    },
-    loadFailedText: {
-      ...typography.body,
-      color: c.textMuted,
-      textAlign: "center",
-      marginBottom: spacing.lg,
-    },
-    loadFailedBtn: {
-      backgroundColor: c.primary,
-      borderRadius: radii.lg,
-      paddingVertical: spacing.md,
-      paddingHorizontal: spacing.xl,
-    },
-    loadFailedBtnText: {
-      color: c.onPrimary,
-      ...typography.bodyBold,
     },
     header: { paddingTop: 60, paddingHorizontal: spacing.xl, paddingBottom: spacing.lg },
     headerTop: {
@@ -1552,11 +1402,6 @@ const makeStyles = (c: Colors) =>
     avatarText: { color: c.primary, ...typography.bodyBold },
     title: { ...typography.display, color: c.text },
     date: { ...typography.small, ...numeric, color: c.textMuted, marginTop: spacing.xs },
-    pendingSync: {
-      ...typography.caption,
-      color: c.textMuted,
-      marginTop: spacing.xs,
-    },
     list: { padding: spacing.lg, paddingBottom: 100 },
     scroll: { flex: 1 },
     scrollContent: { flexGrow: 1 },
