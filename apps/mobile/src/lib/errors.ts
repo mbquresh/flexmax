@@ -39,6 +39,17 @@ export function isTransportError(err: unknown): boolean {
 }
 
 /**
+ * supabase-js returns transport failures as { error } rather than throwing.
+ * PostgREST errors carry a populated `code`; fetch/abort failures do not.
+ * Without this check, the write queue deletes entries when offline.
+ */
+export function isTransportErrorResult(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const code = (error as { code?: string }).code;
+  return !code || code.length === 0;
+}
+
+/**
  * Standard error handler. Logs for debugging and optionally shows the user
  * a friendly message via Alert.
  *

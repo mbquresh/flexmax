@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "./supabase";
-import { isTransportError } from "./errors";
+import { isTransportError, isTransportErrorResult } from "./errors";
 import { AdhocTask, DailyInstance } from "../types/database";
 
 const STORAGE_KEY = "write_queue";
@@ -14,9 +14,12 @@ export type QueuedWrite = {
   queuedAt: number;
 };
 
+type DropHandler = (entry: QueuedWrite, error: unknown) => void;
+
 let queue: QueuedWrite[] = [];
-let loaded = false;
+let loadPromise: Promise<void> | null = null;
 let flushInFlight = false;
+let onDropped: DropHandler | undefined;
 const listeners = new Set<() => void>();
 
 function uuid(): string {
@@ -50,11 +53,17 @@ async function persist(): Promise<void> {
 }
 
 async function ensureLoaded(): Promise<void> {
-  if (!loaded) {
-    queue = await loadQueue();
-    loaded = true;
-    notify();
+  if (!loadPromise) {
+    loadPromise = (async () => {
+      queue = await loadQueue();
+      notify();
+    })();
   }
+  return loadPromise;
+}
+
+export function setDropHandler(handler: DropHandler): void {
+  onDropped = handler;
 }
 
 export async function initWriteQueue(): Promise<void> {
@@ -104,6 +113,8 @@ export async function flush(): Promise<void> {
     await ensureLoaded();
 
     const sorted = [...queue].sort((a, b) => a.queuedAt - b.queuedAt);
+    let dirty = false;
+
     for (const entry of sorted) {
       try {
         const { error } =
@@ -118,21 +129,29 @@ export async function flush(): Promise<void> {
                 .eq("id", entry.rowId);
 
         if (error) {
+          if (isTransportErrorResult(error)) {
+            if (dirty) await persist();
+            return;
+          }
           console.error("[writeQueue] server rejected, dropping entry", entry, error);
+          onDropped?.(entry, error);
           queue = queue.filter((item) => item.id !== entry.id);
-          await persist();
+          dirty = true;
           continue;
         }
 
         queue = queue.filter((item) => item.id !== entry.id);
-        await persist();
+        dirty = true;
       } catch (err) {
         if (isTransportError(err)) {
+          if (dirty) await persist();
           return;
         }
         throw err;
       }
     }
+
+    if (dirty) await persist();
   } finally {
     flushInFlight = false;
   }

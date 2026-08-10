@@ -34,6 +34,7 @@ import {
   flush,
   getPending,
   initWriteQueue,
+  setDropHandler,
   subscribe,
 } from "../src/lib/writeQueue";
 import { useAuth } from "../src/providers/AuthProvider";
@@ -399,6 +400,10 @@ function TodayScreenContent() {
 
   useEffect(() => {
     let cancelled = false;
+
+    setDropHandler(() => {
+      showToast("A change didn't save. Check the block.");
+    });
 
     (async () => {
       await initWriteQueue();
