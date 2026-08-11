@@ -2,6 +2,13 @@
 
 *Read this before touching anything. It captures every hard-won decision.*
 
+> **Maintenance discipline.** Sections describing CURRENT ARCHITECTURE (edge
+> functions, migrations, shipped features) rot fast and must be checked against
+> the tree before being trusted. Sections describing REASONING — rejections and
+> their revival conditions, postmortems, hard-won mechanical constraints,
+> honest risks — do not rot and are the highest-value content here. When the
+> two conflict, the tree wins and the architecture section is wrong.
+
 ---
 
 ## What this app is
@@ -96,18 +103,21 @@ authoring the plan itself.
 Accepted and still open: "Your schedule keeps failing because it doesn't know
 you." Stays out of the planner category and names the pain directly.
 
-**The central claim.** Human accountability works, and it carries a tax: in
-front of a person, effort is diverted into managing perception. The partner can
-only work with what they are shown, so the most useful information — the actual
-pattern of failure — is precisely what gets withheld.
+**The audience effect — real, but not a moat.** Human accountability carries a
+tax: in front of a person, effort is diverted into managing perception, and the
+partner can only work with what they are shown, so the most useful information
+is precisely what gets withheld. An AI removes the audience — no one to
+disappoint, no status to protect.
 
-An AI removes the audience. No one to disappoint, no status to protect, no
-embarrassment in reporting a lost afternoon. The claim is not "AI is smarter
-than a mentor." It is: **an AI gets told the truth, and a mentor doesn't.**
+This is a genuine advantage over human accountability and a genuine reason the
+input quality can exceed what a mentor obtains. It is NOT a moat: every AI
+accountability product inherits it for free. Use it to explain why the approach
+works; never as a claim about defensibility against competitors.
 
-This is structural rather than a capability claim, which makes it the most
-defensible line the product has — a better model cannot beat it, and a
-competitor cannot copy it without also removing the audience.
+**The actual moat is per-user, not categorical:** accumulated
+intervention → response → outcome data. Six months of what specifically works
+on this person. That is not copyable by a competitor at any funding level,
+because it requires that person's six months.
 
 ---
 
@@ -163,6 +173,14 @@ Cursor = implementation engine.
 | 013 | behavior_evidence.sql         | get_behavior_evidence() RPC — precomputed 30-day facts                                                                     |
 | 014 | actual_end_minutes.sql        | actual_end_minutes column for real bedtime capture                                                                         |
 | 015 | behavioral_insights.sql       | behavioral_insights table; weekly stored beliefs, RLS read-only for users                                                  |
+| 016 | nudge_events.sql              | nudge_events — cutoff nudge telemetry                                                                                      |
+| 017 | insight_nudge_line.sql        | behavioral_insights.nudge_line — notification-sized insight restatement                                                      |
+| 018 | nudge_response.sql            | nudge_events.response — which action button was chosen                                                                     |
+| 019 | miss_reason_tag.sql           | daily_schedule_instances.miss_reason_tag — preset miss reason                                                              |
+| 020 | day_boundaries.sql            | day_log — sleep/wake as day boundaries, replaces the BedtimeCard model                                                     |
+| 021 | quality_drift.sql             | quality_drift added to get_behavior_evidence; completion_rating in base CTE                                                |
+| 022 | preset_onboarding_columns.sql | psychology_profiles preset onboarding columns                                                                              |
+| 023 | atomic_insight_replace.sql    | replace_behavioral_insights RPC — atomic insight set replacement                                                           |
 
 
 ---
@@ -208,21 +226,14 @@ AppState listener handles date rollover at midnight.
 ### AI calls — edge functions only
 
 Claude API key never on client.
-AI_PROVIDER=anthropic; demo/offline fallback kept for graceful degradation.
-Edge functions: onboarding-chat, extract-psychology-profile, generate-schedule-tips,
-missed-block-recovery, nightly-notify, weekly-insight.
 
-### AI onboarding (shipped — slated for removal)
+Edge functions (2):
+  weekly-insight   — 1 AI call per user per week; the only AI call in the product
+  nightly-notify   — cron-triggered, no AI; MUST deploy with --no-verify-jwt
 
-Current: 4-turn conversational onboarding via `onboarding-chat` +
-`extract-psychology-profile`; gates app access on `psychology_profiles.completed_at`.
-
-> **Slated for removal.** The 4-turn AI onboarding is planned to be replaced with
-> preset questions. Reasoning: the psychology profile it produces is a day-one
-> guess that 30 days of behavioral evidence supersedes anyway; it is the least
-> necessary AI surface in the product; and it is the only unbounded per-signup
-> cost. Do not build new dependencies on `raw_ai_summary` or on the onboarding
-> transcript.
+weekly-insight hardcodes the Anthropic client. There is no provider
+abstraction and no fallback — if the API is down, insights do not
+regenerate and the previous set remains active until they do.
 
 ### Nightly notifications
 
@@ -282,7 +293,12 @@ Still captured but NOT yet read:
 
 
 
-## v2 roadmap — status as of commit b1bca42
+## v2 roadmap
+
+Status is maintained by editing the tables below when work lands. Do NOT
+pin this heading to a commit hash — the previous header claimed "as of
+b1bca42" while 103 commits had landed since, which is worse than no
+marker at all.
 
 > **UNBLOCKED ACTION — file the FamilyControls entitlement requests now, for
 > every bundle ID (main app and each planned extension).** This has never been
@@ -957,6 +973,13 @@ without-a-face claim — is drawn from a single person's experience and validate
 against a single month of that person's data. It is internally coherent and it
 matches the behavioral evidence, but coherence is not generalization. The beta's
 first job is to test whether this archetype describes anyone else.
+
+**The truth-telling claim is untestable on its current sample.** The argument
+that users tell an AI the truth is validated on one person who is also the
+product's author — someone with no incentive to manage the app's perception of
+him. That is the exact population where the claim cannot be tested. Whether a
+paying stranger reports a lost afternoon honestly to software is unknown, and
+the beta is the first opportunity to find out.
 
 - **Everything is validated on n=1.** Every filter, threshold, and tone rule was
 tuned against the author's own month of data — an unusually diligent
