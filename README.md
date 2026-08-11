@@ -7,7 +7,7 @@
 <p align="center"><strong>Habit trackers watch you fail. FlexMax figures out why.</strong></p>
 
 <p align="center">
-  <a href="https://mbquresh.github.io/flexmax">Interactive demo</a> — every screen, tappable
+  <a href="https://mbquresh.github.io/flexmax">Behavioral engine overview</a> — architecture, real output, build status
 </p>
 
 ---
@@ -303,7 +303,7 @@ packages/ai/          Claude wrappers + prompt system
 supabase/
   migrations/         schema
   functions/          missed-block-recovery, nightly-notify, weekly-insight
-docs/index.html       the interactive demo published above
+docs/index.html       behavioral engine overview (GitHub Pages)
 ```
 
 ## Running it

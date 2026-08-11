@@ -360,7 +360,7 @@ marker at all.
 | Night routine block is hard to answer           | Excluded from the evening sweep (hasn't happened yet) and from bedtime notifications (by design). Drifts to unaccounted unless answered from Today. Candidate fix: a third question on the morning DayBoundaryCard |
 | User instructions page                          | The streak rises on a day where everything was missed. The label qualifier was removed for width, so there is no in-app explanation. Owed |
 | Onboarding demonstration beat | Onboarding establishes the pain (screens 1-2) and sets the contract (screen 7), but never shows what the product DOES. A stranger goes from "how many planners have you abandoned?" to a $14.99 wall without seeing FlexMax work. Fix: show a REAL generated insight, explicitly labelled as another user's, before the contract screen. Not a claim about them — a demonstration. See rejected approaches below |
-| Showcase page carries the offer | docs/index.html has no pricing and no founding-member framing. With no trial it is the only pre-purchase evaluation surface, and most of the "is this enticing" work happens there and in the App Store listing, not in onboarding |
+| Showcase page carries the offer | docs/index.html has no pricing and no founding-member framing. With no trial it is the only pre-purchase evaluation surface, and most of the "is this enticing" work happens there and in the App Store listing, not in onboarding. See also **docs/index.html — rebuilt 2026-08-11** in Pricing & paywall below |
 
 
 ---
@@ -1062,10 +1062,17 @@ That last screen reframes the $14.99 honestly — the user is funding an
 observation period, not buying a finished product. That is the true version of
 the aha the AI conversation used to fake.
 
-**DEPENDENCY — docs/index.html is now commercially load-bearing.** With no trial,
-the public showcase is the only place a prospective payer can evaluate the
-product before paying. It currently carries no pricing and no founding-member
-framing. It must stay in sync with the shipped app AND carry the offer.
+**docs/index.html — rebuilt 2026-08-11 as an engine overview.** The previous
+version was a hand-built replica of the app's UI and had drifted twice
+(deleted AI onboarding flow, retired amber streak strip, old palette). The
+replacement describes the engine — architecture, integrity rules, real
+generated output, honest build status — and contains no UI replica, so it has
+no drift surface. A print-formatted PDF of the same content is published
+alongside it at docs/flexmax-behavioral-engine.pdf for handouts.
+
+Still open: with no free trial this page is the only pre-purchase evaluation
+surface and it does not yet carry pricing or founding-member framing. When the
+in-app interactive demo ships, its screen recordings belong on this page.
 
 ### Rejected: generating an "insight" from onboarding answers
 
