@@ -4,13 +4,16 @@ import { Feather } from "@expo/vector-icons";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
   Easing,
+  Extrapolate,
   interpolate,
   interpolateColor,
   runOnJS,
   useAnimatedStyle,
+  useDerivedValue,
   useSharedValue,
   withDelay,
   withSequence,
+  withSpring,
   withTiming,
 } from "react-native-reanimated";
 import { DailyInstance } from "../types/database";
@@ -203,7 +206,11 @@ export function BlockCard({
     .onEnd(() => {
       const shouldOpen = translateX.value < -revealWidth / 2;
       isOpen.value = shouldOpen ? 1 : 0;
-      translateX.value = withTiming(shouldOpen ? -revealWidth : 0, { duration: 150 });
+      translateX.value = withSpring(shouldOpen ? -revealWidth : 0, {
+        damping: 20,
+        stiffness: 220,
+        overshootClamping: true,
+      });
       if (shouldOpen) {
         runOnJS(hapticDetent)();
       }
@@ -296,6 +303,40 @@ export function BlockCard({
     transform: [{ scale: 0.5 + statusFade.value * 0.5 }],
   }));
 
+  const progress = useDerivedValue(() =>
+    Math.min(Math.abs(translateX.value) / revealWidth, 1)
+  );
+
+  const missedProgress = useDerivedValue(() =>
+    interpolate(progress.value, [0.15, 1], [0, 1], Extrapolate.CLAMP)
+  );
+
+  const missedBtnStyle = useAnimatedStyle(() => ({
+    width: missedProgress.value * ACTION_BUTTON_WIDTH,
+    overflow: "hidden",
+  }));
+
+  const removeBtnStyle = useAnimatedStyle(() => ({
+    width: progress.value * ACTION_BUTTON_WIDTH,
+    overflow: "hidden",
+  }));
+
+  const missedActionContentStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(missedProgress.value, [0.3, 1], [0, 1], Extrapolate.CLAMP),
+    transform: [
+      {
+        scale: interpolate(missedProgress.value, [0.3, 1], [0.6, 1], Extrapolate.CLAMP),
+      },
+    ],
+  }));
+
+  const removeActionContentStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(progress.value, [0.3, 1], [0, 1], Extrapolate.CLAMP),
+    transform: [
+      { scale: interpolate(progress.value, [0.3, 1], [0.6, 1], Extrapolate.CLAMP) },
+    ],
+  }));
+
   return (
     <Animated.View
       style={[styles.cardShadow, shadowAnimatedStyle]}
@@ -307,31 +348,49 @@ export function BlockCard({
       <Animated.View style={[styles.cardWrapper, wrapperAnimatedStyle]}>
       <View style={styles.actionsBehind}>
         {isUnanswered && (
-          <TouchableOpacity
-            style={[styles.actionBtn, styles.missedBtn, styles.actionBtnLeftRounded]}
-            onPress={() => {
-              closeSwipe();
-              onMarkMissed(instance);
-            }}
-            activeOpacity={0.85}
+          <Animated.View
+            style={[
+              styles.actionBtn,
+              styles.missedBtn,
+              styles.actionBtnLeftRounded,
+              missedBtnStyle,
+            ]}
           >
-            <Text style={[styles.actionText, styles.missedBtnText]}>Missed</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.actionBtnTouch}
+              onPress={() => {
+                closeSwipe();
+                onMarkMissed(instance);
+              }}
+              activeOpacity={0.85}
+            >
+              <Animated.View style={missedActionContentStyle}>
+                <Text style={[styles.actionText, styles.missedBtnText]}>Missed</Text>
+              </Animated.View>
+            </TouchableOpacity>
+          </Animated.View>
         )}
-        <TouchableOpacity
+        <Animated.View
           style={[
             styles.actionBtn,
             styles.removeBtn,
             !isUnanswered && styles.actionBtnLeftRounded,
+            removeBtnStyle,
           ]}
-          onPress={() => {
-            closeSwipe();
-            onRemoveRequest(instance);
-          }}
-          activeOpacity={0.85}
         >
-          <Text style={styles.actionText}>Remove</Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.actionBtnTouch}
+            onPress={() => {
+              closeSwipe();
+              onRemoveRequest(instance);
+            }}
+            activeOpacity={0.85}
+          >
+            <Animated.View style={removeActionContentStyle}>
+              <Text style={styles.actionText}>Remove</Text>
+            </Animated.View>
+          </TouchableOpacity>
+        </Animated.View>
       </View>
 
       <Animated.View
@@ -424,8 +483,13 @@ const makeStyles = (c: Colors) =>
       flexDirection: "row",
     },
     actionBtn: {
-      width: ACTION_BUTTON_WIDTH,
       height: "100%",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    actionBtnTouch: {
+      flex: 1,
+      width: "100%",
       alignItems: "center",
       justifyContent: "center",
     },
