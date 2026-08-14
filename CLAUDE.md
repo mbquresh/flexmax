@@ -1066,7 +1066,7 @@ smart the app feels without improving whether the user follows through is not
 progress.
 
 > **The ICP is n=1.** The archetype is derived from the founder as primary
-> user — see the ICP section for the full picture. It is coherent and
+> user — see Who FlexMax is for above for the full picture. It is coherent and
 > internally consistent, and it is still one person. The beta's job is to test
 > whether it generalizes; treat every element of it as a hypothesis until real
 > testers either confirm or break it.
