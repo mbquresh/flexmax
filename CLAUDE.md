@@ -374,8 +374,10 @@ recorded so they are not re-argued from scratch.
 ### Accepted — build
 
 **1. The accounted-for streak (replaces the completion streak).**
-The streak currently counts days with at least one `completed` block, so it
-breaks on the first bad day — the historical uninstall trigger for this ICP.
+The streak currently counts days with at least one `completed` block, so a bad
+day accelerates toward the freeze — confronting the accumulated shortfall at
+once is the historical uninstall trigger for this ICP, not the first missed
+block alone.
 Change the protected number to "every block accounted for, honestly": a day
 counts if every instance has a real user-set status, regardless of outcome.
 `missed` (engaged, admitted) keeps it alive; only `unaccounted` (silence)
@@ -819,7 +821,7 @@ Things that corrupt the ledger or lose data permanently.
    new schema, no AI cost.
 
    This is the highest-value unread signal remaining, and it corresponds
-   directly to the cannibalization pattern in the ICP section.
+   directly to the cannibalization pattern in the Who FlexMax is for section.
 7. **Intention-reliability metric.** Planned vs. completed minutes over time —
    are the user's plans becoming more accurate. Pure SQL.
 8. **DeviceActivity drift-event table.** Schema only, no extension, so the shape
@@ -833,106 +835,202 @@ Things that corrupt the ledger or lose data permanently.
 
 ---
 
+## Who FlexMax is for
 
-
-## Product context (for AI-assisted decisions)
-
-## ICP
-
-*Derived from founder-as-primary-user research, n=1. The beta's job is to test whether this archetype generalizes. Source material is private and stays out of the repo.*
+*Derived from founder-as-primary-user research. n=1 — the beta's job is to
+test whether this archetype generalizes.*
 
 ### The person
 
-Genuinely ambitious, with goals that are their own. Capable of sustained effort — has built things, finished things, and knows what their good weeks look like. Not someone who needs convincing that change is worth wanting.
+Genuinely ambitious, with goals that are their own. Capable of sustained
+effort — has built things, finished things, and knows what their good weeks
+look like. Not someone who needs convincing that change is worth wanting.
 
-The gap is not motivation and not planning. They can produce an accurate, realistic schedule and then fail to execute it, repeatedly, without ever making a conscious decision to abandon it.
+The gap is not motivation and not planning. They can produce an accurate,
+realistic schedule and then fail to execute it, repeatedly, without ever
+making a conscious decision to abandon it.
 
-**The failure mechanism: unconscious inaction.** Time is not consciously traded away — it evaporates. There is no moment of choosing distraction over the plan; there is only a later moment of noticing the plan didn't happen. This is the specific thing FlexMax exists to interrupt.
+**The failure mechanism: unconscious inaction.** Time is not consciously
+traded away — it evaporates. There is no moment of choosing distraction over
+the plan; there is only a later moment of noticing the plan didn't happen.
+This is the specific thing FlexMax exists to interrupt.
 
 ### The collapse pattern — two timescales
 
 **Short arc (days):**
 
 1. Structure holds while something external is watching.
-2. External structure is removed — travel, a break in routine, a quiet week — and execution collapses quickly and completely, not gradually.
-3. The gap between plan and reality grows large enough that reviewing it becomes aversive.
-4. **The freeze.** Re-engaging now requires confronting the whole accumulated shortfall at once, so it gets avoided entirely. This is the uninstall moment for every tool they've tried.
+2. External structure is removed — travel, a break in routine, a quiet week —
+   and execution collapses quickly and completely, not gradually.
+3. The gap between plan and reality grows large enough that reviewing it
+   becomes aversive.
+4. **The freeze.** Re-engaging now requires confronting the whole accumulated
+   shortfall at once, so it gets avoided entirely. This is the uninstall
+   moment for every tool they've tried.
 
-The freeze is the highest-leverage moment in the product. Everything about the recovery flow, the accounted-for streak, and the collapsed multi-miss path exists to make re-entry cost less than avoidance.
+The freeze is the highest-leverage moment in the product. Everything about the
+recovery flow, the accounted-for streak, and the collapsed multi-miss path
+exists to make re-entry cost less than avoidance.
 
 **Long arc (months) — the higher-stakes version:**
 
 1. Sustained unconscious drift on a goal the person genuinely owns.
 2. Effort is real but unregistered; **no visible results accumulate.**
-3. When the goal is challenged — by someone else, or by their own review of it — there is no evidence to point at.
-4. The goal becomes indefensible. Belief in it collapses, and the person yields to someone else's plan for them.
+3. When the goal is challenged — by someone else, or by their own review of
+   it — there is no evidence to point at.
+4. The goal becomes indefensible. Belief in it collapses, and the person
+   yields to someone else's plan for them.
 
-**The causality runs in this direction and it is easy to get backwards.** The drift is not a symptom of lost motivation. The drift is what *produces* the absence of evidence, and the absence of evidence is what dissolves the motivation. A person can want something entirely for their own reasons and still lose it this way.
+**The causality runs in this direction and it is easy to get backwards.** The
+drift is not a symptom of lost motivation. The drift is what *produces* the
+absence of evidence, and the absence of evidence is what dissolves the
+motivation. A person can want something entirely for their own reasons and
+still lose it this way.
 
-This is the real stake of the product. Not hours recovered — the capacity to defend one's own ambition, which requires having something to point at.
+This is the real stake of the product. Not hours recovered — the capacity to
+defend one's own ambition, which requires having something to point at.
 
 ### The cannibalization pattern
 
-Drift does not spend time evenly across a schedule. It triggers **active sacrifice of specific blocks to subsidize others.** When a status-goal slips, the compensation is not "everything loses a little" — it's a targeted raid on whichever blocks feel most sacrificeable in the moment, characteristically health, fitness, and anything framed as maintenance rather than progress.
+Drift does not spend time evenly across a schedule. It triggers **active
+sacrifice of specific blocks to subsidize others.** When a status-goal slips,
+the compensation is not "everything loses a little" — it's a targeted raid on
+whichever blocks feel most sacrificeable in the moment, characteristically
+health, fitness, and anything framed as maintenance rather than progress.
 
-This is self-defeating in a specific, mechanical way: the sacrificed blocks are not peers to the protected one, they're **infrastructure it depends on.** Degrading them degrades the capacity the protected goal actually runs on. The compensation strategy undermines the exact thing it's trying to save.
+This is self-defeating in a specific, mechanical way: the sacrificed blocks
+are not peers to the protected one, they're **infrastructure it depends on.**
+Degrading them degrades the capacity the protected goal actually runs on. The
+compensation strategy undermines the exact thing it's trying to save.
 
-**Design implication:** the product needs to treat blocks as having *interdependence*, not just individual completion rates. A block that gets disproportionately sacrificed whenever a different specific block is missed is a detectable pattern — and naming it directly ("your workouts disappear in the same week your deep work slips — cutting one doesn't protect the other") is a materially different, more useful insight than reporting on either block in isolation.
+**Design implication:** the product needs to treat blocks as having
+*interdependence*, not just individual completion rates. A block that gets
+disproportionately sacrificed whenever a different specific block is missed is
+a detectable pattern — and naming it directly ("your workouts disappear in the
+same week your deep work slips — cutting one doesn't protect the other") is a
+materially different, more useful insight than reporting on either block in
+isolation.
 
 ### Why previous tools failed them
 
-- **Calendars and planners:** the schedule was accurate. It was ignored. **A calendar entry is a suggestion with no weight behind it** — it fires a notification on a fixed timetable, carries no knowledge of the person, and decays into background noise within weeks. Being reminded is not the same as being known. The design problem this sets: give the schedule *weight* without giving it *pressure*, since this audience fails in both directions.
-- **Habit trackers:** rendered the shortfall as a verdict, which accelerated the freeze rather than relieving it.
-- **Nothing they tried distinguished a deliberate rest from a silent collapse.** Both showed up as the same empty row.
+- **Calendars and planners:** the schedule was accurate. It was ignored.
+  **A calendar entry is a suggestion with no weight behind it** — it fires a
+  notification on a fixed timetable, carries no knowledge of the person, and
+  decays into background noise within weeks. Being reminded is not the same as
+  being known. The design problem this sets: give the schedule *weight*
+  without giving it *pressure*, since this audience fails in both directions.
+- **Habit trackers:** rendered the shortfall as a verdict, which accelerated
+  the freeze rather than relieving it.
+- **Nothing they tried distinguished a deliberate rest from a silent
+  collapse.** Both showed up as the same empty row.
 
 ### The core insight: honesty is easier without a face
 
-This user has had real human accountability and found that it works — and that it comes with a tax. In front of a person, effort gets diverted into managing perception: presenting the week favorably, emphasizing what went well, deflecting from what didn't. The diversion is not dishonesty so much as self-protection, and it has two costs:
+This user has had real human accountability and found that it works — and that
+it comes with a tax. In front of a person, effort gets diverted into managing
+perception: presenting the week favorably, emphasizing what went well,
+deflecting from what didn't. The diversion is not dishonesty so much as
+self-protection, and it has two costs:
 
 1. Energy that would go into execution goes into presentation instead.
-2. **The accountability partner can only work with what they're shown** — so the most useful information, the actual pattern of failure, is precisely the information withheld.
+2. **The accountability partner can only work with what they're shown** — so
+   the most useful information, the actual pattern of failure, is precisely
+   the information withheld.
 
-An AI removes the audience. There is no one to disappoint, no status to protect, no embarrassment in reporting a nap or a lost afternoon. This produces a strictly better input than human accountability can obtain, which is why the resulting understanding can exceed what a human mentor would reach.
+An AI removes the audience. There is no one to disappoint, no status to
+protect, no embarrassment in reporting a nap or a lost afternoon. This produces
+a strictly better input than human accountability can obtain, which is why the
+resulting understanding can exceed what a human mentor would reach.
 
-**This is the product's central claim and its most defensible one.** Not "AI is smarter than a mentor" — "an AI gets told the truth, and a mentor doesn't."
+**This is the product's central claim and its most defensible one.** Not "AI is
+smarter than a mentor" — "an AI gets told the truth, and a mentor doesn't."
 
 ### Not everything from the mentor gets discarded
 
-The surveillance and the judgment should go. **Routine itself should not.** These turned out to be separable, and the separation matters for design.
+The surveillance and the judgment should go. **Routine itself should not.**
+These turned out to be separable, and the separation matters for design.
 
-Structure, held for its own sake rather than because someone is checking, is what prevented the cannibalization pattern above from happening in the first place. A block with real weight behind it doesn't get silently raided when a different part of the day goes sideways — an unprotected intention does. This isn't an accountability effect. It doesn't require anyone watching. It's what a schedule does when it's actually load-bearing instead of a suggestion.
+Structure, held for its own sake rather than because someone is checking, is
+what prevents the cannibalization pattern above. A block with real weight
+behind it doesn't get silently raided when a different part of the day goes
+sideways — an unprotected intention does. This isn't an accountability effect.
+It doesn't require anyone watching. It's what a schedule does when it's
+actually load-bearing instead of a suggestion.
 
-The product's job is to reproduce *this* half of the mentor relationship — routine with real weight — without reproducing the half that made honesty costly. Getting only the second half (accountability, minus structure) would be an incomplete rebuild; the routine was doing real work on its own.
+The product's job is to reproduce *this* half of the mentor relationship —
+routine with real weight — without reproducing the half that made honesty
+costly. Getting only the second half (accountability, minus structure) would be
+an incomplete rebuild; the routine was doing real work on its own.
 
 ### What they actually want
 
-- To be seen accurately: capable *and* currently falling short, without either fact cancelling the other.
-- Accountability without ambient dread. Rest must be legitimate and chooseable, not something to hide.
-- **Consciousness restored at the moment it drops**, which is the only intervention that addresses the real mechanism.
-- Peace rather than pressure. Deadline pressure produces compliance; it does not produce durable execution, and it degrades the quality of self-reporting.
-- Proof that acting deliberately becomes *easier* than drifting — not that they should try harder.
-- **Accumulated evidence of their own effort.** A record they can point at, for their own belief before anyone else's. This follows directly from the long arc above: the person who can see what they actually did is much harder to talk out of their own goals.
+- To be seen accurately: capable *and* currently falling short, without either
+  fact cancelling the other.
+- Accountability without ambient dread. Rest must be legitimate and
+  chooseable, not something to hide.
+- **Consciousness restored at the moment it drops**, which is the only
+  intervention that addresses the real mechanism.
+- Peace rather than pressure. Deadline pressure produces compliance; it does
+  not produce durable execution, and it degrades the quality of self-reporting.
+- Proof that acting deliberately becomes *easier* than drifting — not that they
+  should try harder.
+- **Accumulated evidence of their own effort.** A record they can point at, for
+  their own belief before anyone else's. The person who can see what they
+  actually did is much harder to talk out of their own goals.
 
 ### Who this is NOT for
 
-- **No internal motivation of their own.** Someone who acts only under external compulsion needs a different product; FlexMax assumes the wanting is already there and only the execution is broken. Note that this is a statement about *whether the product is useful*, not about whether drift occurs — drift happens independently of where the motivation came from, and it happens to people whose goals are entirely their own.
-- **Already has a working system.** If their current approach produces acceptable results, there is no gap to close and nothing here to sell.
-- **Wants to be told what to do.** FlexMax observes and reflects; it does not author goals.
+- **No internal motivation of their own.** Someone who acts only under external
+  compulsion needs a different product; FlexMax assumes the wanting is already
+  there and only the execution is broken. This is a statement about *whether
+  the product is useful*, not about whether drift occurs — drift happens
+  independently of where the motivation came from, and it happens to people
+  whose goals are entirely their own.
+- **Already has a working system.** If their current approach produces
+  acceptable results, there is no gap to close and nothing here to sell.
+- **Wants to be told what to do.** FlexMax observes and reflects; it does not
+  author goals.
 
 ### Design constraints that follow
 
-1. **Never create surveillance anxiety.** If the app makes rest feel risky, it has reproduced the exact failure of human accountability it exists to improve on.
-2. **Nudges must be earned and specific**, or they become the same wallpaper every calendar notification became. A nudge that can cite a reason is a different object than a nudge that fires on a timer.
-3. **Deliberate rest and silent collapse must be distinguishable** in the data and in the interface.
-4. **Re-entry after collapse must cost less than avoidance.** Multi-miss days collapse to one path, one acknowledgement, one way forward.
-5. **Never reflect the user's harshest self-description back at them.** This audience arrives already fluent in self-criticism; the product's value is accuracy, which is a different thing and usually a kinder one.
-6. **Protect infrastructure blocks from cannibalization.** Health, sleep, and anything framed as maintenance rather than progress needs to resist being silently sacrificed when a status-goal slips. The existing fixed/anchor block mechanic already does part of this job structurally — worth being deliberate about which blocks get positioned as anchors, and worth surfacing the cross-block pattern explicitly when it happens rather than only reporting each block's own numbers.
-
-   **NOTE: detect and name the pattern rather than structurally preventing it.** Anchoring infrastructure blocks trades cannibalization for rigidity, and rigidity produces the freeze. Naming the pattern respects the user's agency; locking the block does not.
+1. **Never create surveillance anxiety.** If the app makes rest feel risky, it
+   has reproduced the exact failure of human accountability it exists to
+   improve on.
+2. **Nudges must be earned and specific**, or they become the same wallpaper
+   every calendar notification became. A nudge that can cite a reason is a
+   different object than a nudge that fires on a timer.
+3. **Deliberate rest and silent collapse must be distinguishable** in the data
+   and in the interface.
+4. **Re-entry after collapse must cost less than avoidance.** Multi-miss days
+   collapse to one path, one acknowledgement, one way forward.
+5. **Never reflect the user's harshest self-description back at them.** This
+   audience arrives already fluent in self-criticism; the product's value is
+   accuracy, which is a different thing and usually a kinder one.
+6. **Detect and name cannibalization — do not structurally prevent it.**
+   Health, sleep, and anything framed as maintenance rather than progress tends
+   to get sacrificed first when a status-goal slips. The response is to surface
+   the cross-block pattern explicitly ("your workouts disappear the same weeks
+   your deep work slips — cutting one doesn't protect the other"), not to lock
+   the block. Anchoring infrastructure blocks trades cannibalization for
+   rigidity, and rigidity produces the freeze. Naming respects the user's
+   agency; locking does not.
 
 ### Internal archetype (not for external use)
 
-"The Capable Drifter" remains useful for product thinking. The external market definition is behavioral: **high intention × low execution reliability**, with unconscious inaction as the named mechanism. Personality framing narrows the market and asks people to self-identify with a label nobody wants; the behavioral framing describes a problem people recognize immediately in themselves.
+"The Capable Drifter" remains useful for product thinking and shapes tone
+decisions. The external market definition is behavioral: **high intention ×
+low execution reliability**, with unconscious inaction as the named mechanism.
+Personality framing narrows the market and asks people to self-identify with a
+label nobody wants; the behavioral framing describes a problem people
+recognize immediately in themselves.
+
+---
+
+## Product context (for AI-assisted decisions)
+
+**Ideal customer:** see **Who FlexMax is for** above. External definition:
+high intention × low execution reliability. External pain sentence: "I know
+what I need to do — why can't I consistently make myself do it?"
 
 **Day-planning competitor:** Structured — see **Competitive positioning** above.
 
@@ -967,12 +1065,11 @@ Everything in the roadmap is subordinate to this. A feature that improves how
 smart the app feels without improving whether the user follows through is not
 progress.
 
-**The ICP is n=1 and derived from the founder.** Every element of the archetype
-— unconscious inaction, the freeze, the cannibalization pattern, the honesty-
-without-a-face claim — is drawn from a single person's experience and validated
-against a single month of that person's data. It is internally coherent and it
-matches the behavioral evidence, but coherence is not generalization. The beta's
-first job is to test whether this archetype describes anyone else.
+> **The ICP is n=1.** The archetype is derived from the founder as primary
+> user — see the ICP section for the full picture. It is coherent and
+> internally consistent, and it is still one person. The beta's job is to test
+> whether it generalizes; treat every element of it as a hypothesis until real
+> testers either confirm or break it.
 
 **The truth-telling claim is untestable on its current sample.** The argument
 that users tell an AI the truth is validated on one person who is also the
