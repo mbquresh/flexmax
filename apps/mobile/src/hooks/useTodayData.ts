@@ -18,6 +18,9 @@ export function useTodayData(userId: string | undefined) {
   const [adhocTasks, setAdhocTasks] = useState<AdhocTask[]>([]);
   const [insights, setInsights] = useState<BehavioralInsight[]>([]);
   const currentDateRef = useRef(getLocalDateString());
+  // Every load claims a token. Only the most recent load may write state —
+  // an earlier, slower request that resolves last must discard its results.
+  const loadSeqRef = useRef(0);
 
   const timedAdhoc = useMemo(
     () => adhocTasks.filter((t) => t.start_minutes != null),
@@ -37,6 +40,9 @@ export function useTodayData(userId: string | undefined) {
     async (dateOverride?: string, options?: { silent?: boolean }) => {
       if (!userId) return;
 
+      const seq = ++loadSeqRef.current;
+      const isStale = () => seq !== loadSeqRef.current;
+
       const targetDate = dateOverride ?? getLocalDateString();
       setDisplayDate(targetDate);
       currentDateRef.current = targetDate;
@@ -47,7 +53,9 @@ export function useTodayData(userId: string | undefined) {
       await generateDailyInstances(targetDate);
 
       fetchTodayStats(userId)
-        .then(setStats)
+        .then((s) => {
+          if (!isStale()) setStats(s);
+        })
         .catch((err) => handleError(err, "fetchTodayStats"));
 
       const { count } = await supabase
@@ -55,6 +63,7 @@ export function useTodayData(userId: string | undefined) {
         .select("*", { count: "exact", head: true })
         .eq("user_id", userId);
 
+      if (isStale()) return;
       setTotalBlocks(count ?? 0);
 
       const { data, error } = await supabase
@@ -86,8 +95,10 @@ export function useTodayData(userId: string | undefined) {
       if (error) {
         handleError(error, "loadToday");
       } else {
+        if (isStale()) return;
         setTodayInstances(data ?? []);
         if (data?.length) {
+          if (isStale()) return;
           try {
             const cutoffs = await scheduleTodayBlockNotifications(
               data,
@@ -121,16 +132,19 @@ export function useTodayData(userId: string | undefined) {
       if (adhocError) {
         handleError(adhocError, "loadToday adhoc");
       } else {
+        if (isStale()) return;
         setAdhocTasks(adhoc ?? []);
       }
 
       if (insightsError) {
         handleError(insightsError, "loadToday insights");
       } else {
+        if (isStale()) return;
         setInsights(insightsData ?? []);
       }
 
       if (!options?.silent) {
+        if (isStale()) return;
         setLoading(false);
       }
 
