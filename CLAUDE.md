@@ -181,8 +181,8 @@ Cursor = implementation engine.
 | 021 | quality_drift.sql             | quality_drift added to get_behavior_evidence; completion_rating in base CTE                                                |
 | 022 | preset_onboarding_columns.sql | psychology_profiles preset onboarding columns                                                                              |
 | 023 | atomic_insight_replace.sql    | replace_behavioral_insights RPC — atomic insight set replacement                                                           |
-| 024 | acknowledged_at.sql           | acknowledged_at column + trigger on first status acknowledgment                                                            |
-| 025 | value_constraints.sql         | NOT VALID CHECK on status and completion_rating                                                                            |
+| 024 | acknowledged_at.sql           | daily_schedule_instances.acknowledged_at + BEFORE UPDATE trigger — stamps on first real acknowledgment, cleared on undo      |
+| 025 | value_constraints.sql         | CHECK constraints on status and completion_rating (NOT VALID)                                                              |
 
 
 ---
@@ -342,6 +342,10 @@ marker at all.
 | Press feedback system                         | PressableScale scale + highlight variants |
 | reflection_improve chips                      | Five presets + "Something else" escape hatch in RecoverySheet |
 | Reschedule sleep boundary                     | findRescheduleSlot respects sleep_target_minutes; manual adjust in RecoverySheet |
+| Acknowledgment timing                         | 024. Recovery time (deviation → acknowledgment) is now computable. Un-backfillable, which is why it led Tier 1 |
+| Value constraints                             | 025. status and completion_rating. NOT VALID so legacy rows are untouched; all future writes governed |
+| loadToday stale-request guard                 | Sequence token per load; superseded loads discard their results rather than overwriting newer state |
+| Test infrastructure                           | vitest on pure modules. Covers the streak threshold, the accounted-but-missed day, unaccounted transparency, and the recovery copy branches |
 
 
 
@@ -782,21 +786,25 @@ Ordering logic, so future sessions understand why: un-backfillable before
 valuable; ledger integrity before features; anything the falsifiable test
 depends on before anything that only makes the app feel smarter.
 
+> **Tier 1 status:** complete as of 2026-08-13. Tier 2 is unblocked.
+
 ### Tier 1 — before external users
 Things that corrupt the ledger or lose data permanently.
 
-1. **acknowledged_at on status transitions** (024). SHIPPED. Un-backfillable.
+1. ~~acknowledged_at on status transitions~~ **SHIPPED (024).** Un-backfillable.
    rated_at stamps only on completion; reflected_at only when text is written
    (~31% of misses). Without this, recovery time — deviation to acknowledgment
    — cannot be computed, and it is the metric that tests the falsifiable
    hypothesis.
-2. **CHECK constraints on status and completion_rating** (025). SHIPPED. The
+2. ~~CHECK constraints on status and completion_rating~~ **SHIPPED (025).** The
    status set already drifted once. A bad value written now is corrupt forever.
-3. **loadToday stale-request guard.** A slower earlier request landing after a
-   newer one shows wrong state the user then acts on.
-4. **Tests on stats.ts and recoveryCopy.ts.** Pure functions, repeatedly
-   rewritten, computing the numbers the user sees. See the offline queue
-   postmortem (Known issues) for what shipping unverified logic costs.
+3. ~~loadToday stale-request guard~~ **SHIPPED.** Monotonic sequence token per
+   load; only the newest may write state. currentDateRef alone was insufficient
+   because two loads for the SAME date both passed it.
+4. ~~Tests on stats.ts and recoveryCopy.ts.~~ **SHIPPED.** vitest, pure modules
+   only — no React, no React Native, no Supabase mocking. computeStreakData was
+   extracted from fetchTodayStats so the accounting math is testable without I/O.
+   Deliberately NOT taking on component or integration testing.
 
 ### Tier 2 — instrument now, build later
 5. **Intervention→outcome and miss_reason_tag into the evidence pack.**
