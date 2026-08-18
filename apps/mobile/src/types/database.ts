@@ -116,6 +116,7 @@ export interface DailyInstance {
   reflection_why: string | null;
   reflection_improve: string | null;
   reflected_at: string | null;
+  acknowledged_at: string | null;
   miss_reason_tag: string | null;
   actual_end_minutes: number | null;
   rescheduled_to_id: string | null;

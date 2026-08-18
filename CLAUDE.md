@@ -181,6 +181,8 @@ Cursor = implementation engine.
 | 021 | quality_drift.sql             | quality_drift added to get_behavior_evidence; completion_rating in base CTE                                                |
 | 022 | preset_onboarding_columns.sql | psychology_profiles preset onboarding columns                                                                              |
 | 023 | atomic_insight_replace.sql    | replace_behavioral_insights RPC — atomic insight set replacement                                                           |
+| 024 | acknowledged_at.sql           | acknowledged_at column + trigger on first status acknowledgment                                                            |
+| 025 | value_constraints.sql         | NOT VALID CHECK on status and completion_rating                                                                            |
 
 
 ---
@@ -783,12 +785,13 @@ depends on before anything that only makes the app feel smarter.
 ### Tier 1 — before external users
 Things that corrupt the ledger or lose data permanently.
 
-1. **acknowledged_at on status transitions** (024). Un-backfillable. rated_at
-   stamps only on completion; reflected_at only when text is written (~31% of
-   misses). Without this, recovery time — deviation to acknowledgment — cannot
-   be computed, and it is the metric that tests the falsifiable hypothesis.
-2. **CHECK constraints on status and completion_rating** (025). The status set
-   already drifted once. A bad value written now is corrupt forever.
+1. **acknowledged_at on status transitions** (024). SHIPPED. Un-backfillable.
+   rated_at stamps only on completion; reflected_at only when text is written
+   (~31% of misses). Without this, recovery time — deviation to acknowledgment
+   — cannot be computed, and it is the metric that tests the falsifiable
+   hypothesis.
+2. **CHECK constraints on status and completion_rating** (025). SHIPPED. The
+   status set already drifted once. A bad value written now is corrupt forever.
 3. **loadToday stale-request guard.** A slower earlier request landing after a
    newer one shows wrong state the user then acts on.
 4. **Tests on stats.ts and recoveryCopy.ts.** Pure functions, repeatedly
