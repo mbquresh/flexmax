@@ -13,12 +13,22 @@ export interface TodayStats {
   todayCountedInStreak: boolean;
 }
 
+export interface StatsRow {
+  date: string;
+  status: string;
+}
+
 function toLocalDateStr(d: Date): string {
   return [
     d.getFullYear(),
     String(d.getMonth() + 1).padStart(2, "0"),
     String(d.getDate()).padStart(2, "0"),
   ].join("-");
+}
+
+function parseLocalDateStr(dateStr: string): Date {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(y, m - 1, d);
 }
 
 // A block is "accounted for" when the user gave it a real status.
@@ -34,6 +44,99 @@ const EXCLUDED = ["removed", "rescheduled"];
 // 7 of 8 — one forgotten block should not erase a day that was otherwise
 // closed out honestly, but a real collapse still breaks the streak.
 export const STREAK_THRESHOLD = 0.8;
+
+export function computeStreakData(
+  windowRows: StatsRow[],
+  todayStr: string,
+  weekMondayStr: string
+): {
+  streak: number;
+  weekDayCompletionRatio: number[];
+  weekDayMissedRatio: number[];
+  todayCountedInStreak: boolean;
+} {
+  const byDate = new Map<
+    string,
+    { relevant: number; accounted: number; completed: number; missed: number }
+  >();
+  for (const r of windowRows) {
+    if (EXCLUDED.includes(r.status)) continue;
+    const entry = byDate.get(r.date) ?? {
+      relevant: 0,
+      accounted: 0,
+      completed: 0,
+      missed: 0,
+    };
+    entry.relevant++;
+    if (ACCOUNTED.includes(r.status)) entry.accounted++;
+    if (r.status === "completed") entry.completed++;
+    if (r.status === "missed") entry.missed++;
+    byDate.set(r.date, entry);
+  }
+
+  const accountedDates = new Set(
+    [...byDate.entries()]
+      .filter(([, v]) => v.relevant > 0 && v.accounted / v.relevant >= STREAK_THRESHOLD)
+      .map(([date]) => date)
+  );
+
+  // Days with nothing scheduled are transparent — they neither break the
+  // streak nor extend it. A user should not lose a streak to an empty day.
+  const emptyDates = new Set(
+    [...byDate.entries()].filter(([, v]) => v.relevant === 0).map(([d]) => d)
+  );
+
+  const monday = parseLocalDateStr(weekMondayStr);
+
+  const weekDayCompletionRatio = Array.from({ length: 7 }, (_, i) => {
+    const day = new Date(monday);
+    day.setDate(monday.getDate() + i);
+    const dateStr = toLocalDateStr(day);
+    const entry = byDate.get(dateStr);
+    if (!entry || entry.relevant === 0) return 0;
+    return entry.completed / entry.relevant;
+  });
+
+  const weekDayMissedRatio = Array.from({ length: 7 }, (_, i) => {
+    const day = new Date(monday);
+    day.setDate(monday.getDate() + i);
+    const dateStr = toLocalDateStr(day);
+    const entry = byDate.get(dateStr);
+    if (!entry || entry.relevant === 0) return 0;
+    return entry.missed / entry.relevant;
+  });
+
+  let streak = 0;
+  const checkDate = parseLocalDateStr(todayStr);
+
+  for (let i = 0; i < 31; i++) {
+    const dateStr = toLocalDateStr(checkDate);
+
+    if (i === 0) {
+      // Today is still in progress. Count it if already fully closed out,
+      // but never let it break the streak.
+      if (accountedDates.has(dateStr)) streak++;
+      checkDate.setDate(checkDate.getDate() - 1);
+      continue;
+    }
+
+    if (accountedDates.has(dateStr)) {
+      streak++;
+    } else if (!byDate.has(dateStr) || emptyDates.has(dateStr)) {
+      // Nothing was scheduled — transparent, skip without breaking.
+    } else {
+      break;
+    }
+    checkDate.setDate(checkDate.getDate() - 1);
+  }
+
+  return {
+    streak,
+    weekDayCompletionRatio,
+    weekDayMissedRatio,
+    todayCountedInStreak: accountedDates.has(todayStr),
+  };
+}
 
 export async function fetchTodayStats(userId: string): Promise<TodayStats> {
   // ── Completion rate: current week Mon–Sun ──────────────────────────────
@@ -102,78 +205,8 @@ export async function fetchTodayStats(userId: string): Promise<TodayStats> {
   ).length;
   const todayCompleted = todayInstances.filter((i) => i.status === "completed").length;
 
-  const byDate = new Map<
-    string,
-    { relevant: number; accounted: number; completed: number; missed: number }
-  >();
-  for (const r of windowRows ?? []) {
-    if (EXCLUDED.includes(r.status)) continue;
-    const entry = byDate.get(r.date) ?? {
-      relevant: 0,
-      accounted: 0,
-      completed: 0,
-      missed: 0,
-    };
-    entry.relevant++;
-    if (ACCOUNTED.includes(r.status)) entry.accounted++;
-    if (r.status === "completed") entry.completed++;
-    if (r.status === "missed") entry.missed++;
-    byDate.set(r.date, entry);
-  }
-
-  const accountedDates = new Set(
-    [...byDate.entries()]
-      .filter(([, v]) => v.relevant > 0 && v.accounted / v.relevant >= STREAK_THRESHOLD)
-      .map(([date]) => date)
-  );
-
-  // Days with nothing scheduled are transparent — they neither break the
-  // streak nor extend it. A user should not lose a streak to an empty day.
-  const emptyDates = new Set(
-    [...byDate.entries()].filter(([, v]) => v.relevant === 0).map(([d]) => d)
-  );
-
-  const weekDayCompletionRatio = Array.from({ length: 7 }, (_, i) => {
-    const day = new Date(monday);
-    day.setDate(monday.getDate() + i);
-    const dateStr = toLocalDateStr(day);
-    const entry = byDate.get(dateStr);
-    if (!entry || entry.relevant === 0) return 0;
-    return entry.completed / entry.relevant;
-  });
-
-  const weekDayMissedRatio = Array.from({ length: 7 }, (_, i) => {
-    const day = new Date(monday);
-    day.setDate(monday.getDate() + i);
-    const dateStr = toLocalDateStr(day);
-    const entry = byDate.get(dateStr);
-    if (!entry || entry.relevant === 0) return 0;
-    return entry.missed / entry.relevant;
-  });
-
-  let streak = 0;
-  const checkDate = new Date(now);
-
-  for (let i = 0; i < 31; i++) {
-    const dateStr = toLocalDateStr(checkDate);
-
-    if (i === 0) {
-      // Today is still in progress. Count it if already fully closed out,
-      // but never let it break the streak.
-      if (accountedDates.has(dateStr)) streak++;
-      checkDate.setDate(checkDate.getDate() - 1);
-      continue;
-    }
-
-    if (accountedDates.has(dateStr)) {
-      streak++;
-    } else if (!byDate.has(dateStr) || emptyDates.has(dateStr)) {
-      // Nothing was scheduled — transparent, skip without breaking.
-    } else {
-      break;
-    }
-    checkDate.setDate(checkDate.getDate() - 1);
-  }
+  const { streak, weekDayCompletionRatio, weekDayMissedRatio, todayCountedInStreak } =
+    computeStreakData(windowRows ?? [], todayStr, mondayStr);
 
   return {
     streak,
@@ -184,6 +217,6 @@ export async function fetchTodayStats(userId: string): Promise<TodayStats> {
     todayTotal,
     weekDayCompletionRatio,
     weekDayMissedRatio,
-    todayCountedInStreak: accountedDates.has(todayStr),
+    todayCountedInStreak,
   };
 }
