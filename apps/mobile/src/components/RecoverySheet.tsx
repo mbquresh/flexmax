@@ -1,15 +1,17 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
   Modal,
   TouchableOpacity,
-  TouchableWithoutFeedback,
   TextInput,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Pressable,
+  Animated as RNAnimated,
+  Easing,
 } from "react-native";
 import { DailyInstance } from "../types/database";
 import { RecoveryCopy } from "../lib/recoveryCopy";
@@ -19,6 +21,12 @@ import { Colors, spacing, radii, typography } from "../theme";
 import { useTheme } from "../providers/ThemeProvider";
 import { TimePicker } from "./TimePicker";
 import { PressableScale } from "./PressableScale";
+
+const SHEET_OFFSET = 400;
+const OPEN_DURATION = 220;
+const CLOSE_DURATION = 180;
+const SCRIM_OPACITY_LIGHT = 0.4;
+const SCRIM_OPACITY_DARK = 0.6;
 
 const IMPROVE_CHIPS = [
   "Start earlier",
@@ -66,10 +74,49 @@ export function RecoverySheet({
   onClose,
   onSkip,
 }: RecoverySheetProps) {
-  const { colors } = useTheme();
+  const { colors, scheme } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [improveOther, setImproveOther] = useState(false);
   const [adjustOpen, setAdjustOpen] = useState(false);
+  const slideAnim = useRef(new RNAnimated.Value(SHEET_OFFSET)).current;
+  const scrimAnim = useRef(new RNAnimated.Value(0)).current;
+  const scrimOpacity = scheme === "dark" ? SCRIM_OPACITY_DARK : SCRIM_OPACITY_LIGHT;
+
+  useEffect(() => {
+    if (recoveryInstance) {
+      slideAnim.setValue(SHEET_OFFSET);
+      scrimAnim.setValue(0);
+      RNAnimated.parallel([
+        RNAnimated.timing(slideAnim, {
+          toValue: 0,
+          duration: OPEN_DURATION,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        RNAnimated.timing(scrimAnim, {
+          toValue: scrimOpacity,
+          duration: OPEN_DURATION,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [recoveryInstance, recoveryInstance?.id, slideAnim, scrimAnim, scrimOpacity]);
+
+  const handleClose = () => {
+    RNAnimated.parallel([
+      RNAnimated.timing(slideAnim, {
+        toValue: SHEET_OFFSET,
+        duration: CLOSE_DURATION,
+        useNativeDriver: true,
+      }),
+      RNAnimated.timing(scrimAnim, {
+        toValue: 0,
+        duration: CLOSE_DURATION,
+        useNativeDriver: true,
+      }),
+    ]).start(() => onClose());
+  };
 
   useEffect(() => {
     setAdjustOpen(false);
@@ -110,17 +157,21 @@ export function RecoverySheet({
     <Modal
       visible={!!recoveryInstance}
       transparent
-      animationType="slide"
-      onRequestClose={onClose}
+      animationType="none"
+      onRequestClose={handleClose}
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.modalOverlay}
-      >
-        <TouchableWithoutFeedback onPress={onClose}>
-          <View style={styles.backdrop} />
-        </TouchableWithoutFeedback>
-        <View style={styles.recoverySheet}>
+      <View style={styles.root}>
+        <RNAnimated.View
+          style={[styles.scrim, { opacity: scrimAnim }]}
+          pointerEvents="none"
+        />
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.overlayPressable}
+        >
+          <Pressable style={styles.dismiss} onPress={handleClose} />
+          <Pressable onPress={(e) => e.stopPropagation()}>
+            <RNAnimated.View style={[styles.recoverySheet, { transform: [{ translateY: slideAnim }] }]}>
           <View style={styles.sheetHandle} />
           <Text style={styles.recoveryTitle}>
             {recoveryInstance?.block?.name ?? "Block"} — missed
@@ -257,21 +308,30 @@ export function RecoverySheet({
               <Text style={styles.skipText}>Skip</Text>
             </PressableScale>
           </View>
-        </View>
-      </KeyboardAvoidingView>
+            </RNAnimated.View>
+          </Pressable>
+        </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
 }
 
 const makeStyles = (c: Colors) =>
   StyleSheet.create({
-    modalOverlay: {
+    root: {
       flex: 1,
       justifyContent: "flex-end",
+    },
+    scrim: {
+      ...StyleSheet.absoluteFillObject,
       backgroundColor: c.overlayScrim,
     },
-    backdrop: {
-      ...StyleSheet.absoluteFillObject,
+    overlayPressable: {
+      flex: 1,
+      justifyContent: "flex-end",
+    },
+    dismiss: {
+      flex: 1,
     },
     recoverySheet: {
       backgroundColor: c.surface,
