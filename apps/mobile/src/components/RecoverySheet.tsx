@@ -1,15 +1,15 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
   Modal,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   TextInput,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
-  Pressable,
-  Animated as RNAnimated,
-  Easing,
 } from "react-native";
 import { DailyInstance } from "../types/database";
 import { RecoveryCopy } from "../lib/recoveryCopy";
@@ -19,12 +19,6 @@ import { Colors, spacing, radii, typography } from "../theme";
 import { useTheme } from "../providers/ThemeProvider";
 import { TimePicker } from "./TimePicker";
 import { PressableScale } from "./PressableScale";
-
-const SHEET_OFFSET = 400;
-const OPEN_DURATION = 220;
-const CLOSE_DURATION = 180;
-const SCRIM_OPACITY_LIGHT = 0.4;
-const SCRIM_OPACITY_DARK = 0.6;
 
 const IMPROVE_CHIPS = [
   "Start earlier",
@@ -72,49 +66,10 @@ export function RecoverySheet({
   onClose,
   onSkip,
 }: RecoverySheetProps) {
-  const { colors, scheme } = useTheme();
+  const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [improveOther, setImproveOther] = useState(false);
   const [adjustOpen, setAdjustOpen] = useState(false);
-  const slideAnim = useRef(new RNAnimated.Value(SHEET_OFFSET)).current;
-  const scrimAnim = useRef(new RNAnimated.Value(0)).current;
-  const scrimOpacity = scheme === "dark" ? SCRIM_OPACITY_DARK : SCRIM_OPACITY_LIGHT;
-
-  useEffect(() => {
-    if (recoveryInstance) {
-      slideAnim.setValue(SHEET_OFFSET);
-      scrimAnim.setValue(0);
-      RNAnimated.parallel([
-        RNAnimated.timing(slideAnim, {
-          toValue: 0,
-          duration: OPEN_DURATION,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-        RNAnimated.timing(scrimAnim, {
-          toValue: scrimOpacity,
-          duration: OPEN_DURATION,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-  }, [recoveryInstance, recoveryInstance?.id, slideAnim, scrimAnim, scrimOpacity]);
-
-  const handleClose = () => {
-    RNAnimated.parallel([
-      RNAnimated.timing(slideAnim, {
-        toValue: SHEET_OFFSET,
-        duration: CLOSE_DURATION,
-        useNativeDriver: true,
-      }),
-      RNAnimated.timing(scrimAnim, {
-        toValue: 0,
-        duration: CLOSE_DURATION,
-        useNativeDriver: true,
-      }),
-    ]).start(() => onClose());
-  };
 
   useEffect(() => {
     setAdjustOpen(false);
@@ -155,173 +110,168 @@ export function RecoverySheet({
     <Modal
       visible={!!recoveryInstance}
       transparent
-      animationType="none"
-      onRequestClose={handleClose}
+      animationType="slide"
+      onRequestClose={onClose}
     >
-      <View style={styles.overlay}>
-        <RNAnimated.View
-          style={[styles.scrim, { opacity: scrimAnim }]}
-          pointerEvents="none"
-        />
-        <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} />
-        <Pressable onPress={(e) => e.stopPropagation()}>
-          <RNAnimated.View
-            style={[styles.recoverySheet, { transform: [{ translateY: slideAnim }] }]}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.modalOverlay}
+      >
+        <TouchableWithoutFeedback onPress={onClose}>
+          <View style={styles.backdrop} />
+        </TouchableWithoutFeedback>
+        <View style={styles.recoverySheet}>
+          <View style={styles.sheetHandle} />
+          <Text style={styles.recoveryTitle}>
+            {recoveryInstance?.block?.name ?? "Block"} — missed
+          </Text>
+
+          <ScrollView
+            style={{ flexShrink: 1 }}
+            contentContainerStyle={{ paddingBottom: spacing.sm }}
+            keyboardShouldPersistTaps="handled"
           >
-            <View style={styles.sheetHandle} />
-            <Text style={styles.recoveryTitle}>
-              {recoveryInstance?.block?.name ?? "Block"} — missed
-            </Text>
+            {copy?.headline ? (
+              <Text style={styles.recoveryAck}>{copy.headline}</Text>
+            ) : null}
+            {copy?.structuralNote ? (
+              <View style={styles.patternNote}>
+                <Text style={styles.patternNoteText}>{copy.structuralNote}</Text>
+              </View>
+            ) : null}
 
-            <ScrollView
-              style={{ flexShrink: 1 }}
-              contentContainerStyle={{ paddingBottom: spacing.sm }}
-              keyboardShouldPersistTaps="handled"
-              automaticallyAdjustKeyboardInsets
-            >
-              {copy?.headline ? (
-                <Text style={styles.recoveryAck}>{copy.headline}</Text>
-              ) : null}
-              {copy?.structuralNote ? (
-                <View style={styles.patternNote}>
-                  <Text style={styles.patternNoteText}>{copy.structuralNote}</Text>
-                </View>
-              ) : null}
+            {copy?.lastIntention ? (
+              <View style={styles.lastIntention}>
+                <Text style={styles.lastIntentionLabel}>Last time you wrote</Text>
+                <Text style={styles.lastIntentionText}>"{copy.lastIntention.text}"</Text>
+              </View>
+            ) : null}
 
-              {copy?.lastIntention ? (
-                <View style={styles.lastIntention}>
-                  <Text style={styles.lastIntentionLabel}>Last time you wrote</Text>
-                  <Text style={styles.lastIntentionText}>"{copy.lastIntention.text}"</Text>
-                </View>
-              ) : null}
+            <Text style={styles.reflectionLabel}>What got in the way?</Text>
+            <TextInput
+              style={styles.reflectionInput}
+              value={reflectionWhy}
+              onChangeText={onChangeWhy}
+              placeholder="What happened?"
+              placeholderTextColor={colors.textPlaceholder}
+              multiline
+            />
 
-              <Text style={styles.reflectionLabel}>What got in the way?</Text>
+            <Text style={styles.reflectionLabel}>One thing you'd change next time?</Text>
+            <View style={[styles.chipRow, !improveOther && styles.chipRowTrailing]}>
+              {IMPROVE_CHIPS.map((chip) => {
+                const selected = reflectionImprove === chip;
+                return (
+                  <TouchableOpacity
+                    key={chip}
+                    style={[styles.chip, selected ? styles.chipSelected : styles.chipUnselected]}
+                    onPress={() => handleChipPress(chip)}
+                  >
+                    <Text
+                      style={[
+                        styles.chipText,
+                        selected ? styles.chipTextSelected : styles.chipTextUnselected,
+                      ]}
+                    >
+                      {chip}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+              <TouchableOpacity
+                style={[styles.chip, improveOther ? styles.chipSelected : styles.chipUnselected]}
+                onPress={handleSomethingElsePress}
+              >
+                <Text
+                  style={[
+                    styles.chipText,
+                    improveOther ? styles.chipTextSelected : styles.chipTextUnselected,
+                  ]}
+                >
+                  Something else
+                </Text>
+              </TouchableOpacity>
+            </View>
+            {improveOther ? (
               <TextInput
                 style={styles.reflectionInput}
-                value={reflectionWhy}
-                onChangeText={onChangeWhy}
-                placeholder="What happened?"
+                value={reflectionImprove}
+                onChangeText={onChangeImprove}
+                placeholder="Even something small..."
                 placeholderTextColor={colors.textPlaceholder}
                 multiline
               />
+            ) : null}
 
-              <Text style={styles.reflectionLabel}>One thing you'd change next time?</Text>
-              <View style={[styles.chipRow, !improveOther && styles.chipRowTrailing]}>
-                {IMPROVE_CHIPS.map((chip) => {
-                  const selected = reflectionImprove === chip;
-                  return (
-                    <TouchableOpacity
-                      key={chip}
-                      style={[styles.chip, selected ? styles.chipSelected : styles.chipUnselected]}
-                      onPress={() => handleChipPress(chip)}
-                    >
-                      <Text
-                        style={[
-                          styles.chipText,
-                          selected ? styles.chipTextSelected : styles.chipTextUnselected,
-                        ]}
-                      >
-                        {chip}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-                <TouchableOpacity
-                  style={[styles.chip, improveOther ? styles.chipSelected : styles.chipUnselected]}
-                  onPress={handleSomethingElsePress}
-                >
-                  <Text
-                    style={[
-                      styles.chipText,
-                      improveOther ? styles.chipTextSelected : styles.chipTextUnselected,
-                    ]}
-                  >
-                    Something else
+            {rescheduleSlot ? (
+              <View style={styles.rescheduleBox}>
+                <Text style={styles.rescheduleLabel}>Available slot today</Text>
+                <View style={styles.rescheduleTimeRow}>
+                  <Text style={styles.rescheduleTime}>
+                    {minutesToTime(rescheduleSlot.start_minutes)} —{" "}
+                    {minutesToTime(rescheduleSlot.end_minutes)}
                   </Text>
-                </TouchableOpacity>
-              </View>
-              {improveOther ? (
-                <TextInput
-                  style={styles.reflectionInput}
-                  value={reflectionImprove}
-                  onChangeText={onChangeImprove}
-                  placeholder="Even something small..."
-                  placeholderTextColor={colors.textPlaceholder}
-                  multiline
-                />
-              ) : null}
-
-              {rescheduleSlot ? (
-                <View style={styles.rescheduleBox}>
-                  <Text style={styles.rescheduleLabel}>Available slot today</Text>
-                  <View style={styles.rescheduleTimeRow}>
-                    <Text style={styles.rescheduleTime}>
-                      {minutesToTime(rescheduleSlot.start_minutes)} —{" "}
-                      {minutesToTime(rescheduleSlot.end_minutes)}
-                    </Text>
-                    <TouchableOpacity
-                      onPress={() => setAdjustOpen((open) => !open)}
-                      hitSlop={8}
-                    >
-                      <Text style={styles.adjustLink}>Adjust</Text>
-                    </TouchableOpacity>
-                  </View>
-                  {adjustOpen ? (
-                    <TimePicker
-                      label="Starts"
-                      valueMinutes={rescheduleSlot.start_minutes}
-                      onChange={handleStartAdjust}
-                    />
-                  ) : null}
-                  {pastBedtime ? (
-                    <View style={styles.bedtimeNote}>
-                      <Text style={styles.bedtimeNoteText}>
-                        This runs past your usual bedtime.
-                      </Text>
-                    </View>
-                  ) : null}
-                  <PressableScale
-                    style={styles.rescheduleBtn}
-                    onPress={onReschedule}
-                    disabled={saving}
+                  <TouchableOpacity
+                    onPress={() => setAdjustOpen((open) => !open)}
+                    hitSlop={8}
                   >
-                    <Text style={styles.rescheduleBtnText}>Reschedule to this slot</Text>
-                  </PressableScale>
+                    <Text style={styles.adjustLink}>Adjust</Text>
+                  </TouchableOpacity>
                 </View>
-              ) : (
-                <Text style={styles.noSlot}>No open slots remaining today.</Text>
-              )}
-            </ScrollView>
+                {adjustOpen ? (
+                  <TimePicker
+                    label="Starts"
+                    valueMinutes={rescheduleSlot.start_minutes}
+                    onChange={handleStartAdjust}
+                  />
+                ) : null}
+                {pastBedtime ? (
+                  <View style={styles.bedtimeNote}>
+                    <Text style={styles.bedtimeNoteText}>
+                      This runs past your usual bedtime.
+                    </Text>
+                  </View>
+                ) : null}
+                <PressableScale
+                  style={styles.rescheduleBtn}
+                  onPress={onReschedule}
+                  disabled={saving}
+                >
+                  <Text style={styles.rescheduleBtnText}>Reschedule to this slot</Text>
+                </PressableScale>
+              </View>
+            ) : (
+              <Text style={styles.noSlot}>No open slots remaining today.</Text>
+            )}
+          </ScrollView>
 
-            <View style={styles.recoveryActions}>
-              <PressableScale
-                style={styles.saveBtn}
-                onPress={onSaveRecovery}
-                disabled={saving}
-              >
-                <Text style={styles.saveBtnText}>Save reflection</Text>
-              </PressableScale>
-              <PressableScale onPress={onSkip} disabled={saving}>
-                <Text style={styles.skipText}>Skip</Text>
-              </PressableScale>
-            </View>
-          </RNAnimated.View>
-        </Pressable>
-      </View>
+          <View style={styles.recoveryActions}>
+            <PressableScale
+              style={styles.saveBtn}
+              onPress={onSaveRecovery}
+              disabled={saving}
+            >
+              <Text style={styles.saveBtnText}>Save reflection</Text>
+            </PressableScale>
+            <PressableScale onPress={onSkip} disabled={saving}>
+              <Text style={styles.skipText}>Skip</Text>
+            </PressableScale>
+          </View>
+        </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
 
 const makeStyles = (c: Colors) =>
   StyleSheet.create({
-    overlay: {
+    modalOverlay: {
       flex: 1,
-      backgroundColor: "rgba(0,0,0,0.55)",
       justifyContent: "flex-end",
-    },
-    scrim: {
-      ...StyleSheet.absoluteFillObject,
       backgroundColor: c.overlayScrim,
+    },
+    backdrop: {
+      ...StyleSheet.absoluteFillObject,
     },
     recoverySheet: {
       backgroundColor: c.surface,
