@@ -339,7 +339,8 @@ const makeStyles = (c: Colors) =>
     },
     recoverySheet: {
       backgroundColor: c.surface,
-      borderRadius: radii.round,
+      borderTopLeftRadius: radii.round,
+      borderTopRightRadius: radii.round,
       padding: spacing.xxl,
       paddingBottom: 40,
       maxHeight: "85%",
