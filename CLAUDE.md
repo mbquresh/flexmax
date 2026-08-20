@@ -757,6 +757,23 @@ notification shade, and the app switcher.
 logged network failure that no user could see. The bar is: does the screen stay
 usable and does the user's intent survive. Not: is the debugger clean.
 
+- **Reward closure, not outcome.** The reflection is the intervention, not the
+  data collection — value lands at the moment of writing, not a week later. The
+  felt payoff is having accounted for the day, which is why the two-tone square
+  fills regardless of whether the block succeeded. Streaks that shatter,
+  confetti, variable reward schedules, and notification pressure are engineered
+  for compulsion, and compulsion is fragile in this population. Same
+  neurochemistry, opposite failure mode.
+- **Strengths open an insight set; they are not a balancing item at the end.**
+  "You confronted this one every time, including when it went badly" is a
+  sentence only this architecture can produce. Lead with it.
+- **Never promise passivity.** The product is specifically engineered to notice
+  when the user didn't follow through. Copy that implies the outcome arrives
+  without effort sets up the exact user who churns hardest — someone who paid,
+  didn't work, and got shown a miss. The honest promise is the opposite and it
+  is stronger: *this is the system that doesn't quit on you when you quit on
+  yourself.*
+
 ---
 
 ## Known issues
@@ -790,6 +807,33 @@ strict time ordering. Currently produces a directionally correct result
 (Morning Deep work is the sole trigger, matching reflections and swap_drift)
 on very thin evidence — a 2-event difference. Treated as corroborating
 evidence only.
+
+These came from an independent code review and should be verified against the
+tree before being acted on — do not assume all are still present.
+
+- **CI is decorative.** The `lint` job installs dependencies and ends. No test
+  job exists despite `stats.test.ts` and `recoveryCopy.test.ts` having shipped.
+- **Expo push pipeline.** `nightly-notify` POSTs the entire message array in one
+  request (Expo wants batches of ≤100). No ticket/receipt handling, so
+  `DeviceNotRegistered` tokens are never pruned. No idempotency key, so a cron
+  retry double-notifies.
+- **Error leakage in `weekly-insight`.** `String(err)` is returned to the client
+  in the catch; the JSON-parse failure path returns the raw parse error.
+- **Model output is under-validated.** Only `Array.isArray` is checked before
+  insights go into `replace_behavioral_insights`. Needs per-item schema
+  validation.
+- **README tree diagram drift.** Still lists `packages/ai/` and
+  `missed-block-recovery` (deleted in `fe76e9d`), and says "rate-limited AI
+  endpoints" plural when `weekly-insight` is the only one left.
+- **Architecture diagram fan-out is partly aspirational.** It shows
+  `behavioral_insights` feeding missed-block-recovery, the Today card, and Plan
+  Tomorrow. Today and weekly-recap read it; missed-block-recovery no longer
+  exists; Plan Tomorrow does not appear to read the table. Two of four arrows
+  are live.
+- **No account deletion or data export path.** This is an App Store requirement,
+  not a nicety — it is a launch blocker.
+- **Undecided:** README vs CLAUDE.md as the canonical reasoning log. They
+  currently overlap.
 
 ---
 
@@ -856,6 +900,138 @@ Things that corrupt the ledger or lose data permanently.
   Revisit only if real testers report lost writes.
 - **DeviceActivity extension**, autonomous intervention, voice input, email,
   third-party integrations, richer AI.
+
+---
+
+## Vision — designed, not built
+
+*Everything in this section is unbuilt. Nothing here is scheduled, and nothing
+downstream should assume it exists. It is recorded because the data it consumes
+is now shipped — migration 026 closed the last input gap — and because the
+constraints attached to these features are easier to write down before the
+features exist than after.*
+
+### The frame: Software as a Mentor
+
+The product's genesis. A mentor who sees everything and judges nothing. The
+structural asymmetry that makes this possible in software and impossible in a
+human relationship: **a human mentor can only work with what you let them see.**
+Effort spent managing a face is effort not spent executing, and the information
+withheld is exactly the information that would have helped. Software has no face
+to perform for, so it gets told the truth. That is the whole thesis, and every
+feature below either serves it or should be cut.
+
+### The Prediction Engine
+
+Each morning the app makes **one to three falsifiable predictions** about the
+day and shows them to the user before the day happens.
+
+> Today I think: you'll complete deep work. You'll miss the 6pm gym. You'll
+> finish at 11:40, not 10:30.
+
+At day's end it scores itself against reality and displays running accuracy —
+"right 34 of 51 times." Inputs already exist: `block_stats` (per-block
+completion by slot), `day_shape` (weekday patterns), `weekly_trend`, and
+`nudge_outcomes` (026), which is what lets predictions about *intervention
+effectiveness* work at all.
+
+Why this is the highest-value unbuilt feature:
+
+- **It makes "it knows me" repeatable.** Feeling understood is a one-time high
+  that decays in about two weeks. A prediction re-earns it daily and cannot be
+  faked.
+- **It inverts shame into challenge.** "You missed the gym 4 times" produces the
+  freeze. "I think you'll skip the gym tonight" produces *watch me*. Identical
+  information, opposite emotional charge. When the user beats a negative
+  prediction, the app says so plainly — "Impressive. You proved me wrong."
+- **It is the answer to the falsifiable test.** A journal describes. A
+  prediction dares. This is the mechanism by which the product could plausibly
+  change behavior rather than merely narrate it.
+- **It renders the moat visible.** Accuracy climbing from 55% to 80% over months
+  *is* the compounding behavioral model, displayed as a number the user watches
+  improve.
+
+**NON-NEGOTIABLE CONSTRAINT — predictions are generated from the evidence pack
+only, and are NEVER tuned on user response.** Accuracy is scored against
+reality, not engagement. If a future session observes that pessimistic
+predictions correlate with completion, that is not a discovery and must not be
+acted on — deliberately predicting failure to provoke a reaction destroys the
+one property that makes the feature valuable, which is that the app publishes
+its own error rate honestly. A sandbagging prediction engine is a slot machine
+in a lab coat, and this ICP will detect it.
+
+**Language rule:** the mechanism is a *challenge*, never a *manipulation*.
+Manipulation requires concealment; the prediction is shown to the user before it
+resolves, and they choose to beat it. Internal shorthand that frames this as
+manipulating the user must not appear in the repo, in copy, or in prompts.
+
+### The Theory of You
+
+A living document the app maintains *about* the user, in plain sentences,
+readable at any time.
+
+> You execute best 7–11am. Afternoons degrade sharply after 2. When work slips,
+> fitness is sacrificed first — 6 of your last 8 bad weeks. Rest you plan goes
+> fine; rest you don't plan turns into three days.
+
+**The user can argue with it.** Tap any line: "that's not right." The app asks
+why and updates. A mentor you can correct is a relationship; a dashboard you
+cannot correct is a verdict. This is also the answer to what the product is for
+after a schedule stabilizes — the Theory is portable to every new goal, and does
+not expire when the current problem is solved.
+
+### The Evidence Archive
+
+A running, exportable record of what the user actually did — hours executed,
+blocks completed, accounted-for streaks, the arc of a chapter. Not analytics:
+**proof**.
+
+This exists because of the long-arc failure in `Who FlexMax is for`: drift
+leaves a person with nothing to point at, and a person with nothing to point at
+loses the argument for their own ambition — first to someone else, then to
+themselves. The Archive is the counter-evidence. It is not for the app. It is
+for the day someone asks what they've been doing.
+
+### Chapters
+
+Twelve-week arcs that end in a real review. Life has arcs; a schedule should not
+be an undifferentiated stream.
+
+**Chapters are the ONLY place charts and visualizations belong.** The daily and
+weekly surfaces stay textual and small-number honest ("4 of your last 5", never
+a dressed-up percentage). A chapter boundary is an explicit look-backward
+moment where the user is deciding what changes next, and visuals earn their
+place there. Charts on Today, or a daily dashboard, is the journal trap: a
+product people enjoy reading and do not act on.
+
+### Supporting features
+
+- **Declared rest.** Rest days chosen in advance, honored by the mentor,
+  excluded from stats. Directly addresses design constraint 1 — rest must be
+  legitimate and chooseable, never something to hide. The onboarding question
+  about rebellion currently has no downstream effect; this closes that loop.
+- **The intervention ledger.** What actually works *on this person*: which nudge
+  timings land, which don't, when moving the block beats nudging at all.
+  `nudge_outcomes` (026) is the foundation. This — not behavioral history alone
+  — is the moat.
+- **Graduation.** Blocks that have gone automatic are retired from active
+  tracking. The mentor's job is to become unnecessary in specific places.
+- **Voice reflections.** Typed input remains the default and the primary path;
+  voice is an alternative that transcribes into the same
+  `reflection_why` / `reflection_improve` fields. Long, messy, unstructured
+  reflections are *higher* signal than terse ones — do not truncate, summarize
+  away, or discourage them at capture time.
+
+### What is deliberately NOT in this vision
+
+Beautiful daily graphs. A peer-reviewed study-technique library (generic advice
+is copyable, free elsewhere, doesn't compound, and breaks the claim that the app
+speaks only from the user's own ground truth). Social features. Integrations. AI
+that authors the schedule.
+
+If the product were only the morning prediction, the mid-day interrupt, and the
+return-after-collapse account, it would still be the strongest thing in the
+category. Everything else is amplitude.
 
 ---
 
@@ -1119,6 +1295,14 @@ behavioral corpus itself.
 downstream of whether people come back after failing. Instrument this before
 external testers arrive, not after.
 
+**The shipped thresholds are invented too.** Deferring Bayesian machinery on the
+grounds that the calibration is n=1 was correct — but the same logic applies to
+the thresholds that *did* ship. Three check-ins, 25% of instances, 80%
+accounting, the ≥4-miss pattern floor: all chosen from one month of one person's
+data. They are cheaper guesses, not settled constants. Treat every one as an
+instrumented parameter to be re-fit from the first TestFlight cohort, and expect
+at least one of them to be wrong.
+
 
 
 ## Beta success criteria
@@ -1126,17 +1310,23 @@ external testers arrive, not after.
 Four proof points, in order. Everything else is downstream of these, and none
 can be answered without real testers.
 
-1. **Can strangers understand the difference in 10 seconds?** Not "is it good" —
+1. **Do users fill both reflection fields unprompted by day ten?** The cheapest
+   decisive number in the entire plan, and the one that determines whether the
+   loop is self-sustaining. Above ~50% the product works on its own; below ~25%
+   it is being carried by notifications and the retention model collapses.
+   Current baseline is 31% on n=1. Measure this before spending anything on
+   acquisition — every other number downstream assumes this one reads clean.
+2. **Can strangers understand the difference in 10 seconds?** Not "is it good" —
    can someone who has never heard of it tell FlexMax apart from a planner from
    the App Store listing and the showcase page alone.
-2. **Will they pay before using it?** The hard paywall is deliberate and filters
+3. **Will they pay before using it?** The hard paywall is deliberate and filters
    for the decided cohort, but the conversion floor is unknown.
-3. **Will they reopen after a bad week?** The north-star metric. Instrument it
+4. **Will they reopen after a bad week?** The north-star metric. Instrument it
    before testers arrive.
-4. **Does the behavioral insight feel surprisingly accurate?** The entire
+5. **Does the behavioral insight feel surprisingly accurate?** The entire
    differentiation reduces to this. Validated on n=1 so far.
 
-If 1-4 hold, $14.99 is not the limiting factor. If they do not, more features
+If 1-5 hold, $14.99 is not the limiting factor. If they do not, more features
 will not fix it.
 
 
