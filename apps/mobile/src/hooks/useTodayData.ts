@@ -36,6 +36,20 @@ export function useTodayData(userId: string | undefined) {
     setAdhocTasks((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)));
   }, []);
 
+  const removeAdhocTask = useCallback((id: string) => {
+    setAdhocTasks((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
+  const restoreAdhocTask = useCallback((task: AdhocTask) => {
+    setAdhocTasks((prev) =>
+      [...prev, task].sort((a, b) => {
+        const aStart = a.start_minutes ?? -1;
+        const bStart = b.start_minutes ?? -1;
+        return aStart - bStart;
+      })
+    );
+  }, []);
+
   const loadToday = useCallback(
     async (dateOverride?: string, options?: { silent?: boolean }) => {
       if (!userId) return;
@@ -227,6 +241,8 @@ export function useTodayData(userId: string | undefined) {
     timedAdhoc,
     anytimeAdhoc,
     updateAdhocTask,
+    removeAdhocTask,
+    restoreAdhocTask,
     insights,
   };
 }

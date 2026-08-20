@@ -5,6 +5,7 @@ import {
   StyleSheet,
   Modal,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   TextInput,
   KeyboardAvoidingView,
   Platform,
@@ -46,6 +47,7 @@ interface RecoverySheetProps {
   onChangeWhy: (text: string) => void;
   onChangeImprove: (text: string) => void;
   onClose: () => void;
+  onSkip: () => void;
 }
 
 export function RecoverySheet({
@@ -62,6 +64,7 @@ export function RecoverySheet({
   onChangeWhy,
   onChangeImprove,
   onClose,
+  onSkip,
 }: RecoverySheetProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -114,6 +117,9 @@ export function RecoverySheet({
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.modalOverlay}
       >
+        <TouchableWithoutFeedback onPress={onClose}>
+          <View style={styles.backdrop} />
+        </TouchableWithoutFeedback>
         <View style={styles.recoverySheet}>
           <View style={styles.sheetHandle} />
           <Text style={styles.recoveryTitle}>
@@ -247,7 +253,7 @@ export function RecoverySheet({
             >
               <Text style={styles.saveBtnText}>Save reflection</Text>
             </PressableScale>
-            <PressableScale onPress={onClose}>
+            <PressableScale onPress={onSkip} disabled={saving}>
               <Text style={styles.skipText}>Skip</Text>
             </PressableScale>
           </View>
@@ -262,7 +268,10 @@ const makeStyles = (c: Colors) =>
     modalOverlay: {
       flex: 1,
       justifyContent: "flex-end",
-      backgroundColor: "rgba(0,0,0,0.6)",
+      backgroundColor: c.overlayScrim,
+    },
+    backdrop: {
+      ...StyleSheet.absoluteFillObject,
     },
     recoverySheet: {
       backgroundColor: c.surface,
@@ -270,7 +279,10 @@ const makeStyles = (c: Colors) =>
       padding: spacing.xxl,
       paddingBottom: 40,
       maxHeight: "85%",
-      ...c.shadowRest,
+      shadowColor: c.shadowLift.shadowColor,
+      shadowOffset: { width: 0, height: -4 },
+      shadowOpacity: c.shadowLift.shadowOpacity,
+      shadowRadius: c.shadowLift.shadowRadius,
     },
     sheetHandle: {
       alignSelf: "center",

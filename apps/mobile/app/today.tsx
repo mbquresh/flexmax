@@ -49,6 +49,7 @@ import { DayBoundaryCard } from "../src/components/DayBoundaryCard";
 import { InsightCard } from "../src/components/InsightCard";
 import { AdhocTimedCard } from "../src/components/AdhocTimedCard";
 import { AdhocAnytimeRow } from "../src/components/AdhocAnytimeRow";
+import { AdhocEditSheet } from "../src/components/AdhocEditSheet";
 import { TimePicker } from "../src/components/TimePicker";
 import { AppMenu, MenuButton } from "../src/components/AppMenu";
 import { PressableScale } from "../src/components/PressableScale";
@@ -126,6 +127,8 @@ function TodayScreenContent() {
     timedAdhoc,
     anytimeAdhoc,
     updateAdhocTask,
+    removeAdhocTask,
+    restoreAdhocTask,
     insights,
   } = useTodayData(session?.user.id);
   const { setTodayInstances, updateInstance } = useStore();
@@ -149,6 +152,10 @@ function TodayScreenContent() {
   const [addTaskMode, setAddTaskMode] = useState<"timed" | "anytime">("timed");
   const [addTaskStartMinutes, setAddTaskStartMinutes] = useState(9 * 60);
   const [addTaskEndMinutes, setAddTaskEndMinutes] = useState(9 * 60 + 30);
+  const [editAdhocTask, setEditAdhocTask] = useState<AdhocTask | null>(null);
+  const [editAdhocName, setEditAdhocName] = useState("");
+  const [editAdhocStartMinutes, setEditAdhocStartMinutes] = useState(9 * 60);
+  const [editAdhocEndMinutes, setEditAdhocEndMinutes] = useState(9 * 60 + 30);
   const [menuOpen, setMenuOpen] = useState(false);
   const [boundaryPrompt, setBoundaryPrompt] = useState<{
     sleptAt: number | null;
@@ -166,6 +173,8 @@ function TodayScreenContent() {
   const removeScrimAnim = useRef(new RNAnimated.Value(0)).current;
   const addTaskSlideAnim = useRef(new RNAnimated.Value(BOTTOM_SHEET_OFFSET)).current;
   const addTaskScrimAnim = useRef(new RNAnimated.Value(0)).current;
+  const editAdhocSlideAnim = useRef(new RNAnimated.Value(BOTTOM_SHEET_OFFSET)).current;
+  const editAdhocScrimAnim = useRef(new RNAnimated.Value(0)).current;
   const bottomSheetScrimOpacity =
     scheme === "dark" ? BOTTOM_SHEET_SCRIM_OPACITY_DARK : BOTTOM_SHEET_SCRIM_OPACITY_LIGHT;
   const toastOpacity = useSharedValue(0);
@@ -364,6 +373,12 @@ function TodayScreenContent() {
     }
   }, [addTaskOpen, addTaskSlideAnim, addTaskScrimAnim, bottomSheetScrimOpacity]);
 
+  useEffect(() => {
+    if (editAdhocTask) {
+      openBottomSheet(editAdhocSlideAnim, editAdhocScrimAnim, bottomSheetScrimOpacity);
+    }
+  }, [editAdhocTask, editAdhocSlideAnim, editAdhocScrimAnim, bottomSheetScrimOpacity]);
+
   const closeUndoSheet = useCallback((onClosed?: () => void) => {
     closeBottomSheet(undoSlideAnim, undoScrimAnim, () => {
       setUndoInstance(null);
@@ -389,6 +404,16 @@ function TodayScreenContent() {
       onClosed?.();
     });
   }, [addTaskSlideAnim, addTaskScrimAnim]);
+
+  const closeEditAdhoc = useCallback((onClosed?: () => void) => {
+    closeBottomSheet(editAdhocSlideAnim, editAdhocScrimAnim, () => {
+      setEditAdhocTask(null);
+      setEditAdhocName("");
+      setEditAdhocStartMinutes(9 * 60);
+      setEditAdhocEndMinutes(9 * 60 + 30);
+      onClosed?.();
+    });
+  }, [editAdhocSlideAnim, editAdhocScrimAnim]);
 
   const confirmReset = () => {
     if (Platform.OS === "web") {
@@ -638,6 +663,61 @@ function TodayScreenContent() {
     }
   };
 
+  const openEditAdhoc = (task: AdhocTask) => {
+    setEditAdhocName(task.name);
+    setEditAdhocStartMinutes(task.start_minutes ?? 9 * 60);
+    setEditAdhocEndMinutes(task.end_minutes ?? task.start_minutes! + 30);
+    setEditAdhocTask(task);
+  };
+
+  const handleSaveEditAdhoc = async () => {
+    if (!editAdhocTask || !editAdhocName.trim()) return;
+
+    const isTimed = editAdhocTask.start_minutes != null;
+    if (isTimed && editAdhocEndMinutes <= editAdhocStartMinutes) {
+      Alert.alert("Invalid time", "End time must be after start time.");
+      return;
+    }
+
+    const patch: Partial<AdhocTask> = { name: editAdhocName.trim() };
+    if (isTimed) {
+      patch.start_minutes = editAdhocStartMinutes;
+      patch.end_minutes = editAdhocEndMinutes;
+    }
+
+    const previous = { ...editAdhocTask };
+    updateAdhocTask(editAdhocTask.id, patch);
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("adhoc_tasks")
+        .update(patch)
+        .eq("id", editAdhocTask.id);
+      if (error) throw error;
+      closeEditAdhoc();
+      showToast("Task updated");
+    } catch (err) {
+      updateAdhocTask(editAdhocTask.id, previous);
+      handleError(err, "handleSaveEditAdhoc");
+      showToast("Couldn't save — check your connection");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteAdhoc = async (task: AdhocTask) => {
+    removeAdhocTask(task.id);
+    try {
+      const { error } = await supabase.from("adhoc_tasks").delete().eq("id", task.id);
+      if (error) throw error;
+      showToast(`"${task.name}" deleted`);
+    } catch (err) {
+      restoreAdhocTask(task);
+      handleError(err, "handleDeleteAdhoc");
+      showToast("Could not delete task");
+    }
+  };
+
   const closeCheckIn = () => {
     RNAnimated.timing(checkInSlideAnim, {
       toValue: 400,
@@ -730,21 +810,6 @@ function TodayScreenContent() {
 
   const handleMarkMissed = async (instance: DailyInstance) => {
     hapticMissed();
-    setSaving(true);
-    try {
-      const { error } = await supabase
-        .from("daily_schedule_instances")
-        .update({ status: "missed" })
-        .eq("id", instance.id);
-
-      if (error) throw error;
-      updateInstance(instance.id, { status: "missed" });
-    } catch (err) {
-      handleError(err, "handleMarkMissed", "Could not mark missed");
-      return;
-    } finally {
-      setSaving(false);
-    }
 
     const slot = findRescheduleSlot(
       { ...instance, status: "missed" },
@@ -807,26 +872,40 @@ function TodayScreenContent() {
     setReflectionImprove("");
   };
 
+  const handleSkipRecovery = async () => {
+    if (!recoveryInstance) return;
+    const instanceId = recoveryInstance.id;
+
+    setSaving(true);
+    try {
+      await commitMissed(instanceId);
+      closeRecovery();
+    } catch (err) {
+      handleError(err, "handleSkipRecovery", "Could not mark missed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const commitMissed = async (instanceId: string, extra = {}) => {
+    const { error } = await supabase
+      .from("daily_schedule_instances")
+      .update({ status: "missed", ...extra })
+      .eq("id", instanceId);
+
+    if (error) throw error;
+    updateInstance(instanceId, { status: "missed", ...extra });
+  };
+
   const handleSaveRecovery = async () => {
     if (!recoveryInstance) return;
 
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from("daily_schedule_instances")
-        .update({
-          reflection_why: reflectionWhy.trim() || null,
-          reflection_improve: reflectionImprove.trim() || null,
-        })
-        .eq("id", recoveryInstance.id);
-
-      if (error) throw error;
-
-      updateInstance(recoveryInstance.id, {
+      await commitMissed(recoveryInstance.id, {
         reflection_why: reflectionWhy.trim() || null,
         reflection_improve: reflectionImprove.trim() || null,
       });
-
       closeRecovery();
     } catch (err) {
       handleError(err, "handleSaveRecovery", "Could not save reflection");
@@ -1102,6 +1181,8 @@ function TodayScreenContent() {
                   key={item.task.id}
                   task={item.task}
                   onToggle={toggleAdhocComplete}
+                  onDelete={handleDeleteAdhoc}
+                  onEdit={openEditAdhoc}
                 />
               )
             )
@@ -1119,6 +1200,8 @@ function TodayScreenContent() {
                   key={task.id}
                   task={task}
                   onToggle={toggleAdhocComplete}
+                  onDelete={handleDeleteAdhoc}
+                  onEdit={openEditAdhoc}
                 />
               ))}
             </View>
@@ -1146,6 +1229,7 @@ function TodayScreenContent() {
         onChangeWhy={setReflectionWhy}
         onChangeImprove={setReflectionImprove}
         onClose={closeRecovery}
+        onSkip={handleSkipRecovery}
       />
 
       {toastMessage ? (
@@ -1409,6 +1493,22 @@ function TodayScreenContent() {
           </KeyboardAvoidingView>
         </View>
       </Modal>
+
+      <AdhocEditSheet
+        task={editAdhocTask}
+        visible={!!editAdhocTask}
+        slideAnim={editAdhocSlideAnim}
+        scrimAnim={editAdhocScrimAnim}
+        name={editAdhocName}
+        startMinutes={editAdhocStartMinutes}
+        endMinutes={editAdhocEndMinutes}
+        saving={saving}
+        onChangeName={setEditAdhocName}
+        onChangeStart={setEditAdhocStartMinutes}
+        onChangeEnd={setEditAdhocEndMinutes}
+        onSave={handleSaveEditAdhoc}
+        onClose={() => closeEditAdhoc()}
+      />
     </View>
   );
 }
