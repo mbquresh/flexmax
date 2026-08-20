@@ -365,7 +365,9 @@ export function BlockCard({
               activeOpacity={0.85}
             >
               <Animated.View style={missedActionContentStyle}>
-                <Text style={[styles.actionText, styles.missedBtnText]}>Missed</Text>
+                <Text style={[styles.actionText, styles.rescheduleBtnText, styles.actionTextStacked]}>Missed</Text>
+                <Text style={[styles.actionText, styles.rescheduleBtnText, styles.actionTextStacked]}>or</Text>
+                <Text style={[styles.actionText, styles.rescheduleBtnText, styles.actionTextStacked]}>Reschedule</Text>
               </Animated.View>
             </TouchableOpacity>
           </Animated.View>
@@ -494,14 +496,14 @@ const makeStyles = (c: Colors) =>
       justifyContent: "center",
     },
     missedBtn: {
-      backgroundColor: c.dangerTint,
+      backgroundColor: c.primaryTint,
     },
     actionBtnLeftRounded: {
       borderTopLeftRadius: radii.lg,
       borderBottomLeftRadius: radii.lg,
     },
-    missedBtnText: {
-      color: c.danger,
+    rescheduleBtnText: {
+      color: c.primary,
     },
     removeBtn: {
       backgroundColor: c.danger,
@@ -509,6 +511,11 @@ const makeStyles = (c: Colors) =>
     actionText: {
       color: c.onPrimary,
       ...typography.smallBold,
+    },
+    actionTextStacked: {
+      fontSize: 12,
+      lineHeight: 15,
+      textAlign: "center",
     },
     slidingRow: {
       flexDirection: "row",
