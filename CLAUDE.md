@@ -1307,7 +1307,7 @@ at least one of them to be wrong.
 
 ## Beta success criteria
 
-Four proof points, in order. Everything else is downstream of these, and none
+Five proof points, in order. Everything else is downstream of these, and none
 can be answered without real testers.
 
 1. **Do users fill both reflection fields unprompted by day ten?** The cheapest
