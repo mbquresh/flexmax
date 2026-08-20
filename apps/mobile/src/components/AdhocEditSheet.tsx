@@ -130,10 +130,7 @@ const makeStyles = (c: Colors) =>
       paddingTop: spacing.sm,
       paddingBottom: Platform.OS === "ios" ? 36 : 24,
       gap: spacing.md,
-      shadowColor: c.shadowLift.shadowColor,
-      shadowOffset: { width: 0, height: -4 },
-      shadowOpacity: c.shadowLift.shadowOpacity,
-      shadowRadius: c.shadowLift.shadowRadius,
+      ...c.shadowRest,
     },
     handle: {
       width: 36,

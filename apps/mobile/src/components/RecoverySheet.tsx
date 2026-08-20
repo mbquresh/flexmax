@@ -279,10 +279,7 @@ const makeStyles = (c: Colors) =>
       padding: spacing.xxl,
       paddingBottom: 40,
       maxHeight: "85%",
-      shadowColor: c.shadowLift.shadowColor,
-      shadowOffset: { width: 0, height: -4 },
-      shadowOpacity: c.shadowLift.shadowOpacity,
-      shadowRadius: c.shadowLift.shadowRadius,
+      ...c.shadowRest,
     },
     sheetHandle: {
       alignSelf: "center",
