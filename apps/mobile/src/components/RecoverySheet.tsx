@@ -165,23 +165,26 @@ export function RecoverySheet({
           style={[styles.scrim, { opacity: scrimAnim }]}
           pointerEvents="none"
         />
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={styles.overlayPressable}
-        >
+        <View style={styles.overlayPressable}>
           <Pressable style={styles.dismiss} onPress={handleClose} />
           <Pressable onPress={(e) => e.stopPropagation()}>
-            <RNAnimated.View style={[styles.recoverySheet, { transform: [{ translateY: slideAnim }] }]}>
-          <View style={styles.sheetHandle} />
-          <Text style={styles.recoveryTitle}>
-            {recoveryInstance?.block?.name ?? "Block"} — missed
-          </Text>
+            <RNAnimated.View
+              style={[styles.recoverySheet, { transform: [{ translateY: slideAnim }] }]}
+            >
+              <View style={styles.sheetHandle} />
+              <Text style={styles.recoveryTitle}>
+                {recoveryInstance?.block?.name ?? "Block"} — missed
+              </Text>
 
-          <ScrollView
-            style={{ flexShrink: 1 }}
-            contentContainerStyle={{ paddingBottom: spacing.sm }}
-            keyboardShouldPersistTaps="handled"
-          >
+              <KeyboardAvoidingView
+                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                style={styles.scrollAvoid}
+              >
+                <ScrollView
+                  style={{ flexShrink: 1 }}
+                  contentContainerStyle={{ paddingBottom: spacing.sm }}
+                  keyboardShouldPersistTaps="handled"
+                >
             {copy?.headline ? (
               <Text style={styles.recoveryAck}>{copy.headline}</Text>
             ) : null}
@@ -294,23 +297,24 @@ export function RecoverySheet({
             ) : (
               <Text style={styles.noSlot}>No open slots remaining today.</Text>
             )}
-          </ScrollView>
+                </ScrollView>
+              </KeyboardAvoidingView>
 
-          <View style={styles.recoveryActions}>
-            <PressableScale
-              style={styles.saveBtn}
-              onPress={onSaveRecovery}
-              disabled={saving}
-            >
-              <Text style={styles.saveBtnText}>Save reflection</Text>
-            </PressableScale>
-            <PressableScale onPress={onSkip} disabled={saving}>
-              <Text style={styles.skipText}>Skip</Text>
-            </PressableScale>
-          </View>
+              <View style={styles.recoveryActions}>
+                <PressableScale
+                  style={styles.saveBtn}
+                  onPress={onSaveRecovery}
+                  disabled={saving}
+                >
+                  <Text style={styles.saveBtnText}>Save reflection</Text>
+                </PressableScale>
+                <PressableScale onPress={onSkip} disabled={saving}>
+                  <Text style={styles.skipText}>Skip</Text>
+                </PressableScale>
+              </View>
             </RNAnimated.View>
           </Pressable>
-        </KeyboardAvoidingView>
+        </View>
       </View>
     </Modal>
   );
@@ -335,12 +339,14 @@ const makeStyles = (c: Colors) =>
     },
     recoverySheet: {
       backgroundColor: c.surface,
-      borderTopLeftRadius: radii.pill,
-      borderTopRightRadius: radii.pill,
+      borderRadius: radii.round,
       padding: spacing.xxl,
-      paddingBottom: Platform.OS === "ios" ? 36 : 24,
+      paddingBottom: 40,
       maxHeight: "85%",
       ...c.shadowRest,
+    },
+    scrollAvoid: {
+      flexShrink: 1,
     },
     sheetHandle: {
       alignSelf: "center",
