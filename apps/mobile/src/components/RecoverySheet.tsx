@@ -344,7 +344,6 @@ const makeStyles = (c: Colors) =>
       padding: spacing.xxl,
       paddingBottom: 40,
       maxHeight: "85%",
-      ...c.shadowRest,
     },
     scrollAvoid: {
       flexShrink: 1,
