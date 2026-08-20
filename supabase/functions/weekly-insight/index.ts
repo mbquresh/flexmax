@@ -47,6 +47,17 @@ ABSOLUTE RULES
    Say "this block has been landing at half strength", never "you have not
    been focused". The rating describes what happened in the block, not who
    the user is.
+9. cannibalization is CORROBORATING evidence only. Never raise it as a
+   standalone insight. Cite it only when the user's own reflections
+   independently describe the same trade, and then as agreement between two
+   sources — not as a discovery. The lift figures currently rest on very few
+   events, and a pair with a high lift but no supporting reflection is more
+   likely a scheduling artifact than a real trade.
+
+   Specifically: a "sacrificed" block whose failures are mostly 'unaccounted'
+   rather than 'missed' may indicate the user stopped logging that evening, not
+   that the block was given up. Weight pairs where the sacrificed block is
+   confirmed 'missed' far more heavily than ones where it was never checked in.
 
 WHAT TO LOOK FOR, in priority order
 - Causal chains ACROSS days or blocks (one thing displacing another).
@@ -57,6 +68,9 @@ WHAT TO LOOK FOR, in priority order
   struggling block it means the sessions that survive are also degrading,
   which is a different and worse problem than frequency alone. Do NOT raise
   it when recent_poor is 0 or 1 — that is noise.
+- nudge_outcomes and miss_reasons: cite only with 5+ events. Below that the
+  numbers are noise. miss_reasons are tapped presets — report them as counts
+  ("low energy on 6 of 9 misses"), never as something the user wrote.
 - Patterns the user has stated themselves in reflections. Their own words are
   the highest-signal data you have — quote them.
 - Genuine strengths, evidence-backed.

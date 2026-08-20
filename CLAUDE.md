@@ -183,6 +183,7 @@ Cursor = implementation engine.
 | 023 | atomic_insight_replace.sql    | replace_behavioral_insights RPC — atomic insight set replacement                                                           |
 | 024 | acknowledged_at.sql           | daily_schedule_instances.acknowledged_at + BEFORE UPDATE trigger — stamps on first real acknowledgment, cleared on undo      |
 | 025 | value_constraints.sql         | CHECK constraints on status and completion_rating (NOT VALID)                                                              |
+| 026 | cannibalization_and_interventions.sql | cannibalization, nudge_outcomes, miss_reasons in get_behavior_evidence; miss_reason_tag in base CTE                  |
 
 
 ---
@@ -778,6 +779,18 @@ transport detection must handle plain objects (PostgREST errors carry a
 populated `code`; transport failures do not), and the airplane-mode test is
 the acceptance criterion, not a nice-to-have.
 
+**cannibalization detection took three attempts, each failing differently.**
+Comparing days the trigger FAILED found whole-day collapse, not trade-offs —
+on a collapse day every pair co-fails. Adding a mixed-day restriction
+surfaced time-of-day clustering instead, including an impossible pair where a
+7am block appeared to cause a 6am failure. The working version inverts the
+trigger: cannibalization is one block SUCCEEDING while a later block fails,
+because the aggressor wins and takes the other's time. Requires mixed days and
+strict time ordering. Currently produces a directionally correct result
+(Morning Deep work is the sole trigger, matching reflections and swap_drift)
+on very thin evidence — a 2-event difference. Treated as corroborating
+evidence only.
+
 ---
 
 ## Retention Architecture v1 — remaining work, in order
@@ -807,13 +820,13 @@ Things that corrupt the ledger or lose data permanently.
    Deliberately NOT taking on component or integration testing.
 
 ### Tier 2 — instrument now, build later
-5. **Intervention→outcome and miss_reason_tag into the evidence pack.**
+5. ~~Intervention→outcome and miss_reason_tag into the evidence pack.~~ **SHIPPED (026).**
    **Cutoff nudges + telemetry** (016 nudge_events) already carries instance_id,
    response, and scheduled_for; joined to the instance's final status that IS
    intervention → response → outcome. The moat data is already accumulating
    and read by nothing. **Preset miss reasons** (019 miss_reason_tag) is in
    the same state. ~25 lines of SQL, no new schema, no AI cost.
-6. **Cross-block cannibalization detection.** The evidence pack computes every
+6. ~~Cross-block cannibalization detection.~~ **SHIPPED (026).** The evidence pack computes every
    block in isolation — block_stats is per-block and day_shape is an
    unstructured string of names. Nothing computes whether block B's failure is
    CONDITIONAL on block A's, so the narrator cannot state the pattern even
