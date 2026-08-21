@@ -147,7 +147,7 @@ function PlanTomorrowScreenContent() {
           return next;
         });
       }
-      handleError(error, "closeTodayStatus");
+      handleError(error, "closeTodayStatus", "Couldn't save that status");
     }
   };
 
@@ -170,7 +170,7 @@ function PlanTomorrowScreenContent() {
     if (error) {
       setCloseTodayInstances(previous);
       setAwaitingPresetIds((prev) => new Set(prev).add(instanceId));
-      handleError(error, "closeTodayPreset");
+      handleError(error, "closeTodayPreset", "Couldn't save that reason");
     }
   };
 

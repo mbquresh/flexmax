@@ -163,7 +163,7 @@ function OnboardingContent() {
       await refreshProfile();
       router.replace("/schedule-builder");
     } catch (err) {
-      handleError(err, "finishOnboarding");
+      handleError(err, "finishOnboarding", "Couldn't finish setting up your schedule");
     } finally {
       setSaving(false);
     }

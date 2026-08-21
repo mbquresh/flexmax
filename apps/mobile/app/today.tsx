@@ -656,8 +656,7 @@ function TodayScreenContent() {
       if (error) throw error;
     } catch (err) {
       updateAdhocTask(task.id, { status: task.status });
-      handleError(err, "toggleAdhocComplete");
-      showToast("Couldn't update — check your connection");
+      handleError(err, "toggleAdhocComplete", "Couldn't update the task");
     } finally {
       adhocToggleInFlight.current.delete(task.id);
     }
@@ -698,8 +697,7 @@ function TodayScreenContent() {
       showToast("Task updated");
     } catch (err) {
       updateAdhocTask(editAdhocTask.id, previous);
-      handleError(err, "handleSaveEditAdhoc");
-      showToast("Couldn't save — check your connection");
+      handleError(err, "handleSaveEditAdhoc", "Couldn't save the task");
     } finally {
       setSaving(false);
     }
@@ -713,8 +711,7 @@ function TodayScreenContent() {
       showToast(`"${task.name}" deleted`);
     } catch (err) {
       restoreAdhocTask(task);
-      handleError(err, "handleDeleteAdhoc");
-      showToast("Could not delete task");
+      handleError(err, "handleDeleteAdhoc", "Couldn't delete the task");
     }
   };
 
@@ -932,7 +929,7 @@ function TodayScreenContent() {
       .eq("id", recoveryInstance.id);
 
     if (error) {
-      handleError(error, "handleReschedule");
+      handleError(error, "handleReschedule", "Couldn't reschedule the block");
       return;
     }
 
@@ -986,8 +983,7 @@ function TodayScreenContent() {
       });
       closeCheckIn();
     } catch (err) {
-      handleError(err, "handleCheckIn");
-      showToast("Couldn't save — check your connection");
+      handleError(err, "handleCheckIn", "Couldn't save your check-in");
     } finally {
       setSaving(false);
     }
@@ -1018,7 +1014,7 @@ function TodayScreenContent() {
         return next;
       });
     } catch (err) {
-      handleError(err, "handleSaveSleep", "Could not save bedtime");
+      handleError(err, "handleSaveSleep", "Couldn't save your sleep time");
     } finally {
       setSaving(false);
     }
@@ -1047,7 +1043,7 @@ function TodayScreenContent() {
         return next;
       });
     } catch (err) {
-      handleError(err, "handleSaveWake", "Could not save wake time");
+      handleError(err, "handleSaveWake", "Couldn't save your wake time");
     } finally {
       setSaving(false);
     }
