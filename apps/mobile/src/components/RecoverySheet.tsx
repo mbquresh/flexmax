@@ -164,7 +164,7 @@ export function RecoverySheet({
           pointerEvents="none"
         />
         <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} />
-        <Pressable onPress={(e) => e.stopPropagation()}>
+        <Pressable style={styles.sheetAnchor} onPress={(e) => e.stopPropagation()}>
           <RNAnimated.View
             style={[styles.recoverySheet, { transform: [{ translateY: slideAnim }] }]}
           >
@@ -316,7 +316,12 @@ const makeStyles = (c: Colors) =>
   StyleSheet.create({
     overlay: {
       flex: 1,
-      justifyContent: "flex-end",
+    },
+    sheetAnchor: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      bottom: 0,
     },
     scrim: {
       ...StyleSheet.absoluteFillObject,
