@@ -21,6 +21,11 @@ import { PressableScale } from "./PressableScale";
 
 const ACTION_BUTTON_WIDTH = 80;
 
+// Two lines of typography.small in a card of this width holds roughly this
+// many characters. Deliberately conservative: a slightly early control is
+// better than one that never appears.
+const EXPAND_THRESHOLD = 70;
+
 interface AdhocTimedCardProps {
   task: AdhocTask;
   onToggle: (task: AdhocTask) => void;
@@ -33,7 +38,7 @@ export function AdhocTimedCard({ task, onToggle, onDelete, onEdit }: AdhocTimedC
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const isDone = task.status === "completed";
   const [expanded, setExpanded] = useState(false);
-  const [truncated, setTruncated] = useState(false);
+  const isLong = task.name.length > EXPAND_THRESHOLD;
 
   const revealWidth = ACTION_BUTTON_WIDTH * 2;
   const translateX = useSharedValue(0);
@@ -41,7 +46,6 @@ export function AdhocTimedCard({ task, onToggle, onDelete, onEdit }: AdhocTimedC
 
   useEffect(() => {
     setExpanded(false);
-    setTruncated(false);
   }, [task.name]);
 
   const closeSwipe = () => {
@@ -159,17 +163,7 @@ export function AdhocTimedCard({ task, onToggle, onDelete, onEdit }: AdhocTimedC
                   >
                     {task.name}
                   </Text>
-                    <Text
-                      style={[styles.name, styles.measureHidden]}
-                      onTextLayout={(e) => {
-                        const isTruncated = e.nativeEvent.lines.length > 2;
-                        if (isTruncated !== truncated) setTruncated(isTruncated);
-                      }}
-                      pointerEvents="none"
-                    >
-                      {task.name}
-                    </Text>
-                  {truncated ? (
+                  {isLong ? (
                     <TouchableOpacity
                       onPress={() => {
                         hapticSelect();
@@ -284,13 +278,6 @@ const makeStyles = (c: Colors) =>
       color: c.primary,
       ...typography.small,
       marginTop: spacing.xs,
-    },
-    measureHidden: {
-      position: "absolute",
-      left: 0,
-      right: 0,
-      opacity: 0,
-      zIndex: -1,
     },
     meta: {
       color: c.textMuted,
