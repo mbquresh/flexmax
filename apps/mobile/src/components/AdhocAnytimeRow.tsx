@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
@@ -13,7 +13,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { AdhocTask } from "../types/database";
-import { hapticCommit, hapticDetent, hapticPickUp, hapticSelect } from "../lib/haptics";
+import { hapticCommit, hapticDetent, hapticSelect } from "../lib/haptics";
 import { Colors, spacing, radii, iconSizes, typography } from "../theme";
 import { useTheme } from "../providers/ThemeProvider";
 import { PressableScale } from "./PressableScale";
@@ -42,10 +42,6 @@ export function AdhocAnytimeRow({ task, onToggle, onDelete, onEdit }: AdhocAnyti
     setExpanded(false);
     setTruncated(false);
   }, [task.name]);
-
-  const toggleExpanded = useCallback(() => {
-    setExpanded((v) => !v);
-  }, []);
 
   const closeSwipe = () => {
     isOpen.value = 0;
@@ -83,13 +79,6 @@ export function AdhocAnytimeRow({ task, onToggle, onDelete, onEdit }: AdhocAnyti
         runOnJS(hapticDetent)();
       }
     });
-
-  const longPressGesture = Gesture.LongPress().onStart(() => {
-    runOnJS(hapticPickUp)();
-    runOnJS(toggleExpanded)();
-  });
-
-  const contentGesture = Gesture.Exclusive(swipeGesture, longPressGesture);
 
   const slideAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: translateX.value }],
@@ -156,7 +145,7 @@ export function AdhocAnytimeRow({ task, onToggle, onDelete, onEdit }: AdhocAnyti
         </Animated.View>
       </View>
 
-      <GestureDetector gesture={contentGesture}>
+      <GestureDetector gesture={swipeGesture}>
         <Animated.View style={[styles.slidingRow, slideAnimatedStyle]}>
           <View style={[styles.row, isDone && styles.rowDone]}>
             <PressableScale onPress={() => onToggle(task)} scaleTo={0.9} hitSlop={8}>
@@ -288,6 +277,8 @@ const makeStyles = (c: Colors) =>
     },
     measureHidden: {
       position: "absolute",
+      left: 0,
+      right: 0,
       opacity: 0,
       zIndex: -1,
     },

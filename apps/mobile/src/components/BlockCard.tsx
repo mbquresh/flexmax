@@ -611,6 +611,8 @@ const makeStyles = (c: Colors) =>
     },
     measureHidden: {
       position: "absolute",
+      left: 0,
+      right: 0,
       opacity: 0,
       zIndex: -1,
     },

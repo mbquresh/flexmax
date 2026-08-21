@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
@@ -14,7 +14,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { AdhocTask } from "../types/database";
 import { minutesToTime } from "../lib/time";
-import { hapticCommit, hapticDetent, hapticPickUp, hapticSelect } from "../lib/haptics";
+import { hapticCommit, hapticDetent, hapticSelect } from "../lib/haptics";
 import { Colors, spacing, radii, iconSizes, typography } from "../theme";
 import { useTheme } from "../providers/ThemeProvider";
 import { PressableScale } from "./PressableScale";
@@ -43,10 +43,6 @@ export function AdhocTimedCard({ task, onToggle, onDelete, onEdit }: AdhocTimedC
     setExpanded(false);
     setTruncated(false);
   }, [task.name]);
-
-  const toggleExpanded = useCallback(() => {
-    setExpanded((v) => !v);
-  }, []);
 
   const closeSwipe = () => {
     isOpen.value = 0;
@@ -84,13 +80,6 @@ export function AdhocTimedCard({ task, onToggle, onDelete, onEdit }: AdhocTimedC
         runOnJS(hapticDetent)();
       }
     });
-
-  const longPressGesture = Gesture.LongPress().onStart(() => {
-    runOnJS(hapticPickUp)();
-    runOnJS(toggleExpanded)();
-  });
-
-  const contentGesture = Gesture.Exclusive(swipeGesture, longPressGesture);
 
   const slideAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: translateX.value }],
@@ -157,7 +146,7 @@ export function AdhocTimedCard({ task, onToggle, onDelete, onEdit }: AdhocTimedC
         </Animated.View>
       </View>
 
-      <GestureDetector gesture={contentGesture}>
+      <GestureDetector gesture={swipeGesture}>
         <Animated.View style={[styles.slidingRow, slideAnimatedStyle]}>
           <View style={[styles.card, isDone && styles.cardDone]}>
             <View style={styles.accent} />
@@ -300,6 +289,8 @@ const makeStyles = (c: Colors) =>
     },
     measureHidden: {
       position: "absolute",
+      left: 0,
+      right: 0,
       opacity: 0,
       zIndex: -1,
     },
