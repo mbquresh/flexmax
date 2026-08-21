@@ -896,8 +896,9 @@ Things that corrupt the ledger or lose data permanently.
    exists when the entitlement lands.
 
 ### Tier 3 — do not build yet
-- **Offline write queue.** Built and reverted 2026-08-09; see Known issues.
-  Revisit only if real testers report lost writes.
+- **Offline write queue.** Designed and deferred 2026-08-20. Full spec,
+  failure history, and build order in `docs/offline-mode.md`. Scope line:
+  recording works offline, planning requires a connection.
 - **DeviceActivity extension**, autonomous intervention, voice input, email,
   third-party integrations, richer AI.
 
