@@ -15,11 +15,12 @@ import { Feather } from "@expo/vector-icons";
 import { generateDailyInstances, supabase } from "../src/lib/supabase";
 import { WEEKDAYS } from "../src/lib/schedule";
 import { getLocalDateString, getTomorrowLocalDateString, minutesToTime } from "../src/lib/time";
-import { handleError } from "../src/lib/errors";
+import { handleError, isConnectivityError } from "../src/lib/errors";
 import { useAuth } from "../src/providers/AuthProvider";
 import { useTheme } from "../src/providers/ThemeProvider";
 import { RequireAuth } from "../src/components/RequireAuth";
 import { BrandLoader } from "../src/components/BrandLoader";
+import { LoadError } from "../src/components/LoadError";
 import { PressableScale } from "../src/components/PressableScale";
 import { CloseTodayRow } from "../src/components/CloseTodayRow";
 import { DailyInstance } from "../src/types/database";
@@ -46,12 +47,15 @@ function PlanTomorrowScreenContent() {
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [loadedDetails, setLoadedDetails] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [loadOffline, setLoadOffline] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const loadPlan = useCallback(async () => {
     if (!session?.user.id) return;
 
     setLoading(true);
+    setLoadFailed(false);
     try {
       await generateDailyInstances(tomorrowDate);
 
@@ -89,6 +93,8 @@ function PlanTomorrowScreenContent() {
       setLoadedDetails(details);
       setDrafts({ ...details });
     } catch (err) {
+      setLoadFailed(true);
+      setLoadOffline(isConnectivityError(err));
       handleError(err, "loadPlanTomorrow");
     } finally {
       setLoading(false);
@@ -221,6 +227,14 @@ function PlanTomorrowScreenContent() {
     return (
       <View style={styles.centered}>
         <BrandLoader size={56} />
+      </View>
+    );
+  }
+
+  if (loadFailed) {
+    return (
+      <View style={styles.centered}>
+        <LoadError offline={loadOffline} onRetry={loadPlan} />
       </View>
     );
   }

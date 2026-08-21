@@ -35,6 +35,7 @@ export function isConnectivityError(err: unknown): boolean {
   );
 }
 
+let lastAlertKey = "";
 let lastAlertAt = 0;
 const ALERT_DEDUPE_MS = 3000;
 
@@ -57,11 +58,14 @@ export function handleError(
 
   if (!userMessage || Platform.OS === "web") return;
 
+  const offline = isConnectivityError(err);
+  const key = offline ? "offline" : userMessage;
   const now = Date.now();
-  if (now - lastAlertAt < ALERT_DEDUPE_MS) return;
+  if (key === lastAlertKey && now - lastAlertAt < ALERT_DEDUPE_MS) return;
+  lastAlertKey = key;
   lastAlertAt = now;
 
-  if (isConnectivityError(err)) {
+  if (offline) {
     Alert.alert(
       "You're offline",
       "This didn't save. Reconnect and try again."

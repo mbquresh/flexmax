@@ -9,10 +9,11 @@ import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { supabase } from "../src/lib/supabase";
 import { getLocalDateString } from "../src/lib/time";
-import { handleError } from "../src/lib/errors";
+import { handleError, isConnectivityError } from "../src/lib/errors";
 import { useAuth } from "../src/providers/AuthProvider";
 import { RequireAuth } from "../src/components/RequireAuth";
 import { BrandLoader } from "../src/components/BrandLoader";
+import { LoadError } from "../src/components/LoadError";
 import { DaySquare, daySquareStripStyles } from "../src/components/DaySquare";
 import { PressableScale } from "../src/components/PressableScale";
 import { BehavioralInsight } from "../src/types/database";
@@ -137,6 +138,8 @@ function WeeklyRecapScreenContent() {
   );
 
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [loadOffline, setLoadOffline] = useState(false);
   const [hasData, setHasData] = useState(false);
   const [completionRatio, setCompletionRatio] = useState<number[]>(
     Array(7).fill(0)
@@ -149,6 +152,7 @@ function WeeklyRecapScreenContent() {
     if (!session?.user.id) return;
 
     setLoading(true);
+    setLoadFailed(false);
     try {
       const [instancesResult, insightResult] = await Promise.all([
         supabase
@@ -184,6 +188,8 @@ function WeeklyRecapScreenContent() {
       setDaysAccounted(shape.daysAccounted);
       setInsight(insightResult.data);
     } catch (err) {
+      setLoadFailed(true);
+      setLoadOffline(isConnectivityError(err));
       handleError(err, "loadWeeklyRecap");
     } finally {
       setLoading(false);
@@ -200,6 +206,14 @@ function WeeklyRecapScreenContent() {
     return (
       <View style={styles.centered}>
         <BrandLoader size={56} />
+      </View>
+    );
+  }
+
+  if (loadFailed) {
+    return (
+      <View style={styles.centered}>
+        <LoadError offline={loadOffline} onRetry={loadRecap} />
       </View>
     );
   }

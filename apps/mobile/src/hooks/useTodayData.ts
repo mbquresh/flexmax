@@ -5,13 +5,15 @@ import { generateDailyInstances, supabase } from "../lib/supabase";
 import { scheduleTodayBlockNotifications } from "../lib/blockNotifications";
 import { fetchTodayStats, TodayStats } from "../lib/stats";
 import { getLocalDateString } from "../lib/time";
-import { handleError } from "../lib/errors";
+import { handleError, isConnectivityError } from "../lib/errors";
 import { AdhocTask, BehavioralInsight } from "../types/database";
 import { useStore } from "../store";
 
 export function useTodayData(userId: string | undefined) {
   const { todayInstances, setTodayInstances } = useStore();
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [loadOffline, setLoadOffline] = useState(false);
   const [totalBlocks, setTotalBlocks] = useState(0);
   const [displayDate, setDisplayDate] = useState(getLocalDateString());
   const [stats, setStats] = useState<TodayStats | null>(null);
@@ -62,6 +64,7 @@ export function useTodayData(userId: string | undefined) {
       currentDateRef.current = targetDate;
       if (!options?.silent) {
         setLoading(true);
+        setLoadFailed(false);
       }
 
       await generateDailyInstances(targetDate);
@@ -107,6 +110,8 @@ export function useTodayData(userId: string | undefined) {
         .order("rank") as { data: BehavioralInsight[] | null; error: Error | null };
 
       if (error) {
+        setLoadFailed(true);
+        setLoadOffline(isConnectivityError(error));
         handleError(error, "loadToday");
       } else {
         if (isStale()) return;
@@ -144,6 +149,8 @@ export function useTodayData(userId: string | undefined) {
       }
 
       if (adhocError) {
+        setLoadFailed(true);
+        setLoadOffline(isConnectivityError(adhocError));
         handleError(adhocError, "loadToday adhoc");
       } else {
         if (isStale()) return;
@@ -151,6 +158,8 @@ export function useTodayData(userId: string | undefined) {
       }
 
       if (insightsError) {
+        setLoadFailed(true);
+        setLoadOffline(isConnectivityError(insightsError));
         handleError(insightsError, "loadToday insights");
       } else {
         if (isStale()) return;
@@ -235,6 +244,8 @@ export function useTodayData(userId: string | undefined) {
     totalBlocks,
     stats,
     loading,
+    loadFailed,
+    loadOffline,
     reload: loadToday,
     resetToday,
     adhocTasks,

@@ -31,10 +31,11 @@ import { useStore } from "../src/store";
 import { BlockCategory, ScheduleBlock } from "../src/types/database";
 import { minutesToTime } from "../src/lib/time";
 import { TimePicker } from "../src/components/TimePicker";
-import { handleError, getErrorMessage } from "../src/lib/errors";
+import { handleError, getErrorMessage, isConnectivityError } from "../src/lib/errors";
 
 import { RequireAuth } from "../src/components/RequireAuth";
 import { BrandLoader } from "../src/components/BrandLoader";
+import { LoadError } from "../src/components/LoadError";
 import { PressableScale } from "../src/components/PressableScale";
 import { BoundaryRow } from "../src/components/BoundaryRow";
 import { Colors, spacing, radii, typography, iconSizes } from "../src/theme";
@@ -45,6 +46,8 @@ function ScheduleBuilderScreenContent() {
   const { session, refreshProfile } = useAuth();
   const { blocks, setBlocks } = useStore();
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [loadOffline, setLoadOffline] = useState(false);
   const [saving, setSaving] = useState(false);
   const [templateId, setTemplateId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -73,6 +76,7 @@ function ScheduleBuilderScreenContent() {
     }
 
     setLoading(true);
+    setLoadFailed(false);
     setError(null);
     try {
       const tid = await ensureActiveTemplate(session.user.id);
@@ -98,6 +102,8 @@ function ScheduleBuilderScreenContent() {
       setWakeTarget(profileData?.wake_target_minutes ?? null);
       setSleepTarget(profileData?.sleep_target_minutes ?? null);
     } catch (err) {
+      setLoadFailed(true);
+      setLoadOffline(isConnectivityError(err));
       handleError(err, "loadBlocks");
       setError(getErrorMessage(err));
     } finally {
@@ -484,6 +490,14 @@ function ScheduleBuilderScreenContent() {
     return (
       <View style={styles.centered}>
         <BrandLoader size={56} />
+      </View>
+    );
+  }
+
+  if (loadFailed) {
+    return (
+      <View style={styles.centered}>
+        <LoadError offline={loadOffline} onRetry={loadBlocks} />
       </View>
     );
   }

@@ -39,6 +39,7 @@ import { scheduleTodayBlockNotifications } from "../src/lib/blockNotifications";
 import { getInitials } from "../src/lib/format";
 import { RequireAuth } from "../src/components/RequireAuth";
 import { BrandLoader } from "../src/components/BrandLoader";
+import { LoadError } from "../src/components/LoadError";
 import { StreakStrip } from "../src/components/StreakStrip";
 import { CheckInSheet } from "../src/components/CheckInSheet";
 import { TaskDetailSheet } from "../src/components/TaskDetailSheet";
@@ -122,6 +123,8 @@ function TodayScreenContent() {
     totalBlocks,
     stats,
     loading,
+    loadFailed,
+    loadOffline,
     reload,
     resetToday,
     timedAdhoc,
@@ -815,26 +818,41 @@ function TodayScreenContent() {
     );
     setRescheduleSlot(slot);
 
-    const { data: recent } = await supabase
-      .from("daily_schedule_instances")
-      .select("date, status")
-      .eq("block_id", instance.block_id)
-      .order("date", { ascending: false })
-      .limit(14);
+    let recent: { date: string; status: string }[] = [];
+    let lastNoteRow: {
+      date: string;
+      reflection_why: string | null;
+      reflection_improve: string | null;
+    } | null = null;
 
-    // Separate, wider lookup: the user's most recent forward-looking note on
-    // this block, however long ago. The 14-row streak window is far too narrow
-    // — intentions are written rarely (~1 in 3 misses) and stay relevant.
-    const { data: lastNoteRow } = await supabase
-      .from("daily_schedule_instances")
-      .select("date, reflection_why, reflection_improve")
-      .eq("user_id", session!.user.id)
-      .eq("block_id", instance.block_id)
-      .neq("id", instance.id)
-      .or("reflection_why.not.is.null,reflection_improve.not.is.null")
-      .order("date", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    try {
+      const { data: recentData } = await supabase
+        .from("daily_schedule_instances")
+        .select("date, status")
+        .eq("block_id", instance.block_id)
+        .order("date", { ascending: false })
+        .limit(14);
+
+      recent = recentData ?? [];
+
+      // Separate, wider lookup: the user's most recent forward-looking note on
+      // this block, however long ago. The 14-row streak window is far too narrow
+      // — intentions are written rarely (~1 in 3 misses) and stay relevant.
+      const { data: lastNoteRowData } = await supabase
+        .from("daily_schedule_instances")
+        .select("date, reflection_why, reflection_improve")
+        .eq("user_id", session!.user.id)
+        .eq("block_id", instance.block_id)
+        .neq("id", instance.id)
+        .or("reflection_why.not.is.null,reflection_improve.not.is.null")
+        .order("date", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      lastNoteRow = lastNoteRowData ?? null;
+    } catch (err) {
+      handleError(err, "handleMarkMissed lookups");
+    }
 
     // Prefer the forward-looking note; fall back to the cause. Both are the
     // user's own words, which is what makes this land.
@@ -845,7 +863,7 @@ function TodayScreenContent() {
 
     const copy = buildRecoveryCopy(
       instance.block?.name ?? "this block",
-      recent ?? [],
+      recent,
       getLocalDateString(),
       noteText ? { text: noteText, date: lastNoteRow!.date } : null
     );
@@ -1090,6 +1108,14 @@ function TodayScreenContent() {
     return (
       <View style={styles.centered}>
         <BrandLoader size={56} />
+      </View>
+    );
+  }
+
+  if (loadFailed) {
+    return (
+      <View style={styles.centered}>
+        <LoadError offline={loadOffline} onRetry={reload} />
       </View>
     );
   }
