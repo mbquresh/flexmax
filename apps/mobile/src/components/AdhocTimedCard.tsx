@@ -159,7 +159,6 @@ export function AdhocTimedCard({ task, onToggle, onDelete, onEdit }: AdhocTimedC
                   >
                     {task.name}
                   </Text>
-                  {!expanded ? (
                     <Text
                       style={[styles.name, styles.measureHidden]}
                       onTextLayout={(e) => {
@@ -170,7 +169,6 @@ export function AdhocTimedCard({ task, onToggle, onDelete, onEdit }: AdhocTimedC
                     >
                       {task.name}
                     </Text>
-                  ) : null}
                   {truncated ? (
                     <TouchableOpacity
                       onPress={() => {

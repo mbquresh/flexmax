@@ -439,18 +439,16 @@ export function BlockCard({
                     >
                       {instance.task_detail}
                     </Text>
-                    {!expanded ? (
-                      <Text
-                        style={[styles.task, styles.measureHidden]}
-                        onTextLayout={(e) => {
-                          const isTruncated = e.nativeEvent.lines.length > 2;
-                          if (isTruncated !== truncated) setTruncated(isTruncated);
-                        }}
-                        pointerEvents="none"
-                      >
-                        {instance.task_detail}
-                      </Text>
-                    ) : null}
+                    <Text
+                      style={[styles.task, styles.measureHidden]}
+                      onTextLayout={(e) => {
+                        const isTruncated = e.nativeEvent.lines.length > 2;
+                        if (isTruncated !== truncated) setTruncated(isTruncated);
+                      }}
+                      pointerEvents="none"
+                    >
+                      {instance.task_detail}
+                    </Text>
                   </View>
                 ) : (
                   <View style={styles.taskAddRow}>

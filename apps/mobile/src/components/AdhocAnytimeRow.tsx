@@ -162,18 +162,16 @@ export function AdhocAnytimeRow({ task, onToggle, onDelete, onEdit }: AdhocAnyti
               >
                 {task.name}
               </Text>
-              {!expanded ? (
-                <Text
-                  style={[styles.name, styles.measureHidden]}
-                  onTextLayout={(e) => {
-                    const isTruncated = e.nativeEvent.lines.length > 2;
-                    if (isTruncated !== truncated) setTruncated(isTruncated);
-                  }}
-                  pointerEvents="none"
-                >
-                  {task.name}
-                </Text>
-              ) : null}
+              <Text
+                style={[styles.name, styles.measureHidden]}
+                onTextLayout={(e) => {
+                  const isTruncated = e.nativeEvent.lines.length > 2;
+                  if (isTruncated !== truncated) setTruncated(isTruncated);
+                }}
+                pointerEvents="none"
+              >
+                {task.name}
+              </Text>
               {truncated ? (
                 <TouchableOpacity
                   onPress={() => {
