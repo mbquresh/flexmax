@@ -13,8 +13,8 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { AdhocTask } from "../types/database";
-import { hapticCommit, hapticDetent, hapticPickUp } from "../lib/haptics";
-import { Colors, spacing, radii, iconSizes } from "../theme";
+import { hapticCommit, hapticDetent, hapticPickUp, hapticSelect } from "../lib/haptics";
+import { Colors, spacing, radii, iconSizes, typography } from "../theme";
 import { useTheme } from "../providers/ThemeProvider";
 import { PressableScale } from "./PressableScale";
 
@@ -32,6 +32,7 @@ export function AdhocAnytimeRow({ task, onToggle, onDelete, onEdit }: AdhocAnyti
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const isDone = task.status === "completed";
   const [expanded, setExpanded] = useState(false);
+  const [truncated, setTruncated] = useState(false);
 
   const revealWidth = ACTION_BUTTON_WIDTH * 2;
   const translateX = useSharedValue(0);
@@ -39,6 +40,7 @@ export function AdhocAnytimeRow({ task, onToggle, onDelete, onEdit }: AdhocAnyti
 
   useEffect(() => {
     setExpanded(false);
+    setTruncated(false);
   }, [task.name]);
 
   const toggleExpanded = useCallback(() => {
@@ -164,12 +166,28 @@ export function AdhocAnytimeRow({ task, onToggle, onDelete, onEdit }: AdhocAnyti
                 ) : null}
               </View>
             </PressableScale>
-            <Text
-              style={[styles.name, isDone && styles.nameDone]}
-              numberOfLines={expanded ? undefined : 2}
-            >
-              {task.name}
-            </Text>
+            <View style={styles.nameBlock}>
+              <Text
+                style={[styles.name, isDone && styles.nameDone]}
+                numberOfLines={expanded ? undefined : 2}
+                onTextLayout={(e) => {
+                  if (!expanded && e.nativeEvent.lines.length > 2) setTruncated(true);
+                }}
+              >
+                {task.name}
+              </Text>
+              {truncated ? (
+                <TouchableOpacity
+                  onPress={() => {
+                    hapticSelect();
+                    setExpanded((v) => !v);
+                  }}
+                  hitSlop={8}
+                >
+                  <Text style={styles.expandToggle}>{expanded ? "Collapse" : "Expand"}</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
           </View>
         </Animated.View>
       </GestureDetector>
@@ -243,13 +261,20 @@ const makeStyles = (c: Colors) =>
       borderColor: c.success,
       backgroundColor: c.success,
     },
-    name: {
+    nameBlock: {
       flex: 1,
+    },
+    name: {
       color: c.textSecondary,
       fontSize: 14,
     },
     nameDone: {
       textDecorationLine: "line-through",
       color: c.textMuted,
+    },
+    expandToggle: {
+      color: c.primary,
+      ...typography.small,
+      marginTop: spacing.xs,
     },
   });

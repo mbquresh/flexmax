@@ -18,7 +18,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { DailyInstance } from "../types/database";
 import { minutesToTime } from "../lib/time";
-import { hapticPickUp, hapticDetent } from "../lib/haptics";
+import { hapticPickUp, hapticDetent, hapticSelect } from "../lib/haptics";
 import { DragHandle } from "./DragHandle";
 import { PressableScale } from "./PressableScale";
 import { useStore } from "../store";
@@ -65,6 +65,7 @@ export function BlockCard({
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [expanded, setExpanded] = useState(false);
+  const [truncated, setTruncated] = useState(false);
 
   const translateY = useSharedValue(0);
   const translateX = useSharedValue(0);
@@ -216,11 +217,6 @@ export function BlockCard({
         runOnJS(hapticDetent)();
       }
     });
-
-  const taskLongPress = Gesture.LongPress().onStart(() => {
-    runOnJS(hapticPickUp)();
-    runOnJS(setExpanded)((v) => !v);
-  });
 
   const shadowAnimatedStyle = useAnimatedStyle(() => {
     const displaced = Math.min(Math.abs(translateY.value) / 4, 1);
@@ -436,11 +432,15 @@ export function BlockCard({
               </Text>
               <TouchableOpacity onPress={() => onTaskDetail(instance)} hitSlop={8}>
                 {instance.task_detail ? (
-                  <GestureDetector gesture={Gesture.Exclusive(swipeGesture, taskLongPress)}>
-                    <Text style={styles.task} numberOfLines={expanded ? undefined : 2}>
-                      {instance.task_detail}
-                    </Text>
-                  </GestureDetector>
+                  <Text
+                    style={styles.task}
+                    numberOfLines={expanded ? undefined : 2}
+                    onTextLayout={(e) => {
+                      if (!expanded && e.nativeEvent.lines.length > 2) setTruncated(true);
+                    }}
+                  >
+                    {instance.task_detail}
+                  </Text>
                 ) : (
                   <View style={styles.taskAddRow}>
                     <Text style={styles.taskAdd}>Add task</Text>
@@ -448,6 +448,17 @@ export function BlockCard({
                   </View>
                 )}
               </TouchableOpacity>
+              {instance.task_detail && truncated ? (
+                <TouchableOpacity
+                  onPress={() => {
+                    hapticSelect();
+                    setExpanded((v) => !v);
+                  }}
+                  hitSlop={8}
+                >
+                  <Text style={styles.expandToggle}>{expanded ? "Collapse" : "Expand"}</Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
 
             <PressableScale
@@ -582,6 +593,11 @@ const makeStyles = (c: Colors) =>
       marginTop: spacing.sm,
     },
     taskAdd: { color: c.primary, ...typography.smallBold },
+    expandToggle: {
+      color: c.primary,
+      ...typography.small,
+      marginTop: spacing.xs,
+    },
     actionCircle: {
       width: 32,
       height: 32,
