@@ -164,7 +164,7 @@ export function RecoverySheet({
           pointerEvents="none"
         />
         <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} />
-        <Pressable style={styles.sheetAnchor} onPress={(e) => e.stopPropagation()}>
+        <View style={styles.sheetAnchor} pointerEvents="box-none">
           <RNAnimated.View
             style={[styles.recoverySheet, { transform: [{ translateY: slideAnim }] }]}
           >
@@ -306,7 +306,7 @@ export function RecoverySheet({
               </PressableScale>
             </View>
           </RNAnimated.View>
-        </Pressable>
+        </View>
       </View>
     </Modal>
   );
