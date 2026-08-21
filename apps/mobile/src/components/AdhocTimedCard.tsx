@@ -167,12 +167,21 @@ export function AdhocTimedCard({ task, onToggle, onDelete, onEdit }: AdhocTimedC
                   <Text
                     style={[styles.name, isDone && styles.nameDone]}
                     numberOfLines={expanded ? undefined : 2}
-                    onTextLayout={(e) => {
-                      if (!expanded && e.nativeEvent.lines.length > 2) setTruncated(true);
-                    }}
                   >
                     {task.name}
                   </Text>
+                  {!expanded ? (
+                    <Text
+                      style={[styles.name, styles.measureHidden]}
+                      onTextLayout={(e) => {
+                        const isTruncated = e.nativeEvent.lines.length > 2;
+                        if (isTruncated !== truncated) setTruncated(isTruncated);
+                      }}
+                      pointerEvents="none"
+                    >
+                      {task.name}
+                    </Text>
+                  ) : null}
                   {truncated ? (
                     <TouchableOpacity
                       onPress={() => {
@@ -288,6 +297,11 @@ const makeStyles = (c: Colors) =>
       color: c.primary,
       ...typography.small,
       marginTop: spacing.xs,
+    },
+    measureHidden: {
+      position: "absolute",
+      opacity: 0,
+      zIndex: -1,
     },
     meta: {
       color: c.textMuted,

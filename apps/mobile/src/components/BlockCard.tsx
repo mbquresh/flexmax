@@ -432,15 +432,26 @@ export function BlockCard({
               </Text>
               <TouchableOpacity onPress={() => onTaskDetail(instance)} hitSlop={8}>
                 {instance.task_detail ? (
-                  <Text
-                    style={styles.task}
-                    numberOfLines={expanded ? undefined : 2}
-                    onTextLayout={(e) => {
-                      if (!expanded && e.nativeEvent.lines.length > 2) setTruncated(true);
-                    }}
-                  >
-                    {instance.task_detail}
-                  </Text>
+                  <View>
+                    <Text
+                      style={styles.task}
+                      numberOfLines={expanded ? undefined : 2}
+                    >
+                      {instance.task_detail}
+                    </Text>
+                    {!expanded ? (
+                      <Text
+                        style={[styles.task, styles.measureHidden]}
+                        onTextLayout={(e) => {
+                          const isTruncated = e.nativeEvent.lines.length > 2;
+                          if (isTruncated !== truncated) setTruncated(isTruncated);
+                        }}
+                        pointerEvents="none"
+                      >
+                        {instance.task_detail}
+                      </Text>
+                    ) : null}
+                  </View>
                 ) : (
                   <View style={styles.taskAddRow}>
                     <Text style={styles.taskAdd}>Add task</Text>
@@ -597,6 +608,11 @@ const makeStyles = (c: Colors) =>
       color: c.primary,
       ...typography.small,
       marginTop: spacing.xs,
+    },
+    measureHidden: {
+      position: "absolute",
+      opacity: 0,
+      zIndex: -1,
     },
     actionCircle: {
       width: 32,
