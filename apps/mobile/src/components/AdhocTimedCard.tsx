@@ -21,11 +21,6 @@ import { PressableScale } from "./PressableScale";
 
 const ACTION_BUTTON_WIDTH = 80;
 
-// Two lines of typography.small in a card of this width holds roughly this
-// many characters. Deliberately conservative: a slightly early control is
-// better than one that never appears.
-const EXPAND_THRESHOLD = 70;
-
 interface AdhocTimedCardProps {
   task: AdhocTask;
   onToggle: (task: AdhocTask) => void;
@@ -38,7 +33,9 @@ export function AdhocTimedCard({ task, onToggle, onDelete, onEdit }: AdhocTimedC
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const isDone = task.status === "completed";
   const [expanded, setExpanded] = useState(false);
-  const isLong = task.name.length > EXPAND_THRESHOLD;
+  const [collapsedH, setCollapsedH] = useState(0);
+  const [fullH, setFullH] = useState(0);
+  const isLong = collapsedH > 0 && fullH > collapsedH + 1;
 
   const revealWidth = ACTION_BUTTON_WIDTH * 2;
   const translateX = useSharedValue(0);
@@ -160,6 +157,16 @@ export function AdhocTimedCard({ task, onToggle, onDelete, onEdit }: AdhocTimedC
                   <Text
                     style={[styles.name, isDone && styles.nameDone]}
                     numberOfLines={expanded ? undefined : 2}
+                    onLayout={(e) => {
+                      if (!expanded) setCollapsedH(e.nativeEvent.layout.height);
+                    }}
+                  >
+                    {task.name}
+                  </Text>
+                  <Text
+                    style={[styles.name, styles.measureFull]}
+                    onLayout={(e) => setFullH(e.nativeEvent.layout.height)}
+                    pointerEvents="none"
                   >
                     {task.name}
                   </Text>
@@ -278,6 +285,13 @@ const makeStyles = (c: Colors) =>
       color: c.primary,
       ...typography.small,
       marginTop: spacing.xs,
+    },
+    measureFull: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      opacity: 0,
+      zIndex: -1,
     },
     meta: {
       color: c.textMuted,

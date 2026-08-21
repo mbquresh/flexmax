@@ -29,11 +29,6 @@ const ACTION_BUTTON_WIDTH = 80;
 const REVEAL_WIDTH_PENDING = 160;
 const REVEAL_WIDTH_SINGLE = 80;
 
-// Two lines of typography.small in a card of this width holds roughly this
-// many characters. Deliberately conservative: a slightly early control is
-// better than one that never appears.
-const EXPAND_THRESHOLD = 70;
-
 function isInstanceFixed(instance: DailyInstance): boolean {
   return instance.is_fixed || !!instance.block?.is_fixed;
 }
@@ -70,7 +65,9 @@ export function BlockCard({
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [expanded, setExpanded] = useState(false);
-  const isLong = (instance.task_detail?.length ?? 0) > EXPAND_THRESHOLD;
+  const [collapsedH, setCollapsedH] = useState(0);
+  const [fullH, setFullH] = useState(0);
+  const isLong = collapsedH > 0 && fullH > collapsedH + 1;
 
   const translateY = useSharedValue(0);
   const translateX = useSharedValue(0);
@@ -437,10 +434,20 @@ export function BlockCard({
               </Text>
               <TouchableOpacity onPress={() => onTaskDetail(instance)} hitSlop={8}>
                 {instance.task_detail ? (
-                  <View>
+                  <View style={{ flex: 1 }}>
                     <Text
                       style={styles.task}
                       numberOfLines={expanded ? undefined : 2}
+                      onLayout={(e) => {
+                        if (!expanded) setCollapsedH(e.nativeEvent.layout.height);
+                      }}
+                    >
+                      {instance.task_detail}
+                    </Text>
+                    <Text
+                      style={[styles.task, styles.measureFull]}
+                      onLayout={(e) => setFullH(e.nativeEvent.layout.height)}
+                      pointerEvents="none"
                     >
                       {instance.task_detail}
                     </Text>
@@ -601,6 +608,13 @@ const makeStyles = (c: Colors) =>
       color: c.primary,
       ...typography.small,
       marginTop: spacing.xs,
+    },
+    measureFull: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      opacity: 0,
+      zIndex: -1,
     },
     actionCircle: {
       width: 32,
