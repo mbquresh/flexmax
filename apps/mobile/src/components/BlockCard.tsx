@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Pressable } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
@@ -64,6 +64,7 @@ export function BlockCard({
 }: BlockCardProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const [expanded, setExpanded] = useState(false);
 
   const translateY = useSharedValue(0);
   const translateX = useSharedValue(0);
@@ -215,6 +216,11 @@ export function BlockCard({
         runOnJS(hapticDetent)();
       }
     });
+
+  const taskLongPress = Gesture.LongPress().onStart(() => {
+    runOnJS(hapticPickUp)();
+    runOnJS(setExpanded)((v) => !v);
+  });
 
   const shadowAnimatedStyle = useAnimatedStyle(() => {
     const displaced = Math.min(Math.abs(translateY.value) / 4, 1);
@@ -430,7 +436,11 @@ export function BlockCard({
               </Text>
               <TouchableOpacity onPress={() => onTaskDetail(instance)} hitSlop={8}>
                 {instance.task_detail ? (
-                  <Text style={styles.task}>{instance.task_detail}</Text>
+                  <GestureDetector gesture={Gesture.Exclusive(swipeGesture, taskLongPress)}>
+                    <Text style={styles.task} numberOfLines={expanded ? undefined : 2}>
+                      {instance.task_detail}
+                    </Text>
+                  </GestureDetector>
                 ) : (
                   <View style={styles.taskAddRow}>
                     <Text style={styles.taskAdd}>Add task</Text>
