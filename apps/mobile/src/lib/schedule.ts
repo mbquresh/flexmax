@@ -175,6 +175,36 @@ export function findRescheduleSlot(
   return null;
 }
 
+export function findSlotCollisions(
+  slot: { start_minutes: number; end_minutes: number },
+  allInstances: DailyInstance[],
+  excludeId: string
+): string[] {
+  return allInstances
+    .filter(
+      (i) =>
+        i.id !== excludeId &&
+        i.status !== "skipped" &&
+        i.status !== "removed" &&
+        i.status !== "rescheduled" &&
+        slot.start_minutes < i.end_minutes &&
+        slot.end_minutes > i.start_minutes
+    )
+    .map((i) => i.block?.name ?? "another block");
+}
+
+export function getFallbackSlot(
+  missedInstance: DailyInstance
+): { start_minutes: number; end_minutes: number } {
+  const duration = missedInstance.end_minutes - missedInstance.start_minutes;
+  const now = new Date();
+  const start = Math.min(
+    now.getHours() * 60 + now.getMinutes() + 30,
+    1440 - duration
+  );
+  return { start_minutes: start, end_minutes: start + duration };
+}
+
 export const CATEGORY_OPTIONS: { value: BlockCategory; label: string }[] = [
   { value: "deep_work", label: "Deep work" },
   { value: "health", label: "Health" },

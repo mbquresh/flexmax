@@ -25,7 +25,7 @@ import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "../src/lib/supabase";
-import { findRescheduleSlot, getTodayLabel } from "../src/lib/schedule";
+import { getTodayLabel } from "../src/lib/schedule";
 import { handleError } from "../src/lib/errors";
 import { useAuth } from "../src/providers/AuthProvider";
 import { useStore } from "../src/store";
@@ -43,8 +43,6 @@ import { LoadError } from "../src/components/LoadError";
 import { StreakStrip } from "../src/components/StreakStrip";
 import { CheckInSheet } from "../src/components/CheckInSheet";
 import { TaskDetailSheet } from "../src/components/TaskDetailSheet";
-import { RecoverySheet } from "../src/components/RecoverySheet";
-import { buildRecoveryCopy, findInsightForBlock, RecoveryCopy } from "../src/lib/recoveryCopy";
 import { BlockCard } from "../src/components/BlockCard";
 import { DayBoundaryCard } from "../src/components/DayBoundaryCard";
 import { InsightCard } from "../src/components/InsightCard";
@@ -137,14 +135,6 @@ function TodayScreenContent() {
   const { setTodayInstances, updateInstance } = useStore();
   const [checkInInstance, setCheckInInstance] = useState<DailyInstance | null>(null);
   const [undoInstance, setUndoInstance] = useState<DailyInstance | null>(null);
-  const [recoveryInstance, setRecoveryInstance] = useState<DailyInstance | null>(null);
-  const [recoveryCopy, setRecoveryCopy] = useState<RecoveryCopy | null>(null);
-  const [reflectionWhy, setReflectionWhy] = useState("");
-  const [reflectionImprove, setReflectionImprove] = useState("");
-  const [rescheduleSlot, setRescheduleSlot] = useState<{
-    start_minutes: number;
-    end_minutes: number;
-  } | null>(null);
   const [activeTaskDetailInstance, setActiveTaskDetailInstance] =
     useState<DailyInstance | null>(null);
   const [taskDetailDraft, setTaskDetailDraft] = useState("");
@@ -808,174 +798,9 @@ function TodayScreenContent() {
     }
   };
 
-  const handleMarkMissed = async (instance: DailyInstance) => {
+  const handleMarkMissed = (instance: DailyInstance) => {
     hapticMissed();
-
-    const slot = findRescheduleSlot(
-      { ...instance, status: "missed" },
-      useStore.getState().todayInstances,
-      profile?.sleep_target_minutes ?? null
-    );
-    setRescheduleSlot(slot);
-
-    let recent: { date: string; status: string }[] = [];
-    let lastNoteRow: {
-      date: string;
-      reflection_why: string | null;
-      reflection_improve: string | null;
-    } | null = null;
-
-    try {
-      const { data: recentData } = await supabase
-        .from("daily_schedule_instances")
-        .select("date, status")
-        .eq("block_id", instance.block_id)
-        .order("date", { ascending: false })
-        .limit(14);
-
-      recent = recentData ?? [];
-
-      // Separate, wider lookup: the user's most recent forward-looking note on
-      // this block, however long ago. The 14-row streak window is far too narrow
-      // — intentions are written rarely (~1 in 3 misses) and stay relevant.
-      const { data: lastNoteRowData } = await supabase
-        .from("daily_schedule_instances")
-        .select("date, reflection_why, reflection_improve")
-        .eq("user_id", session!.user.id)
-        .eq("block_id", instance.block_id)
-        .neq("id", instance.id)
-        .or("reflection_why.not.is.null,reflection_improve.not.is.null")
-        .order("date", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      lastNoteRow = lastNoteRowData ?? null;
-    } catch (err) {
-      handleError(err, "handleMarkMissed lookups");
-    }
-
-    // Prefer the forward-looking note; fall back to the cause. Both are the
-    // user's own words, which is what makes this land.
-    const noteText =
-      lastNoteRow?.reflection_improve?.trim() ||
-      lastNoteRow?.reflection_why?.trim() ||
-      null;
-
-    const copy = buildRecoveryCopy(
-      instance.block?.name ?? "this block",
-      recent,
-      getLocalDateString(),
-      noteText ? { text: noteText, date: lastNoteRow!.date } : null
-    );
-    const insight = copy.suppressInsight
-      ? null
-      : findInsightForBlock(insights, instance.block?.name ?? "");
-    setRecoveryCopy({
-      ...copy,
-      structuralNote: insight?.belief ?? copy.structuralNote,
-    });
-    setRecoveryInstance(instance);
-    setReflectionWhy("");
-    setReflectionImprove("");
-  };
-
-  const closeRecovery = () => {
-    setRecoveryInstance(null);
-    setRecoveryCopy(null);
-    setRescheduleSlot(null);
-    setReflectionWhy("");
-    setReflectionImprove("");
-  };
-
-  const handleSkipRecovery = async () => {
-    if (!recoveryInstance) return;
-    const instanceId = recoveryInstance.id;
-
-    setSaving(true);
-    try {
-      await commitMissed(instanceId);
-      closeRecovery();
-    } catch (err) {
-      handleError(err, "handleSkipRecovery", "Could not mark missed");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const commitMissed = async (instanceId: string, extra = {}) => {
-    const { error } = await supabase
-      .from("daily_schedule_instances")
-      .update({ status: "missed", ...extra })
-      .eq("id", instanceId);
-
-    if (error) throw error;
-    updateInstance(instanceId, { status: "missed", ...extra });
-  };
-
-  const handleSaveRecovery = async () => {
-    if (!recoveryInstance) return;
-
-    setSaving(true);
-    try {
-      await commitMissed(recoveryInstance.id, {
-        reflection_why: reflectionWhy.trim() || null,
-        reflection_improve: reflectionImprove.trim() || null,
-      });
-      closeRecovery();
-    } catch (err) {
-      handleError(err, "handleSaveRecovery", "Could not save reflection");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleAdjustSlot = (start: number, end: number) => {
-    setRescheduleSlot({ start_minutes: start, end_minutes: end });
-  };
-
-  const handleReschedule = async () => {
-    if (!recoveryInstance || !rescheduleSlot) return;
-
-    const { error } = await supabase
-      .from("daily_schedule_instances")
-      .update({
-        start_minutes: rescheduleSlot.start_minutes,
-        end_minutes: rescheduleSlot.end_minutes,
-        status: "pending",
-        rescheduled_to_id: null,
-      })
-      .eq("id", recoveryInstance.id);
-
-    if (error) {
-      handleError(error, "handleReschedule", "Couldn't reschedule the block");
-      return;
-    }
-
-    const updated = {
-      ...recoveryInstance,
-      start_minutes: rescheduleSlot.start_minutes,
-      end_minutes: rescheduleSlot.end_minutes,
-      status: "pending" as const,
-    };
-
-    const updatedInstances = instances
-      .map((i) => (i.id === recoveryInstance.id ? updated : i))
-      .sort((a, b) => a.start_minutes - b.start_minutes);
-
-    updateInstance(recoveryInstance.id, {
-      start_minutes: rescheduleSlot.start_minutes,
-      end_minutes: rescheduleSlot.end_minutes,
-      status: "pending",
-    });
-
-    setTodayInstances(updatedInstances);
-    resyncNotifications(updatedInstances);
-
-    showToast(
-      `${recoveryInstance.block?.name ?? "Block"} rescheduled to ${minutesToTime(rescheduleSlot.start_minutes)}`
-    );
-    setRecoveryInstance(null);
-    setRecoveryCopy(null);
+    router.push(`/recovery/${instance.id}`);
   };
 
   const handleCheckIn = async (rating: CompletionRating) => {
@@ -1236,23 +1061,6 @@ function TodayScreenContent() {
           ) : null}
         </View>
       </ScrollView>
-
-      <RecoverySheet
-        recoveryInstance={recoveryInstance}
-        copy={recoveryCopy}
-        reflectionWhy={reflectionWhy}
-        reflectionImprove={reflectionImprove}
-        rescheduleSlot={rescheduleSlot}
-        sleepTargetMinutes={profile?.sleep_target_minutes ?? null}
-        saving={saving}
-        onSaveRecovery={handleSaveRecovery}
-        onReschedule={handleReschedule}
-        onAdjustSlot={handleAdjustSlot}
-        onChangeWhy={setReflectionWhy}
-        onChangeImprove={setReflectionImprove}
-        onClose={closeRecovery}
-        onSkip={handleSkipRecovery}
-      />
 
       {toastMessage ? (
         <Animated.View style={[styles.toast, toastAnimatedStyle]} pointerEvents="none">
