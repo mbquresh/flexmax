@@ -120,6 +120,9 @@ export interface DailyInstance {
   miss_reason_tag: string | null;
   actual_end_minutes: number | null;
   rescheduled_to_id: string | null;
+  reschedule_count: number;
+  original_start_minutes: number | null;
+  original_end_minutes: number | null;
   is_fixed: boolean;
   removed_reason: string | null;
   // Joined from schedule_blocks

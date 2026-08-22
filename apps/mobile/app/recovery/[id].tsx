@@ -256,14 +256,25 @@ function RecoveryScreenContent() {
   const handleReschedule = async () => {
     if (!instance || !rescheduleSlot) return;
 
+    const isFirstReschedule = (instance.reschedule_count ?? 0) === 0;
+
+    const payload = {
+      start_minutes: rescheduleSlot.start_minutes,
+      end_minutes: rescheduleSlot.end_minutes,
+      status: "pending" as const,
+      rescheduled_to_id: null,
+      reschedule_count: (instance.reschedule_count ?? 0) + 1,
+      ...(isFirstReschedule
+        ? {
+            original_start_minutes: instance.start_minutes,
+            original_end_minutes: instance.end_minutes,
+          }
+        : {}),
+    };
+
     const { error } = await supabase
       .from("daily_schedule_instances")
-      .update({
-        start_minutes: rescheduleSlot.start_minutes,
-        end_minutes: rescheduleSlot.end_minutes,
-        status: "pending",
-        rescheduled_to_id: null,
-      })
+      .update(payload)
       .eq("id", instance.id);
 
     if (error) {
@@ -273,20 +284,14 @@ function RecoveryScreenContent() {
 
     const updated = {
       ...instance,
-      start_minutes: rescheduleSlot.start_minutes,
-      end_minutes: rescheduleSlot.end_minutes,
-      status: "pending" as const,
+      ...payload,
     };
 
     const updatedInstances = allInstances
       .map((i) => (i.id === instance.id ? updated : i))
       .sort((a, b) => a.start_minutes - b.start_minutes);
 
-    updateInstance(instance.id, {
-      start_minutes: rescheduleSlot.start_minutes,
-      end_minutes: rescheduleSlot.end_minutes,
-      status: "pending",
-    });
+    updateInstance(instance.id, payload);
 
     setTodayInstances(updatedInstances);
     scheduleTodayBlockNotifications(updatedInstances, getLocalDateString()).catch((err) =>
