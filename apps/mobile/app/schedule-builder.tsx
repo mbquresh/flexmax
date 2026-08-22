@@ -220,8 +220,8 @@ function ScheduleBuilderScreenContent() {
       setEditingBlockId(null);
     } catch (err) {
       const message = getErrorMessage(err);
-      handleError(err, "handleSaveEdit", message);
-      setError(message);
+      handleError(err, "handleSaveEdit");
+      showError(message);
     } finally {
       setSaving(false);
     }
@@ -243,6 +243,10 @@ function ScheduleBuilderScreenContent() {
     }
     if (!daysOfWeek.length) {
       showError("Pick at least one day for this block.");
+      return;
+    }
+    if (blockEnd <= blockStart) {
+      showError("End time must be after start time.");
       return;
     }
 
@@ -268,8 +272,8 @@ function ScheduleBuilderScreenContent() {
       }
     } catch (err) {
       const message = getErrorMessage(err);
-      handleError(err, "handleAddBlock", message);
-      setError(message);
+      handleError(err, "handleAddBlock");
+      showError(message);
     } finally {
       setSaving(false);
     }
@@ -284,8 +288,8 @@ function ScheduleBuilderScreenContent() {
       if (editingBlockId === blockId) setEditingBlockId(null);
     } catch (err) {
       const message = getErrorMessage(err);
-      handleError(err, "handleDeleteBlock", message);
-      setError(message);
+      handleError(err, "handleDeleteBlock");
+      showError(message);
     } finally {
       setSaving(false);
     }

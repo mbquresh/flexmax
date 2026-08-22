@@ -21,17 +21,24 @@ export function getErrorMessage(err: unknown): string {
 }
 
 export function isConnectivityError(err: unknown): boolean {
-  if (!err || typeof err !== "object") return false;
+  if (!err) return false;
+
+  // A populated `code` means PostgREST answered -- the request reached
+  // the server, so this is not a transport failure.
   const code = (err as { code?: unknown }).code;
   if (typeof code === "string" && code.length > 0) return false;
+
+  // Absence of `code` proves nothing: Error instances never have one.
+  // Match on the message only.
   const message = getErrorMessage(err).toLowerCase();
   return (
     message.includes("network request failed") ||
     message.includes("failed to fetch") ||
     message.includes("network error") ||
+    message.includes("the internet connection") ||
     message.includes("connection appears to be offline") ||
-    code === undefined ||
-    code === ""
+    message.includes("could not connect") ||
+    message.includes("timed out")
   );
 }
 
