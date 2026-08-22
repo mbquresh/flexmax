@@ -32,20 +32,11 @@ supabase link --project-ref YOUR_PROJECT_REF
 # Push the schema
 supabase db push
 
-# Set AI provider + API key (pick one):
-supabase secrets set AI_PROVIDER=gemini
-supabase secrets set GEMINI_API_KEY=your-key-here
-# Or for production:
-# supabase secrets set AI_PROVIDER=anthropic
-# supabase secrets set ANTHROPIC_API_KEY=your-key-here
-# Or scripted demo (no key):
-# supabase secrets set AI_PROVIDER=demo
-
-# Or run: ./scripts/setup-ai.sh gemini YOUR_GEMINI_KEY
+# Set the Anthropic API key
+supabase secrets set ANTHROPIC_API_KEY=your-key-here
 
 # Deploy edge functions
-supabase functions deploy onboarding-chat
-supabase functions deploy extract-psychology-profile
+supabase functions deploy weekly-insight
 supabase functions deploy nightly-notify
 ```
 

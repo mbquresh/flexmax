@@ -48,10 +48,10 @@ results.
                                               ▼
                                     behavioral_insights  [stored beliefs]
                                               │
-                    ┌─────────────────────────┼─────────────────────────┐
-                    ▼                         ▼                         ▼
-            missed-block-recovery      Today morning card        Plan Tomorrow
-              (injected, free)          (injected, free)        (injected, free)
+                            ┌─────────────────┴─────────────────┐
+                            ▼                                   ▼
+                    Today morning card                    Plan Tomorrow
+                     (injected, free)                    (injected, free)
 
 ### Data integrity rules (learned the hard way)
 
@@ -274,7 +274,7 @@ offers the next real slot in the day.
 Working: preset onboarding and preference profile, schedule builder with
 drag-to-swap and fixed anchors, check-ins, miss reflections, missed-block 
 recovery with reschedule, push notifications in each user's local 
-timezone, rate-limited AI endpoints with the API key server-side only.
+timezone, rate-limited AI endpoint with the API key server-side only.
 
 Not built yet: the full behavioral learning layer. Swap patterns, 
 completion ratings, and removal reasons are captured but not yet read back 
@@ -297,12 +297,11 @@ The app is about half of what it should be. The magic is in the other half.
 ```
 apps/mobile/          Expo app
   app/                Expo Router routes — today, schedule-builder, onboarding, account
-  src/components/     BlockCard, RecoverySheet, CheckInSheet, StreakStrip
+  src/components/     BlockCard, CheckInSheet, StreakStrip
   src/theme.ts        design tokens, single source of truth
-packages/ai/          Claude wrappers + prompt system
 supabase/
   migrations/         schema
-  functions/          missed-block-recovery, nightly-notify, weekly-insight
+  functions/          nightly-notify, weekly-insight
 docs/index.html       behavioral engine overview (GitHub Pages)
 ```
 
