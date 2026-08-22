@@ -834,6 +834,22 @@ tree before being acted on — do not assume all are still present.
   not a nicety — it is a launch blocker.
 - **Undecided:** README vs CLAUDE.md as the canonical reasoning log. They
   currently overlap.
+- **`weekly-insight` leaks internals on error.** The catch at
+  `supabase/functions/weekly-insight/index.ts:265` returns
+  `JSON.stringify({ error: String(err) })` to the client with a 500. Any
+  Postgres error text, RPC name, or stack fragment reaches the app. Should
+  return a generic message and log the detail server-side. Nothing depends on
+  the current shape — `useTodayData` invokes this fire-and-forget and ignores
+  the body.
+- **No database guard against inverted blocks.** `daily_schedule_instances`
+  has no CHECK constraint on `end_minutes > start_minutes`; migration 025
+  constrains `status` and `completion_rating` only. Postgres would accept a
+  block that ends before it starts and the day render would break. Three
+  client-side guards currently carry this: the add-block check in
+  `schedule-builder.tsx`, the edit-block check, and the `MIN_BLOCK_MINUTES`
+  clamp in the recovery route's end-time picker. A CHECK constraint would make
+  all three backstops rather than the only defense — but it would need to
+  tolerate existing rows, so verify no inverted rows exist before adding one.
 
 ---
 
