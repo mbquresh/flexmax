@@ -1,10 +1,15 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { AppState } from "react-native";
 import { Session } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
 import { registerPushToken, unregisterPushToken } from "../lib/notifications";
 import { handleError } from "../lib/errors";
+import { getLocalDateString } from "../lib/time";
 import { useStore } from "../store";
 import { Profile, PsychologyProfile } from "../types/database";
+
+let lastOpenRecordedAt = 0;
+const OPEN_DEBOUNCE_MS = 60_000;
 
 interface AuthContextValue {
   session: Session | null;
@@ -104,6 +109,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     registerPushToken(userId).catch(console.error);
   };
 
+  const recordAppOpen = () => {
+    const now = Date.now();
+    if (now - lastOpenRecordedAt < OPEN_DEBOUNCE_MS) return;
+    lastOpenRecordedAt = now;
+
+    supabase
+      .rpc("record_app_open", { p_local_date: getLocalDateString() })
+      .then(({ error }) => {
+        if (error) handleError(error, "recordAppOpen");
+      });
+  };
+
   const refreshProfile = async () => {
     if (!session?.user.id) return;
     await loadUserData(session.user.id);
@@ -116,6 +133,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loadUserData(current.user.id)
           .catch(console.error)
           .finally(() => setLoading(false));
+        recordAppOpen();
       } else {
         setLoading(false);
         setProfileLoaded(true);
@@ -140,7 +158,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
-    return () => subscription.unsubscribe();
+    const appStateSub = AppState.addEventListener("change", (next) => {
+      if (next === "active") recordAppOpen();
+    });
+
+    return () => {
+      subscription.unsubscribe();
+      appStateSub.remove();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {

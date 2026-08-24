@@ -184,6 +184,33 @@ Cursor = implementation engine.
 | 024 | acknowledged_at.sql           | daily_schedule_instances.acknowledged_at + BEFORE UPDATE trigger — stamps on first real acknowledgment, cleared on undo      |
 | 025 | value_constraints.sql         | CHECK constraints on status and completion_rating (NOT VALID)                                                              |
 | 026 | cannibalization_and_interventions.sql | cannibalization, nudge_outcomes, miss_reasons in get_behavior_evidence; miss_reason_tag in base CTE                  |
+| 028 | app_sessions.sql              | app_sessions + record_app_open(date) RPC — one row per user per local date; repeats increment open_count             |
+
+028 exists to answer the north-star metric: of users who had a bad week, what
+share opened the app the following week. Capture is fire-and-forget from
+AuthProvider (cold start + foreground, 60s debounce). Time-in-app is not a
+signal — a phone in a pocket looks identical to engagement.
+
+```sql
+-- Of users who had a bad week, what share opened the app the following week?
+with weekly as (
+  select user_id,
+         date_trunc('week', date) as wk,
+         avg((status = 'completed')::int) as rate
+  from daily_schedule_instances
+  where status in ('completed','missed','skipped')
+  group by 1, 2
+)
+select w.rate < 0.5 as bad_week,
+       count(*) filter (where exists (
+         select 1 from app_sessions s
+         where s.user_id = w.user_id
+           and s.local_date >= (w.wk + interval '7 days')::date
+           and s.local_date <  (w.wk + interval '14 days')::date
+       ))::float / count(*) as returned_next_week
+from weekly w
+group by 1;
+```
 
 
 ---
@@ -1309,8 +1336,9 @@ incumbent could ship a weekly "why your plans fail" card as a feature update.
 The durable edges are tone discipline, data-integrity care, and eventually the
 behavioral corpus itself.
 - **NORTH-STAR METRIC: reopen rate after a bad week.** Everything else is
-downstream of whether people come back after failing. Instrument this before
-external testers arrive, not after.
+downstream of whether people come back after failing. Capture shipped in 028
+(`app_sessions` / `record_app_open`). The defining query sits under the
+migrations table.
 
 **The shipped thresholds are invented too.** Deferring Bayesian machinery on the
 grounds that the calibration is n=1 was correct — but the same logic applies to
@@ -1338,8 +1366,8 @@ can be answered without real testers.
    the App Store listing and the showcase page alone.
 3. **Will they pay before using it?** The hard paywall is deliberate and filters
    for the decided cohort, but the conversion floor is unknown.
-4. **Will they reopen after a bad week?** The north-star metric. Instrument it
-   before testers arrive.
+4. **Will they reopen after a bad week?** The north-star metric. Capture is
+   028; the query sits under the migrations table.
 5. **Does the behavioral insight feel surprisingly accurate?** The entire
    differentiation reduces to this. Validated on n=1 so far.
 
