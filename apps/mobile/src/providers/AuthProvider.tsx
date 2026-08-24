@@ -114,6 +114,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setProfileLoaded(true);
 
     registerPushToken(userId).catch(console.error);
+    recordAppOpen();
   };
 
   const recordAppOpen = () => {
@@ -143,7 +144,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setLoading(false);
             setProfileLoaded(true);
           });
-        recordAppOpen();
       } else {
         setLoading(false);
         setProfileLoaded(true);
