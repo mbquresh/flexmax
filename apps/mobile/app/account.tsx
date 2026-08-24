@@ -34,6 +34,7 @@ function AccountScreenContent() {
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState(profile?.name ?? "");
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const initials = getInitials(profile?.name ?? "User");
 
@@ -82,6 +83,48 @@ function AccountScreenContent() {
         {
           text: "Redo",
           onPress: () => router.replace("/onboarding"),
+        },
+      ]
+    );
+  };
+
+  const deleteAccount = async () => {
+    setDeleting(true);
+    try {
+      const { error } = await supabase.rpc("delete_my_account");
+      if (error) throw error;
+
+      await signOut();
+      router.replace("/sign-in");
+    } catch (err) {
+      handleError(err, "deleteAccount", "Couldn't delete your account");
+      setDeleting(false);
+    }
+  };
+
+  const confirmDeleteAccount = () => {
+    Alert.alert(
+      "Delete account",
+      "This permanently deletes your account, your schedule, and every reflection and completion record. This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Continue",
+          style: "destructive",
+          onPress: () => {
+            Alert.alert(
+              "Are you sure?",
+              "There is no way to recover this data.",
+              [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Delete my account",
+                  style: "destructive",
+                  onPress: deleteAccount,
+                },
+              ]
+            );
+          },
         },
       ]
     );
@@ -227,6 +270,16 @@ function AccountScreenContent() {
           <Text style={styles.signOutText}>Sign out</Text>
         </PressableScale>
 
+        <PressableScale
+          style={styles.deleteBtn}
+          onPress={confirmDeleteAccount}
+          disabled={deleting}
+        >
+          <Text style={styles.deleteText}>
+            {deleting ? "Deleting..." : "Delete account"}
+          </Text>
+        </PressableScale>
+
         <View style={styles.footerMark}>
           <BrandMark size={28} />
         </View>
@@ -367,5 +420,11 @@ const makeStyles = (c: Colors) =>
       alignItems: "center",
     },
     signOutText: { color: c.danger, ...typography.bodyBold },
+    deleteBtn: {
+      marginTop: spacing.sm,
+      paddingVertical: spacing.lg,
+      alignItems: "center",
+    },
+    deleteText: { color: c.danger, ...typography.small },
     footerMark: { marginTop: spacing.xxxl, opacity: 0.4, alignItems: "center" },
   });
