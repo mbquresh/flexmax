@@ -68,12 +68,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Profile missing (migrations not run, or signed up before trigger existed)
     if (profileResult.error?.code === "PGRST116") {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+      // Session token is valid but the user is gone (account deleted
+      // elsewhere, or deleted directly in the database). Nothing can be
+      // written under this id — every table cascades from auth.users.
+      if (userError || !user) {
+        await supabase.auth.signOut();
+        return;
+      }
+
       const name =
-        user?.user_metadata?.name ??
-        user?.email?.split("@")[0] ??
+        user.user_metadata?.name ??
+        user.email?.split("@")[0] ??
         "User";
 
       profileResult = await supabase
@@ -131,8 +138,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(current);
       if (current?.user.id) {
         loadUserData(current.user.id)
-          .catch(console.error)
-          .finally(() => setLoading(false));
+          .catch((err) => handleError(err, "loadUserData"))
+          .finally(() => {
+            setLoading(false);
+            setProfileLoaded(true);
+          });
         recordAppOpen();
       } else {
         setLoading(false);
@@ -147,8 +157,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (nextSession?.user.id) {
         setLoading(true);
         loadUserData(nextSession.user.id)
-          .catch(console.error)
-          .finally(() => setLoading(false));
+          .catch((err) => handleError(err, "loadUserData"))
+          .finally(() => {
+            setLoading(false);
+            setProfileLoaded(true);
+          });
       } else {
         setProfile(null);
         setPsychologyProfile(null);
