@@ -15,7 +15,7 @@ import { minutesToTime, getLocalDateString } from "../../src/lib/time";
 import {
   findRescheduleSlot,
   getFallbackSlot,
-  findSlotCollisions,
+  planDisplacement,
 } from "../../src/lib/schedule";
 import { hapticSelect } from "../../src/lib/haptics";
 import { Colors, spacing, radii, typography } from "../../src/theme";
@@ -197,10 +197,29 @@ function RecoveryScreenContent() {
     rescheduleSlot != null &&
     rescheduleSlot.end_minutes > profile.sleep_target_minutes;
 
-  const collisions =
-    rescheduleSlot && instance
-      ? findSlotCollisions(rescheduleSlot, allInstances, instance.id)
-      : [];
+  const plan = useMemo(
+    () =>
+      rescheduleSlot && instance
+        ? planDisplacement(
+            rescheduleSlot,
+            allInstances,
+            instance.id,
+            profile?.sleep_target_minutes
+          )
+        : ({ kind: "clear" } as const),
+    [rescheduleSlot, allInstances, instance?.id, profile?.sleep_target_minutes]
+  );
+
+  const blockedMessage =
+    plan.kind !== "blocked"
+      ? null
+      : plan.reason === "multiple"
+        ? `This overlaps ${plan.names.length} blocks. Pick a time with room for it.`
+        : plan.reason === "fixed"
+          ? `This overlaps ${plan.names[0]}, which is locked. Pick another time.`
+          : plan.reason === "past_bedtime"
+            ? `Moving ${plan.names[0]} to make room would run past your bedtime. Pick another time.`
+            : `Moving to make room would run into ${plan.names.join(", ")}. Pick another time.`;
 
   const commitMissed = async (instanceId: string, extra = {}) => {
     const { error } = await supabase
@@ -245,12 +264,10 @@ function RecoveryScreenContent() {
 
   const handleReschedule = async () => {
     if (!instance || !rescheduleSlot) return;
+    if (plan.kind === "blocked") return;
 
     const isFirstReschedule = (instance.reschedule_count ?? 0) === 0;
-
-    const payload = {
-      start_minutes: rescheduleSlot.start_minutes,
-      end_minutes: rescheduleSlot.end_minutes,
+    const provenance = {
       status: "pending" as const,
       rescheduled_to_id: null,
       reschedule_count: (instance.reschedule_count ?? 0) + 1,
@@ -261,34 +278,98 @@ function RecoveryScreenContent() {
           }
         : {}),
     };
-
-    const { error } = await supabase
-      .from("daily_schedule_instances")
-      .update(payload)
-      .eq("id", instance.id);
-
-    if (error) {
-      handleError(error, "handleReschedule", "Couldn't reschedule the block");
-      return;
-    }
-
-    const updated = {
-      ...instance,
-      ...payload,
+    const payload = {
+      start_minutes: rescheduleSlot.start_minutes,
+      end_minutes: rescheduleSlot.end_minutes,
+      ...provenance,
     };
 
-    const updatedInstances = allInstances
-      .map((i) => (i.id === instance.id ? updated : i))
-      .sort((a, b) => a.start_minutes - b.start_minutes);
+    setSaving(true);
+    try {
+      if (plan.kind === "displace") {
+        // Two rows must move together. swap_instance_times (008) is a
+        // generic ownership-validated "set both instances' times in one
+        // transaction" — it carries no swap-specific logic. Sequential
+        // updates here would allow a half-commit that leaves a real
+        // overlap in the database, which is the failure this whole change
+        // exists to prevent.
+        const { error: rpcError } = await supabase.rpc("swap_instance_times", {
+          instance_a_id: instance.id,
+          a_start: rescheduleSlot.start_minutes,
+          a_end: rescheduleSlot.end_minutes,
+          instance_b_id: plan.instanceId,
+          b_start: plan.newStart,
+          b_end: plan.newEnd,
+        });
+        if (rpcError) throw rpcError;
 
-    updateInstance(instance.id, payload);
+        // Provenance second, deliberately. Times are already correct and
+        // non-overlapping, so a failure here loses metadata, never
+        // schedule integrity.
+        const { error: provError } = await supabase
+          .from("daily_schedule_instances")
+          .update(provenance)
+          .eq("id", instance.id);
+        if (provError) handleError(provError, "handleReschedule provenance");
 
-    setTodayInstances(updatedInstances);
-    scheduleTodayBlockNotifications(updatedInstances, getLocalDateString()).catch((err) =>
-      handleError(err, "recoveryResync")
-    );
+        updateInstance(instance.id, payload);
+        updateInstance(plan.instanceId, {
+          start_minutes: plan.newStart,
+          end_minutes: plan.newEnd,
+        });
 
-    router.back();
+        const displacedId = plan.instanceId;
+        const displacedStart = plan.newStart;
+        const displacedEnd = plan.newEnd;
+
+        const updatedInstances = allInstances
+          .map((i) =>
+            i.id === instance.id
+              ? { ...i, ...payload }
+              : i.id === displacedId
+                ? {
+                    ...i,
+                    start_minutes: displacedStart,
+                    end_minutes: displacedEnd,
+                  }
+                : i
+          )
+          .sort((a, b) => a.start_minutes - b.start_minutes);
+
+        setTodayInstances(updatedInstances);
+        scheduleTodayBlockNotifications(
+          updatedInstances,
+          getLocalDateString()
+        ).catch((err) => handleError(err, "recoveryResync"));
+
+        router.back();
+        return;
+      }
+
+      const { error } = await supabase
+        .from("daily_schedule_instances")
+        .update(payload)
+        .eq("id", instance.id);
+      if (error) throw error;
+
+      updateInstance(instance.id, payload);
+
+      const updatedInstances = allInstances
+        .map((i) => (i.id === instance.id ? { ...i, ...payload } : i))
+        .sort((a, b) => a.start_minutes - b.start_minutes);
+
+      setTodayInstances(updatedInstances);
+      scheduleTodayBlockNotifications(
+        updatedInstances,
+        getLocalDateString()
+      ).catch((err) => handleError(err, "recoveryResync"));
+
+      router.back();
+    } catch (err) {
+      handleError(err, "handleReschedule", "Couldn't reschedule the block");
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (!instance) return null;
@@ -369,29 +450,49 @@ function RecoveryScreenContent() {
                 ) : null}
               </>
             ) : null}
-            {pastBedtime ? (
+            {pastBedtime && plan.kind !== "blocked" ? (
               <View style={styles.bedtimeNote}>
                 <Text style={styles.bedtimeNoteText}>
                   This runs past your usual bedtime.
                 </Text>
               </View>
             ) : null}
-            {collisions.length > 0 ? (
+            {plan.kind === "displace" ? (
               <View style={styles.collisionNote}>
                 <Text style={styles.bedtimeNoteText}>
-                  {collisions.length === 1
-                    ? `This overlaps ${collisions[0]}.`
-                    : `This overlaps ${collisions.length} other blocks.`}
+                  This overlaps {plan.name}. Moving it to{" "}
+                  {minutesToTime(plan.newStart)} makes room.
                 </Text>
               </View>
+            ) : blockedMessage ? (
+              <View style={styles.collisionNote}>
+                <Text style={styles.bedtimeNoteText}>{blockedMessage}</Text>
+              </View>
             ) : null}
+
+            {/* A blocked plan disables the commit rather than offering a second
+                button. The affordance to choose another time is the picker directly
+                above — the refusal message explains why this time will not work, and
+                the button re-enables the moment the picker produces a slot that does. */}
             <PressableScale
-              style={styles.rescheduleBtn}
+              style={[
+                styles.rescheduleBtn,
+                plan.kind === "blocked" && styles.rescheduleBtnBlocked,
+              ]}
               onPress={handleReschedule}
-              disabled={saving}
+              disabled={saving || plan.kind === "blocked"}
             >
-              <Text style={styles.rescheduleBtnText}>
-                {slotIsFallback ? "Reschedule to this time" : "Reschedule to this slot"}
+              <Text
+                style={[
+                  styles.rescheduleBtnText,
+                  plan.kind === "blocked" && styles.rescheduleBtnTextBlocked,
+                ]}
+              >
+                {plan.kind === "displace"
+                  ? `Reschedule and move ${plan.name}`
+                  : slotIsFallback
+                    ? "Reschedule to this time"
+                    : "Reschedule to this slot"}
               </Text>
             </PressableScale>
           </View>
@@ -536,6 +637,12 @@ const makeStyles = (c: Colors) =>
       marginTop: spacing.xs,
     },
     rescheduleBtnText: { color: c.text, fontSize: 14, fontWeight: "600" },
+    rescheduleBtnBlocked: {
+      backgroundColor: c.surfaceNested,
+    },
+    rescheduleBtnTextBlocked: {
+      color: c.textSecondary,
+    },
     footer: {
       flexDirection: "row",
       alignItems: "center",

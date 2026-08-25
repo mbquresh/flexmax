@@ -375,6 +375,7 @@ marker at all.
 | Value constraints                             | 025. status and completion_rating. NOT VALID so legacy rows are untouched; all future writes governed |
 | loadToday stale-request guard                 | Sequence token per load; superseded loads discard their results rather than overwriting newer state |
 | Test infrastructure                           | vitest on pure modules. Covers the streak threshold, the accounted-but-missed day, unaccounted transparency, and the recovery copy branches |
+| Reschedule conflict resolver | recovery/[id].tsx + planDisplacement in schedule.ts. Reschedule previously WARNED on collision and committed the overlap anyway; overlapping instances were legal in the DB and corrupted notification scheduling, findRescheduleSlot's occupied list, and cannibalization's time-ordering. Now: one movable collider is offered as a displacement ("move Dinner to 8:15"), everything else refuses to "Pick another time". Never writes an overlap. Two-row write is atomic via the existing swap_instance_times RPC — no new migration |
 
 
 
@@ -635,6 +636,18 @@ makes it a one-line swap in theme.ts if ever revisited.
   Directional claims may be one observation seen from both sides. txid already
   groups both halves; splitting swap-derived moves from solo reschedules is
   pure SQL and should land before any insight cites drift direction.
+- **Swap still dead-ends on collision.** handleSwap refuses with a toast and
+  offers nothing, while reschedule now resolves. The asymmetry is deliberate
+  for now: in a reschedule the user chooses the destination, so "displace
+  what's there?" is a coherent question; the anchor-rebuild swap computes a
+  position the user never picked, so the same offer would be confusing. The
+  likely fix there is showing resulting times BEFORE committing, not a
+  displacement offer.
+- **A displacement is indistinguishable from a swap in the audit trail.**
+  Reusing swap_instance_times means the trigger writes both rows under one
+  txid, exactly like a swap. This compounds the existing "swap_drift cannot
+  separate swaps from reschedules" item — there are now three event types
+  sharing one signature.
 
 ---
 

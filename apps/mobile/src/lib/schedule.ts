@@ -193,6 +193,91 @@ export function findSlotCollisions(
     .map((i) => i.block?.name ?? "another block");
 }
 
+// A collision is a decision point, not a dead end. Blocking the reschedule
+// produces the freeze; auto-cascading makes the app author the schedule.
+// This names the conflict and offers ONE bounded resolution — push the single
+// blocking block to just after the new slot — and refuses honestly in every
+// case it cannot handle cleanly. No recursion by design.
+export type DisplacementPlan =
+  | { kind: "clear" }
+  | {
+      kind: "displace";
+      instanceId: string;
+      name: string;
+      newStart: number;
+      newEnd: number;
+    }
+  | {
+      kind: "blocked";
+      reason: "multiple" | "fixed" | "past_bedtime" | "cascade";
+      names: string[];
+    };
+
+function isFixedInstance(i: DailyInstance): boolean {
+  return i.is_fixed || !!i.block?.is_fixed;
+}
+
+function isLiveInstance(i: DailyInstance): boolean {
+  return (
+    i.status !== "skipped" && i.status !== "removed" && i.status !== "rescheduled"
+  );
+}
+
+export function planDisplacement(
+  slot: { start_minutes: number; end_minutes: number },
+  allInstances: DailyInstance[],
+  excludeId: string,
+  sleepTargetMinutes?: number | null
+): DisplacementPlan {
+  const live = allInstances.filter(
+    (i) => i.id !== excludeId && isLiveInstance(i)
+  );
+
+  const colliders = live.filter(
+    (i) => slot.start_minutes < i.end_minutes && slot.end_minutes > i.start_minutes
+  );
+
+  if (colliders.length === 0) return { kind: "clear" };
+
+  if (colliders.length > 1) {
+    return {
+      kind: "blocked",
+      reason: "multiple",
+      names: colliders.map((i) => i.block?.name ?? "another block"),
+    };
+  }
+
+  const target = colliders[0];
+  const name = target.block?.name ?? "another block";
+
+  if (isFixedInstance(target)) {
+    return { kind: "blocked", reason: "fixed", names: [name] };
+  }
+
+  const newStart = slot.end_minutes;
+  const newEnd = newStart + (target.end_minutes - target.start_minutes);
+
+  // Same day-end convention as findRescheduleSlot: bedtime when set, else midnight.
+  const dayEnd = sleepTargetMinutes ?? 1440;
+  if (newEnd > dayEnd) {
+    return { kind: "blocked", reason: "past_bedtime", names: [name] };
+  }
+
+  const cascade = live.filter(
+    (i) => i.id !== target.id && newStart < i.end_minutes && newEnd > i.start_minutes
+  );
+
+  if (cascade.length > 0) {
+    return {
+      kind: "blocked",
+      reason: "cascade",
+      names: cascade.map((i) => i.block?.name ?? "another block"),
+    };
+  }
+
+  return { kind: "displace", instanceId: target.id, name, newStart, newEnd };
+}
+
 export function getFallbackSlot(
   missedInstance: DailyInstance
 ): { start_minutes: number; end_minutes: number } {
