@@ -44,7 +44,6 @@ import { StreakStrip } from "../src/components/StreakStrip";
 import { CheckInSheet } from "../src/components/CheckInSheet";
 import { TaskDetailSheet } from "../src/components/TaskDetailSheet";
 import { BlockCard } from "../src/components/BlockCard";
-import { DayBoundaryCard } from "../src/components/DayBoundaryCard";
 import { InsightCard } from "../src/components/InsightCard";
 import { AdhocTimedCard } from "../src/components/AdhocTimedCard";
 import { AdhocAnytimeRow } from "../src/components/AdhocAnytimeRow";
@@ -154,11 +153,6 @@ function TodayScreenContent() {
   const [editAdhocStartMinutes, setEditAdhocStartMinutes] = useState(9 * 60);
   const [editAdhocEndMinutes, setEditAdhocEndMinutes] = useState(9 * 60 + 30);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [boundaryPrompt, setBoundaryPrompt] = useState<{
-    sleptAt: number | null;
-    wokeAt: number | null;
-  } | null>(null);
-  const [boundaryDismissed, setBoundaryDismissed] = useState(true);
   const [insightDismissed, setInsightDismissed] = useState(true);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -271,53 +265,6 @@ function TodayScreenContent() {
       if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     };
   }, []);
-
-  useEffect(() => {
-    if (!session?.user.id) return;
-
-    const today = getLocalDateString();
-    const yesterdayDate = new Date();
-    yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-    const yesterday = getLocalDateString(yesterdayDate);
-    const dismissKey = `boundary_dismissed_${today}`;
-
-    (async () => {
-      const dismissed = await AsyncStorage.getItem(dismissKey);
-      if (dismissed) {
-        setBoundaryDismissed(true);
-        setBoundaryPrompt(null);
-        return;
-      }
-
-      setBoundaryDismissed(false);
-
-      const { data: logs, error } = await supabase
-        .from("day_log")
-        .select("date, slept_at, woke_at")
-        .eq("user_id", session.user.id)
-        .in("date", [yesterday, today]);
-
-      if (error) {
-        handleError(error, "loadDayBoundaries");
-        return;
-      }
-
-      const yesterdayLog = logs?.find((l) => l.date === yesterday);
-      const todayLog = logs?.find((l) => l.date === today);
-      const needsSleep = yesterdayLog?.slept_at == null;
-      const needsWake = todayLog?.woke_at == null;
-
-      if (!needsSleep && !needsWake) {
-        setBoundaryPrompt(null);
-        return;
-      }
-
-      setBoundaryPrompt({
-        sleptAt: yesterdayLog?.slept_at ?? null,
-        wokeAt: todayLog?.woke_at ?? null,
-      });
-    })();
-  }, [session?.user.id]);
 
   useEffect(() => {
     if (!morningInsight) return;
@@ -862,72 +809,6 @@ function TodayScreenContent() {
     }
   };
 
-  const handleSaveSleep = async (actualMinutes: number) => {
-    if (!session?.user.id) return;
-
-    const yesterdayDate = new Date();
-    yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-    const yesterday = getLocalDateString(yesterdayDate);
-
-    setSaving(true);
-    try {
-      const { error } = await supabase
-        .from("day_log")
-        .upsert(
-          { user_id: session.user.id, date: yesterday, slept_at: actualMinutes },
-          { onConflict: "user_id,date" }
-        );
-
-      if (error) throw error;
-
-      setBoundaryPrompt((prev) => {
-        if (!prev) return null;
-        const next = { ...prev, sleptAt: actualMinutes };
-        if (next.wokeAt != null) return null;
-        return next;
-      });
-    } catch (err) {
-      handleError(err, "handleSaveSleep", "Couldn't save your sleep time");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleSaveWake = async (wakeMinutes: number) => {
-    if (!session?.user.id) return;
-
-    const today = getLocalDateString();
-
-    setSaving(true);
-    try {
-      const { error } = await supabase
-        .from("day_log")
-        .upsert(
-          { user_id: session.user.id, date: today, woke_at: wakeMinutes },
-          { onConflict: "user_id,date" }
-        );
-
-      if (error) throw error;
-
-      setBoundaryPrompt((prev) => {
-        if (!prev) return null;
-        const next = { ...prev, wokeAt: wakeMinutes };
-        if (next.sleptAt != null) return null;
-        return next;
-      });
-    } catch (err) {
-      handleError(err, "handleSaveWake", "Couldn't save your wake time");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDismissBoundary = async () => {
-    await AsyncStorage.setItem(`boundary_dismissed_${getLocalDateString()}`, "1");
-    setBoundaryDismissed(true);
-    setBoundaryPrompt(null);
-  };
-
   const handleDismissInsight = async () => {
     if (!morningInsight) return;
     await AsyncStorage.setItem(`insight_seen_${morningInsight.id}`, "1");
@@ -1003,18 +884,7 @@ function TodayScreenContent() {
               </PressableScale>
             </View>
           </View>
-          {boundaryPrompt && !boundaryDismissed ? (
-            <DayBoundaryCard
-              sleepTargetMinutes={profile?.sleep_target_minutes ?? 22 * 60 + 30}
-              wakeTargetMinutes={profile?.wake_target_minutes ?? 6 * 60}
-              sleptAt={boundaryPrompt.sleptAt}
-              wokeAt={boundaryPrompt.wokeAt}
-              onSaveSleep={handleSaveSleep}
-              onSaveWake={handleSaveWake}
-              onDismiss={handleDismissBoundary}
-              saving={saving}
-            />
-          ) : morningInsight && !insightDismissed ? (
+          {morningInsight && !insightDismissed ? (
             <InsightCard insight={morningInsight} onDismiss={handleDismissInsight} />
           ) : null}
           {stats ? (

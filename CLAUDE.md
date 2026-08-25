@@ -364,12 +364,12 @@ marker at all.
 | Cutoff nudges + telemetry                     | blockNotifications.ts; fires at midpoint or end-30, gated on task_detail; 016 nudge_events |
 | Notification action buttons                   | "Wrapping up" / "Need 15 more"; 018 nudge_response    |
 | nudge_line on insights                        | 017; notification-sized restatement, written in the same weekly AI call |
-| Day boundaries (sleep/wake)                   | 020 day_log; replaces BedtimeCard; wake/sleep rows on schedule builder |
+| Day boundaries (sleep/wake)                   | 020 day_log. Sleep/wake capture REMOVED FROM THE UI 2026-08-24 — the table and history remain, but nothing prompts for it. Rationale: day_log is read by no version of get_behavior_evidence, so it was pure capture with zero consumption; worse, DayBoundaryCard shared a render slot with the morning InsightCard and took precedence, suppressing the engine's only daily output on every morning it fired. Wake/sleep TARGETS on profiles are unaffected and remain load-bearing for findRescheduleSlot. Wake/sleep rows on the schedule builder (BoundaryRow) are unaffected |
 | Morning InsightCard                           | Rank-1 non-strength insight, dismissed per-insight, 8-day expiry |
 | Dark theme                                    | lightColors / darkColors, ThemeProvider, System/Light/Dark toggle |
 | Brand mark and loader                         | BrandMark SVG, BrandLoader on six full-screen loads |
 | Press feedback system                         | PressableScale scale + highlight variants |
-| reflection_improve chips                      | Five presets + "Something else" escape hatch in RecoverySheet |
+| reflection_improve chips                      | REMOVED 2026-08-24. Chips turned the highest-signal free-text column into six repeated strings; eight taps of "Start earlier" is chip affordance, not a pattern. Column and history retained, capture UI deleted. Also resolves the open question of whether the evidence pack should weight canned answers differently — there are no new canned answers. recoveryCopy now filters legacy chip labels out of the "Last time you wrote" callback rather than quoting a tapped preset as the user's words |
 | Reschedule sleep boundary                     | findRescheduleSlot respects sleep_target_minutes; manual adjust in RecoverySheet |
 | Acknowledgment timing                         | 024. Recovery time (deviation → acknowledgment) is now computable. Un-backfillable, which is why it led Tier 1 |
 | Value constraints                             | 025. status and completion_rating. NOT VALID so legacy rows are untouched; all future writes governed |
@@ -463,6 +463,10 @@ But it means a new vendor (transcription), new per-use cost, and real native
 work. The cheaper fixes are already queued: recovery presets, a `miss_reason_tag`
 column, and an optional completion-side reflection field. Test those first. If
 fill rate moves to ~55%, voice is unnecessary.
+UPDATED 2026-08-24: the target is now reflection_why alone. The
+reflection_improve capture was removed rather than fixed, so the 31%
+figure this paragraph cites no longer describes anything that exists.
+Re-measure fill rate on reflection_why before deciding voice is warranted.
 
 **Graduation / block retirement.** Proposing progression or retirement once a
 block sustains high completion. Conceptually strong and it is the product's
@@ -622,6 +626,9 @@ makes it a one-line swap in theme.ts if ever revisited.
   day by profiles.sleep_target_minutes (stated intent). day_log.slept_at records
   what actually happened. Whether it should use observed behaviour is a
   behavioural-engine question.
+  SUPERSEDED 2026-08-24: day_log.slept_at is no longer being collected, so
+  there is no observed-behaviour series to switch to. This reopens only if
+  sleep observation returns with a consumer attached.
 - **swap_drift cannot separate swaps from reschedules.** A swap writes one
   instance_time_changes row per participant, so a single event appears twice
   with opposite directions and roughly doubles aggregate move counts.
