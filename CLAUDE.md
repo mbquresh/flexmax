@@ -186,6 +186,7 @@ Cursor = implementation engine.
 | 026 | cannibalization_and_interventions.sql | cannibalization, nudge_outcomes, miss_reasons in get_behavior_evidence; miss_reason_tag in base CTE                  |
 | 027 | swap_drift_net_displacement.sql | swap_drift counts NET displacement per instance, not edit rows; fidget swap-backs excluded |
 | 028 | app_sessions.sql              | app_sessions + record_app_open(date) RPC — one row per user per local date; repeats increment open_count             |
+| 029 | quality_reason_tag.sql | quality_reason_tag column + CHECK; quality_drift window widened 5→7 rated instances; quality_reasons added to the evidence pack |
 
 028 exists to answer the north-star metric: of users who had a bad week, what
 share opened the app the following week. Capture is fire-and-forget from
@@ -648,6 +649,13 @@ makes it a one-line swap in theme.ts if ever revisited.
   txid, exactly like a swap. This compounds the existing "swap_drift cannot
   separate swaps from reschedules" item — there are now three event types
   sharing one signature.
+- **quality_drift's window moved from 5 to 7 rated instances (029).** The
+  in-app degradation prompt and the evidence pack now share one definition of
+  "degrading", so the app cannot ask about a block the weekly insight never
+  mentions. recent_poor and recent_rated will report different numbers than
+  any insight generated before 029 — the meaning is unchanged, the sample is
+  larger. Insights generated before 2026-08-25 were also built on pre-027
+  swap_drift, so the first fully clean set is the one after both.
 
 ---
 
