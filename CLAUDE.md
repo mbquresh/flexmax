@@ -184,6 +184,7 @@ Cursor = implementation engine.
 | 024 | acknowledged_at.sql           | daily_schedule_instances.acknowledged_at + BEFORE UPDATE trigger — stamps on first real acknowledgment, cleared on undo      |
 | 025 | value_constraints.sql         | CHECK constraints on status and completion_rating (NOT VALID)                                                              |
 | 026 | cannibalization_and_interventions.sql | cannibalization, nudge_outcomes, miss_reasons in get_behavior_evidence; miss_reason_tag in base CTE                  |
+| 027 | swap_drift_net_displacement.sql | swap_drift counts NET displacement per instance, not edit rows; fidget swap-backs excluded |
 | 028 | app_sessions.sql              | app_sessions + record_app_open(date) RPC — one row per user per local date; repeats increment open_count             |
 
 028 exists to answer the north-star metric: of users who had a bad week, what
@@ -620,6 +621,12 @@ makes it a one-line swap in theme.ts if ever revisited.
   day by profiles.sleep_target_minutes (stated intent). day_log.slept_at records
   what actually happened. Whether it should use observed behaviour is a
   behavioural-engine question.
+- **swap_drift cannot separate swaps from reschedules.** A swap writes one
+  instance_time_changes row per participant, so a single event appears twice
+  with opposite directions and roughly doubles aggregate move counts.
+  Directional claims may be one observation seen from both sides. txid already
+  groups both halves; splitting swap-derived moves from solo reschedules is
+  pure SQL and should land before any insight cites drift direction.
 
 ---
 
@@ -833,7 +840,41 @@ because the aggressor wins and takes the other's time. Requires mixed days and
 strict time ordering. Currently produces a directionally correct result
 (Morning Deep work is the sole trigger, matching reflections and swap_drift)
 on very thin evidence — a 2-event difference. Treated as corroborating
-evidence only.
+evidence only. **DOWNGRADED 2026-08-24. The corroboration is gone.** The
+swap_drift half of "two independent sources agree" was measuring edit rows,
+not moves. A contamination audit found 817 logged changes resolving to 45 net
+moves — 5.5% signal. Under the old metric the current 30-day window reports
+Morning Deep Work as the SECOND most-moved block (133 rows vs Cardio's 87), a
+straight inversion of the "everything reorganizes around the block that never
+moves" claim this section was built on. Net displacement (027) puts Morning
+Deep Work at 5 moves against Cardio's 9 and Weights' 9, so "moves least"
+survives — but "never moves" does not, and the anchor framing dies with it.
+All 5 of its moves are LATER, none earlier, at an average of 276 minutes: a
+four-and-a-half-hour unidirectional drift that relocates a morning block into
+the afternoon. An anchor that shifts rarely but always by 4.6 hours in the
+same direction is not anchoring anything. Compounding this, Deep work
+afternoon is the only block skewing EARLIER (6 of 9), which is the reverse of
+the direction this section asserts — though swap_drift writes one row per
+swap participant, so those may be the same events counted from both sides
+rather than two independent facts. A 4-move spread across ~22 underlying
+events is not an independent source either way. Cannibalization is now
+SINGLE-SOURCE (reflections only) on this dataset, and weekly-insight rule 9
+already forbids raising it standalone. Expect it to say nothing until a
+tester who is not also the developer produces clean drift data.
+**Evidence restated 2026-08-24 (027).** The cited swap counts — Cardio 29,
+Weights 11, Morning Deep Work 3 — were produced by a metric counting edit
+ROWS, not moves. An audit found 817 logged changes resolving to 45 net
+moves. Clean figures: Cardio 9, Weights 9, Morning Deep Work 5. The
+corroboration holds, but the supporting fact is different than stated. The
+5-vs-9 spread is too narrow to support "everything reorganizes around the
+block that never moves." What the clean data does show is directional and
+strong: Cardio moved later in 8 of 9 moves, averaging ~5 hours, while
+Morning Deep Work moved later in 5 of 5, averaging ~4.6 hours. Per the
+user's own account the mechanism is an oversleep cascade — the morning
+session is pushed forward, the afternoon session is pulled earlier to fit
+alongside it (6 of 9 moves earlier), and Cardio absorbs the displacement.
+Cardio-as-sacrificed is better supported by displacement direction than the
+immovability argument ever was.
 
 These came from an independent code review and should be verified against the
 tree before being acted on — do not assume all are still present.
@@ -933,6 +974,16 @@ Things that corrupt the ledger or lose data permanently.
 
    This is the highest-value unread signal remaining, and it corresponds
    directly to the cannibalization pattern in the Who FlexMax is for section.
+
+   > **Signal-integrity note (027).** swap_drift originally counted every
+   > instance_time_changes row. A swap writes two rows and a swap-back writes
+   > two more, so net-zero fidgeting was reported as heavy drift, and
+   > multi-step repositioning was counted once per step rather than once per
+   > outcome. 027 collapses every edit to an instance into a single net figure
+   > (earliest old_start vs latest new_start) and drops instances that end
+   > where they began. This matters beyond swap_drift itself: swap_drift is one
+   > of the two independent sources that corroborate the cannibalization
+   > finding, so the pre-027 corroboration was weaker than it appeared.
 7. **Intention-reliability metric.** Planned vs. completed minutes over time —
    are the user's plans becoming more accurate. Pure SQL.
 8. **DeviceActivity drift-event table.** Schema only, no extension, so the shape
@@ -1326,6 +1377,19 @@ the beta is the first opportunity to find out.
 tuned against the author's own month of data — an unusually diligent
 self-journaler who wrote 31 reflections in 30 days. Whether any of it survives
 sparse, low-effort user data is untested and is the whole ballgame.
+- **Interaction-derived signals on n=1 are contaminated, not merely thin.**
+The reflections are honest data — 31 in 30 days, no audience to perform for.
+But every signal derived from how the sole user TOUCHES the app is produced
+by someone testing that app: swap_drift, rated_at/reflected_at check-in
+timing (010), acknowledged_at recovery time (024), and nudge response rates
+(018/026). The 2026-08-24 swap audit found 69% of all logged time changes
+landing within 30 seconds of the previous edit to the same instance, across
+14-18 distinct days per block — daily interface exercise, indistinguishable
+in the data from scheduling intent. This is not a thin-sample problem that
+more of the founder's data would fix. It is a wrong-direction problem that
+only a tester who is not building the app can resolve, and it applies most
+sharply to acknowledged_at, which Tier 1 justified as the metric that tests
+the falsifiable hypothesis.
 - **Reflection dependency is the bottleneck.** The engine is text-first because
 the user's own words are the highest-signal data. Most users write nothing.
 reflection_improve is at 31% fill for the ONE user who exists.
