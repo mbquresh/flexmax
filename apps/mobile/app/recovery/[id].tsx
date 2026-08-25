@@ -29,7 +29,11 @@ import { TimePicker } from "../../src/components/TimePicker";
 import { PressableScale } from "../../src/components/PressableScale";
 import { RequireAuth } from "../../src/components/RequireAuth";
 
-const IMPROVE_CHIPS = [
+// Retained ONLY to filter tapped chip labels out of the "Last time you
+// wrote" callback below. The capture UI was removed; these six strings
+// still exist in historical rows and must never be quoted back to the
+// user as something they wrote.
+const LEGACY_IMPROVE_CHIPS = [
   "Start earlier",
   "Make it shorter",
   "Different time of day",
@@ -50,14 +54,12 @@ function RecoveryScreenContent() {
 
   const [recoveryCopy, setRecoveryCopy] = useState<RecoveryCopy | null>(null);
   const [reflectionWhy, setReflectionWhy] = useState("");
-  const [reflectionImprove, setReflectionImprove] = useState("");
   const [rescheduleSlot, setRescheduleSlot] = useState<{
     start_minutes: number;
     end_minutes: number;
   } | null>(null);
   const [slotIsFallback, setSlotIsFallback] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [improveOther, setImproveOther] = useState(false);
   const [adjustOpen, setAdjustOpen] = useState(slotIsFallback);
 
   useEffect(() => {
@@ -77,7 +79,6 @@ function RecoveryScreenContent() {
     setSlotIsFallback(found === null);
     setRescheduleSlot(found ?? getFallbackSlot(instance));
     setReflectionWhy("");
-    setReflectionImprove("");
 
     let cancelled = false;
 
@@ -135,10 +136,16 @@ function RecoveryScreenContent() {
 
       // Prefer the forward-looking note; fall back to the cause. Both are the
       // user's own words, which is what makes this land.
-      const noteText =
-        lastNoteRow?.reflection_improve?.trim() ||
-        lastNoteRow?.reflection_why?.trim() ||
-        null;
+      // A tapped chip is not the user's own words. Quoting one back as
+      // "Last time you wrote" is the same error the evidence pack forbids
+      // for miss_reason_tag. Typed improve notes are still preferred —
+      // they are forward-looking, which is what lands in a recovery moment.
+      const improveNote = lastNoteRow?.reflection_improve?.trim() || null;
+      const typedImprove =
+        improveNote && !LEGACY_IMPROVE_CHIPS.includes(improveNote as never)
+          ? improveNote
+          : null;
+      const noteText = typedImprove || lastNoteRow?.reflection_why?.trim() || null;
 
       const copy = buildRecoveryCopy(
         instance.block?.name ?? "this block",
@@ -195,22 +202,6 @@ function RecoveryScreenContent() {
       ? findSlotCollisions(rescheduleSlot, allInstances, instance.id)
       : [];
 
-  const handleChipPress = (chipLabel: string) => {
-    hapticSelect();
-    if (reflectionImprove === chipLabel) {
-      setReflectionImprove("");
-    } else {
-      setReflectionImprove(chipLabel);
-      setImproveOther(false);
-    }
-  };
-
-  const handleSomethingElsePress = () => {
-    hapticSelect();
-    setImproveOther(true);
-    setReflectionImprove("");
-  };
-
   const commitMissed = async (instanceId: string, extra = {}) => {
     const { error } = await supabase
       .from("daily_schedule_instances")
@@ -243,7 +234,6 @@ function RecoveryScreenContent() {
     try {
       await commitMissed(instance.id, {
         reflection_why: reflectionWhy.trim() || null,
-        reflection_improve: reflectionImprove.trim() || null,
       });
       router.back();
     } catch (err) {
@@ -345,52 +335,6 @@ function RecoveryScreenContent() {
           placeholderTextColor={colors.textPlaceholder}
           multiline
         />
-
-        <Text style={styles.reflectionLabel}>One thing you'd change next time?</Text>
-        <View style={[styles.chipRow, !improveOther && styles.chipRowTrailing]}>
-          {IMPROVE_CHIPS.map((chip) => {
-            const selected = reflectionImprove === chip;
-            return (
-              <TouchableOpacity
-                key={chip}
-                style={[styles.chip, selected ? styles.chipSelected : styles.chipUnselected]}
-                onPress={() => handleChipPress(chip)}
-              >
-                <Text
-                  style={[
-                    styles.chipText,
-                    selected ? styles.chipTextSelected : styles.chipTextUnselected,
-                  ]}
-                >
-                  {chip}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-          <TouchableOpacity
-            style={[styles.chip, improveOther ? styles.chipSelected : styles.chipUnselected]}
-            onPress={handleSomethingElsePress}
-          >
-            <Text
-              style={[
-                styles.chipText,
-                improveOther ? styles.chipTextSelected : styles.chipTextUnselected,
-              ]}
-            >
-              Something else
-            </Text>
-          </TouchableOpacity>
-        </View>
-        {improveOther ? (
-          <TextInput
-            style={styles.reflectionInput}
-            value={reflectionImprove}
-            onChangeText={setReflectionImprove}
-            placeholder="Even something small..."
-            placeholderTextColor={colors.textPlaceholder}
-            multiline
-          />
-        ) : null}
 
         {rescheduleSlot ? (
           <View style={styles.rescheduleBox}>
@@ -552,38 +496,6 @@ const makeStyles = (c: Colors) =>
       minHeight: 80,
       lineHeight: 20,
       marginBottom: spacing.xl,
-    },
-    chipRow: {
-      flexDirection: "row",
-      flexWrap: "wrap",
-      gap: spacing.sm,
-      marginBottom: spacing.sm,
-    },
-    chipRowTrailing: {
-      marginBottom: spacing.xl,
-    },
-    chip: {
-      paddingVertical: spacing.sm,
-      paddingHorizontal: spacing.md,
-      borderRadius: radii.pill,
-      borderWidth: 1,
-    },
-    chipSelected: {
-      backgroundColor: c.primaryTint,
-      borderColor: c.primary,
-    },
-    chipUnselected: {
-      backgroundColor: c.surfaceNested,
-      borderColor: c.border,
-    },
-    chipText: {
-      ...typography.small,
-    },
-    chipTextSelected: {
-      color: c.primary,
-    },
-    chipTextUnselected: {
-      color: c.textSecondary,
     },
     rescheduleBox: {
       backgroundColor: c.successTint,
