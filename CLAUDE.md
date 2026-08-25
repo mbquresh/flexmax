@@ -396,6 +396,7 @@ marker at all.
 | User instructions page                          | The streak rises on a day where everything was missed. The label qualifier was removed for width, so there is no in-app explanation. Owed |
 | Onboarding demonstration beat | Onboarding establishes the pain (screens 1-2) and sets the contract (screen 7), but never shows what the product DOES. A stranger goes from "how many planners have you abandoned?" to a $14.99 wall without seeing FlexMax work. Fix: show a REAL generated insight, explicitly labelled as another user's, before the contract screen. Not a claim about them — a demonstration. See rejected approaches below |
 | Showcase page carries the offer | docs/index.html has no pricing and no founding-member framing. With no trial it is the only pre-purchase evaluation surface, and most of the "is this enticing" work happens there and in the App Store listing, not in onboarding. See also **docs/index.html — rebuilt 2026-08-11** in Pricing & paywall below |
+| miss_reason_tag on same-day misses | Only CloseTodayRow writes miss_reason_tag. The recovery route and the locked-block sheet path do not, and marking a block missed removes it from the evening sweep — so miss_reasons in the evidence pack is populated ONLY by misses the user left unresolved until 9pm. The tag is captured exactly when engagement was lowest |
 
 
 ---
@@ -757,8 +758,11 @@ sheet translateY animated together, ~220ms open with `Easing.out(Easing.cubic)`,
 sheet's position, never the sheet's own opacity.
 
 **Undo is not destructive.** The undo sheet's primary action uses `c.text`, not
-`c.danger`. Coral is reserved for Remove and Missed. Undoing a completion is a
-correction.
+`c.danger`. Coral is reserved for Remove ONLY — Missed uses `c.primaryTint`
+(BlockCard.missedBtn, CheckInSheet.missedBtn), because admitting a miss is
+engaged behaviour the accounted-for streak protects, not a destructive act.
+This matches the streak rule that the missed segment must never be coral.
+Undoing a completion is a correction.
 
 **Check-in transition runs at 400ms** with the icon scaling 0.5 -> 1 on
 `statusFade`, so the fill and unfill are both perceptible. Never exceed scale 1 —

@@ -111,6 +111,10 @@ function closeBottomSheet(
   ]).start(() => onClosed?.());
 }
 
+function isInstanceFixed(instance: DailyInstance): boolean {
+  return instance.is_fixed || !!instance.block?.is_fixed;
+}
+
 function TodayScreenContent() {
   const { colors, scheme } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -832,6 +836,32 @@ function TodayScreenContent() {
     }
   };
 
+  const handleMarkMissedFromSheet = async () => {
+    if (!checkInInstance) return;
+    const instanceId = checkInInstance.id;
+
+    hapticMissed();
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("daily_schedule_instances")
+        .update({ status: "missed", completion_rating: null })
+        .eq("id", instanceId);
+
+      if (error) throw error;
+
+      updateInstance(instanceId, {
+        status: "missed",
+        completion_rating: null,
+      });
+      closeCheckIn();
+    } catch (err) {
+      handleError(err, "handleMarkMissedFromSheet", "Couldn't mark that missed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleSaveSleep = async (actualMinutes: number) => {
     if (!session?.user.id) return;
 
@@ -1115,6 +1145,11 @@ function TodayScreenContent() {
         saving={saving}
         onRate={handleCheckIn}
         onClose={closeCheckIn}
+        onMarkMissed={
+          checkInInstance && isInstanceFixed(checkInInstance)
+            ? handleMarkMissedFromSheet
+            : undefined
+        }
       />
 
       <TaskDetailSheet

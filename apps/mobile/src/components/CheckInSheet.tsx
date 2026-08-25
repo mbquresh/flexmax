@@ -14,6 +14,7 @@ import { hapticSelect } from "../lib/haptics";
 import { minutesToTime } from "../lib/time";
 import { Colors, spacing, radii, typography, numeric } from "../theme";
 import { useTheme } from "../providers/ThemeProvider";
+import { PressableScale } from "./PressableScale";
 
 const makeRatingOptions = (c: Colors): {
   value: CompletionRating;
@@ -52,6 +53,7 @@ interface CheckInSheetProps {
   saving: boolean;
   onRate: (rating: CompletionRating) => void;
   onClose: () => void;
+  onMarkMissed?: () => void;
 }
 
 export function CheckInSheet({
@@ -61,6 +63,7 @@ export function CheckInSheet({
   saving,
   onRate,
   onClose,
+  onMarkMissed,
 }: CheckInSheetProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -105,6 +108,22 @@ export function CheckInSheet({
                 </Pressable>
               ))}
             </View>
+
+            {onMarkMissed ? (
+              <>
+                <View style={styles.missedDivider} />
+                <PressableScale
+                  variant="highlight"
+                  baseColor={colors.primaryTint}
+                  highlightColor={colors.surfaceNested}
+                  style={styles.missedBtn}
+                  onPress={onMarkMissed}
+                  disabled={saving}
+                >
+                  <Text style={styles.missedBtnText}>Didn't happen</Text>
+                </PressableScale>
+              </>
+            ) : null}
 
             {saving ? (
               <ActivityIndicator color={colors.primary} style={styles.sheetSaving} />
@@ -160,6 +179,22 @@ const makeStyles = (c: Colors) =>
     ratingBtnText: {
       ...typography.smallBold,
       textAlign: "center",
+    },
+    missedDivider: {
+      height: StyleSheet.hairlineWidth,
+      backgroundColor: c.border,
+      marginTop: spacing.lg,
+      marginBottom: spacing.md,
+    },
+    missedBtn: {
+      backgroundColor: c.primaryTint,
+      borderRadius: radii.md,
+      paddingVertical: spacing.md,
+      alignItems: "center",
+    },
+    missedBtnText: {
+      ...typography.body,
+      color: c.text,
     },
     sheetSaving: { marginTop: spacing.lg },
   });
