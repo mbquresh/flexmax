@@ -840,27 +840,8 @@ because the aggressor wins and takes the other's time. Requires mixed days and
 strict time ordering. Currently produces a directionally correct result
 (Morning Deep work is the sole trigger, matching reflections and swap_drift)
 on very thin evidence — a 2-event difference. Treated as corroborating
-evidence only. **DOWNGRADED 2026-08-24. The corroboration is gone.** The
-swap_drift half of "two independent sources agree" was measuring edit rows,
-not moves. A contamination audit found 817 logged changes resolving to 45 net
-moves — 5.5% signal. Under the old metric the current 30-day window reports
-Morning Deep Work as the SECOND most-moved block (133 rows vs Cardio's 87), a
-straight inversion of the "everything reorganizes around the block that never
-moves" claim this section was built on. Net displacement (027) puts Morning
-Deep Work at 5 moves against Cardio's 9 and Weights' 9, so "moves least"
-survives — but "never moves" does not, and the anchor framing dies with it.
-All 5 of its moves are LATER, none earlier, at an average of 276 minutes: a
-four-and-a-half-hour unidirectional drift that relocates a morning block into
-the afternoon. An anchor that shifts rarely but always by 4.6 hours in the
-same direction is not anchoring anything. Compounding this, Deep work
-afternoon is the only block skewing EARLIER (6 of 9), which is the reverse of
-the direction this section asserts — though swap_drift writes one row per
-swap participant, so those may be the same events counted from both sides
-rather than two independent facts. A 4-move spread across ~22 underlying
-events is not an independent source either way. Cannibalization is now
-SINGLE-SOURCE (reflections only) on this dataset, and weekly-insight rule 9
-already forbids raising it standalone. Expect it to say nothing until a
-tester who is not also the developer produces clean drift data.
+evidence only.
+
 **Evidence restated 2026-08-24 (027).** The cited swap counts — Cardio 29,
 Weights 11, Morning Deep Work 3 — were produced by a metric counting edit
 ROWS, not moves. An audit found 817 logged changes resolving to 45 net
@@ -975,15 +956,11 @@ Things that corrupt the ledger or lose data permanently.
    This is the highest-value unread signal remaining, and it corresponds
    directly to the cannibalization pattern in the Who FlexMax is for section.
 
-   > **Signal-integrity note (027).** swap_drift originally counted every
-   > instance_time_changes row. A swap writes two rows and a swap-back writes
-   > two more, so net-zero fidgeting was reported as heavy drift, and
-   > multi-step repositioning was counted once per step rather than once per
-   > outcome. 027 collapses every edit to an instance into a single net figure
-   > (earliest old_start vs latest new_start) and drops instances that end
-   > where they began. This matters beyond swap_drift itself: swap_drift is one
-   > of the two independent sources that corroborate the cannibalization
-   > finding, so the pre-027 corroboration was weaker than it appeared.
+   > **Signal-integrity note (027).** swap_drift originally counted edit ROWS,
+   > so swaps, swap-backs and multi-step repositioning all inflated it. 027
+   > counts net displacement per instance instead. The corroboration this item
+   > cites was restated as a result — see "Evidence restated 2026-08-24 (027)"
+   > under Known issues.
 7. **Intention-reliability metric.** Planned vs. completed minutes over time —
    are the user's plans becoming more accurate. Pure SQL.
 8. **DeviceActivity drift-event table.** Schema only, no extension, so the shape
