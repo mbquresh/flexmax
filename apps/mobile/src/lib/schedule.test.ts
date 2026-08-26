@@ -46,6 +46,7 @@ function instance(
     reschedule_count: 0,
     original_start_minutes: null,
     original_end_minutes: null,
+    displaced_by_id: null,
     is_fixed: false,
     removed_reason: null,
     block: block({ name: overrides.block?.name ?? "Dinner" }),
@@ -70,7 +71,7 @@ describe("planDisplacement", () => {
     expect(plan).toEqual({ kind: "clear" });
   });
 
-  it("displaces one movable block, keeping its duration", () => {
+  it("pushes one movable block, keeping its duration", () => {
     const dinner = instance({
       id: "dinner",
       start_minutes: 630,
@@ -80,16 +81,17 @@ describe("planDisplacement", () => {
     const slot = { start_minutes: 600, end_minutes: 660 };
     const plan = planDisplacement(slot, [missed, dinner], missed.id);
 
-    expect(plan).toEqual({
-      kind: "displace",
-      instanceId: "dinner",
-      name: "Dinner",
-      newStart: 660,
-      newEnd: 720,
-    });
+    expect(plan.kind).toBe("push");
+    if (plan.kind !== "push") return;
+    expect(plan.target.id).toBe("dinner");
+    expect(plan.newStart).toBe(660);
+    expect(plan.newEnd).toBe(720);
+    expect(plan.newEnd - plan.newStart).toBe(
+      dinner.end_minutes - dinner.start_minutes
+    );
   });
 
-  it("blocks when the slot overlaps two blocks", () => {
+  it("sacrifices when the slot overlaps two blocks", () => {
     const a = instance({
       id: "a",
       start_minutes: 610,
@@ -108,9 +110,8 @@ describe("planDisplacement", () => {
       missed.id
     );
 
-    expect(plan.kind).toBe("blocked");
-    if (plan.kind !== "blocked") return;
-    expect(plan.reason).toBe("multiple");
+    expect(plan.kind).toBe("sacrifice");
+    if (plan.kind !== "sacrifice") return;
     expect(plan.names).toEqual(["A", "B"]);
   });
 
@@ -156,7 +157,7 @@ describe("planDisplacement", () => {
     });
   });
 
-  it("blocks when the push would end after sleepTargetMinutes", () => {
+  it("sacrifices when the push would end after sleepTargetMinutes", () => {
     const dinner = instance({
       id: "dinner",
       start_minutes: 1280,
@@ -170,14 +171,13 @@ describe("planDisplacement", () => {
       22 * 60
     );
 
-    expect(plan).toEqual({
-      kind: "blocked",
-      reason: "past_bedtime",
-      names: ["Dinner"],
-    });
+    expect(plan.kind).toBe("sacrifice");
+    if (plan.kind !== "sacrifice") return;
+    expect(plan.names).toEqual(["Dinner"]);
+    expect(plan.targets.map((t) => t.id)).toEqual(["dinner"]);
   });
 
-  it("blocks when sleepTargetMinutes is null and the push would end after 1440", () => {
+  it("sacrifices when sleepTargetMinutes is null and the push would end after 1440", () => {
     const late = instance({
       id: "late",
       start_minutes: 1390,
@@ -191,14 +191,13 @@ describe("planDisplacement", () => {
       null
     );
 
-    expect(plan).toEqual({
-      kind: "blocked",
-      reason: "past_bedtime",
-      names: ["Wind down"],
-    });
+    expect(plan.kind).toBe("sacrifice");
+    if (plan.kind !== "sacrifice") return;
+    expect(plan.names).toEqual(["Wind down"]);
+    expect(plan.targets.map((t) => t.id)).toEqual(["late"]);
   });
 
-  it("blocks when the push would land on a third block", () => {
+  it("sacrifices when the push would land on a third block", () => {
     const dinner = instance({
       id: "dinner",
       start_minutes: 630,
@@ -217,11 +216,10 @@ describe("planDisplacement", () => {
       missed.id
     );
 
-    expect(plan).toEqual({
-      kind: "blocked",
-      reason: "cascade",
-      names: ["Walk"],
-    });
+    expect(plan.kind).toBe("sacrifice");
+    if (plan.kind !== "sacrifice") return;
+    expect(plan.names).toEqual(["Dinner"]);
+    expect(plan.targets.map((t) => t.id)).toEqual(["dinner"]);
   });
 
   it("ignores removed, skipped, and rescheduled instances as colliders", () => {
@@ -262,5 +260,36 @@ describe("planDisplacement", () => {
       missed.id
     );
     expect(plan).toEqual({ kind: "clear" });
+  });
+
+  it("carries every colliding instance in a sacrifice plan, not just the first", () => {
+    const a = instance({
+      id: "a",
+      start_minutes: 610,
+      end_minutes: 640,
+      block: block({ name: "A" }),
+    });
+    const b = instance({
+      id: "b",
+      start_minutes: 640,
+      end_minutes: 680,
+      block: block({ name: "B" }),
+    });
+    const c = instance({
+      id: "c",
+      start_minutes: 650,
+      end_minutes: 700,
+      block: block({ name: "C" }),
+    });
+    const plan = planDisplacement(
+      { start_minutes: 600, end_minutes: 660 },
+      [missed, a, b, c],
+      missed.id
+    );
+
+    expect(plan.kind).toBe("sacrifice");
+    if (plan.kind !== "sacrifice") return;
+    expect(plan.targets.map((t) => t.id)).toEqual(["a", "b", "c"]);
+    expect(plan.names).toEqual(["A", "B", "C"]);
   });
 });

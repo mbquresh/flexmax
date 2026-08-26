@@ -210,16 +210,17 @@ function RecoveryScreenContent() {
     [rescheduleSlot, allInstances, instance?.id, profile?.sleep_target_minutes]
   );
 
-  const blockedMessage =
-    plan.kind !== "blocked"
+  const sacrificeWarning =
+    plan.kind !== "sacrifice"
       ? null
-      : plan.reason === "multiple"
-        ? `This overlaps ${plan.names.length} blocks. Pick a time with room for it.`
-        : plan.reason === "fixed"
-          ? `This overlaps ${plan.names[0]}, which is locked. Pick another time.`
-          : plan.reason === "past_bedtime"
-            ? `Moving ${plan.names[0]} to make room would run past your bedtime. Pick another time.`
-            : `Moving to make room would run into ${plan.names.join(", ")}. Pick another time.`;
+      : plan.names.length === 1
+        ? `Rescheduling here removes ${plan.names[0]}.`
+        : `Rescheduling here removes ${plan.names.length} blocks: ${plan.names.join(", ")}.`;
+
+  const blockedMessage =
+    plan.kind === "blocked"
+      ? `${plan.names[0]} is fixed and can't move. Pick another time.`
+      : null;
 
   const commitMissed = async (instanceId: string, extra = {}) => {
     const { error } = await supabase
@@ -286,7 +287,7 @@ function RecoveryScreenContent() {
 
     setSaving(true);
     try {
-      if (plan.kind === "displace") {
+      if (plan.kind === "push") {
         // Two rows must move together. swap_instance_times (008) is a
         // generic ownership-validated "set both instances' times in one
         // transaction" — it carries no swap-specific logic. Sequential
@@ -297,7 +298,7 @@ function RecoveryScreenContent() {
           instance_a_id: instance.id,
           a_start: rescheduleSlot.start_minutes,
           a_end: rescheduleSlot.end_minutes,
-          instance_b_id: plan.instanceId,
+          instance_b_id: plan.target.id,
           b_start: plan.newStart,
           b_end: plan.newEnd,
         });
@@ -313,12 +314,12 @@ function RecoveryScreenContent() {
         if (provError) handleError(provError, "handleReschedule provenance");
 
         updateInstance(instance.id, payload);
-        updateInstance(plan.instanceId, {
+        updateInstance(plan.target.id, {
           start_minutes: plan.newStart,
           end_minutes: plan.newEnd,
         });
 
-        const displacedId = plan.instanceId;
+        const displacedId = plan.target.id;
         const displacedStart = plan.newStart;
         const displacedEnd = plan.newEnd;
 
@@ -346,6 +347,18 @@ function RecoveryScreenContent() {
         return;
       }
 
+      if (plan.kind === "sacrifice") {
+        const { error: dropError } = await supabase
+          .from("daily_schedule_instances")
+          .update({ status: "removed", displaced_by_id: instance.id })
+          .in("id", plan.targets.map((t) => t.id));
+
+        if (dropError) throw dropError;
+        plan.targets.forEach((t) =>
+          updateInstance(t.id, { status: "removed", displaced_by_id: instance.id })
+        );
+      }
+
       const { error } = await supabase
         .from("daily_schedule_instances")
         .update(payload)
@@ -354,8 +367,19 @@ function RecoveryScreenContent() {
 
       updateInstance(instance.id, payload);
 
+      const droppedIds =
+        plan.kind === "sacrifice"
+          ? new Set(plan.targets.map((t) => t.id))
+          : null;
+
       const updatedInstances = allInstances
-        .map((i) => (i.id === instance.id ? { ...i, ...payload } : i))
+        .map((i) =>
+          i.id === instance.id
+            ? { ...i, ...payload }
+            : droppedIds?.has(i.id)
+              ? { ...i, status: "removed" as const, displaced_by_id: instance.id }
+              : i
+        )
         .sort((a, b) => a.start_minutes - b.start_minutes);
 
       setTodayInstances(updatedInstances);
@@ -457,12 +481,16 @@ function RecoveryScreenContent() {
                 </Text>
               </View>
             ) : null}
-            {plan.kind === "displace" ? (
+            {plan.kind === "push" ? (
               <View style={styles.collisionNote}>
                 <Text style={styles.bedtimeNoteText}>
-                  This overlaps {plan.name}. Moving it to{" "}
+                  This overlaps {plan.target.block?.name ?? "another block"}. Moving it to{" "}
                   {minutesToTime(plan.newStart)} makes room.
                 </Text>
+              </View>
+            ) : sacrificeWarning ? (
+              <View style={styles.collisionNote}>
+                <Text style={styles.bedtimeNoteText}>{sacrificeWarning}</Text>
               </View>
             ) : blockedMessage ? (
               <View style={styles.collisionNote}>
@@ -488,11 +516,13 @@ function RecoveryScreenContent() {
                   plan.kind === "blocked" && styles.rescheduleBtnTextBlocked,
                 ]}
               >
-                {plan.kind === "displace"
-                  ? `Reschedule and move ${plan.name}`
-                  : slotIsFallback
-                    ? "Reschedule to this time"
-                    : "Reschedule to this slot"}
+                {plan.kind === "push"
+                  ? `Reschedule and move ${plan.target.block?.name ?? "another block"}`
+                  : plan.kind === "sacrifice"
+                    ? "Reschedule and remove"
+                    : slotIsFallback
+                      ? "Reschedule to this time"
+                      : "Reschedule to this slot"}
               </Text>
             </PressableScale>
           </View>

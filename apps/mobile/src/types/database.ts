@@ -123,6 +123,7 @@ export interface DailyInstance {
   reschedule_count: number;
   original_start_minutes: number | null;
   original_end_minutes: number | null;
+  displaced_by_id: string | null;
   is_fixed: boolean;
   removed_reason: string | null;
   // Joined from schedule_blocks
