@@ -935,6 +935,16 @@ tree before being acted on — do not assume all are still present.
 - **`removed` now carries two meanings.** User-deleted and displaced,
   distinguished only by `displaced_by_id`. Any query filtering on status
   `'removed'` will return more rows than a reader expects.
+- **`swap_drift` appears structurally dormant.** It requires a block to have at
+  least two net-nonzero moves in 30 days (`having count(*) >= 2`). On the
+  heaviest-used account, with 188 swap rows in a single week, it returns zero
+  entries — and returned zero before the 033 status filter too, so the filter
+  is not the cause. Net-zero fidgeting may simply be the norm and the
+  threshold unreachable. CLAUDE.md currently describes `swap_drift` as one of
+  two independent sources corroborating the cannibalization finding; on
+  present evidence it is contributing nothing. Verify against real tester data
+  before relying on that corroboration, and consider whether the threshold or
+  the net-displacement definition is what needs revisiting.
 
 ---
 
