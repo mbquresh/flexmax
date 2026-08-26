@@ -379,6 +379,7 @@ marker at all.
 | Test infrastructure                           | vitest on pure modules. Covers the streak threshold, the accounted-but-missed day, unaccounted transparency, and the recovery copy branches |
 | Reschedule conflict resolver | recovery/[id].tsx + planDisplacement in schedule.ts. Reschedule previously WARNED on collision and committed the overlap anyway; overlapping instances were legal in the DB and corrupted notification scheduling, findRescheduleSlot's occupied list, and cannibalization's time-ordering. Now: one movable collider is offered as a displacement ("move Dinner to 8:15"), everything else refuses to "Pick another time". Never writes an overlap. Two-row write is atomic via the existing swap_instance_times RPC — no new migration |
 | Quality degradation prompt | CheckInSheet + today.tsx. Fires when a block is rated partial/pulled_away AND 4+ of its last 7 rated instances were poor. Writes quality_reason_tag from five presets. Once per block per week, cooldown written when SHOWN so skipping does not re-prompt. Reuses CheckInSheet's geometry by swapping content — no second modal, per the RecoverySheet postmortem. Threshold matches quality_drift's rn<=7 window (029) so the prompt and the weekly insight cannot contradict each other |
+| Profile page: preferences, not observations | account.tsx. Removed the "What FlexMax learned about you" section — it gated on psychology_profiles.completed_at, written only by the deleted AI onboarding, so it showed an empty state pointing at onboarding that no longer exists. Replaced with controls that already govern app behaviour but had no UI: accountability_tone (injected into every weekly-insight prompt, previously unreachable after onboarding) and notification permission state (blockNotifications silently no-ops when denied, and nothing surfaced it). Behavioural observations belong on a dedicated surface, not behind a settings-shaped door — a user opening settings to change a toggle should not be confronted |
 
 
 
@@ -658,6 +659,19 @@ makes it a one-line swap in theme.ts if ever revisited.
   any insight generated before 029 — the meaning is unchanged, the sample is
   larger. Insights generated before 2026-08-25 were also built on pre-027
   swap_drift, so the first fully clean set is the one after both.
+- **Timezone is displayed but not editable.** profiles.timezone drives
+  v_today in get_behavior_evidence and the whole nightly sweep. A user who
+  moves cannot correct it. Deliberately excluded from the profile-page work
+  because changing it retroactively reinterprets every stored date, and the
+  right behaviour for existing history is not obvious.
+- **accountability_tone has no CHECK constraint.** firm / gentle /
+  data-driven are enforced only by TONE_OPTIONS in account.tsx. The column
+  accepts anything, and whatever it holds is written verbatim into the AI
+  prompt. A NOT VALID CHECK matching 025's style would close this.
+- **No nudge frequency control.** Cutoff nudges fire automatically with no
+  off switch. CLAUDE.md's "nudges must be earned and specific" argues the user
+  should be able to turn them down; without that, the only available action is
+  killing notifications at the OS level, which silently disables everything.
 
 ---
 

@@ -218,7 +218,10 @@ serve(async (req) => {
         messages: [
           {
             role: "user",
-            content: `Accountability tone preference: ${profile?.accountability_tone ?? "direct"}
+            // firm | gentle | data-driven are the only values the system prompt is
+            // written for, and the only ones the profile page can set. The fallback
+            // must be one of them.
+            content: `Accountability tone preference: ${profile?.accountability_tone ?? "firm"}
 Evidence:
 ${JSON.stringify(evidence)}`,
           },
