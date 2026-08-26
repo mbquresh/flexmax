@@ -4,6 +4,7 @@ import { StyleSheet, View } from "react-native";
 import { useAuth } from "../providers/AuthProvider";
 import { useTheme } from "../providers/ThemeProvider";
 import { BrandLoader } from "./BrandLoader";
+import { LoadError } from "./LoadError";
 import { Colors } from "../theme";
 
 interface RequireAuthProps {
@@ -18,22 +19,33 @@ export function RequireAuth({
 }: RequireAuthProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const { session, psychologyProfile, loading, profileLoaded } = useAuth();
+  const {
+    session,
+    profile,
+    psychologyProfile,
+    loading,
+    profileLoaded,
+    profileError,
+    refreshProfile,
+  } = useAuth();
 
   const authReady = !loading && (!session || profileLoaded);
 
   useEffect(() => {
     if (!authReady) return;
+    if (profileError) return;
 
     if (!session) {
       router.replace("/sign-in");
       return;
     }
 
+    if (!profile) return;
+
     if (requireOnboarding && !psychologyProfile?.completed_at) {
       router.replace("/onboarding");
     }
-  }, [session, psychologyProfile, authReady, requireOnboarding]);
+  }, [session, profile, psychologyProfile, authReady, requireOnboarding, profileError]);
 
   if (!authReady) {
     return (
@@ -45,6 +57,14 @@ export function RequireAuth({
 
   if (!session) {
     return null;
+  }
+
+  if (profileError || !profile) {
+    return (
+      <View style={styles.centered}>
+        <LoadError offline={false} onRetry={refreshProfile} />
+      </View>
+    );
   }
 
   if (requireOnboarding && !psychologyProfile?.completed_at) {

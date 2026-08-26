@@ -17,6 +17,7 @@ interface AuthContextValue {
   psychologyProfile: PsychologyProfile | null;
   loading: boolean;
   profileLoaded: boolean;
+  profileError: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, name: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -57,9 +58,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     useState<PsychologyProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [profileLoaded, setProfileLoaded] = useState(false);
+  const [profileError, setProfileError] = useState(false);
   const { setUser, setPsychologyProfile: setStorePsych, reset } = useStore();
 
   const loadUserData = async (userId: string) => {
+    setProfileError(false);
     let profileResult = await supabase
       .from("profiles")
       .select("*")
@@ -87,6 +90,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .from("profiles")
         .insert({ id: userId, name })
         .select()
+        .single();
+    }
+
+    if (profileResult.error) {
+      await new Promise((r) => setTimeout(r, 1200));
+      profileResult = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
         .single();
     }
 
@@ -139,7 +151,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(current);
       if (current?.user.id) {
         loadUserData(current.user.id)
-          .catch((err) => handleError(err, "loadUserData"))
+          .catch((err) => {
+            handleError(err, "loadUserData");
+            setProfileError(true);
+          })
           .finally(() => {
             setLoading(false);
             setProfileLoaded(true);
@@ -157,7 +172,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (nextSession?.user.id) {
         setLoading(true);
         loadUserData(nextSession.user.id)
-          .catch((err) => handleError(err, "loadUserData"))
+          .catch((err) => {
+            handleError(err, "loadUserData");
+            setProfileError(true);
+          })
           .finally(() => {
             setLoading(false);
             setProfileLoaded(true);
@@ -166,6 +184,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setProfile(null);
         setPsychologyProfile(null);
         setProfileLoaded(false);
+        setProfileError(false);
         reset();
         setLoading(false);
       }
@@ -211,6 +230,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         psychologyProfile,
         loading,
         profileLoaded,
+        profileError,
         signIn,
         signUp,
         signOut,

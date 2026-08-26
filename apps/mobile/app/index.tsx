@@ -9,9 +9,10 @@ import { Colors } from "../src/theme";
 export default function Index() {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const { session, psychologyProfile, loading } = useAuth();
+  const { session, psychologyProfile, loading, profileLoaded, profileError } =
+    useAuth();
 
-  if (loading) {
+  if (loading || (session && !profileLoaded)) {
     return (
       <View style={styles.container}>
         <BrandLoader size={56} />
@@ -20,6 +21,7 @@ export default function Index() {
   }
 
   if (!session) return <Redirect href="/sign-in" />;
+  if (profileError) return <Redirect href="/today" />;
   if (!psychologyProfile?.completed_at) return <Redirect href="/onboarding" />;
 
   return <Redirect href="/today" />;
