@@ -944,6 +944,11 @@ tree before being acted on — do not assume all are still present.
   return a generic message and log the detail server-side. Nothing depends on
   the current shape — `useTodayData` invokes this fire-and-forget and ignores
   the body.
+  FIXED 2026-08-26. The catch now logs the error server-side and returns a
+  generic "Insight generation failed". Fixed alongside a larger gap: the
+  function had NO console output at all, on any path, so a failing invocation
+  produced only boot and shutdown lines in the dashboard and could not be
+  diagnosed. All five failure returns and both success returns now log.
 - **No database guard against inverted blocks.** `daily_schedule_instances`
   has no CHECK constraint on `end_minutes > start_minutes`; migration 025
   constrains `status` and `completion_rating` only. Postgres would accept a

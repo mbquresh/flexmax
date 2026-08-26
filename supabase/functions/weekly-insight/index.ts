@@ -142,6 +142,7 @@ serve(async (req) => {
   try {
     const user = await getAuthenticatedUser(req);
     if (!user) {
+      console.error("[weekly-insight] 401 no authenticated user");
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -162,6 +163,7 @@ serve(async (req) => {
     if (cacheError) throw cacheError;
 
     if (existing?.length) {
+      console.log(`[weekly-insight] cache hit user=${user.id} count=${existing.length}`);
       return new Response(JSON.stringify({ insights: existing, cached: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -169,6 +171,7 @@ serve(async (req) => {
 
     const { allowed, limit } = await checkRateLimit(user.id, "weekly-insight");
     if (!allowed) {
+      console.warn(`[weekly-insight] 429 rate limited user=${user.id}`);
       return new Response(
         JSON.stringify({
           error: `Rate limit exceeded. Max ${limit} requests per hour.`,
@@ -191,6 +194,7 @@ serve(async (req) => {
     if (evidenceError) throw evidenceError;
 
     if (!evidence || evidence.data_quality?.engaged_days < 5) {
+      console.log(`[weekly-insight] insufficient data user=${user.id}`);
       return new Response(JSON.stringify({ insights: [], reason: "insufficient_data" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -238,6 +242,7 @@ ${JSON.stringify(evidence)}`,
     try {
       parsed = JSON.parse(raw.replace(/```json|```/g, "").trim());
     } catch (parseErr) {
+      console.error("[weekly-insight] 500 parse failure", parseErr);
       return new Response(JSON.stringify({ error: String(parseErr) }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -245,6 +250,7 @@ ${JSON.stringify(evidence)}`,
     }
 
     if (!Array.isArray(parsed)) {
+      console.error("[weekly-insight] 500 AI response was not a JSON array");
       return new Response(JSON.stringify({ error: "AI response was not a JSON array" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -261,13 +267,20 @@ ${JSON.stringify(evidence)}`,
 
     if (replaceError) throw replaceError;
 
+    console.log(`[weekly-insight] generated user=${user.id} count=${inserted?.length ?? 0}`);
     return new Response(JSON.stringify({ insights: inserted, cached: false }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: String(err) }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    // Detail goes to the logs, never to the client. Returning String(err)
+    // leaked internal error text — see Known issues.
+    console.error("[weekly-insight] 500 unhandled", err);
+    return new Response(
+      JSON.stringify({ error: "Insight generation failed" }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
   }
 });
