@@ -187,6 +187,7 @@ Cursor = implementation engine.
 | 027 | swap_drift_net_displacement.sql | swap_drift counts NET displacement per instance, not edit rows; fidget swap-backs excluded |
 | 028 | app_sessions.sql              | app_sessions + record_app_open(date) RPC — one row per user per local date; repeats increment open_count             |
 | 029 | quality_reason_tag.sql | quality_reason_tag column + CHECK; quality_drift window widened 5→7 rated instances; quality_reasons added to the evidence pack |
+| 033 | swap_drift_resolved_only.sql | swap_drift counts net displacement only on completed/missed instances; impact claim in its header is wrong, see Known issues 2026-08-26 |
 
 028 exists to answer the north-star metric: of users who had a bad week, what
 share opened the app the following week. Capture is fire-and-forget from
@@ -889,6 +890,12 @@ session is pushed forward, the afternoon session is pulled earlier to fit
 alongside it (6 of 9 moves earlier), and Cardio absorbs the displacement.
 Cardio-as-sacrificed is better supported by displacement direction than the
 immovability argument ever was.
+Sharpened 2026-08-26 on post-033 data: Cardio now moves later in 7 of 7
+moves and Morning Deep Work in 6 of 6, both with zero earlier moves,
+averaging 313 and 265 minutes. Deep work afternoon remains the only block
+skewing earlier (6 of 10). Perfect unidirectionality on both anchors of the
+oversleep cascade is stronger corroboration than the mixed figures this
+paragraph originally cited.
 
 These came from an independent code review and should be verified against the
 tree before being acted on — do not assume all are still present.
@@ -935,16 +942,16 @@ tree before being acted on — do not assume all are still present.
 - **`removed` now carries two meanings.** User-deleted and displaced,
   distinguished only by `displaced_by_id`. Any query filtering on status
   `'removed'` will return more rows than a reader expects.
-- **`swap_drift` appears structurally dormant.** It requires a block to have at
-  least two net-nonzero moves in 30 days (`having count(*) >= 2`). On the
-  heaviest-used account, with 188 swap rows in a single week, it returns zero
-  entries — and returned zero before the 033 status filter too, so the filter
-  is not the cause. Net-zero fidgeting may simply be the norm and the
-  threshold unreachable. CLAUDE.md currently describes `swap_drift` as one of
-  two independent sources corroborating the cannibalization finding; on
-  present evidence it is contributing nothing. Verify against real tester data
-  before relying on that corroboration, and consider whether the threshold or
-  the net-displacement definition is what needs revisiting.
+- **CORRECTED 2026-08-26.** The "0 entries before and after" measurement was
+  wrong — almost certainly a null or wrong user id, which makes
+  get_behavior_evidence return empty arrays for every key. Verified against
+  the live function on 2026-08-26: swap_drift returns six blocks with
+  times_moved 6-10 and average displacements of 73-313 minutes. The signal is
+  live and 033's filter is doing real work; only the impact assessment was
+  wrong. Process note: an empty result is not a passing test. "The fix had no
+  effect and the input was also empty" indicates a broken measurement, not a
+  harmless change — the same failure mode as the offline-queue postmortem,
+  where the acceptance criterion was never exercised.
 
 ---
 
