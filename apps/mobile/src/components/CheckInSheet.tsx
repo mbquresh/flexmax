@@ -65,6 +65,7 @@ interface CheckInSheetProps {
   qualityPrompt?: { blockName: string } | null;
   onQualityReason?: (tag: string) => void;
   onQualitySkip?: () => void;
+  onQualitySomethingElse?: () => void;
 }
 
 export function CheckInSheet({
@@ -78,6 +79,7 @@ export function CheckInSheet({
   qualityPrompt,
   onQualityReason,
   onQualitySkip,
+  onQualitySomethingElse,
 }: CheckInSheetProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -111,6 +113,16 @@ export function CheckInSheet({
                       <Text style={styles.qualityChipText}>{label}</Text>
                     </PressableScale>
                   ))}
+                  <PressableScale
+                    variant="highlight"
+                    baseColor={colors.primaryTint}
+                    highlightColor={colors.surfaceNested}
+                    style={styles.qualityChip}
+                    onPress={() => onQualitySomethingElse?.()}
+                    disabled={saving}
+                  >
+                    <Text style={styles.qualityChipText}>Something else</Text>
+                  </PressableScale>
                 </View>
                 <PressableScale
                   style={styles.qualitySkip}

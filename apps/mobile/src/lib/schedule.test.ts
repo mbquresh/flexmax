@@ -42,6 +42,7 @@ function instance(
     acknowledged_at: null,
     miss_reason_tag: null,
     quality_reason_tag: null,
+    quality_reason_note: null,
     actual_end_minutes: null,
     rescheduled_to_id: null,
     reschedule_count: 0,

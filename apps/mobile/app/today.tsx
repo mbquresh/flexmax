@@ -867,6 +867,13 @@ function TodayScreenContent() {
     }
   };
 
+  const handleQualitySomethingElse = () => {
+    if (!qualityPrompt) return;
+    const instanceId = qualityPrompt.instanceId;
+    closeQualityPrompt();
+    router.push(`/quality-note/${instanceId}`);
+  };
+
   const handleMarkMissedFromSheet = async () => {
     if (!checkInInstance) return;
     const instanceId = checkInInstance.id;
@@ -1107,6 +1114,7 @@ function TodayScreenContent() {
         qualityPrompt={qualityPrompt}
         onQualityReason={handleQualityReason}
         onQualitySkip={closeQualityPrompt}
+        onQualitySomethingElse={handleQualitySomethingElse}
       />
 
       <TaskDetailSheet

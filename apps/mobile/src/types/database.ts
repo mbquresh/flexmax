@@ -119,6 +119,7 @@ export interface DailyInstance {
   acknowledged_at: string | null;
   miss_reason_tag: string | null;
   quality_reason_tag: string | null;
+  quality_reason_note: string | null;
   actual_end_minutes: number | null;
   rescheduled_to_id: string | null;
   reschedule_count: number;
