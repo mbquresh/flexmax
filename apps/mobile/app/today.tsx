@@ -137,6 +137,10 @@ function TodayScreenContent() {
   } = useTodayData(session?.user.id);
   const { setTodayInstances, updateInstance } = useStore();
   const [checkInInstance, setCheckInInstance] = useState<DailyInstance | null>(null);
+  const [qualityPrompt, setQualityPrompt] = useState<{
+    instanceId: string;
+    blockName: string;
+  } | null>(null);
   const [undoInstance, setUndoInstance] = useState<DailyInstance | null>(null);
   const [activeTaskDetailInstance, setActiveTaskDetailInstance] =
     useState<DailyInstance | null>(null);
@@ -664,7 +668,10 @@ function TodayScreenContent() {
       toValue: 400,
       duration: 180,
       useNativeDriver: true,
-    }).start(() => setCheckInInstance(null));
+    }).start(() => {
+      setCheckInInstance(null);
+      setQualityPrompt(null);
+    });
   };
 
   const closeTaskDetail = () => {
@@ -754,6 +761,47 @@ function TodayScreenContent() {
     router.push(`/recovery/${instance.id}`);
   };
 
+  // Fires at most once per block per week. The cooldown is written when the
+  // prompt is SHOWN, not when it is answered — otherwise skipping re-prompts
+  // on the next check-in, which is exactly when the user is least willing.
+  const shouldPromptQuality = async (
+    blockId: string
+  ): Promise<boolean> => {
+    try {
+      const key = `quality_prompt_${blockId}`;
+      const last = await AsyncStorage.getItem(key);
+      if (last) {
+        const days =
+          (Date.now() - new Date(last).getTime()) / (24 * 60 * 60 * 1000);
+        if (days < 7) return false;
+      }
+
+      const { data, error } = await supabase
+        .from("daily_schedule_instances")
+        .select("completion_rating")
+        .eq("block_id", blockId)
+        .not("completion_rating", "is", null)
+        .order("date", { ascending: false })
+        .limit(7);
+
+      if (error || !data) return false;
+
+      const poor = data.filter(
+        (r) =>
+          r.completion_rating === "partial" ||
+          r.completion_rating === "pulled_away"
+      ).length;
+
+      if (poor < 4) return false;
+
+      await AsyncStorage.setItem(key, new Date().toISOString());
+      return true;
+    } catch {
+      // A failed drift check must never block the check-in.
+      return false;
+    }
+  };
+
   const handleCheckIn = async (rating: CompletionRating) => {
     if (!checkInInstance) return;
 
@@ -775,11 +823,47 @@ function TodayScreenContent() {
         completion_rating: rating,
         miss_reason_tag: null,
       });
-      closeCheckIn();
+      const degraded = rating === "partial" || rating === "pulled_away";
+      if (degraded && (await shouldPromptQuality(checkInInstance.block_id))) {
+        setQualityPrompt({
+          instanceId: checkInInstance.id,
+          blockName: checkInInstance.block?.name ?? "This block",
+        });
+      } else {
+        closeCheckIn();
+      }
     } catch (err) {
       handleError(err, "handleCheckIn", "Couldn't save your check-in");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const closeQualityPrompt = () => {
+    setQualityPrompt(null);
+    closeCheckIn();
+  };
+
+  const handleQualityReason = async (tag: string) => {
+    if (!qualityPrompt) return;
+    const instanceId = qualityPrompt.instanceId;
+
+    hapticSelect();
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("daily_schedule_instances")
+        .update({ quality_reason_tag: tag })
+        .eq("id", instanceId);
+
+      if (error) throw error;
+
+      updateInstance(instanceId, { quality_reason_tag: tag });
+    } catch (err) {
+      handleError(err, "handleQualityReason", "Couldn't save that");
+    } finally {
+      setSaving(false);
+      closeQualityPrompt();
     }
   };
 
@@ -1020,6 +1104,9 @@ function TodayScreenContent() {
             ? handleMarkMissedFromSheet
             : undefined
         }
+        qualityPrompt={qualityPrompt}
+        onQualityReason={handleQualityReason}
+        onQualitySkip={closeQualityPrompt}
       />
 
       <TaskDetailSheet

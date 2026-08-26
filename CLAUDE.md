@@ -377,6 +377,7 @@ marker at all.
 | loadToday stale-request guard                 | Sequence token per load; superseded loads discard their results rather than overwriting newer state |
 | Test infrastructure                           | vitest on pure modules. Covers the streak threshold, the accounted-but-missed day, unaccounted transparency, and the recovery copy branches |
 | Reschedule conflict resolver | recovery/[id].tsx + planDisplacement in schedule.ts. Reschedule previously WARNED on collision and committed the overlap anyway; overlapping instances were legal in the DB and corrupted notification scheduling, findRescheduleSlot's occupied list, and cannibalization's time-ordering. Now: one movable collider is offered as a displacement ("move Dinner to 8:15"), everything else refuses to "Pick another time". Never writes an overlap. Two-row write is atomic via the existing swap_instance_times RPC — no new migration |
+| Quality degradation prompt | CheckInSheet + today.tsx. Fires when a block is rated partial/pulled_away AND 4+ of its last 7 rated instances were poor. Writes quality_reason_tag from five presets. Once per block per week, cooldown written when SHOWN so skipping does not re-prompt. Reuses CheckInSheet's geometry by swapping content — no second modal, per the RecoverySheet postmortem. Threshold matches quality_drift's rn<=7 window (029) so the prompt and the weekly insight cannot contradict each other |
 
 
 

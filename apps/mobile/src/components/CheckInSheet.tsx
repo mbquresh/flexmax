@@ -16,6 +16,14 @@ import { Colors, spacing, radii, typography, numeric } from "../theme";
 import { useTheme } from "../providers/ThemeProvider";
 import { PressableScale } from "./PressableScale";
 
+export const QUALITY_REASON_PRESETS = [
+  "Interrupted",
+  "Low energy",
+  "Started late",
+  "Wrong time of day",
+  "Lost interest",
+] as const;
+
 const makeRatingOptions = (c: Colors): {
   value: CompletionRating;
   label: string;
@@ -54,6 +62,9 @@ interface CheckInSheetProps {
   onRate: (rating: CompletionRating) => void;
   onClose: () => void;
   onMarkMissed?: () => void;
+  qualityPrompt?: { blockName: string } | null;
+  onQualityReason?: (tag: string) => void;
+  onQualitySkip?: () => void;
 }
 
 export function CheckInSheet({
@@ -64,6 +75,9 @@ export function CheckInSheet({
   onRate,
   onClose,
   onMarkMissed,
+  qualityPrompt,
+  onQualityReason,
+  onQualitySkip,
 }: CheckInSheetProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -77,6 +91,37 @@ export function CheckInSheet({
             style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}
           >
             <View style={styles.sheetHandle} />
+            {qualityPrompt ? (
+              <>
+                <Text style={styles.title}>
+                  {qualityPrompt.blockName} has been landing at half strength lately.
+                </Text>
+                <Text style={styles.qualitySub}>What's been getting in the way?</Text>
+                <View style={styles.qualityChipRow}>
+                  {QUALITY_REASON_PRESETS.map((label) => (
+                    <PressableScale
+                      key={label}
+                      variant="highlight"
+                      baseColor={colors.primaryTint}
+                      highlightColor={colors.surfaceNested}
+                      style={styles.qualityChip}
+                      onPress={() => onQualityReason?.(label)}
+                      disabled={saving}
+                    >
+                      <Text style={styles.qualityChipText}>{label}</Text>
+                    </PressableScale>
+                  ))}
+                </View>
+                <PressableScale
+                  style={styles.qualitySkip}
+                  onPress={onQualitySkip}
+                  disabled={saving}
+                >
+                  <Text style={styles.qualitySkipText}>Not now</Text>
+                </PressableScale>
+              </>
+            ) : (
+              <>
             <Text style={styles.sheetTitle}>
               {instance?.block?.name ?? "Block"} — how'd it go?
             </Text>
@@ -124,6 +169,8 @@ export function CheckInSheet({
                 </PressableScale>
               </>
             ) : null}
+              </>
+            )}
 
             {saving ? (
               <ActivityIndicator color={colors.primary} style={styles.sheetSaving} />
@@ -162,6 +209,38 @@ const makeStyles = (c: Colors) =>
     sheetTitle: {
       color: c.text,
       ...typography.heading,
+    },
+    title: {
+      color: c.text,
+      ...typography.heading,
+    },
+    qualitySub: {
+      ...typography.body,
+      color: c.textSecondary,
+      marginBottom: spacing.md,
+    },
+    qualityChipRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: spacing.sm,
+    },
+    qualityChip: {
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+      borderRadius: radii.md,
+    },
+    qualityChipText: {
+      ...typography.body,
+      color: c.text,
+    },
+    qualitySkip: {
+      marginTop: spacing.lg,
+      alignItems: "center",
+      paddingVertical: spacing.sm,
+    },
+    qualitySkipText: {
+      ...typography.body,
+      color: c.textSecondary,
     },
     sheetTime: { color: c.textMuted, ...typography.small, ...numeric, marginBottom: spacing.xl, marginTop: 6 },
     ratingRow: { flexDirection: "row", gap: spacing.sm },
