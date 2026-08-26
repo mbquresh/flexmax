@@ -931,6 +931,9 @@ tree before being acted on — do not assume all are still present.
   clamp in the recovery route's end-time picker. A CHECK constraint would make
   all three backstops rather than the only defense — but it would need to
   tolerate existing rows, so verify no inverted rows exist before adding one.
+- **`removed` now carries two meanings.** User-deleted and displaced,
+  distinguished only by `displaced_by_id`. Any query filtering on status
+  `'removed'` will return more rows than a reader expects.
 
 ---
 
