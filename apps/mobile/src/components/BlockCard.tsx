@@ -526,7 +526,8 @@ const makeStyles = (c: Colors) =>
     cardGlow: {
       ...StyleSheet.absoluteFillObject,
       borderRadius: radii.lg,
-      backgroundColor: "transparent",
+      backgroundColor: c.surface,
+      zIndex: -1,
     },
     cardWrapper: {
       position: "relative",
