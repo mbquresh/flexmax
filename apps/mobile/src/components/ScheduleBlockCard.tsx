@@ -34,8 +34,10 @@ export const ScheduleBlockCard = React.memo(function ScheduleBlockCard({
       disabled={disabled}
     >
       <View style={styles.blockHeader}>
-        <Text style={styles.blockName}>{block.name}</Text>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+        <Text style={styles.blockName} numberOfLines={1}>
+          {block.name}
+        </Text>
+        <View style={styles.blockActions}>
           <TouchableOpacity onPress={() => onEdit(block)} disabled={disabled}>
             <Text style={styles.editText}>Edit</Text>
           </TouchableOpacity>
@@ -68,7 +70,19 @@ const makeStyles = (c: Colors) =>
       marginBottom: 10,
     },
     blockHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-    blockName: { color: c.text, fontSize: 16, fontWeight: "600" },
+    blockName: {
+      flex: 1,
+      marginRight: spacing.md,
+      color: c.text,
+      fontSize: 16,
+      fontWeight: "600",
+    },
+    blockActions: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      flexShrink: 0,
+    },
     editText: { color: c.primary, fontSize: 13, fontWeight: "600" },
     removeText: { color: c.danger, fontSize: 13, fontWeight: "600" },
     blockMeta: { color: c.textMuted, fontSize: 13, marginTop: spacing.xs },

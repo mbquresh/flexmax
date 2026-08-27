@@ -189,6 +189,7 @@ Cursor = implementation engine.
 | 029 | quality_reason_tag.sql | quality_reason_tag column + CHECK; quality_drift window widened 5→7 rated instances; quality_reasons added to the evidence pack |
 | 033 | swap_drift_resolved_only.sql | swap_drift counts net displacement only on completed/missed instances; impact claim in its header is wrong, see Known issues 2026-08-26 |
 | 034 | quality_reason_note.sql | Free-text companion to quality_reason_tag. Not written to the tag (CHECK-constrained, must stay countable) and not to reflection_why (means "why missed", a different question) |
+| 035 | day_boundary_overrides.sql | Sparse per-weekday wake/sleep overrides on profiles; scalar columns remain the default |
 
 028 exists to answer the north-star metric: of users who had a bad week, what
 share opened the app the following week. Capture is fire-and-forget from
@@ -681,18 +682,14 @@ makes it a one-line swap in theme.ts if ever revisited.
   user's own note the next time that same block is in trouble. Until that
   ships, this column is capture without consumption, which is what got
   day_log removed.
-- **wake_target_minutes is written but read by nothing.** Only
-  sleep_target_minutes is load-bearing (findRescheduleSlot's dayEnd, the
-  pastBedtime warning, planDisplacement's bedtime bound). Wake is captured on
-  the schedule builder and displayed, and no logic consumes it — the same
-  capture-without-consumption that got day_log removed. Decide whether it
-  earns a consumer or gets cut before building per-day wake overrides.
-- **Wake and Sleep are split by the entire block list.** Wake sits in the
-  FlatList header, Sleep in the footer, with every block and the add button
-  between them. They are one setting — the bounds of the day — presented as
-  two unrelated controls at opposite ends of a scroll. Unifying them is a
-  prerequisite for per-day boundaries, which cannot render seven rows at the
-  top and seven at the bottom.
+- **Wake is now load-bearing.** It is how resolveDayEnd detects a midnight
+  crossing. Per-day overrides live in DayBoundariesSheet; the header/footer
+  split was kept deliberately so Wake and Sleep still frame the block list as
+  a timeline.
+- **No way to archive a block.** Delete is the only removal path and it
+  cascades. An `is_active` flag on schedule_blocks, respected by
+  generate_daily_instances and ignored by get_behavior_evidence's 30-day
+  window, would let a block retire without taking its history with it.
 
 ---
 
@@ -992,6 +989,28 @@ tree before being acted on — do not assume all are still present.
   effect and the input was also empty" indicates a broken measurement, not a
   harmless change — the same failure mode as the offline-queue postmortem,
   where the acceptance criterion was never exercised.
+
+**A post-midnight bedtime disabled rescheduling entirely (fixed 2026-08-26,
+035).** dayEnd was `sleepTargetMinutes ?? 1440` in both findRescheduleSlot
+and planDisplacement. A 1am bedtime stores 60, so `end > dayEnd` rejected
+every slot after 1am — which is all of them. Reschedule proposed nothing and
+every displacement reported past-bedtime. resolveDayEnd now detects a
+boundary crossing midnight (sleep <= wake, or below 4am when no wake is set)
+and clamps to 1440, because instances are minutes-since-midnight on a single
+date and no slot past 1440 is representable. Latent since 020; per-day
+overrides would have made it common.
+
+**Deleting a schedule block destroys its behavioural history (guarded
+2026-08-26).** daily_schedule_instances.block_id is `on delete cascade`, so
+removing a block permanently deletes every instance — completions, misses,
+ratings, reflections, quality tags, miss reasons. It shipped with no
+confirmation, one tap from a card. Now behind an Alert naming the specific
+cost. The underlying problem stands: there is no way to retire a block
+without destroying its record, and no start/end date on a block, so a user
+finishing a fixed-length programme must choose between a dead block
+cluttering every day and losing the data. Archiving (is_active on the block,
+excluded from generation but retained for the evidence pack) is the real
+fix.
 
 ---
 

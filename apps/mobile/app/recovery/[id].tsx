@@ -16,6 +16,7 @@ import {
   findRescheduleSlot,
   getFallbackSlot,
   planDisplacement,
+  resolveDayBoundaries,
 } from "../../src/lib/schedule";
 import { hapticSelect } from "../../src/lib/haptics";
 import { Colors, spacing, radii, typography } from "../../src/theme";
@@ -52,6 +53,19 @@ function RecoveryScreenContent() {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
+  const todayBounds = useMemo(
+    () =>
+      resolveDayBoundaries(
+        new Date().getDay(),
+        {
+          wake: profile?.wake_target_minutes ?? null,
+          sleep: profile?.sleep_target_minutes ?? null,
+        },
+        profile?.day_boundary_overrides
+      ),
+    [profile]
+  );
+
   const [recoveryCopy, setRecoveryCopy] = useState<RecoveryCopy | null>(null);
   const [reflectionWhy, setReflectionWhy] = useState("");
   const [rescheduleSlot, setRescheduleSlot] = useState<{
@@ -74,7 +88,8 @@ function RecoveryScreenContent() {
     const found = findRescheduleSlot(
       { ...instance, status: "missed" },
       useStore.getState().todayInstances,
-      profile?.sleep_target_minutes ?? null
+      todayBounds.sleep,
+      todayBounds.wake
     );
     setSlotIsFallback(found === null);
     setRescheduleSlot(found ?? getFallbackSlot(instance));
@@ -193,9 +208,9 @@ function RecoveryScreenContent() {
   };
 
   const pastBedtime =
-    profile?.sleep_target_minutes != null &&
+    todayBounds.sleep != null &&
     rescheduleSlot != null &&
-    rescheduleSlot.end_minutes > profile.sleep_target_minutes;
+    rescheduleSlot.end_minutes > todayBounds.sleep;
 
   const plan = useMemo(
     () =>
@@ -204,10 +219,11 @@ function RecoveryScreenContent() {
             rescheduleSlot,
             allInstances,
             instance.id,
-            profile?.sleep_target_minutes
+            todayBounds.sleep,
+            todayBounds.wake
           )
         : ({ kind: "clear" } as const),
-    [rescheduleSlot, allInstances, instance?.id, profile?.sleep_target_minutes]
+    [rescheduleSlot, allInstances, instance?.id, todayBounds]
   );
 
   const sacrificeWarning =

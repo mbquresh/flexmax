@@ -13,6 +13,13 @@ export const WEEKDAYS = [
 
 export const ALL_DAYS = WEEKDAYS.map((d) => d.value);
 
+export type DayBoundaryOverrides = Record<
+  string,
+  { wake?: number | null; sleep?: number | null } | undefined
+>;
+
+export type DayBoundaries = { wake: number | null; sleep: number | null };
+
 export function formatDays(days: number[]): string {
   const sorted = [...days].sort((a, b) => a - b);
   if (sorted.length === 7) return "Every day";
@@ -138,18 +145,46 @@ export const BLOCK_PRESETS = [
   },
 ];
 
+// Sparse overrides win per FIELD, not per day — someone can override
+// Saturday's sleep without overriding its wake.
+export function resolveDayBoundaries(
+  dayOfWeek: number,
+  defaults: { wake: number | null; sleep: number | null },
+  overrides: DayBoundaryOverrides | null | undefined
+): DayBoundaries {
+  const o = overrides?.[String(dayOfWeek)];
+  return {
+    wake: o?.wake ?? defaults.wake,
+    sleep: o?.sleep ?? defaults.sleep,
+  };
+}
+
+// A sleep target at or before wake crosses midnight. Instances are stored
+// as minutes-since-midnight on a single date, so there is no representable
+// slot past 1440 — the last usable minute of the day IS midnight. Without
+// this, a 1am bedtime yields dayEnd = 60 and rejects every slot after 1am,
+// which is all of them.
+export function resolveDayEnd(
+  sleepMinutes: number | null | undefined,
+  wakeMinutes: number | null | undefined
+): number {
+  if (sleepMinutes == null) return 1440;
+  const crossesMidnight =
+    wakeMinutes != null ? sleepMinutes <= wakeMinutes : sleepMinutes < 240;
+  return crossesMidnight ? 1440 : sleepMinutes;
+}
+
 export function findRescheduleSlot(
   missedInstance: DailyInstance,
   allInstances: DailyInstance[],
-  sleepTargetMinutes?: number | null
+  sleepTargetMinutes?: number | null,
+  wakeTargetMinutes?: number | null
 ): { start_minutes: number; end_minutes: number } | null {
   const duration = missedInstance.end_minutes - missedInstance.start_minutes;
   const nowMinutes = new Date().getHours() * 60 + new Date().getMinutes();
   const bufferMinutes = nowMinutes + 30;
 
-  // Day ends at bedtime, not midnight. Falls back to midnight only when the
-  // user has no sleep target set.
-  const dayEnd = sleepTargetMinutes ?? 1440;
+  const dayEnd = resolveDayEnd(sleepTargetMinutes, wakeTargetMinutes);
 
   const occupied = allInstances
     .filter(
@@ -219,7 +254,8 @@ export function planDisplacement(
   slot: { start_minutes: number; end_minutes: number },
   allInstances: DailyInstance[],
   excludeId: string,
-  sleepTargetMinutes?: number | null
+  sleepTargetMinutes?: number | null,
+  wakeTargetMinutes?: number | null
 ): DisplacementPlan {
   const live = allInstances.filter(
     (i) => i.id !== excludeId && isLiveInstance(i)
@@ -248,8 +284,7 @@ export function planDisplacement(
     const newStart = slot.end_minutes;
     const newEnd = newStart + (target.end_minutes - target.start_minutes);
 
-    // Same day-end convention as findRescheduleSlot: bedtime when set, else midnight.
-    const dayEnd = sleepTargetMinutes ?? 1440;
+    const dayEnd = resolveDayEnd(sleepTargetMinutes, wakeTargetMinutes);
     if (newEnd <= dayEnd) {
       const cascade = live.filter(
         (i) =>

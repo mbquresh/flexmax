@@ -5,7 +5,11 @@ vi.mock("./supabase", () => ({
 }));
 
 import { DailyInstance, ScheduleBlock } from "../types/database";
-import { planDisplacement } from "./schedule";
+import {
+  planDisplacement,
+  resolveDayBoundaries,
+  resolveDayEnd,
+} from "./schedule";
 
 function block(overrides: Partial<ScheduleBlock> = {}): ScheduleBlock {
   return {
@@ -293,5 +297,58 @@ describe("planDisplacement", () => {
     if (plan.kind !== "sacrifice") return;
     expect(plan.targets.map((t) => t.id)).toEqual(["a", "b", "c"]);
     expect(plan.names).toEqual(["A", "B", "C"]);
+  });
+});
+
+describe("resolveDayEnd", () => {
+  it("returns 1440 when sleep is null", () => {
+    expect(resolveDayEnd(null, 360)).toBe(1440);
+  });
+
+  it("returns the sleep time when it is after wake on the same day", () => {
+    expect(resolveDayEnd(1380, 360)).toBe(1380);
+  });
+
+  it("clamps to 1440 when sleep crosses midnight past wake", () => {
+    expect(resolveDayEnd(60, 360)).toBe(1440);
+  });
+
+  it("clamps to 1440 when sleep is before 4am and wake is unset", () => {
+    expect(resolveDayEnd(120, null)).toBe(1440);
+  });
+
+  it("keeps a same-day sleep when wake is unset and sleep is after 4am", () => {
+    expect(resolveDayEnd(300, null)).toBe(300);
+  });
+
+  it("clamps to 1440 when sleep equals wake", () => {
+    expect(resolveDayEnd(360, 360)).toBe(1440);
+  });
+});
+
+describe("resolveDayBoundaries", () => {
+  const defaults = { wake: 360, sleep: 1380 };
+
+  it("returns defaults when there are no overrides", () => {
+    expect(resolveDayBoundaries(1, defaults, null)).toEqual(defaults);
+    expect(resolveDayBoundaries(1, defaults, {})).toEqual(defaults);
+  });
+
+  it("overrides only the fields present for that day", () => {
+    expect(
+      resolveDayBoundaries(6, defaults, { "6": { sleep: 60 } })
+    ).toEqual({ wake: 360, sleep: 60 });
+  });
+
+  it("ignores an override for a different day", () => {
+    expect(
+      resolveDayBoundaries(1, defaults, { "6": { sleep: 60 } })
+    ).toEqual(defaults);
+  });
+
+  it("falls back to the default when the override field is explicitly null", () => {
+    expect(
+      resolveDayBoundaries(1, defaults, { "1": { wake: null } })
+    ).toEqual(defaults);
   });
 });

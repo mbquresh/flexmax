@@ -18,6 +18,7 @@ import {
   createScheduleBlock,
   deleteScheduleBlock,
   ensureActiveTemplate,
+  DayBoundaryOverrides,
 } from "../src/lib/schedule";
 import { useAuth } from "../src/providers/AuthProvider";
 import { useTheme } from "../src/providers/ThemeProvider";
@@ -32,6 +33,7 @@ import { PressableScale } from "../src/components/PressableScale";
 import { BoundaryRow } from "../src/components/BoundaryRow";
 import { ScheduleBlockCard } from "../src/components/ScheduleBlockCard";
 import { BlockFormSheet, BlockFormData } from "../src/components/BlockFormSheet";
+import { DayBoundariesSheet } from "../src/components/DayBoundariesSheet";
 import { Colors, spacing, radii, typography, iconSizes } from "../src/theme";
 
 function ScheduleBuilderScreenContent() {
@@ -50,6 +52,9 @@ function ScheduleBuilderScreenContent() {
   const [editingBlock, setEditingBlock] = useState<ScheduleBlock | null>(null);
   const [wakeTarget, setWakeTarget] = useState<number | null>(null);
   const [sleepTarget, setSleepTarget] = useState<number | null>(null);
+  const [overrides, setOverrides] = useState<DayBoundaryOverrides>({});
+  const [overridesOpen, setOverridesOpen] = useState(false);
+  const [overridesSaving, setOverridesSaving] = useState(false);
 
   const loadBlocks = async () => {
     if (!session?.user.id) {
@@ -73,7 +78,7 @@ function ScheduleBuilderScreenContent() {
             .order("start_minutes"),
           supabase
             .from("profiles")
-            .select("sleep_target_minutes, wake_target_minutes")
+            .select("sleep_target_minutes, wake_target_minutes, day_boundary_overrides")
             .eq("id", session.user.id)
             .single(),
         ]);
@@ -83,6 +88,9 @@ function ScheduleBuilderScreenContent() {
       setBlocks(data ?? []);
       setWakeTarget(profileData?.wake_target_minutes ?? null);
       setSleepTarget(profileData?.sleep_target_minutes ?? null);
+      setOverrides(
+        (profileData?.day_boundary_overrides as DayBoundaryOverrides | null) ?? {}
+      );
     } catch (err) {
       setLoadFailed(true);
       setLoadOffline(isConnectivityError(err));
@@ -116,6 +124,35 @@ function ScheduleBuilderScreenContent() {
     [blocks, setBlocks]
   );
 
+  // Deleting a block cascades to every daily_schedule_instances row for it.
+  // The behavioural history is unrecoverable, so name the cost rather than
+  // asking a generic "are you sure".
+  const confirmDeleteBlock = useCallback(
+    (blockId: string) => {
+      const block = blocks.find((b) => b.id === blockId);
+      const name = block?.name ?? "this block";
+
+      if (Platform.OS === "web") {
+        handleDeleteBlock(blockId);
+        return;
+      }
+
+      Alert.alert(
+        `Remove ${name}?`,
+        "This also deletes its full history — every completion, miss, rating and reflection for this block. This can't be undone.",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Remove",
+            style: "destructive",
+            onPress: () => handleDeleteBlock(blockId),
+          },
+        ]
+      );
+    },
+    [blocks, handleDeleteBlock]
+  );
+
   const handleEditPress = useCallback((b: ScheduleBlock) => {
     setEditingBlock(b);
     setFormOpen(true);
@@ -126,11 +163,11 @@ function ScheduleBuilderScreenContent() {
       <ScheduleBlockCard
         block={item}
         onEdit={handleEditPress}
-        onDelete={handleDeleteBlock}
+        onDelete={confirmDeleteBlock}
         disabled={saving}
       />
     ),
-    [handleEditPress, handleDeleteBlock, saving]
+    [handleEditPress, confirmDeleteBlock, saving]
   );
 
   if (!session) return null;
@@ -169,6 +206,27 @@ function ScheduleBuilderScreenContent() {
     }
 
     await refreshProfile();
+  };
+
+  const saveDayOverrides = async (next: DayBoundaryOverrides) => {
+    const prev = overrides;
+    setOverrides(next);
+    setOverridesSaving(true);
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ day_boundary_overrides: next })
+        .eq("id", session.user.id);
+      if (error) {
+        setOverrides(prev);
+        handleError(error, "saveDayOverrides", "Could not save");
+        return;
+      }
+      await refreshProfile();
+      setOverridesOpen(false);
+    } finally {
+      setOverridesSaving(false);
+    }
   };
 
   const handleFormSave = async (data: BlockFormData) => {
@@ -343,6 +401,13 @@ function ScheduleBuilderScreenContent() {
                 minutes={wakeTarget}
                 onChange={(m) => saveBoundary("wake_target_minutes", m)}
               />
+              <PressableScale style={styles.overrideLink} onPress={() => setOverridesOpen(true)}>
+                <Text style={styles.overrideLinkText}>
+                  {Object.keys(overrides).length > 0
+                    ? `Different on ${Object.keys(overrides).length} ${Object.keys(overrides).length === 1 ? "day" : "days"}`
+                    : "Different on some days?"}
+                </Text>
+              </PressableScale>
             </View>
           </>
         }
@@ -360,6 +425,13 @@ function ScheduleBuilderScreenContent() {
                 minutes={sleepTarget}
                 onChange={(m) => saveBoundary("sleep_target_minutes", m)}
               />
+              <PressableScale style={styles.overrideLink} onPress={() => setOverridesOpen(true)}>
+                <Text style={styles.overrideLinkText}>
+                  {Object.keys(overrides).length > 0
+                    ? `Different on ${Object.keys(overrides).length} ${Object.keys(overrides).length === 1 ? "day" : "days"}`
+                    : "Different on some days?"}
+                </Text>
+              </PressableScale>
             </View>
             <View style={styles.addSection}>
               <PressableScale
@@ -395,6 +467,14 @@ function ScheduleBuilderScreenContent() {
           setFormOpen(false);
           setEditingBlock(null);
         }}
+      />
+      <DayBoundariesSheet
+        visible={overridesOpen}
+        defaults={{ wake: wakeTarget, sleep: sleepTarget }}
+        overrides={overrides}
+        saving={overridesSaving}
+        onSave={saveDayOverrides}
+        onClose={() => setOverridesOpen(false)}
       />
     </View>
   );
@@ -479,6 +559,14 @@ const makeStyles = (c: Colors) =>
       backgroundColor: c.surface,
     },
     addToggleText: { color: c.primary, fontSize: 15, fontWeight: "500" },
+    overrideLink: {
+      marginTop: spacing.sm,
+      alignSelf: "flex-start",
+    },
+    overrideLinkText: {
+      color: c.textSecondary,
+      ...typography.small,
+    },
     primaryBtn: {
       backgroundColor: c.primary,
       borderRadius: radii.lg,

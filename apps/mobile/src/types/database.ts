@@ -41,6 +41,7 @@ export interface Profile {
   timezone: string;
   sleep_target_minutes: number | null;
   wake_target_minutes: number | null;
+  day_boundary_overrides: import("../lib/schedule").DayBoundaryOverrides | null;
   created_at: string;
 }
 
