@@ -81,6 +81,20 @@ export const lightColors = {
     shadowOpacity: 0.32,
     shadowRadius: 16,
   },
+  // Light has no drag glow — elevation is the shadow. Zeroed so the Colors
+  // mapped type stays complete; interpolation is a no-op in this mode.
+  glowRest: {
+    shadowColor: "#43698F",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+  },
+  glowLift: {
+    shadowColor: "#43698F",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+  },
 } as const;
 
 type WidenColorValue<T> = T extends string
@@ -178,6 +192,18 @@ export const darkColors: Colors = {
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0,
     shadowRadius: 0,
+  },
+  glowRest: {
+    shadowColor: "#7FA8CE",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+  },
+  glowLift: {
+    shadowColor: "#7FA8CE",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.35,
+    shadowRadius: 14,
   },
 };
 

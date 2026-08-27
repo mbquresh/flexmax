@@ -243,6 +243,21 @@ export function BlockCard({
     };
   });
 
+  const glowAnimatedStyle = useAnimatedStyle(() => ({
+    shadowOpacity: interpolate(
+      isDragging.value,
+      [0, 1],
+      [colors.glowRest.shadowOpacity, colors.glowLift.shadowOpacity]
+    ),
+    shadowRadius: interpolate(
+      isDragging.value,
+      [0, 1],
+      [colors.glowRest.shadowRadius, colors.glowLift.shadowRadius]
+    ),
+    shadowColor: colors.glowLift.shadowColor,
+    shadowOffset: colors.glowLift.shadowOffset,
+  }));
+
   const wrapperAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }, { scale: scale.value }],
   }));
@@ -349,6 +364,10 @@ export function BlockCard({
         onLayout(instance.id, y, height);
       }}
     >
+      <Animated.View
+        style={[styles.cardGlow, glowAnimatedStyle]}
+        pointerEvents="none"
+      />
       <Animated.View style={[styles.cardWrapper, wrapperAnimatedStyle]}>
       <View style={styles.actionsBehind}>
         {isUnanswered && (
@@ -503,6 +522,11 @@ const makeStyles = (c: Colors) =>
       borderRadius: radii.lg,
       marginBottom: 10,
       ...c.shadowRest,
+    },
+    cardGlow: {
+      ...StyleSheet.absoluteFillObject,
+      borderRadius: radii.lg,
+      backgroundColor: "transparent",
     },
     cardWrapper: {
       position: "relative",
