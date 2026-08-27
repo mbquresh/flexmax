@@ -256,6 +256,7 @@ export function BlockCard({
     ),
     shadowColor: colors.glowLift.shadowColor,
     shadowOffset: colors.glowLift.shadowOffset,
+    transform: [{ translateY: translateY.value }, { scale: scale.value }],
   }));
 
   const wrapperAnimatedStyle = useAnimatedStyle(() => ({
