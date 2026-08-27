@@ -381,6 +381,7 @@ marker at all.
 | Reschedule conflict resolver | recovery/[id].tsx + planDisplacement in schedule.ts. Reschedule previously WARNED on collision and committed the overlap anyway; overlapping instances were legal in the DB and corrupted notification scheduling, findRescheduleSlot's occupied list, and cannibalization's time-ordering. Now: one movable collider is offered as a displacement ("move Dinner to 8:15"), everything else refuses to "Pick another time". Never writes an overlap. Two-row write is atomic via the existing swap_instance_times RPC — no new migration |
 | Quality degradation prompt | CheckInSheet + today.tsx. Fires when a block is rated partial/pulled_away AND 4+ of its last 7 rated instances were poor. Writes quality_reason_tag from five presets. Once per block per week, cooldown written when SHOWN so skipping does not re-prompt. Reuses CheckInSheet's geometry by swapping content — no second modal, per the RecoverySheet postmortem. Threshold matches quality_drift's rn<=7 window (029) so the prompt and the weekly insight cannot contradict each other; 'Something else' opens a free-text note written to quality_reason_note |
 | Profile page: preferences, not observations | account.tsx. Removed the "What FlexMax learned about you" section — it gated on psychology_profiles.completed_at, written only by the deleted AI onboarding, so it showed an empty state pointing at onboarding that no longer exists. Replaced with controls that already govern app behaviour but had no UI: accountability_tone (injected into every weekly-insight prompt, previously unreachable after onboarding) and notification permission state (blockNotifications silently no-ops when denied, and nothing surfaced it). Behavioural observations belong on a dedicated surface, not behind a settings-shaped door — a user opening settings to change a toggle should not be confronted |
+| Schedule builder refactor | schedule-builder.tsx split into ScheduleBlockCard, BlockFormSheet, CategoryChips, DayChips. Editing moved out of the FlatList row into a bottom sheet — inline expansion jumped row height ~400px, put a TextInput and a nested horizontal ScrollView inside a FlatList row, and recreated renderBlock on every keystroke. Add and edit were two copy-pasted forms behind twelve duplicated state hooks; now one BlockFormSheet with a single draft object. Behaviour-neutral: validation strings, save payloads, sort order and quick-add all unchanged. Sheet copies TaskDetailSheet's Modal structure exactly — KeyboardAvoidingView as the direct child carrying the overlay style, dismiss Pressable as a sibling not a wrapper |
 
 
 
@@ -680,6 +681,18 @@ makes it a one-line swap in theme.ts if ever revisited.
   user's own note the next time that same block is in trouble. Until that
   ships, this column is capture without consumption, which is what got
   day_log removed.
+- **wake_target_minutes is written but read by nothing.** Only
+  sleep_target_minutes is load-bearing (findRescheduleSlot's dayEnd, the
+  pastBedtime warning, planDisplacement's bedtime bound). Wake is captured on
+  the schedule builder and displayed, and no logic consumes it — the same
+  capture-without-consumption that got day_log removed. Decide whether it
+  earns a consumer or gets cut before building per-day wake overrides.
+- **Wake and Sleep are split by the entire block list.** Wake sits in the
+  FlatList header, Sleep in the footer, with every block and the add button
+  between them. They are one setting — the bounds of the day — presented as
+  two unrelated controls at opposite ends of a scroll. Unifying them is a
+  prerequisite for per-day boundaries, which cannot render seven rows at the
+  top and seven at the bottom.
 
 ---
 

@@ -279,13 +279,3 @@ export function getFallbackSlot(
   );
   return { start_minutes: start, end_minutes: start + duration };
 }
-
-export const CATEGORY_OPTIONS: { value: BlockCategory; label: string }[] = [
-  { value: "deep_work", label: "Deep work" },
-  { value: "health", label: "Health" },
-  { value: "morning_routine", label: "Morning" },
-  { value: "wind_down", label: "Wind down" },
-  { value: "learning", label: "Learning" },
-  { value: "admin", label: "Admin" },
-  { value: "other", label: "Other" },
-];
