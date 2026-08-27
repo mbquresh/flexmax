@@ -101,6 +101,7 @@ export interface ScheduleBlock {
   days_of_week: number[];
   sort_order: number;
   is_fixed: boolean;
+  is_active: boolean;
 }
 
 export interface DailyInstance {

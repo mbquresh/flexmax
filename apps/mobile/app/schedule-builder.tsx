@@ -17,9 +17,11 @@ import {
   BLOCK_PRESETS,
   createScheduleBlock,
   deleteScheduleBlock,
+  setBlockArchived,
   ensureActiveTemplate,
   DayBoundaryOverrides,
 } from "../src/lib/schedule";
+import { getLocalDateString } from "../src/lib/time";
 import { useAuth } from "../src/providers/AuthProvider";
 import { useTheme } from "../src/providers/ThemeProvider";
 import { useStore } from "../src/store";
@@ -55,6 +57,16 @@ function ScheduleBuilderScreenContent() {
   const [overrides, setOverrides] = useState<DayBoundaryOverrides>({});
   const [overridesOpen, setOverridesOpen] = useState(false);
   const [overridesSaving, setOverridesSaving] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
+
+  const activeBlocks = useMemo(
+    () => blocks.filter((b) => b.is_active),
+    [blocks]
+  );
+  const archivedBlocks = useMemo(
+    () => blocks.filter((b) => !b.is_active),
+    [blocks]
+  );
 
   const loadBlocks = async () => {
     if (!session?.user.id) {
@@ -139,7 +151,7 @@ function ScheduleBuilderScreenContent() {
 
       Alert.alert(
         `Remove ${name}?`,
-        "This also deletes its full history — every completion, miss, rating and reflection for this block. This can't be undone.",
+        "This also deletes its full history — every completion, miss, rating and reflection for this block. This can't be undone. Archive it instead if you just want it off your schedule.",
         [
           { text: "Cancel", style: "cancel" },
           {
@@ -158,16 +170,55 @@ function ScheduleBuilderScreenContent() {
     setFormOpen(true);
   }, []);
 
+  const handleArchiveToggle = useCallback(
+    async (block: ScheduleBlock) => {
+      const archiving = block.is_active;
+      setSaving(true);
+      setError(null);
+      try {
+        const updated = await setBlockArchived(block.id, archiving);
+
+        if (archiving) {
+          // Today's instance already exists; generation only prevents
+          // FUTURE ones. Mark it removed rather than deleting it — 'removed'
+          // is already excluded from every live-instance filter and from
+          // the evidence pack's tracked/base CTEs.
+          const { error: instErr } = await supabase
+            .from("daily_schedule_instances")
+            .update({ status: "removed" })
+            .eq("block_id", block.id)
+            .eq("date", getLocalDateString())
+            .eq("status", "pending");
+          if (instErr) handleError(instErr, "archiveClearInstance");
+        }
+
+        setBlocks(
+          blocks
+            .map((b) => (b.id === block.id ? updated : b))
+            .sort((a, b) => a.start_minutes - b.start_minutes)
+        );
+      } catch (err) {
+        const message = getErrorMessage(err);
+        handleError(err, "handleArchiveToggle");
+        setError(message);
+        if (Platform.OS !== "web") Alert.alert("Error", message);
+      } finally {
+        setSaving(false);
+      }
+    },
+    [blocks, setBlocks]
+  );
+
   const renderItem = useCallback(
     ({ item }: { item: ScheduleBlock }) => (
       <ScheduleBlockCard
         block={item}
         onEdit={handleEditPress}
-        onDelete={confirmDeleteBlock}
+        onArchive={handleArchiveToggle}
         disabled={saving}
       />
     ),
-    [handleEditPress, confirmDeleteBlock, saving]
+    [handleEditPress, handleArchiveToggle, saving]
   );
 
   if (!session) return null;
@@ -361,7 +412,7 @@ function ScheduleBuilderScreenContent() {
   return (
     <View style={styles.container}>
       <FlatList
-        data={blocks}
+        data={activeBlocks}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         contentContainerStyle={styles.list}
@@ -454,6 +505,26 @@ function ScheduleBuilderScreenContent() {
                 <Feather name="arrow-right" size={iconSizes.xs} color={colors.onPrimary} />
               </View>
             </PressableScale>
+            {archivedBlocks.length > 0 ? (
+              <View style={styles.archivedSection}>
+                <PressableScale onPress={() => setShowArchived((v) => !v)}>
+                  <Text style={styles.archivedToggle}>
+                    {showArchived ? "Hide" : "Show"} archived ({archivedBlocks.length})
+                  </Text>
+                </PressableScale>
+                {showArchived
+                  ? archivedBlocks.map((b) => (
+                      <ScheduleBlockCard
+                        key={b.id}
+                        block={b}
+                        onEdit={handleEditPress}
+                        onArchive={handleArchiveToggle}
+                        disabled={saving}
+                      />
+                    ))
+                  : null}
+              </View>
+            ) : null}
           </>
         }
       />
@@ -467,6 +538,16 @@ function ScheduleBuilderScreenContent() {
           setFormOpen(false);
           setEditingBlock(null);
         }}
+        onDelete={
+          editingBlock
+            ? () => {
+                const id = editingBlock.id;
+                setFormOpen(false);
+                setEditingBlock(null);
+                confirmDeleteBlock(id);
+              }
+            : undefined
+        }
       />
       <DayBoundariesSheet
         visible={overridesOpen}
@@ -550,6 +631,12 @@ const makeStyles = (c: Colors) =>
       paddingHorizontal: spacing.sm,
     },
     addSection: { marginTop: spacing.sm, marginBottom: spacing.md },
+    archivedSection: { marginTop: spacing.xl },
+    archivedToggle: {
+      ...typography.body,
+      color: c.textSecondary,
+      paddingVertical: spacing.md,
+    },
     addToggle: {
       borderRadius: radii.lg,
       borderWidth: 0.5,

@@ -11,14 +11,14 @@ import { PressableScale } from "./PressableScale";
 interface ScheduleBlockCardProps {
   block: ScheduleBlock;
   onEdit: (b: ScheduleBlock) => void;
-  onDelete: (id: string) => void;
+  onArchive: (block: ScheduleBlock) => void;
   disabled: boolean;
 }
 
 export const ScheduleBlockCard = React.memo(function ScheduleBlockCard({
   block,
   onEdit,
-  onDelete,
+  onArchive,
   disabled,
 }: ScheduleBlockCardProps) {
   const { colors } = useTheme();
@@ -29,20 +29,26 @@ export const ScheduleBlockCard = React.memo(function ScheduleBlockCard({
       variant="highlight"
       baseColor={colors.surface}
       highlightColor={colors.surfaceNested}
-      style={styles.blockCard}
-      onPress={() => onEdit(block)}
-      disabled={disabled}
+      style={[styles.blockCard, !block.is_active && styles.blockCardArchived]}
+      onPress={() => {
+        if (block.is_active) onEdit(block);
+      }}
+      disabled={disabled || !block.is_active}
     >
       <View style={styles.blockHeader}>
         <Text style={styles.blockName} numberOfLines={1}>
           {block.name}
         </Text>
         <View style={styles.blockActions}>
-          <TouchableOpacity onPress={() => onEdit(block)} disabled={disabled}>
-            <Text style={styles.editText}>Edit</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => onDelete(block.id)} disabled={disabled}>
-            <Text style={styles.removeText}>Remove</Text>
+          {block.is_active ? (
+            <TouchableOpacity onPress={() => onEdit(block)} disabled={disabled}>
+              <Text style={styles.editText}>Edit</Text>
+            </TouchableOpacity>
+          ) : null}
+          <TouchableOpacity onPress={() => onArchive(block)} disabled={disabled}>
+            <Text style={styles.archiveText}>
+              {block.is_active ? "Archive" : "Restore"}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -69,6 +75,9 @@ const makeStyles = (c: Colors) =>
       padding: spacing.lg,
       marginBottom: 10,
     },
+    blockCardArchived: {
+      opacity: 0.55,
+    },
     blockHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
     blockName: {
       flex: 1,
@@ -84,7 +93,7 @@ const makeStyles = (c: Colors) =>
       flexShrink: 0,
     },
     editText: { color: c.primary, fontSize: 13, fontWeight: "600" },
-    removeText: { color: c.danger, fontSize: 13, fontWeight: "600" },
+    archiveText: { color: c.textSecondary, fontSize: 13, fontWeight: "600" },
     blockMeta: { color: c.textMuted, fontSize: 13, marginTop: spacing.xs },
     blockRepeats: { color: c.textFaint, fontSize: 12, marginTop: 4, marginBottom: 10 },
   });

@@ -118,6 +118,17 @@ export async function deleteScheduleBlock(blockId: string) {
   if (error) throw error;
 }
 
+export async function setBlockArchived(blockId: string, archived: boolean) {
+  const { data, error } = await supabase
+    .from("schedule_blocks")
+    .update({ is_active: !archived })
+    .eq("id", blockId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 export const BLOCK_PRESETS = [
   {
     name: "Morning routine",

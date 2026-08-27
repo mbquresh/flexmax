@@ -190,6 +190,8 @@ Cursor = implementation engine.
 | 033 | swap_drift_resolved_only.sql | swap_drift counts net displacement only on completed/missed instances; impact claim in its header is wrong, see Known issues 2026-08-26 |
 | 034 | quality_reason_note.sql | Free-text companion to quality_reason_tag. Not written to the tag (CHECK-constrained, must stay countable) and not to reflection_why (means "why missed", a different question) |
 | 035 | day_boundary_overrides.sql | Sparse per-weekday wake/sleep overrides on profiles; scalar columns remain the default |
+| 036 | accountability_tone_check.sql | NOT VALID CHECK on firm/gentle/data-driven; the column is written verbatim into the AI prompt and previously accepted anything |
+| 037 | block_archive.sql | schedule_blocks.is_active; both generate_daily_instances and generate_my_daily_instances now filter on it |
 
 028 exists to answer the north-star metric: of users who had a bad week, what
 share opened the app the following week. Capture is fire-and-forget from
@@ -383,6 +385,7 @@ marker at all.
 | Quality degradation prompt | CheckInSheet + today.tsx. Fires when a block is rated partial/pulled_away AND 4+ of its last 7 rated instances were poor. Writes quality_reason_tag from five presets. Once per block per week, cooldown written when SHOWN so skipping does not re-prompt. Reuses CheckInSheet's geometry by swapping content — no second modal, per the RecoverySheet postmortem. Threshold matches quality_drift's rn<=7 window (029) so the prompt and the weekly insight cannot contradict each other; 'Something else' opens a free-text note written to quality_reason_note |
 | Profile page: preferences, not observations | account.tsx. Removed the "What FlexMax learned about you" section — it gated on psychology_profiles.completed_at, written only by the deleted AI onboarding, so it showed an empty state pointing at onboarding that no longer exists. Replaced with controls that already govern app behaviour but had no UI: accountability_tone (injected into every weekly-insight prompt, previously unreachable after onboarding) and notification permission state (blockNotifications silently no-ops when denied, and nothing surfaced it). Behavioural observations belong on a dedicated surface, not behind a settings-shaped door — a user opening settings to change a toggle should not be confronted |
 | Schedule builder refactor | schedule-builder.tsx split into ScheduleBlockCard, BlockFormSheet, CategoryChips, DayChips. Editing moved out of the FlatList row into a bottom sheet — inline expansion jumped row height ~400px, put a TextInput and a nested horizontal ScrollView inside a FlatList row, and recreated renderBlock on every keystroke. Add and edit were two copy-pasted forms behind twelve duplicated state hooks; now one BlockFormSheet with a single draft object. Behaviour-neutral: validation strings, save payloads, sort order and quick-add all unchanged. Sheet copies TaskDetailSheet's Modal structure exactly — KeyboardAvoidingView as the direct child carrying the overlay style, dismiss Pressable as a sibling not a wrapper |
+| Block archiving | schedule_blocks.is_active (037). A block can retire without destroying its record. Card actions are now Edit / Archive; permanent delete moved into the edit sheet, because delete cascades to every daily_schedule_instances row and the one-tap action should be the reversible one. Archiving marks today's PENDING instance 'removed' so the block leaves Today immediately; completed and missed instances survive and keep feeding the evidence pack until they age out of the 30-day window |
 
 
 
@@ -667,10 +670,6 @@ makes it a one-line swap in theme.ts if ever revisited.
   moves cannot correct it. Deliberately excluded from the profile-page work
   because changing it retroactively reinterprets every stored date, and the
   right behaviour for existing history is not obvious.
-- **accountability_tone has no CHECK constraint.** firm / gentle /
-  data-driven are enforced only by TONE_OPTIONS in account.tsx. The column
-  accepts anything, and whatever it holds is written verbatim into the AI
-  prompt. A NOT VALID CHECK matching 025's style would close this.
 - **No nudge frequency control.** Cutoff nudges fire automatically with no
   off switch. CLAUDE.md's "nudges must be earned and specific" argues the user
   should be able to turn them down; without that, the only available action is
@@ -686,10 +685,6 @@ makes it a one-line swap in theme.ts if ever revisited.
   crossing. Per-day overrides live in DayBoundariesSheet; the header/footer
   split was kept deliberately so Wake and Sleep still frame the block list as
   a timeline.
-- **No way to archive a block.** Delete is the only removal path and it
-  cascades. An `is_active` flag on schedule_blocks, respected by
-  generate_daily_instances and ignored by get_behavior_evidence's 30-day
-  window, would let a block retire without taking its history with it.
 
 ---
 

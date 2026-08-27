@@ -46,6 +46,7 @@ interface BlockFormSheetProps {
   error: string | null;
   onSave: (data: BlockFormData) => void;
   onClose: () => void;
+  onDelete?: () => void;
 }
 
 export function BlockFormSheet({
@@ -55,6 +56,7 @@ export function BlockFormSheet({
   error,
   onSave,
   onClose,
+  onDelete,
 }: BlockFormSheetProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -164,6 +166,18 @@ export function BlockFormSheet({
                 </Text>
               )}
             </PressableScale>
+            {onDelete ? (
+              <>
+                <View style={styles.deleteDivider} />
+                <PressableScale
+                  style={styles.deleteBtn}
+                  onPress={onDelete}
+                  disabled={saving}
+                >
+                  <Text style={styles.deleteBtnText}>Delete permanently</Text>
+                </PressableScale>
+              </>
+            ) : null}
           </ScrollView>
         </RNAnimated.View>
       </KeyboardAvoidingView>
@@ -240,4 +254,17 @@ const makeStyles = (c: Colors) =>
       alignItems: "center",
     },
     addBtnText: { color: c.onPrimary, ...typography.bodyBold },
+    deleteDivider: {
+      height: StyleSheet.hairlineWidth,
+      backgroundColor: c.border,
+      marginVertical: spacing.lg,
+    },
+    deleteBtn: {
+      paddingVertical: spacing.md,
+      alignItems: "center",
+    },
+    deleteBtnText: {
+      ...typography.body,
+      color: c.danger,
+    },
   });

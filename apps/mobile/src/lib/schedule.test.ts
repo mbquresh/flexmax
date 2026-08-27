@@ -24,6 +24,7 @@ function block(overrides: Partial<ScheduleBlock> = {}): ScheduleBlock {
     days_of_week: [0, 1, 2, 3, 4, 5, 6],
     sort_order: 0,
     is_fixed: false,
+    is_active: true,
     ...overrides,
   };
 }
