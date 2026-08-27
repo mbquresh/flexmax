@@ -190,6 +190,26 @@ function ScheduleBuilderScreenContent() {
             .eq("date", getLocalDateString())
             .eq("status", "pending");
           if (instErr) handleError(instErr, "archiveClearInstance");
+        } else {
+          // Restore has to undo both halves. Generate first, which creates
+          // today's instance if the block was archived on an earlier day and
+          // generation has already run without it. It is a no-op when a row
+          // already exists.
+          const { error: genErr } = await supabase.rpc(
+            "generate_my_daily_instances",
+            { target_date: getLocalDateString() }
+          );
+          if (genErr) handleError(genErr, "restoreGenerate");
+
+          // Then clear the tombstone from a same-day archive. Scoped to today
+          // and to 'removed' so nothing historical is touched.
+          const { error: instErr } = await supabase
+            .from("daily_schedule_instances")
+            .update({ status: "pending" })
+            .eq("block_id", block.id)
+            .eq("date", getLocalDateString())
+            .eq("status", "removed");
+          if (instErr) handleError(instErr, "restoreClearRemoved");
         }
 
         setBlocks(

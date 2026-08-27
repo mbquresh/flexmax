@@ -1007,6 +1007,22 @@ cluttering every day and losing the data. Archiving (is_active on the block,
 excluded from generation but retained for the evidence pack) is the real
 fix.
 
+**Restoring an archived block did not return it to Today (fixed
+2026-08-26).** Archiving marks today's pending instance 'removed'; restore
+only flipped is_active. The stale 'removed' row then blocked regeneration,
+because generate_my_daily_instances is `on conflict (block_id, date) do
+nothing` — the row existed, so nothing was inserted. Reset Today was the
+only way back. Restore now generates first (covering a restore on a later
+day, where no row exists at all) and then clears the tombstone, scoped to
+today and to status 'removed'.
+
+Known limitation: 'removed' is also written by the user's own "Remove from
+today" action, so restoring a block that was manually removed earlier the
+same day will bring it back. That requires archiving and restoring the same
+block on the same day it was manually removed, and the restore itself is a
+clear statement of intent. Distinguishing the two would need provenance on
+the status change.
+
 ---
 
 ## Retention Architecture v1 — remaining work, in order
