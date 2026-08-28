@@ -15,6 +15,7 @@ interface CloseTodayRowProps {
   ) => void;
   onPresetTap: (instanceId: string, tag: string) => void;
   onPresetSkip: (instanceId: string) => void;
+  onUndoMissed: (instanceId: string) => void;
 }
 
 export function CloseTodayRow({
@@ -22,6 +23,7 @@ export function CloseTodayRow({
   onStatusTap,
   onPresetTap,
   onPresetSkip,
+  onUndoMissed,
 }: CloseTodayRowProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -55,18 +57,29 @@ export function CloseTodayRow({
             </PressableScale>
           ))}
         </View>
-        <PressableScale
-          variant="highlight"
-          baseColor={colors.surface}
-          highlightColor={colors.surfaceNested}
-          onPress={() => {
-            setPresetsDismissed(true);
-            onPresetSkip(instance.id);
-          }}
-          hitSlop={8}
-        >
-          <Text style={styles.skipLink}>skip</Text>
-        </PressableScale>
+        <View style={styles.presetFooter}>
+          <PressableScale
+            variant="highlight"
+            baseColor={colors.surface}
+            highlightColor={colors.surfaceNested}
+            onPress={() => onUndoMissed(instance.id)}
+            hitSlop={8}
+          >
+            <Text style={styles.undoLink}>Not missed</Text>
+          </PressableScale>
+          <PressableScale
+            variant="highlight"
+            baseColor={colors.surface}
+            highlightColor={colors.surfaceNested}
+            onPress={() => {
+              setPresetsDismissed(true);
+              onPresetSkip(instance.id);
+            }}
+            hitSlop={8}
+          >
+            <Text style={styles.skipLink}>No reason</Text>
+          </PressableScale>
+        </View>
       </View>
     );
   }
@@ -173,6 +186,17 @@ const makeStyles = (c: Colors) =>
     },
     skipLink: {
       color: c.textFaint,
+      fontSize: 13,
+      alignSelf: "flex-start",
+    },
+    presetFooter: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      marginTop: spacing.sm,
+    },
+    undoLink: {
+      color: c.textSecondary,
       fontSize: 13,
       alignSelf: "flex-start",
     },

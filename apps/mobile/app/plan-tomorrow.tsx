@@ -124,43 +124,22 @@ function PlanTomorrowScreenContent() {
     instanceId: string,
     status: "completed" | "missed"
   ) => {
+    // A miss is not committed here. Tapping Missed only opens the reason
+    // step; the write happens when the user picks a reason or explicitly
+    // declines one. Leaving the screen mid-flow must leave the block
+    // pending — the evening sweep will ask again, and an unanswered block
+    // is honest where a fabricated miss is not.
+    if (status === "missed") {
+      setCloseTodayInstances((prev) =>
+        prev.map((i) => (i.id === instanceId ? { ...i, status } : i))
+      );
+      setAwaitingPresetIds((prev) => new Set(prev).add(instanceId));
+      return;
+    }
+
     const previous = closeTodayInstances;
     setCloseTodayInstances((prev) =>
       prev.map((i) => (i.id === instanceId ? { ...i, status } : i))
-    );
-
-    if (status === "missed") {
-      setAwaitingPresetIds((prev) => new Set(prev).add(instanceId));
-    } else {
-      setAwaitingPresetIds((prev) => {
-        const next = new Set(prev);
-        next.delete(instanceId);
-        return next;
-      });
-    }
-
-    const { error } = await supabase
-      .from("daily_schedule_instances")
-      .update({ status })
-      .eq("id", instanceId);
-
-    if (error) {
-      setCloseTodayInstances(previous);
-      if (status === "missed") {
-        setAwaitingPresetIds((prev) => {
-          const next = new Set(prev);
-          next.delete(instanceId);
-          return next;
-        });
-      }
-      handleError(error, "closeTodayStatus", "Couldn't save that status");
-    }
-  };
-
-  const handlePresetTap = async (instanceId: string, tag: string) => {
-    const previous = closeTodayInstances;
-    setCloseTodayInstances((prev) =>
-      prev.map((i) => (i.id === instanceId ? { ...i, miss_reason_tag: tag } : i))
     );
     setAwaitingPresetIds((prev) => {
       const next = new Set(prev);
@@ -170,17 +149,65 @@ function PlanTomorrowScreenContent() {
 
     const { error } = await supabase
       .from("daily_schedule_instances")
-      .update({ miss_reason_tag: tag })
+      .update({ status })
+      .eq("id", instanceId);
+
+    if (error) {
+      setCloseTodayInstances(previous);
+      handleError(error, "closeTodayStatus", "Couldn't save that status");
+    }
+  };
+
+  const handlePresetTap = async (instanceId: string, tag: string) => {
+    const previous = closeTodayInstances;
+    setCloseTodayInstances((prev) =>
+      prev.map((i) =>
+        i.id === instanceId ? { ...i, status: "missed", miss_reason_tag: tag } : i
+      )
+    );
+    setAwaitingPresetIds((prev) => {
+      const next = new Set(prev);
+      next.delete(instanceId);
+      return next;
+    });
+
+    // Status and tag land together — this is the first write for this miss.
+    const { error } = await supabase
+      .from("daily_schedule_instances")
+      .update({ status: "missed", miss_reason_tag: tag })
       .eq("id", instanceId);
 
     if (error) {
       setCloseTodayInstances(previous);
       setAwaitingPresetIds((prev) => new Set(prev).add(instanceId));
-      handleError(error, "closeTodayPreset", "Couldn't save that reason");
+      handleError(error, "closeTodayPreset", "Couldn't save that");
     }
   };
 
-  const handlePresetSkip = (instanceId: string) => {
+  const handlePresetSkip = async (instanceId: string) => {
+    const previous = closeTodayInstances;
+    setAwaitingPresetIds((prev) => {
+      const next = new Set(prev);
+      next.delete(instanceId);
+      return next;
+    });
+
+    const { error } = await supabase
+      .from("daily_schedule_instances")
+      .update({ status: "missed" })
+      .eq("id", instanceId);
+
+    if (error) {
+      setCloseTodayInstances(previous);
+      setAwaitingPresetIds((prev) => new Set(prev).add(instanceId));
+      handleError(error, "closeTodaySkipReason", "Couldn't save that");
+    }
+  };
+
+  const handleUndoMissed = (instanceId: string) => {
+    setCloseTodayInstances((prev) =>
+      prev.map((i) => (i.id === instanceId ? { ...i, status: "pending" } : i))
+    );
     setAwaitingPresetIds((prev) => {
       const next = new Set(prev);
       next.delete(instanceId);
@@ -279,6 +306,7 @@ function PlanTomorrowScreenContent() {
                 onStatusTap={handleCloseTodayStatus}
                 onPresetTap={handlePresetTap}
                 onPresetSkip={handlePresetSkip}
+                onUndoMissed={handleUndoMissed}
               />
             ))}
           </View>
