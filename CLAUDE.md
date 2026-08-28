@@ -388,6 +388,7 @@ marker at all.
 | Schedule builder refactor | schedule-builder.tsx split into ScheduleBlockCard, BlockFormSheet, CategoryChips, DayChips. Editing moved out of the FlatList row into a bottom sheet — inline expansion jumped row height ~400px, put a TextInput and a nested horizontal ScrollView inside a FlatList row, and recreated renderBlock on every keystroke. Add and edit were two copy-pasted forms behind twelve duplicated state hooks; now one BlockFormSheet with a single draft object. Behaviour-neutral: validation strings, save payloads, sort order and quick-add all unchanged. Sheet copies TaskDetailSheet's Modal structure exactly — KeyboardAvoidingView as the direct child carrying the overlay style, dismiss Pressable as a sibling not a wrapper |
 | Block archiving | schedule_blocks.is_active (037). A block can retire without destroying its record. Card actions are now Edit / Archive; permanent delete moved into the edit sheet, because delete cascades to every daily_schedule_instances row and the one-tap action should be the reversible one. Archiving marks today's PENDING instance 'removed' so the block leaves Today immediately; completed and missed instances survive and keep feeding the evidence pack until they age out of the 30-day window |
 | Shared miss reason presets | src/lib/missReasons.ts. Extracted from CloseTodayRow so any future surface writes identical strings — miss_reasons in get_behavior_evidence groups by exact value, so drift would split one reason into two rows |
+| Pre-block nudge | src/lib/preempt.ts + blockNotifications.ts. Fires at start time for a block where 4 of its last 7 rated occurrences failed — the same threshold as the quality degradation prompt, so no new constant. AT MOST ONE PER DAY, worst record first, earliest start breaking ties: a qualifying block already gets start, cutoff and end notifications, and without the cap a bad week would nudge every block. Requires a full 7-occurrence window, so it never fires on thin data. Copy states what LANDED rather than what failed — same fact, but it arrives while the user is deciding whether to start, and naming a failure streak at that moment invites avoidance |
 
 
 
@@ -704,6 +705,20 @@ makes it a one-line swap in theme.ts if ever revisited.
   the database. That was the right call — it prevents ~300 unrelated lines
   drifting — but it means reconstructing the function from files alone is no
   longer possible. Dump it with pg_get_functiondef before any future edit.
+- **The pre-block nudge is not tone-aware.** accountability_tone (firm /
+  gentle / data-driven) shapes the weekly insight but not notifications. A
+  data-driven user probably wants the raw ratio and a gentle user probably does
+  not want a count at all. Cheap to add — the client already has the profile.
+- **Watch whether the pre-block nudge helps or discourages.** It arrives at
+  the moment of decision and reports a poor record. The counts-what-landed
+  framing is a hedge, not evidence. nudge_events already captures fired-versus-
+  completed for cutoff nudges; the same instrumentation on block_preempt would
+  answer this directly, and until it exists this feature is a hypothesis.
+- **Three notification types, still no off switch.** Nudge frequency control
+  was already open before this; a third type makes it more pressing. The only
+  action available to an annoyed user is disabling notifications at the OS
+  level, which silently kills everything including the cutoff nudges that have
+  measured response data.
 
 ---
 
@@ -1041,6 +1056,25 @@ same day will bring it back. That requires archiving and restoring the same
 block on the same day it was manually removed, and the restore itself is a
 clear statement of intent. Distinguishing the two would need provenance on
 the status change.
+
+**Close-today's "skip" link read as cancel (fixed 2026-08-26).** Tapping
+Missed committed status='missed' immediately; the chips that followed offered
+a "skip" link that only called setPresetsDismissed. Users read it as backing
+out of the miss. Because closeTodayVisible filters to
+pending/active/awaiting-preset, the row then disappeared and a mistap was
+unrecoverable without Reset Today. "skip" is now "No reason", and a "Not
+missed" action reverts the row to pending and clears the tag.
+
+**Close-today wrote a miss before the user finished declaring it (fixed
+2026-08-26).** Tapping Missed committed status='missed' immediately, then
+showed reason chips. Leaving the screen at that point — closing the sheet,
+backgrounding the app — left a recorded miss the user never confirmed, and
+the "skip" link under the chips only dismissed the chips, so it read as a
+cancel that was not one. The write now happens when a reason is picked or
+explicitly declined; "Not missed" backs out with no write because nothing
+was committed. Leaving mid-flow leaves the block pending, and the sweep asks
+again. A fabricated 'missed' is a real signal to the behavioral engine; an
+unanswered block is honestly unanswered.
 
 ---
 

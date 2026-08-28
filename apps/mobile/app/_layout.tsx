@@ -48,7 +48,11 @@ function handleNotificationResponse(response: Notifications.NotificationResponse
 
   if (data?.type === "nightly_fill") {
     router.replace("/plan-tomorrow");
-  } else if (data?.screen === "today") {
+  } else if (
+    data?.type === "block_complete" ||
+    data?.type === "block_preempt" ||
+    data?.screen === "today"
+  ) {
     router.replace("/today");
   }
 }

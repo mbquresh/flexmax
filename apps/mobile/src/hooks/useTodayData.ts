@@ -3,6 +3,7 @@ import { AppState } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { generateDailyInstances, supabase } from "../lib/supabase";
 import { scheduleTodayBlockNotifications } from "../lib/blockNotifications";
+import { pickPreemptTarget, PreemptCandidate } from "../lib/preempt";
 import { fetchTodayStats, TodayStats } from "../lib/stats";
 import { getLocalDateString } from "../lib/time";
 import { handleError, isConnectivityError } from "../lib/errors";
@@ -118,11 +119,40 @@ export function useTodayData(userId: string | undefined) {
         setTodayInstances(data ?? []);
         if (data?.length) {
           if (isStale()) return;
+          let preempt: PreemptCandidate | null = null;
+          try {
+            const blockIds = Array.from(
+              new Set(data.map((i) => i.block_id).filter(Boolean))
+            );
+            if (blockIds.length) {
+              const { data: hist } = await supabase
+                .from("daily_schedule_instances")
+                .select("block_id, date, status")
+                .in("block_id", blockIds)
+                .lt("date", targetDate)
+                .in("status", ["completed", "missed", "unaccounted"])
+                .order("date", { ascending: false })
+                .limit(400);
+
+              if (hist) {
+                const now = new Date();
+                preempt = pickPreemptTarget(
+                  data,
+                  hist,
+                  now.getHours() * 60 + now.getMinutes()
+                );
+              }
+            }
+          } catch (err) {
+            // A failed history lookup must never block the day from loading.
+            handleError(err, "preemptHistory");
+          }
           try {
             const cutoffs = await scheduleTodayBlockNotifications(
               data,
               targetDate,
-              insightsData ?? []
+              insightsData ?? [],
+              preempt
             );
             if (cutoffs.length > 0) {
               const { error: nudgeError } = await (

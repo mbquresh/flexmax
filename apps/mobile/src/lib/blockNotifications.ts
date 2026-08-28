@@ -1,6 +1,7 @@
 import * as Notifications from "expo-notifications";
 import { DailyInstance, BehavioralInsight } from "../types/database";
 import { minutesToTime as formatTime } from "./time";
+import { preemptBody, PreemptCandidate } from "./preempt";
 
 export interface ScheduledCutoff {
   instanceId: string;
@@ -47,7 +48,7 @@ export async function scheduleFollowUpNudge(
 // Call this before rescheduling to avoid duplicates
 export async function cancelTodayBlockNotifications(): Promise<void> {
   const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-  const managed = ["block_complete", "block_cutoff", "block_followup"];
+  const managed = ["block_complete", "block_cutoff", "block_followup", "block_preempt"];
   const todayBlockNotifs = scheduled.filter((n) =>
     managed.includes(n.content.data?.type as string)
   );
@@ -61,7 +62,8 @@ export async function cancelTodayBlockNotifications(): Promise<void> {
 export async function scheduleTodayBlockNotifications(
   instances: DailyInstance[],
   date: string,
-  insights: BehavioralInsight[] = []
+  insights: BehavioralInsight[] = [],
+  preempt: PreemptCandidate | null = null
 ): Promise<ScheduledCutoff[]> {
   // Cancel existing ones first to avoid duplicates on refresh
   await cancelTodayBlockNotifications();
@@ -174,6 +176,36 @@ export async function scheduleTodayBlockNotifications(
 
         scheduledCutoffs.push({ instanceId: inst.id, scheduledFor: cutoffDate });
       }
+    }
+  }
+
+  if (preempt) {
+    const startDate = new Date(
+      year,
+      month - 1,
+      day,
+      Math.floor(preempt.startMinutes / 60),
+      preempt.startMinutes % 60,
+      0
+    );
+
+    if (startDate > now) {
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: `${preempt.blockName} starts now`,
+          body: preemptBody(preempt),
+          sound: true,
+          data: {
+            type: "block_preempt",
+            instanceId: preempt.instanceId,
+            screen: "today",
+          },
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DATE,
+          date: startDate,
+        },
+      });
     }
   }
 
