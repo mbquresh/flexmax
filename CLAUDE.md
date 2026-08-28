@@ -188,10 +188,11 @@ Cursor = implementation engine.
 | 028 | app_sessions.sql              | app_sessions + record_app_open(date) RPC — one row per user per local date; repeats increment open_count             |
 | 029 | quality_reason_tag.sql | quality_reason_tag column + CHECK; quality_drift window widened 5→7 rated instances; quality_reasons added to the evidence pack |
 | 033 | swap_drift_resolved_only.sql | swap_drift counts net displacement only on completed/missed instances; impact claim in its header is wrong, see Known issues 2026-08-26 |
-| 034 | quality_reason_note.sql | Free-text companion to quality_reason_tag. Not written to the tag (CHECK-constrained, must stay countable) and not to reflection_why (means "why missed", a different question) |
+| 034 | quality_reason_note.sql | Free-text companion to quality_reason_tag; not written to the tag (CHECK-constrained, must stay countable) nor to reflection_why (means "why missed", a different question) |
 | 035 | day_boundary_overrides.sql | Sparse per-weekday wake/sleep overrides on profiles; scalar columns remain the default |
 | 036 | accountability_tone_check.sql | NOT VALID CHECK on firm/gentle/data-driven; the column is written verbatim into the AI prompt and previously accepted anything |
-| 037 | block_archive.sql | schedule_blocks.is_active; both generate_daily_instances and generate_my_daily_instances now filter on it |
+| 037 | block_archive.sql | schedule_blocks.is_active; both generate_daily_instances and generate_my_daily_instances filter on it |
+| 038 | miss_reason_denominator.sql | miss_totals added beside miss_reasons; tag counts had no base. Rewrites the deployed definition in place per 033's precedent, with anchor assertions that raise on drift |
 
 028 exists to answer the north-star metric: of users who had a bad week, what
 share opened the app the following week. Capture is fire-and-forget from
@@ -386,7 +387,7 @@ marker at all.
 | Profile page: preferences, not observations | account.tsx. Removed the "What FlexMax learned about you" section — it gated on psychology_profiles.completed_at, written only by the deleted AI onboarding, so it showed an empty state pointing at onboarding that no longer exists. Replaced with controls that already govern app behaviour but had no UI: accountability_tone (injected into every weekly-insight prompt, previously unreachable after onboarding) and notification permission state (blockNotifications silently no-ops when denied, and nothing surfaced it). Behavioural observations belong on a dedicated surface, not behind a settings-shaped door — a user opening settings to change a toggle should not be confronted |
 | Schedule builder refactor | schedule-builder.tsx split into ScheduleBlockCard, BlockFormSheet, CategoryChips, DayChips. Editing moved out of the FlatList row into a bottom sheet — inline expansion jumped row height ~400px, put a TextInput and a nested horizontal ScrollView inside a FlatList row, and recreated renderBlock on every keystroke. Add and edit were two copy-pasted forms behind twelve duplicated state hooks; now one BlockFormSheet with a single draft object. Behaviour-neutral: validation strings, save payloads, sort order and quick-add all unchanged. Sheet copies TaskDetailSheet's Modal structure exactly — KeyboardAvoidingView as the direct child carrying the overlay style, dismiss Pressable as a sibling not a wrapper |
 | Block archiving | schedule_blocks.is_active (037). A block can retire without destroying its record. Card actions are now Edit / Archive; permanent delete moved into the edit sheet, because delete cascades to every daily_schedule_instances row and the one-tap action should be the reversible one. Archiving marks today's PENDING instance 'removed' so the block leaves Today immediately; completed and missed instances survive and keep feeding the evidence pack until they age out of the 30-day window |
-| miss_reason_tag in the recovery route | recovery/[id].tsx. The route previously wrote reflection_why but not the tag, and marking a block missed removes it from the evening sweep — so miss_reasons was populated only by misses left unresolved until 9pm, collecting the tag exactly when engagement was lowest. Presets extracted to src/lib/missReasons.ts so both surfaces write identical strings; miss_reasons groups by exact value, so drift would split one reason into two rows. Chips sit BELOW the free-text input on purpose: chips above an input cannibalise typing, which is what happened to reflection_improve |
+| Shared miss reason presets | src/lib/missReasons.ts. Extracted from CloseTodayRow so any future surface writes identical strings — miss_reasons in get_behavior_evidence groups by exact value, so drift would split one reason into two rows |
 
 
 
@@ -685,13 +686,24 @@ makes it a one-line swap in theme.ts if ever revisited.
   crossing. Per-day overrides live in DayBoundariesSheet; the header/footer
   split was kept deliberately so Wake and Sleep still frame the block list as
   a timeline.
-- **Watch reflection_why's fill rate after the recovery-route chips.** The
-  reflection_improve removal established that presets can cannibalise the
-  free text they sit beside. These are causes rather than forward-looking
-  intentions, and they sit below the input rather than above it, but the risk
-  is not zero and reflection_why is now the highest-signal free-text field in
-  the schema. If its fill rate drops on recovery-route misses relative to the
-  evening sweep, the chips are the cause.
+- **miss_reason_tag is only captured in the evening sweep, and that is
+  deliberate.** A user who swipes to declare a miss during the day is being
+  intentional and writes reflection_why; a user resolving misses at 9pm has
+  only a tap left in them, which is what the presets are for. Two capture modes
+  matching two engagement states. The consequence is that miss_reasons
+  describes END-OF-DAY misses specifically, not misses in general, and the
+  evidence pack does not currently say so.
+- **Migration files have drifted from remote before.** 034 through 037 were
+  applied to the database and shipped as app code with no matching migration
+  files, and were only caught by chance. The table in this document is the only
+  record of what is deployed. Any manually applied SQL must be committed in the
+  same session it is run.
+- **No migration file holds the current get_behavior_evidence definition.**
+  033 and 038 both rewrite the deployed function in place via
+  pg_get_functiondef rather than redefining it, so the live body exists only in
+  the database. That was the right call — it prevents ~300 unrelated lines
+  drifting — but it means reconstructing the function from files alone is no
+  longer possible. Dump it with pg_get_functiondef before any future edit.
 
 ---
 

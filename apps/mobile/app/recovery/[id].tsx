@@ -19,7 +19,6 @@ import {
   resolveDayBoundaries,
 } from "../../src/lib/schedule";
 import { hapticSelect } from "../../src/lib/haptics";
-import { MISS_REASON_PRESETS } from "../../src/lib/missReasons";
 import { Colors, spacing, radii, typography } from "../../src/theme";
 import { useTheme } from "../../src/providers/ThemeProvider";
 import { useAuth } from "../../src/providers/AuthProvider";
@@ -69,7 +68,6 @@ function RecoveryScreenContent() {
 
   const [recoveryCopy, setRecoveryCopy] = useState<RecoveryCopy | null>(null);
   const [reflectionWhy, setReflectionWhy] = useState("");
-  const [missReason, setMissReason] = useState<string | null>(null);
   const [rescheduleSlot, setRescheduleSlot] = useState<{
     start_minutes: number;
     end_minutes: number;
@@ -256,7 +254,7 @@ function RecoveryScreenContent() {
 
     setSaving(true);
     try {
-      await commitMissed(instanceId, { miss_reason_tag: missReason });
+      await commitMissed(instanceId);
       router.back();
     } catch (err) {
       handleError(err, "handleSkipRecovery", "Could not mark missed");
@@ -272,7 +270,6 @@ function RecoveryScreenContent() {
     try {
       await commitMissed(instance.id, {
         reflection_why: reflectionWhy.trim() || null,
-        miss_reason_tag: missReason,
       });
       router.back();
     } catch (err) {
@@ -460,29 +457,6 @@ function RecoveryScreenContent() {
           multiline
         />
 
-        <Text style={styles.missReasonLabel}>Or pick one</Text>
-        <View style={styles.missReasonRow}>
-          {MISS_REASON_PRESETS.map((label) => {
-            const selected = missReason === label;
-            return (
-              <PressableScale
-                key={label}
-                variant="highlight"
-                baseColor={selected ? colors.primaryTint : colors.surfaceNested}
-                highlightColor={colors.surfaceNested}
-                style={[styles.missChip, selected && styles.missChipSelected]}
-                onPress={() => {
-                  hapticSelect();
-                  setMissReason(selected ? null : label);
-                }}
-                disabled={saving}
-              >
-                <Text style={styles.missChipText}>{label}</Text>
-              </PressableScale>
-            );
-          })}
-        </View>
-
         {rescheduleSlot ? (
           <View style={styles.rescheduleBox}>
             <Text style={styles.rescheduleLabel}>
@@ -669,30 +643,6 @@ const makeStyles = (c: Colors) =>
       minHeight: 80,
       lineHeight: 20,
       marginBottom: spacing.xl,
-    },
-    missReasonLabel: {
-      color: c.textSecondary,
-      ...typography.smallBold,
-      marginTop: spacing.lg,
-      marginBottom: spacing.sm,
-    },
-    missReasonRow: {
-      flexDirection: "row",
-      flexWrap: "wrap",
-      gap: spacing.sm,
-    },
-    missChip: {
-      paddingVertical: spacing.sm,
-      paddingHorizontal: spacing.md,
-      borderRadius: radii.md,
-      backgroundColor: c.surfaceNested,
-    },
-    missChipSelected: {
-      backgroundColor: c.primaryTint,
-    },
-    missChipText: {
-      ...typography.body,
-      color: c.text,
     },
     rescheduleBox: {
       backgroundColor: c.successTint,
