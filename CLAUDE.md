@@ -386,6 +386,7 @@ marker at all.
 | Profile page: preferences, not observations | account.tsx. Removed the "What FlexMax learned about you" section — it gated on psychology_profiles.completed_at, written only by the deleted AI onboarding, so it showed an empty state pointing at onboarding that no longer exists. Replaced with controls that already govern app behaviour but had no UI: accountability_tone (injected into every weekly-insight prompt, previously unreachable after onboarding) and notification permission state (blockNotifications silently no-ops when denied, and nothing surfaced it). Behavioural observations belong on a dedicated surface, not behind a settings-shaped door — a user opening settings to change a toggle should not be confronted |
 | Schedule builder refactor | schedule-builder.tsx split into ScheduleBlockCard, BlockFormSheet, CategoryChips, DayChips. Editing moved out of the FlatList row into a bottom sheet — inline expansion jumped row height ~400px, put a TextInput and a nested horizontal ScrollView inside a FlatList row, and recreated renderBlock on every keystroke. Add and edit were two copy-pasted forms behind twelve duplicated state hooks; now one BlockFormSheet with a single draft object. Behaviour-neutral: validation strings, save payloads, sort order and quick-add all unchanged. Sheet copies TaskDetailSheet's Modal structure exactly — KeyboardAvoidingView as the direct child carrying the overlay style, dismiss Pressable as a sibling not a wrapper |
 | Block archiving | schedule_blocks.is_active (037). A block can retire without destroying its record. Card actions are now Edit / Archive; permanent delete moved into the edit sheet, because delete cascades to every daily_schedule_instances row and the one-tap action should be the reversible one. Archiving marks today's PENDING instance 'removed' so the block leaves Today immediately; completed and missed instances survive and keep feeding the evidence pack until they age out of the 30-day window |
+| miss_reason_tag in the recovery route | recovery/[id].tsx. The route previously wrote reflection_why but not the tag, and marking a block missed removes it from the evening sweep — so miss_reasons was populated only by misses left unresolved until 9pm, collecting the tag exactly when engagement was lowest. Presets extracted to src/lib/missReasons.ts so both surfaces write identical strings; miss_reasons groups by exact value, so drift would split one reason into two rows. Chips sit BELOW the free-text input on purpose: chips above an input cannibalise typing, which is what happened to reflection_improve |
 
 
 
@@ -407,7 +408,6 @@ marker at all.
 | User instructions page                          | The streak rises on a day where everything was missed. The label qualifier was removed for width, so there is no in-app explanation. Owed |
 | Onboarding demonstration beat | Onboarding establishes the pain (screens 1-2) and sets the contract (screen 7), but never shows what the product DOES. A stranger goes from "how many planners have you abandoned?" to a $14.99 wall without seeing FlexMax work. Fix: show a REAL generated insight, explicitly labelled as another user's, before the contract screen. Not a claim about them — a demonstration. See rejected approaches below |
 | Showcase page carries the offer | docs/index.html has no pricing and no founding-member framing. With no trial it is the only pre-purchase evaluation surface, and most of the "is this enticing" work happens there and in the App Store listing, not in onboarding. See also **docs/index.html — rebuilt 2026-08-11** in Pricing & paywall below |
-| miss_reason_tag on same-day misses | Only CloseTodayRow writes miss_reason_tag. The recovery route and the locked-block sheet path do not, and marking a block missed removes it from the evening sweep — so miss_reasons in the evidence pack is populated ONLY by misses the user left unresolved until 9pm. The tag is captured exactly when engagement was lowest |
 
 
 ---
@@ -685,6 +685,13 @@ makes it a one-line swap in theme.ts if ever revisited.
   crossing. Per-day overrides live in DayBoundariesSheet; the header/footer
   split was kept deliberately so Wake and Sleep still frame the block list as
   a timeline.
+- **Watch reflection_why's fill rate after the recovery-route chips.** The
+  reflection_improve removal established that presets can cannibalise the
+  free text they sit beside. These are causes rather than forward-looking
+  intentions, and they sit below the input rather than above it, but the risk
+  is not zero and reflection_why is now the highest-signal free-text field in
+  the schema. If its fill rate drops on recovery-route misses relative to the
+  evening sweep, the chips are the cause.
 
 ---
 

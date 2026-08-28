@@ -5,14 +5,7 @@ import { minutesToTime } from "../lib/time";
 import { Colors, spacing, radii } from "../theme";
 import { useTheme } from "../providers/ThemeProvider";
 import { PressableScale } from "./PressableScale";
-
-const MISS_REASON_PRESETS = [
-  "Ran out of time",
-  "Low energy",
-  "Something came up",
-  "Chose something else",
-  "Lost track of time",
-] as const;
+import { MISS_REASON_PRESETS } from "../lib/missReasons";
 
 interface CloseTodayRowProps {
   instance: DailyInstance;
