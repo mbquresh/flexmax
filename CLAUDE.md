@@ -1076,6 +1076,17 @@ was committed. Leaving mid-flow leaves the block pending, and the sweep asks
 again. A fabricated 'missed' is a real signal to the behavioral engine; an
 unanswered block is honestly unanswered.
 
+**A completed block could be sacrificed to make room (fixed 2026-08-26).**
+isLiveInstance was a denylist — skipped, removed, rescheduled — so
+'completed' counted as a live collider. planDisplacement would offer a block
+the user had already finished as the thing to drop, and accepting wrote
+'removed' over a real completion. 'missed' had the inverse fault: answered
+and not happening, but still reserving its slot, so a morning block could not
+be rescheduled into an afternoon gap whose blocks were already resolved.
+Now an allowlist: only pending and active occupy time. handleSwap gained the
+same guard — it checked is_fixed but not status, so a pending block could be
+dragged onto a completed one and rewrite its times.
+
 ---
 
 ## Retention Architecture v1 — remaining work, in order

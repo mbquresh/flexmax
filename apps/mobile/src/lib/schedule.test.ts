@@ -6,6 +6,7 @@ vi.mock("./supabase", () => ({
 
 import { DailyInstance, ScheduleBlock } from "../types/database";
 import {
+  findRescheduleSlot,
   planDisplacement,
   resolveDayBoundaries,
   resolveDayEnd,
@@ -299,6 +300,83 @@ describe("planDisplacement", () => {
     expect(plan.targets.map((t) => t.id)).toEqual(["a", "b", "c"]);
     expect(plan.names).toEqual(["A", "B", "C"]);
   });
+
+  it("returns clear when the slot overlaps a completed instance", () => {
+    const done = instance({
+      id: "done",
+      start_minutes: 610,
+      end_minutes: 670,
+      status: "completed",
+      block: block({ name: "Deep work" }),
+    });
+    const plan = planDisplacement(
+      { start_minutes: 600, end_minutes: 660 },
+      [missed, done],
+      missed.id
+    );
+    expect(plan).toEqual({ kind: "clear" });
+    expect(plan.kind).not.toBe("push");
+    expect(plan.kind).not.toBe("sacrifice");
+  });
+
+  it("returns clear when the slot overlaps a missed instance", () => {
+    const alreadyMissed = instance({
+      id: "already-missed",
+      start_minutes: 610,
+      end_minutes: 670,
+      status: "missed",
+      block: block({ name: "Cardio" }),
+    });
+    const plan = planDisplacement(
+      { start_minutes: 600, end_minutes: 660 },
+      [missed, alreadyMissed],
+      missed.id
+    );
+    expect(plan).toEqual({ kind: "clear" });
+  });
+
+  it("still collides with a pending instance in the slot", () => {
+    const dinner = instance({
+      id: "dinner",
+      start_minutes: 630,
+      end_minutes: 690,
+      status: "pending",
+      block: block({ name: "Dinner" }),
+    });
+    const plan = planDisplacement(
+      { start_minutes: 600, end_minutes: 660 },
+      [missed, dinner],
+      missed.id
+    );
+    expect(plan.kind).toBe("push");
+    if (plan.kind !== "push") return;
+    expect(plan.target.id).toBe("dinner");
+  });
+
+  it("names only the pending collider when a completed block also overlaps", () => {
+    const done = instance({
+      id: "done",
+      start_minutes: 610,
+      end_minutes: 640,
+      status: "completed",
+      block: block({ name: "Deep work" }),
+    });
+    const dinner = instance({
+      id: "dinner",
+      start_minutes: 630,
+      end_minutes: 690,
+      status: "pending",
+      block: block({ name: "Dinner" }),
+    });
+    const plan = planDisplacement(
+      { start_minutes: 600, end_minutes: 660 },
+      [missed, done, dinner],
+      missed.id
+    );
+    expect(plan.kind).toBe("push");
+    if (plan.kind !== "push") return;
+    expect(plan.target.id).toBe("dinner");
+  });
 });
 
 describe("resolveDayEnd", () => {
@@ -351,5 +429,34 @@ describe("resolveDayBoundaries", () => {
     expect(
       resolveDayBoundaries(1, defaults, { "1": { wake: null } })
     ).toEqual(defaults);
+  });
+});
+
+describe("findRescheduleSlot", () => {
+  it("returns a window that only contains a completed block as available", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 7, 28, 10, 0, 0));
+    try {
+      const done = instance({
+        id: "done",
+        start_minutes: 630,
+        end_minutes: 690,
+        status: "completed",
+        block: block({ name: "Deep work" }),
+      });
+      const morning = instance({
+        id: "morning",
+        start_minutes: 480,
+        end_minutes: 540,
+        status: "missed",
+        block: block({ name: "Gym" }),
+      });
+      expect(findRescheduleSlot(morning, [morning, done])).toEqual({
+        start_minutes: 630,
+        end_minutes: 690,
+      });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

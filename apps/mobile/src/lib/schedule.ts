@@ -185,6 +185,18 @@ export function resolveDayEnd(
   return crossesMidnight ? 1440 : sleepMinutes;
 }
 
+// Only UNRESOLVED instances occupy time. 'completed' and 'missed' are
+// historical facts: the first already happened, the second is not going
+// to. Neither can be displaced and neither blocks a slot.
+//
+// Allowlist, not denylist. The previous denylist excluded skipped,
+// removed and rescheduled, which meant 'completed' was treated as a live
+// collider and could be offered as a sacrifice — writing 'removed' over a
+// real completion.
+function occupiesTime(i: DailyInstance): boolean {
+  return i.status === "pending" || i.status === "active";
+}
+
 export function findRescheduleSlot(
   missedInstance: DailyInstance,
   allInstances: DailyInstance[],
@@ -198,13 +210,7 @@ export function findRescheduleSlot(
   const dayEnd = resolveDayEnd(sleepTargetMinutes, wakeTargetMinutes);
 
   const occupied = allInstances
-    .filter(
-      (i) =>
-        i.id !== missedInstance.id &&
-        i.status !== "skipped" &&
-        i.status !== "removed" &&
-        i.status !== "rescheduled"
-    )
+    .filter((i) => i.id !== missedInstance.id && occupiesTime(i))
     .map((i) => ({ start: i.start_minutes, end: i.end_minutes }));
 
   const candidates = [bufferMinutes, ...occupied.map((o) => o.end)];
@@ -255,12 +261,6 @@ function isFixedInstance(i: DailyInstance): boolean {
   return i.is_fixed || !!i.block?.is_fixed;
 }
 
-function isLiveInstance(i: DailyInstance): boolean {
-  return (
-    i.status !== "skipped" && i.status !== "removed" && i.status !== "rescheduled"
-  );
-}
-
 export function planDisplacement(
   slot: { start_minutes: number; end_minutes: number },
   allInstances: DailyInstance[],
@@ -269,7 +269,7 @@ export function planDisplacement(
   wakeTargetMinutes?: number | null
 ): DisplacementPlan {
   const live = allInstances.filter(
-    (i) => i.id !== excludeId && isLiveInstance(i)
+    (i) => i.id !== excludeId && occupiesTime(i)
   );
 
   const colliders = live.filter(

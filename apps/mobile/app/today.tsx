@@ -425,6 +425,11 @@ function TodayScreenContent() {
     if (instanceA.is_fixed || instanceA.block?.is_fixed) return;
     if (instanceB.is_fixed || instanceB.block?.is_fixed) return;
 
+    // A resolved block's times are a record of what happened. Swapping into
+    // one would rewrite history.
+    if (instanceA.status !== "pending" && instanceA.status !== "active") return;
+    if (instanceB.status !== "pending" && instanceB.status !== "active") return;
+
     const [earlier, later] =
       instanceA.start_minutes < instanceB.start_minutes
         ? [instanceA, instanceB]
