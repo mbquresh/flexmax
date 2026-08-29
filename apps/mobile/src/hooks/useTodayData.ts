@@ -68,7 +68,18 @@ export function useTodayData(userId: string | undefined) {
         setLoadFailed(false);
       }
 
-      await generateDailyInstances(targetDate);
+      try {
+      // Instance generation is idempotent (on conflict do nothing) and the
+      // fetch below returns whatever already exists, so a slow or hung
+      // generate must not hold the whole screen.
+      try {
+        await Promise.race([
+          generateDailyInstances(targetDate),
+          new Promise((resolve) => setTimeout(resolve, 8000)),
+        ]);
+      } catch (err) {
+        handleError(err, "loadToday generate");
+      }
 
       fetchTodayStats(userId)
         .then((s) => {
@@ -196,11 +207,6 @@ export function useTodayData(userId: string | undefined) {
         setInsights(insightsData ?? []);
       }
 
-      if (!options?.silent) {
-        if (isStale()) return;
-        setLoading(false);
-      }
-
       // Fire-and-forget. Returns cached insights without an AI call if a fresh
       // set exists, so this is cheap to call on every load.
       supabase.functions
@@ -209,6 +215,12 @@ export function useTodayData(userId: string | undefined) {
           if (error) handleError(error, "weeklyInsightInvoke");
         })
         .catch((e) => handleError(e, "weeklyInsightInvoke"));
+      } catch (err) {
+        handleError(err, "loadToday");
+        if (!isStale()) setLoadFailed(true);
+      } finally {
+        if (!options?.silent && !isStale()) setLoading(false);
+      }
     },
     [userId, setTodayInstances]
   );

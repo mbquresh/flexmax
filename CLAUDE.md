@@ -887,7 +887,12 @@ nothing darker to receive it. Every shadowed view needs an explicit
 **Any function that sets a loading flag must clear it in `finally`.**
 `useTodayData`'s load set `loading` true, then threw at
 `await generateDailyInstances()` before reaching `setLoading(false)`, locking the
-Today screen on a spinner permanently with an unhandled rejection. Also give
+Today screen on a spinner permanently with an unhandled rejection. Recurred
+2026-08-26: the same hole reopened because the clear lived on a later line
+rather than in a finally, so any throw or hung RPC before that line locked the
+screen again. It is now structurally guarded — `setLoading(false)` lives in
+`finally`, and `generateDailyInstances` is raced against an 8s timeout so it
+cannot hold the load indefinitely. Also give
 failed loads a distinct retry state — a failed load rendering the empty state
 tells the user they have no blocks, which is a worse lie than an error.
 
