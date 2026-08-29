@@ -560,7 +560,9 @@ function TodayScreenContent() {
         status: "removed",
         removed_reason: removeReason.trim() || null,
       });
-      setTodayInstances(instances.filter((i) => i.id !== removeInstance.id));
+      const updated = instances.filter((i) => i.id !== removeInstance.id);
+      setTodayInstances(updated);
+      resyncNotifications(updated);
       showToast(`${removeInstance.block?.name ?? "Block"} removed from today`);
     } catch (err) {
       handleError(err, "handleRemove", "Could not remove the block");
@@ -752,10 +754,11 @@ function TodayScreenContent() {
 
       if (error) throw error;
 
-      updateInstance(instanceId, {
-        status: "pending",
-        completion_rating: null,
-      });
+      const payload = { status: "pending" as const, completion_rating: null };
+      updateInstance(instanceId, payload);
+      resyncNotifications(
+        instances.map((i) => (i.id === instanceId ? { ...i, ...payload } : i))
+      );
     } catch (err) {
       handleError(err, "handleUndoCompletion", "Could not undo completion");
     } finally {
@@ -774,7 +777,11 @@ function TodayScreenContent() {
 
       if (error) throw error;
 
-      updateInstance(instanceId, { status: "pending" });
+      const payload = { status: "pending" as const };
+      updateInstance(instanceId, payload);
+      resyncNotifications(
+        instances.map((i) => (i.id === instanceId ? { ...i, ...payload } : i))
+      );
     } catch (err) {
       handleError(err, "handleUndoMissed", "Could not undo missed");
     } finally {
@@ -845,11 +852,17 @@ function TodayScreenContent() {
 
       if (error) throw error;
 
-      updateInstance(checkInInstance.id, {
-        status: "completed",
+      const payload = {
+        status: "completed" as const,
         completion_rating: rating,
         miss_reason_tag: null,
-      });
+      };
+      updateInstance(checkInInstance.id, payload);
+      resyncNotifications(
+        instances.map((i) =>
+          i.id === checkInInstance.id ? { ...i, ...payload } : i
+        )
+      );
       const degraded = rating === "partial" || rating === "pulled_away";
       if (degraded && (await shouldPromptQuality(checkInInstance.block_id))) {
         setQualityPrompt({
@@ -915,10 +928,14 @@ function TodayScreenContent() {
 
       if (error) throw error;
 
-      updateInstance(instanceId, {
-        status: "missed",
+      const payload = {
+        status: "missed" as const,
         completion_rating: null,
-      });
+      };
+      updateInstance(instanceId, payload);
+      resyncNotifications(
+        instances.map((i) => (i.id === instanceId ? { ...i, ...payload } : i))
+      );
       closeCheckIn();
     } catch (err) {
       handleError(err, "handleMarkMissedFromSheet", "Couldn't mark that missed");

@@ -79,7 +79,8 @@ export async function scheduleTodayBlockNotifications(
   const futureInstances = instances.filter(
     (inst) =>
       inst.end_minutes > nowMinutes + 1 &&
-      inst.block?.category !== "wind_down"
+      inst.block?.category !== "wind_down" &&
+      (inst.status === "pending" || inst.status === "active")
   );
 
   for (const inst of futureInstances) {

@@ -481,13 +481,11 @@ function RecoveryScreenContent() {
                   valueMinutes={rescheduleSlot.start_minutes}
                   onChange={handleStartAdjust}
                 />
-                {slotIsFallback ? (
-                  <TimePicker
-                    label="Ends"
-                    valueMinutes={rescheduleSlot.end_minutes}
-                    onChange={handleEndAdjust}
-                  />
-                ) : null}
+                <TimePicker
+                  label="Ends"
+                  valueMinutes={rescheduleSlot.end_minutes}
+                  onChange={handleEndAdjust}
+                />
               </>
             ) : null}
             {pastBedtime && plan.kind !== "blocked" ? (

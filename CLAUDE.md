@@ -193,6 +193,7 @@ Cursor = implementation engine.
 | 036 | accountability_tone_check.sql | NOT VALID CHECK on firm/gentle/data-driven; the column is written verbatim into the AI prompt and previously accepted anything |
 | 037 | block_archive.sql | schedule_blocks.is_active; both generate_daily_instances and generate_my_daily_instances filter on it |
 | 038 | miss_reason_denominator.sql | miss_totals added beside miss_reasons; tag counts had no base. Rewrites the deployed definition in place per 033's precedent, with anchor assertions that raise on drift |
+| 039 | block_recency.sql | Per-block first_seen, days_tracked, and 7-day vs prior split. The pack was time-flat: a habit that stopped a month ago read as current, and a week-old block was diagnosed as broken |
 
 028 exists to answer the north-star metric: of users who had a bad week, what
 share opened the app the following week. Capture is fire-and-forget from
@@ -390,6 +391,7 @@ marker at all.
 | Shared miss reason presets | src/lib/missReasons.ts. Extracted from CloseTodayRow so any future surface writes identical strings — miss_reasons in get_behavior_evidence groups by exact value, so drift would split one reason into two rows |
 | Pre-block nudge | src/lib/preempt.ts + blockNotifications.ts. Fires at start time for a block where 4 of its last 7 rated occurrences failed — the same threshold as the quality degradation prompt, so no new constant. AT MOST ONE PER DAY, worst record first, earliest start breaking ties: a qualifying block already gets start, cutoff and end notifications, and without the cap a bad week would nudge every block. Requires a full 7-occurrence window, so it never fires on thin data. Copy states what LANDED rather than what failed — same fact, but it arrives while the user is deciding whether to start, and naming a failure streak at that moment invites avoidance |
 | Accounted for section | today.tsx. Completed and missed blocks move to a section at the bottom of Today, greyed, undo intact. The top list becomes exactly what is left, which is what makes a late-day reschedule legible — a morning block can be moved into an afternoon whose blocks are already resolved, and the open time reads as open. Missed blocks go here too: an answered block is not unfinished business, and the accounted-for streak already counts it as engagement. Cards here do not register onLayout and cannot be dragged or swiped, so cardPositions only ever holds open cards — this SHRINKS the drag surface. A pruning effect clears stale entries when a card leaves the open list, without which findSwapTarget could match a phantom position |
+| End time on reschedule | recovery/[id].tsx. The "Ends" picker was gated behind slotIsFallback, so duration could only be changed when the app failed to find a slot. Always available now |
 
 
 
@@ -725,6 +727,12 @@ makes it a one-line swap in theme.ts if ever revisited.
   timeline while a completed block moves down. Consistent treatment needs a
   decision about whether adhoc completion means the same thing as block
   completion.
+- **No maturity gate on tracked.** 039 reports block age but does not act on
+  it — a block with three days of history still enters block_stats,
+  quality_drift and cannibalization, held back only by a caveat. A hard floor
+  in the tracked CTE would be stronger, but would also silence a genuinely
+  failing new block, so the facts are reported and the narrator is instructed
+  rather than gated. Revisit if the caveat proves insufficient.
 
 ---
 
@@ -1100,6 +1108,30 @@ occupiesTime is now exported and is the single definition. The rule drifted
 in three separate places (planDisplacement, findRescheduleSlot, handleSwap)
 because each carried its own denylist; any future occupancy check must import
 it rather than re-express it.
+
+**Completed blocks kept firing "how'd it go?" (fixed 2026-08-26).**
+futureInstances filtered on end_minutes and category but never status, and
+resyncNotifications had one call site that was not the check-in path — so
+answering a block neither cancelled its notification nor rebuilt the set.
+Status is now part of notification eligibility, and every status-mutating
+handler resyncs, which also re-schedules on undo.
+
+**The evidence pack was time-flat, and the narrator said so out loud (fixed
+2026-08-26, 039).** block_stats aggregated 30 days with no recency signal, so
+a pattern that stopped four weeks ago was indistinguishable from one
+happening today. A real insight told the user post-fajr sleep was costing
+Morning Deep Work "this month" when every one of those misses was from July
+and August was clean. Separately, the pack had no notion of block AGE — the
+tracked CTE admits any block with 3 resolved instances, which a new block
+reaches in days, so a block in its first week was told it had "no functioning
+slot" and prescribed restructuring. Both are the same defect. block_recency
+now carries first_seen, days_tracked, and a 7-day vs prior split, with
+caveats forbidding present tense for a pattern absent from the last 7 days
+and forbidding diagnosis of a young block.
+
+This is the sharpest form of the trust risk this document already names: an
+insight about a habit the user has ALREADY FIXED is worse than no insight,
+because it proves the engine is not watching.
 
 ---
 
