@@ -1150,6 +1150,18 @@ was picked. onEnd now passes translationY plus the scroll delta accumulated
 since the drag began. Any future change touching drag or scroll must
 preserve this: the two coordinate spaces are not interchangeable.
 
+**Resync silently deleted the pre-block nudge (fixed 2026-08-26).**
+scheduleTodayBlockNotifications cancels all managed notifications before
+rebuilding from its arguments, so a call omitting an optional argument
+deletes that category instead of preserving it. Three of four call sites
+passed only (instances, date), so every reschedule, check-in, mark-missed and
+undo destroyed the day's block_preempt nudge and stripped nudge_line from
+cutoff notifications. The nudge only survived if the user loaded the day and
+then touched nothing — which is why it never fired in testing. Both values
+are now held in the store and passed by every call site. Any future
+notification type must be added to the store-and-pass-through path, not just
+to the managed cancel list.
+
 ---
 
 ## Retention Architecture v1 — remaining work, in order
