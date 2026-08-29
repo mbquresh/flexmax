@@ -46,6 +46,7 @@ interface BlockCardProps {
   onLayout: (id: string, y: number, height: number) => void;
   registerFlashTrigger: (id: string, trigger: () => void) => void;
   unregisterFlashTrigger: (id: string) => void;
+  accounted?: boolean;
 }
 
 export function BlockCard({
@@ -61,6 +62,7 @@ export function BlockCard({
   onLayout,
   registerFlashTrigger,
   unregisterFlashTrigger,
+  accounted = false,
 }: BlockCardProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -178,7 +180,7 @@ export function BlockCard({
   };
 
   const dragGesture = Gesture.Pan()
-    .enabled(!isFixed)
+    .enabled(!isFixed && !accounted)
     .onStart(() => {
       isDragging.value = 1;
       scale.value = withTiming(1.03, { duration: 120 });
@@ -199,7 +201,7 @@ export function BlockCard({
     });
 
   const swipeGesture = Gesture.Pan()
-    .enabled(!isFixed && !isAnswered)
+    .enabled(!isFixed && !isAnswered && !accounted)
     .activeOffsetX([-15, 15])
     .failOffsetY([-8, 8])
     .maxPointers(1)
@@ -359,8 +361,9 @@ export function BlockCard({
 
   return (
     <Animated.View
-      style={[styles.cardShadow, shadowAnimatedStyle]}
+      style={[styles.cardShadow, accounted && styles.cardAccounted, shadowAnimatedStyle]}
       onLayout={(e) => {
+        if (accounted) return;
         const { y, height } = e.nativeEvent.layout;
         onLayout(instance.id, y, height);
       }}
@@ -523,6 +526,9 @@ const makeStyles = (c: Colors) =>
       borderRadius: radii.lg,
       marginBottom: 10,
       ...c.shadowRest,
+    },
+    cardAccounted: {
+      opacity: 0.5,
     },
     cardGlow: {
       ...StyleSheet.absoluteFillObject,

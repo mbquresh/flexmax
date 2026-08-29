@@ -185,15 +185,10 @@ export function resolveDayEnd(
   return crossesMidnight ? 1440 : sleepMinutes;
 }
 
-// Only UNRESOLVED instances occupy time. 'completed' and 'missed' are
-// historical facts: the first already happened, the second is not going
-// to. Neither can be displaced and neither blocks a slot.
-//
-// Allowlist, not denylist. The previous denylist excluded skipped,
-// removed and rescheduled, which meant 'completed' was treated as a live
-// collider and could be offered as a sacrifice — writing 'removed' over a
-// real completion.
-function occupiesTime(i: DailyInstance): boolean {
+// Only UNRESOLVED instances occupy time. Exported because handleSwap,
+// findRescheduleSlot and planDisplacement must all agree — this rule has
+// drifted three times when each kept its own copy.
+export function occupiesTime(i: DailyInstance): boolean {
   return i.status === "pending" || i.status === "active";
 }
 

@@ -389,6 +389,7 @@ marker at all.
 | Block archiving | schedule_blocks.is_active (037). A block can retire without destroying its record. Card actions are now Edit / Archive; permanent delete moved into the edit sheet, because delete cascades to every daily_schedule_instances row and the one-tap action should be the reversible one. Archiving marks today's PENDING instance 'removed' so the block leaves Today immediately; completed and missed instances survive and keep feeding the evidence pack until they age out of the 30-day window |
 | Shared miss reason presets | src/lib/missReasons.ts. Extracted from CloseTodayRow so any future surface writes identical strings — miss_reasons in get_behavior_evidence groups by exact value, so drift would split one reason into two rows |
 | Pre-block nudge | src/lib/preempt.ts + blockNotifications.ts. Fires at start time for a block where 4 of its last 7 rated occurrences failed — the same threshold as the quality degradation prompt, so no new constant. AT MOST ONE PER DAY, worst record first, earliest start breaking ties: a qualifying block already gets start, cutoff and end notifications, and without the cap a bad week would nudge every block. Requires a full 7-occurrence window, so it never fires on thin data. Copy states what LANDED rather than what failed — same fact, but it arrives while the user is deciding whether to start, and naming a failure streak at that moment invites avoidance |
+| Accounted for section | today.tsx. Completed and missed blocks move to a section at the bottom of Today, greyed, undo intact. The top list becomes exactly what is left, which is what makes a late-day reschedule legible — a morning block can be moved into an afternoon whose blocks are already resolved, and the open time reads as open. Missed blocks go here too: an answered block is not unfinished business, and the accounted-for streak already counts it as engagement. Cards here do not register onLayout and cannot be dragged or swiped, so cardPositions only ever holds open cards — this SHRINKS the drag surface. A pruning effect clears stale entries when a card leaves the open list, without which findSwapTarget could match a phantom position |
 
 
 
@@ -719,6 +720,11 @@ makes it a one-line swap in theme.ts if ever revisited.
   action available to an annoyed user is disabling notifications at the OS
   level, which silently kills everything including the cutoff nudges that have
   measured response data.
+- **Timed adhoc tasks are not in the Accounted for section.** They keep
+  their existing in-place completed state, so a completed adhoc stays in the
+  timeline while a completed block moves down. Consistent treatment needs a
+  decision about whether adhoc completion means the same thing as block
+  completion.
 
 ---
 
@@ -1086,6 +1092,14 @@ be rescheduled into an afternoon gap whose blocks were already resolved.
 Now an allowlist: only pending and active occupy time. handleSwap gained the
 same guard — it checked is_fixed but not status, so a pending block could be
 dragged onto a completed one and rewrite its times.
+
+Follow-up 2026-08-26: handleSwap kept its OWN inline copy of this filter and
+was missed by the first fix — it excluded only skipped and removed, so a
+block in the Accounted for section still blocked a swap into its old slot.
+occupiesTime is now exported and is the single definition. The rule drifted
+in three separate places (planDisplacement, findRescheduleSlot, handleSwap)
+because each carried its own denylist; any future occupancy check must import
+it rather than re-express it.
 
 ---
 

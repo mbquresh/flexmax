@@ -25,7 +25,7 @@ import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "../src/lib/supabase";
-import { getTodayLabel } from "../src/lib/schedule";
+import { getTodayLabel, occupiesTime } from "../src/lib/schedule";
 import { handleError } from "../src/lib/errors";
 import { useAuth } from "../src/providers/AuthProvider";
 import { useStore } from "../src/store";
@@ -248,13 +248,15 @@ function TodayScreenContent() {
     return stats.streak;
   }, [instances, stats]);
 
-  const timelineItems = useMemo(() => {
+  const openItems = useMemo(() => {
     const items = [
-      ...sortedInstances.map((instance) => ({
-        kind: "block" as const,
-        instance,
-        sortKey: instance.start_minutes,
-      })),
+      ...sortedInstances
+        .filter((i) => i.status === "pending" || i.status === "active")
+        .map((instance) => ({
+          kind: "block" as const,
+          instance,
+          sortKey: instance.start_minutes,
+        })),
       ...timedAdhoc.map((task) => ({
         kind: "adhoc" as const,
         task,
@@ -263,6 +265,27 @@ function TodayScreenContent() {
     ];
     return items.sort((a, b) => a.sortKey - b.sortKey);
   }, [sortedInstances, timedAdhoc]);
+
+  // completed and missed both belong here. A declared miss is an answered
+  // block, not unfinished business — the accounted-for streak already
+  // counts it as engagement, and leaving it above would mean the top
+  // section is not actually "what's left".
+  const accountedItems = useMemo(
+    () =>
+      sortedInstances.filter(
+        (i) => i.status === "completed" || i.status === "missed"
+      ),
+    [sortedInstances]
+  );
+
+  useEffect(() => {
+    const openIds = new Set(
+      openItems.filter((i) => i.kind === "block").map((i) => i.instance.id)
+    );
+    for (const id of Object.keys(cardPositions.current)) {
+      if (!openIds.has(id)) delete cardPositions.current[id];
+    }
+  }, [openItems]);
 
   useEffect(() => {
     return () => {
@@ -471,8 +494,7 @@ function TodayScreenContent() {
       (inst) =>
         inst.id !== instanceA.id &&
         inst.id !== instanceB.id &&
-        inst.status !== "skipped" &&
-        inst.status !== "removed"
+        occupiesTime(inst)
     );
     const collides = (start: number, end: number, other: DailyInstance) =>
       start < other.end_minutes && end > other.start_minutes;
@@ -995,14 +1017,14 @@ function TodayScreenContent() {
         </View>
 
         <View style={styles.list}>
-          {timelineItems.length === 0 ? (
+          {openItems.length === 0 && accountedItems.length === 0 ? (
             <Text style={styles.empty}>
               {totalBlocks > 0
                 ? `Nothing scheduled for ${todayLabel}. Your blocks may be set for other days — go to Edit schedule and tap ${todayLabel} on each block.`
                 : "No blocks yet. Add some in the schedule builder first."}
             </Text>
           ) : (
-            timelineItems.map((item) =>
+            openItems.map((item) =>
               item.kind === "block" ? (
                 <BlockCard
                   key={item.instance.id}
@@ -1045,6 +1067,30 @@ function TodayScreenContent() {
                   onToggle={toggleAdhocComplete}
                   onDelete={handleDeleteAdhoc}
                   onEdit={openEditAdhoc}
+                />
+              ))}
+            </View>
+          ) : null}
+
+          {accountedItems.length > 0 ? (
+            <View style={styles.accountedSection}>
+              <Text style={styles.accountedTitle}>Accounted for</Text>
+              {accountedItems.map((instance) => (
+                <BlockCard
+                  key={instance.id}
+                  instance={instance}
+                  accounted
+                  saving={saving}
+                  cardPositions={cardPositions}
+                  onCheckIn={setCheckInInstance}
+                  onMarkMissed={handleMarkMissed}
+                  onUndo={showUndoActions}
+                  onTaskDetail={openTaskDetail}
+                  onSwap={handleSwap}
+                  onRemoveRequest={setRemoveInstance}
+                  onLayout={handleCardLayout}
+                  registerFlashTrigger={registerFlashTrigger}
+                  unregisterFlashTrigger={unregisterFlashTrigger}
                 />
               ))}
             </View>
@@ -1422,6 +1468,17 @@ const makeStyles = (c: Colors) =>
       textTransform: "uppercase",
       paddingHorizontal: spacing.sm,
       marginBottom: spacing.xs,
+    },
+    accountedSection: {
+      marginTop: spacing.xl,
+      gap: spacing.sm,
+    },
+    accountedTitle: {
+      color: c.textSecondary,
+      ...typography.label,
+      textTransform: "uppercase",
+      paddingHorizontal: spacing.sm,
+      marginBottom: spacing.sm,
     },
     sleepFooter: {
       color: c.textMuted,
