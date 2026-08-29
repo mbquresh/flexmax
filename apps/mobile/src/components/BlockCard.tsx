@@ -8,13 +8,17 @@ import Animated, {
   interpolate,
   interpolateColor,
   runOnJS,
+  scrollTo,
   useAnimatedStyle,
   useDerivedValue,
+  useFrameCallback,
   useSharedValue,
   withDelay,
   withSequence,
   withSpring,
   withTiming,
+  type AnimatedRef,
+  type SharedValue,
 } from "react-native-reanimated";
 import { DailyInstance } from "../types/database";
 import { minutesToTime } from "../lib/time";
@@ -47,6 +51,9 @@ interface BlockCardProps {
   registerFlashTrigger: (id: string, trigger: () => void) => void;
   unregisterFlashTrigger: (id: string) => void;
   accounted?: boolean;
+  scrollRef?: AnimatedRef<Animated.ScrollView>;
+  scrollY?: SharedValue<number>;
+  viewportHeight?: SharedValue<number>;
 }
 
 export function BlockCard({
@@ -63,6 +70,9 @@ export function BlockCard({
   registerFlashTrigger,
   unregisterFlashTrigger,
   accounted = false,
+  scrollRef,
+  scrollY,
+  viewportHeight,
 }: BlockCardProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -179,25 +189,75 @@ export function BlockCard({
     onCardPress();
   };
 
+  // Scroll accumulated since this drag began. findSwapTarget compares a
+  // SCREEN-space finger delta against CONTENT-space card positions, so any
+  // scrolling during the drag has to be added back or the swap resolves
+  // against stale geometry.
+  const dragStartScrollY = useSharedValue(0);
+  const autoScrollSpeed = useSharedValue(0);
+  const fingerY = useSharedValue(0);
+  // Live scroll compensation for the dragged card. Animated home on release
+  // rather than snapped, because translateY animates home over 150ms and a
+  // snap here would jump the card at the moment of drop.
+  const scrollOffset = useSharedValue(0);
+  const dragActive = useSharedValue(0);
+
+  useFrameCallback(() => {
+    if (dragActive.value === 1 && scrollY) {
+      scrollOffset.value = scrollY.value - dragStartScrollY.value;
+    }
+    if (autoScrollSpeed.value === 0 || !scrollY || !scrollRef) return;
+    const next = Math.max(0, scrollY.value + autoScrollSpeed.value);
+    scrollTo(scrollRef, 0, next, false);
+  }, true);
+
   const dragGesture = Gesture.Pan()
     .enabled(!isFixed && !accounted)
     .onStart(() => {
       isDragging.value = 1;
       scale.value = withTiming(1.03, { duration: 120 });
+      dragStartScrollY.value = scrollY?.value ?? 0;
+      dragActive.value = 1;
+      scrollOffset.value = 0;
       runOnJS(hapticPickUp)();
     })
     .onUpdate((e) => {
       translateY.value = e.translationY;
+      fingerY.value = e.absoluteY;
+      if (viewportHeight && viewportHeight.value > 0) {
+        const EDGE = 90;         // px from each edge that triggers scrolling
+        const MAX_SPEED = 12;    // px per frame at the very edge
+        const top = EDGE;
+        const bottom = viewportHeight.value - EDGE;
+
+        if (e.absoluteY < top) {
+          // Ramps with depth into the zone, so a small overshoot creeps and a
+          // deliberate hold at the edge moves fast.
+          autoScrollSpeed.value = -MAX_SPEED * ((top - e.absoluteY) / EDGE);
+        } else if (e.absoluteY > bottom) {
+          autoScrollSpeed.value =
+            MAX_SPEED * ((e.absoluteY - bottom) / EDGE);
+        } else {
+          autoScrollSpeed.value = 0;
+        }
+      }
     })
     .onEnd((e) => {
+      dragActive.value = 0;
+      autoScrollSpeed.value = 0;
+      const scrollDelta = scrollOffset.value;
+      scrollOffset.value = withTiming(0, { duration: 150 });
       isDragging.value = 0;
       scale.value = withTiming(1, { duration: 120 });
       translateY.value = withTiming(0, { duration: 150 });
-      runOnJS(handleDragEnd)(instance.id, e.translationY);
+      runOnJS(handleDragEnd)(instance.id, e.translationY + scrollDelta);
     })
     .onFinalize(() => {
       isDragging.value = 0;
       scale.value = withTiming(1, { duration: 120 });
+      autoScrollSpeed.value = 0;
+      dragActive.value = 0;
+      scrollOffset.value = withTiming(0, { duration: 150 });
     });
 
   const swipeGesture = Gesture.Pan()
@@ -258,11 +318,11 @@ export function BlockCard({
     ),
     shadowColor: colors.glowLift.shadowColor,
     shadowOffset: colors.glowLift.shadowOffset,
-    transform: [{ translateY: translateY.value }, { scale: scale.value }],
+    transform: [{ translateY: translateY.value + scrollOffset.value }, { scale: scale.value }],
   }));
 
   const wrapperAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }, { scale: scale.value }],
+    transform: [{ translateY: translateY.value + scrollOffset.value }, { scale: scale.value }],
   }));
 
   const slideAnimatedStyle = useAnimatedStyle(() => ({

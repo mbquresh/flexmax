@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   Pressable,
   Modal,
@@ -17,6 +16,8 @@ import {
   ActionSheetIOS,
 } from "react-native";
 import Animated, {
+  useAnimatedRef,
+  useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
@@ -177,7 +178,14 @@ function TodayScreenContent() {
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const adhocToggleInFlight = useRef<Set<string>>(new Set());
   const cardPositions = useRef<Record<string, { y: number; height: number }>>({});
+  const scrollRef = useAnimatedRef<Animated.ScrollView>();
+  const scrollY = useSharedValue(0);
+  const viewportHeight = useSharedValue(0);
   const flashTriggers = useRef<Record<string, () => void>>({});
+
+  const scrollHandler = useAnimatedScrollHandler((e) => {
+    scrollY.value = e.contentOffset.y;
+  });
   const todayLabel = getTodayLabel();
 
   const sortedInstances = [...instances].sort(
@@ -993,7 +1001,13 @@ function TodayScreenContent() {
 
   return (
     <View style={styles.container}>
-      <ScrollView
+      <Animated.ScrollView
+        ref={scrollRef}
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
+        onLayout={(e) => {
+          viewportHeight.value = e.nativeEvent.layout.height;
+        }}
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
@@ -1057,6 +1071,9 @@ function TodayScreenContent() {
                   onLayout={handleCardLayout}
                   registerFlashTrigger={registerFlashTrigger}
                   unregisterFlashTrigger={unregisterFlashTrigger}
+                  scrollRef={scrollRef}
+                  scrollY={scrollY}
+                  viewportHeight={viewportHeight}
                 />
               ) : (
                 <AdhocTimedCard
@@ -1119,7 +1136,7 @@ function TodayScreenContent() {
             </Text>
           ) : null}
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
 
       {toastMessage ? (
         <Animated.View style={[styles.toast, toastAnimatedStyle]} pointerEvents="none">

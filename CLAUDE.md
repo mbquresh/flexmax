@@ -392,6 +392,7 @@ marker at all.
 | Pre-block nudge | src/lib/preempt.ts + blockNotifications.ts. Fires at start time for a block where 4 of its last 7 rated occurrences failed — the same threshold as the quality degradation prompt, so no new constant. AT MOST ONE PER DAY, worst record first, earliest start breaking ties: a qualifying block already gets start, cutoff and end notifications, and without the cap a bad week would nudge every block. Requires a full 7-occurrence window, so it never fires on thin data. Copy states what LANDED rather than what failed — same fact, but it arrives while the user is deciding whether to start, and naming a failure streak at that moment invites avoidance |
 | Accounted for section | today.tsx. Completed and missed blocks move to a section at the bottom of Today, greyed, undo intact. The top list becomes exactly what is left, which is what makes a late-day reschedule legible — a morning block can be moved into an afternoon whose blocks are already resolved, and the open time reads as open. Missed blocks go here too: an answered block is not unfinished business, and the accounted-for streak already counts it as engagement. Cards here do not register onLayout and cannot be dragged or swiped, so cardPositions only ever holds open cards — this SHRINKS the drag surface. A pruning effect clears stale entries when a card leaves the open list, without which findSwapTarget could match a phantom position |
 | End time on reschedule | recovery/[id].tsx. The "Ends" picker was gated behind slotIsFallback, so duration could only be changed when the app failed to find a slot. Always available now |
+| Drag auto-scroll | today.tsx + BlockCard.tsx. Dragging near the top or bottom edge scrolls the list, so a swap target off-screen is reachable. Speed ramps with depth into a 90px edge zone. Driven by useFrameCallback rather than the gesture's onUpdate, because onUpdate only fires when the finger MOVES — holding still at the edge would stop the scroll exactly when the user is waiting for a target to appear |
 
 
 
@@ -1132,6 +1133,17 @@ and forbidding diagnosis of a young block.
 This is the sharpest form of the trust risk this document already names: an
 insight about a habit the user has ALREADY FIXED is worse than no insight,
 because it proves the engine is not watching.
+
+**Auto-scroll would have silently broken swap targeting (handled
+2026-08-26).** cardPositions holds CONTENT-space coordinates from onLayout;
+dragTranslationY is SCREEN-space finger movement. findSwapTarget adds them
+directly, which was only correct because the list could not scroll mid-drag.
+Enabling auto-scroll makes the two spaces diverge by the distance scrolled,
+so the swap would resolve against stale geometry and land on the wrong card —
+visible only after scrolling, which is exactly when the user cannot see what
+was picked. onEnd now passes translationY plus the scroll delta accumulated
+since the drag began. Any future change touching drag or scroll must
+preserve this: the two coordinate spaces are not interchangeable.
 
 ---
 
