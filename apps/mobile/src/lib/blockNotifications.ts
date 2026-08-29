@@ -44,10 +44,8 @@ export async function scheduleFollowUpNudge(
   });
 }
 
-// Cancels the ENTIRE managed set, then scheduleTodayBlockNotifications
-// rebuilds it from its arguments. Any caller that omits an optional
-// argument therefore DELETES that category rather than leaving it alone.
-// Every call site must pass the full set.
+// Cancel all previously scheduled block notifications for today
+// Call this before rescheduling to avoid duplicates
 export async function cancelTodayBlockNotifications(): Promise<void> {
   const scheduled = await Notifications.getAllScheduledNotificationsAsync();
   const managed = ["block_complete", "block_cutoff", "block_followup", "block_preempt"];

@@ -11,7 +11,7 @@ import { AdhocTask, BehavioralInsight } from "../types/database";
 import { useStore } from "../store";
 
 export function useTodayData(userId: string | undefined) {
-  const { todayInstances, setTodayInstances, setTodayPreempt, setTodayInsights } = useStore();
+  const { todayInstances, setTodayInstances } = useStore();
   const [loading, setLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
   const [loadOffline, setLoadOffline] = useState(false);
@@ -147,8 +147,6 @@ export function useTodayData(userId: string | undefined) {
             // A failed history lookup must never block the day from loading.
             handleError(err, "preemptHistory");
           }
-          setTodayPreempt(preempt);
-          setTodayInsights(insightsData ?? []);
           try {
             const cutoffs = await scheduleTodayBlockNotifications(
               data,
@@ -212,7 +210,7 @@ export function useTodayData(userId: string | undefined) {
         })
         .catch((e) => handleError(e, "weeklyInsightInvoke"));
     },
-    [userId, setTodayInstances, setTodayPreempt, setTodayInsights]
+    [userId, setTodayInstances]
   );
 
   const isFirstFocus = useRef(true);

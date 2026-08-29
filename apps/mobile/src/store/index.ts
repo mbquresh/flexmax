@@ -1,6 +1,5 @@
 import { create } from "zustand";
-import { Profile, PsychologyProfile, ScheduleBlock, DailyInstance, BehavioralInsight } from "../types/database";
-import { PreemptCandidate } from "../lib/preempt";
+import { Profile, PsychologyProfile, ScheduleBlock, DailyInstance } from "../types/database";
 
 interface FlexMaxStore {
   // Auth
@@ -14,10 +13,6 @@ interface FlexMaxStore {
   // Schedule
   blocks: ScheduleBlock[];
   todayInstances: DailyInstance[];
-  todayPreempt: PreemptCandidate | null;
-  setTodayPreempt: (p: PreemptCandidate | null) => void;
-  todayInsights: BehavioralInsight[];
-  setTodayInsights: (i: BehavioralInsight[]) => void;
 
   // Actions
   setUser: (userId: string, profile: Profile) => void;
@@ -35,8 +30,6 @@ export const useStore = create<FlexMaxStore>((set) => ({
   onboardingComplete: false,
   blocks: [],
   todayInstances: [],
-  todayPreempt: null,
-  todayInsights: [],
 
   setUser: (userId, profile) => set({ userId, profile }),
 
@@ -46,10 +39,6 @@ export const useStore = create<FlexMaxStore>((set) => ({
   setBlocks: (blocks) => set({ blocks }),
 
   setTodayInstances: (instances) => set({ todayInstances: instances }),
-
-  setTodayPreempt: (p) => set({ todayPreempt: p }),
-
-  setTodayInsights: (i) => set({ todayInsights: i }),
 
   updateInstance: (id, updates) =>
     set((state) => ({
@@ -66,7 +55,5 @@ export const useStore = create<FlexMaxStore>((set) => ({
       onboardingComplete: false,
       blocks: [],
       todayInstances: [],
-      todayPreempt: null,
-      todayInsights: [],
     }),
 }));

@@ -447,16 +447,9 @@ function TodayScreenContent() {
   }, []);
 
   const resyncNotifications = (updatedInstances: DailyInstance[]) => {
-    const { todayInsights, todayPreempt } = useStore.getState();
-    // The full set is cancelled and rebuilt on every call, so anything not
-    // passed here is silently dropped. Both values are derived once at load
-    // and held in the store precisely so a resync can restore them.
-    scheduleTodayBlockNotifications(
-      updatedInstances,
-      getLocalDateString(),
-      todayInsights,
-      todayPreempt
-    ).catch((err) => handleError(err, "resyncNotifications"));
+    scheduleTodayBlockNotifications(updatedInstances, getLocalDateString()).catch((err) =>
+      handleError(err, "resyncNotifications")
+    );
   };
 
   const handleSwap = async (instanceA: DailyInstance, instanceB: DailyInstance) => {
