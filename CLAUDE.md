@@ -196,6 +196,7 @@ Cursor = implementation engine.
 | 039 | block_recency.sql | Per-block first_seen, days_tracked, and 7-day vs prior split. The pack was time-flat: a habit that stopped a month ago read as current, and a week-old block was diagnosed as broken |
 | 040 | block_recurrence.sql | starts_on / ends_on / interval_weeks / anchor_date on schedule_blocks, plus block_exceptions for advance skip. Both generate_* functions updated. All defaults preserve prior behaviour |
 | 041 | tracked_interval_aware.sql | tracked's floor scales with cadence: least(3, greatest(2, count(*))). A biweekly block could never reach a flat floor of 3 and was silently invisible to the whole engine |
+| 042 | away_periods.sql | User-level date ranges where nothing generates. Both generate_* functions updated. Chosen over per-block exception rows: an away week written that way is 60+ rows, needs consecutive dates regrouped to display or cancel, and misses blocks created during the period |
 
 028 exists to answer the north-star metric: of users who had a bad week, what
 share opened the app the following week. Capture is fire-and-forget from
@@ -398,6 +399,7 @@ marker at all.
 | Block recurrence UI | BlockFormSheet + src/lib/recurrence.ts. One collapsible "Repeats" section replaces the standalone day chips: summary row, expanding to days + an interval stepper + an optional end date. Modelled on Apple Calendar's repeat rule — the days, cadence and end date are one statement, not three settings, and collapsed the sheet is SHORTER than before because DayChips no longer occupies permanent space on a control nobody edits after setup. Expanded by default when adding, collapsed when editing. Inline expansion rather than a pushed screen, because a bottom sheet cannot push and sheet-over-sheet is the RecoverySheet trap. Stepper rather than a wheel: the CHECK constraint caps at 8 and a picker would need a dependency that is not installed. anchor_date is written once when a block first becomes non-weekly and never moved |
 | Block form polish | BlockFormSheet. Fixed/Flexible became a two-tile segmented control — the single pill had no visible off-state and read as an available action when unselected. Helper text now describes the current state instead of defining the word. Every field labelled, since one field having a label and the rest not is worse than none having them. Uniform gap replaced with grouped spacing so the Save button no longer sits as close to the last field as fields sit to each other. Title is a static "Edit block" / "New block" rather than repeating the name shown in the input below it. Visual grabber added, with no pan gesture — a half-working drag-to-dismiss on this sheet is worse than none |
 | Schedule builder polish | Primary action pinned to a bottom bar with safe-area inset — it previously sat inside ListFooterComponent BEFORE the archived section, so it was not even the last element on the page. Its disabled condition read blocks.length, which includes archived, so archiving every block left Continue enabled and sent the user to an empty day; now activeBlocks.length, with a hint explaining why it is disabled. Haptics added throughout: the first screen a user sees had ZERO, while six haptic functions ship and every other surface uses them. Success haptics fire only after a write resolves. Duplicate `section` key removed from makeStyles. Subtitle rewritten to orient rather than explain UI mechanics. First use of useSafeAreaInsets in the app |
+| Time away | away_periods (042) + AwaySheet. A date range where no instances generate at all. Not skipped placeholder rows — tracked requires 25% of a block's instances resolved, so a week of unanswered rows would push blocks below the floor and drop them from the engine, which is the exact misreading this prevents. A range covering today also marks today's pending instances 'removed', since generation only prevents future ones. The accounted-for streak needed no change: computeStreakData requires relevant > 0, so an empty day neither breaks nor extends it |
 
 
 
@@ -745,11 +747,10 @@ makes it a one-line swap in theme.ts if ever revisited.
   Correct for a slow connection, poor for no connection. A shorter first-attempt
   timeout with a retry would feel better, but distinguishing slow from dead
   needs care — do not shorten it blindly.
-- **Advance skip has no UI.** block_exceptions (040) is verified in SQL and
-  reachable by nothing. The case that matters is a date RANGE across every
-  block — "away next week" — not a field on one block's form. Until it ships,
-  a week away means manual removals, each of which reads to the engine as
-  disengagement rather than as life.
+- **block_exceptions still has no UI.** 042 covers the common case — a
+  user-level absence — but per-block skip ("no gym next Tuesday", keep
+  everything else) is reachable only from SQL. The table exists and
+  generation honours it.
 - **starts_on has no UI, deliberately.** Blocks always start immediately,
   matching how Apple Calendar treats a repeat rule: the event's own date is
   the start. A programme beginning next month is a real case but wants its own
@@ -1104,6 +1105,22 @@ same day will bring it back. That requires archiving and restoring the same
 block on the same day it was manually removed, and the restore itself is a
 clear statement of intent. Distinguishing the two would need provenance on
 the status change.
+
+**Removing an away period did not restore today (fixed 2026-08-31).**
+Creating a period covering today marks today's pending instances 'removed';
+deleting it only deleted the away row. The tombstones survived and blocked
+regeneration, because generate_* is `on conflict do nothing`. Reset Today was
+the only way back. This is the SECOND time this exact pattern shipped — block
+archive restore had it identically (b83cb41). Any feature that suppresses
+instances by marking them 'removed' must undo both halves: generate first
+(covering a suppression created on an earlier day, where no rows exist at
+all), then clear the tombstones.
+
+Known limitation, same as archive restore: 'removed' is also written by the
+user's own "Remove from today", so cancelling an away period that covers
+today restores blocks the user had removed manually. Distinguishing them
+needs provenance on the status change, and cancelling an absence is a clear
+statement of intent to have the day back.
 
 **Close-today's "skip" link read as cancel (fixed 2026-08-26).** Tapping
 Missed committed status='missed' immediately; the chips that followed offered

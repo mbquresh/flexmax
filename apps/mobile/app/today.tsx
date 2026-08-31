@@ -14,6 +14,7 @@ import {
   Keyboard,
   Platform,
   ActionSheetIOS,
+  RefreshControl,
 } from "react-native";
 import Animated, {
   useAnimatedRef,
@@ -137,6 +138,7 @@ function TodayScreenContent() {
     insights,
   } = useTodayData(session?.user.id);
   const { setTodayInstances, updateInstance } = useStore();
+  const [refreshing, setRefreshing] = useState(false);
   const [checkInInstance, setCheckInInstance] = useState<DailyInstance | null>(null);
   const [qualityPrompt, setQualityPrompt] = useState<{
     instanceId: string;
@@ -186,6 +188,15 @@ function TodayScreenContent() {
   const scrollHandler = useAnimatedScrollHandler((e) => {
     scrollY.value = e.contentOffset.y;
   });
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await reload(undefined, { silent: true });
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   const todayLabel = getTodayLabel();
 
   const sortedInstances = [...instances].sort(
@@ -1019,6 +1030,13 @@ function TodayScreenContent() {
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={colors.textMuted}
+          />
+        }
       >
         <View style={styles.header}>
           <View style={styles.headerTop}>

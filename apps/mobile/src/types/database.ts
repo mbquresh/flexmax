@@ -108,6 +108,15 @@ export interface ScheduleBlock {
   anchor_date: string | null;
 }
 
+export interface AwayPeriod {
+  id: string;
+  user_id: string;
+  starts_on: string; // YYYY-MM-DD
+  ends_on: string; // YYYY-MM-DD
+  label: string | null;
+  created_at: string;
+}
+
 export interface DailyInstance {
   id: string;
   user_id: string;
@@ -204,6 +213,16 @@ export interface Database {
         Row: DayLog & Record<string, unknown>;
         Insert: Partial<DayLog> & { user_id: string; date: string };
         Update: Partial<DayLog>;
+        Relationships: [];
+      };
+      away_periods: {
+        Row: AwayPeriod;
+        Insert: Partial<AwayPeriod> & {
+          user_id: string;
+          starts_on: string;
+          ends_on: string;
+        };
+        Update: Partial<AwayPeriod>;
         Relationships: [];
       };
     };

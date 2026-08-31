@@ -8,6 +8,7 @@ import {
   Alert,
   Platform,
   Keyboard,
+  RefreshControl,
 } from "react-native";
 import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
@@ -25,7 +26,7 @@ import { getLocalDateString } from "../src/lib/time";
 import { useAuth } from "../src/providers/AuthProvider";
 import { useTheme } from "../src/providers/ThemeProvider";
 import { useStore } from "../src/store";
-import { ScheduleBlock } from "../src/types/database";
+import { ScheduleBlock, AwayPeriod } from "../src/types/database";
 import { handleError, getErrorMessage, isConnectivityError } from "../src/lib/errors";
 
 import { RequireAuth } from "../src/components/RequireAuth";
@@ -36,9 +37,35 @@ import { BoundaryRow } from "../src/components/BoundaryRow";
 import { ScheduleBlockCard } from "../src/components/ScheduleBlockCard";
 import { BlockFormSheet, BlockFormData } from "../src/components/BlockFormSheet";
 import { DayBoundariesSheet } from "../src/components/DayBoundariesSheet";
+import { AwaySheet } from "../src/components/AwaySheet";
 import { Colors, spacing, radii, typography, iconSizes } from "../src/theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { hapticSelect, hapticCommit, hapticReject } from "../src/lib/haptics";
+import {
+  createAwayPeriod,
+  deleteAwayPeriod,
+  formatAwayRange,
+} from "../src/lib/away";
+
+function featuredAwayPeriod(periods: AwayPeriod[]): AwayPeriod | null {
+  if (!periods.length) return null;
+  const today = getLocalDateString();
+  const currentOrUpcoming = periods
+    .filter((p) => p.ends_on >= today)
+    .sort((a, b) => a.starts_on.localeCompare(b.starts_on));
+  if (currentOrUpcoming.length) return currentOrUpcoming[0];
+  return [...periods].sort((a, b) => b.ends_on.localeCompare(a.ends_on))[0];
+}
+
+function awaySummary(periods: AwayPeriod[]): string {
+  if (!periods.length) return "None";
+  const featured = featuredAwayPeriod(periods);
+  if (!featured) return "None";
+  const extra = periods.length - 1;
+  return extra > 0
+    ? `${formatAwayRange(featured)} +${extra} more`
+    : formatAwayRange(featured);
+}
 
 function ScheduleBuilderScreenContent() {
   const { colors } = useTheme();
@@ -61,6 +88,10 @@ function ScheduleBuilderScreenContent() {
   const [overridesOpen, setOverridesOpen] = useState(false);
   const [overridesSaving, setOverridesSaving] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
+  const [awayOpen, setAwayOpen] = useState(false);
+  const [awaySaving, setAwaySaving] = useState(false);
+  const [awayPeriods, setAwayPeriods] = useState<AwayPeriod[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
 
   const activeBlocks = useMemo(
     () => blocks.filter((b) => b.is_active),
@@ -71,21 +102,26 @@ function ScheduleBuilderScreenContent() {
     [blocks]
   );
 
-  const loadBlocks = async () => {
+  const loadBlocks = async (quiet = false) => {
     if (!session?.user.id) {
-      setLoading(false);
+      if (!quiet) setLoading(false);
       return;
     }
 
-    setLoading(true);
-    setLoadFailed(false);
-    setError(null);
+    if (!quiet) {
+      setLoading(true);
+      setLoadFailed(false);
+      setError(null);
+    }
     try {
       const tid = await ensureActiveTemplate(session.user.id);
       setTemplateId(tid);
 
-      const [{ data, error: fetchError }, { data: profileData, error: profileError }] =
-        await Promise.all([
+      const [
+        { data, error: fetchError },
+        { data: profileData, error: profileError },
+        { data: awayData, error: awayError },
+      ] = await Promise.all([
           supabase
             .from("schedule_blocks")
             .select("*")
@@ -96,6 +132,11 @@ function ScheduleBuilderScreenContent() {
             .select("sleep_target_minutes, wake_target_minutes, day_boundary_overrides")
             .eq("id", session.user.id)
             .single(),
+          supabase
+            .from("away_periods")
+            .select("*")
+            .eq("user_id", session.user.id)
+            .order("starts_on"),
         ]);
 
       if (fetchError) throw fetchError;
@@ -106,13 +147,21 @@ function ScheduleBuilderScreenContent() {
       setOverrides(
         (profileData?.day_boundary_overrides as DayBoundaryOverrides | null) ?? {}
       );
+      if (awayError) {
+        handleError(awayError, "loadAwayPeriods");
+        setAwayPeriods([]);
+      } else {
+        setAwayPeriods(awayData ?? []);
+      }
     } catch (err) {
-      setLoadFailed(true);
-      setLoadOffline(isConnectivityError(err));
       handleError(err, "loadBlocks");
-      setError(getErrorMessage(err));
+      if (!quiet) {
+        setLoadFailed(true);
+        setLoadOffline(isConnectivityError(err));
+        setError(getErrorMessage(err));
+      }
     } finally {
-      setLoading(false);
+      if (!quiet) setLoading(false);
     }
   };
 
@@ -173,9 +222,68 @@ function ScheduleBuilderScreenContent() {
     setFormOpen(true);
   }, []);
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await loadBlocks(true);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   const handleContinue = () => {
     hapticCommit();
     router.back();
+  };
+
+  const handleAwayCreate = async (
+    startsOn: string,
+    endsOn: string,
+    label: string | null
+  ) => {
+    if (!session?.user.id) return;
+    hapticSelect();
+    setAwaySaving(true);
+    try {
+      const created = await createAwayPeriod(
+        session.user.id,
+        startsOn,
+        endsOn,
+        label
+      );
+      hapticCommit();
+      const today = getLocalDateString();
+      if (startsOn <= today && today <= endsOn) {
+        await loadBlocks(true);
+      } else {
+        setAwayPeriods((prev) =>
+          [...prev, created].sort((a, b) => a.starts_on.localeCompare(b.starts_on))
+        );
+      }
+    } catch (err) {
+      hapticReject();
+      handleError(err, "handleAwayCreate");
+      setError(getErrorMessage(err));
+    } finally {
+      setAwaySaving(false);
+    }
+  };
+
+  const handleAwayDelete = async (period: AwayPeriod) => {
+    if (!session?.user.id) return;
+    hapticSelect();
+    setAwaySaving(true);
+    try {
+      await deleteAwayPeriod(period, session.user.id);
+      hapticCommit();
+      await loadBlocks(true);
+    } catch (err) {
+      hapticReject();
+      handleError(err, "handleAwayDelete");
+      setError(getErrorMessage(err));
+    } finally {
+      setAwaySaving(false);
+    }
   };
 
   const handleArchiveToggle = useCallback(
@@ -466,6 +574,13 @@ function ScheduleBuilderScreenContent() {
         contentContainerStyle={[styles.list, { paddingBottom: 120 + insets.bottom }]}
         nestedScrollEnabled={true}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={colors.textMuted}
+          />
+        }
         ListHeaderComponent={
           <>
             <View style={styles.header}>
@@ -555,6 +670,18 @@ function ScheduleBuilderScreenContent() {
                 </Text>
               </PressableScale>
             </View>
+            <PressableScale
+              style={styles.awayRow}
+              onPress={() => {
+                hapticSelect();
+                setAwayOpen(true);
+              }}
+            >
+              <Text style={styles.awayLabel}>Time away</Text>
+              <Text style={styles.awayValue} numberOfLines={1}>
+                {awaySummary(awayPeriods)}
+              </Text>
+            </PressableScale>
             <View style={styles.addSection}>
               <PressableScale
                 style={styles.addToggle}
@@ -638,6 +765,14 @@ function ScheduleBuilderScreenContent() {
         saving={overridesSaving}
         onSave={saveDayOverrides}
         onClose={() => setOverridesOpen(false)}
+      />
+      <AwaySheet
+        visible={awayOpen}
+        periods={awayPeriods}
+        saving={awaySaving}
+        onCreate={handleAwayCreate}
+        onDelete={handleAwayDelete}
+        onClose={() => setAwayOpen(false)}
       />
     </View>
   );
@@ -734,6 +869,20 @@ const makeStyles = (c: Colors) =>
     overrideLinkText: {
       color: c.textSecondary,
       ...typography.small,
+    },
+    awayRow: {
+      marginTop: spacing.sm,
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: spacing.sm,
+    },
+    awayLabel: { color: c.textSecondary, ...typography.small },
+    awayValue: {
+      flex: 1,
+      textAlign: "right",
+      color: c.textSecondary,
+      ...typography.small,
+      marginHorizontal: spacing.sm,
     },
     primaryBtn: {
       backgroundColor: c.primary,
