@@ -37,10 +37,13 @@ import { ScheduleBlockCard } from "../src/components/ScheduleBlockCard";
 import { BlockFormSheet, BlockFormData } from "../src/components/BlockFormSheet";
 import { DayBoundariesSheet } from "../src/components/DayBoundariesSheet";
 import { Colors, spacing, radii, typography, iconSizes } from "../src/theme";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { hapticSelect, hapticCommit, hapticReject } from "../src/lib/haptics";
 
 function ScheduleBuilderScreenContent() {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const insets = useSafeAreaInsets();
   const { session, refreshProfile } = useAuth();
   const { blocks, setBlocks } = useStore();
   const [loading, setLoading] = useState(true);
@@ -170,6 +173,11 @@ function ScheduleBuilderScreenContent() {
     setFormOpen(true);
   }, []);
 
+  const handleContinue = () => {
+    hapticCommit();
+    router.back();
+  };
+
   const handleArchiveToggle = useCallback(
     async (block: ScheduleBlock) => {
       const archiving = block.is_active;
@@ -217,9 +225,11 @@ function ScheduleBuilderScreenContent() {
             .map((b) => (b.id === block.id ? updated : b))
             .sort((a, b) => a.start_minutes - b.start_minutes)
         );
+        hapticCommit();
       } catch (err) {
         const message = getErrorMessage(err);
         handleError(err, "handleArchiveToggle");
+        hapticReject();
         setError(message);
         if (Platform.OS !== "web") Alert.alert("Error", message);
       } finally {
@@ -244,6 +254,7 @@ function ScheduleBuilderScreenContent() {
   if (!session) return null;
 
   const showError = (message: string) => {
+    hapticReject();
     setError(message);
     if (Platform.OS !== "web") Alert.alert("Error", message);
   };
@@ -273,6 +284,7 @@ function ScheduleBuilderScreenContent() {
       setWakeTarget(prevWake);
       setSleepTarget(prevSleep);
       handleError(error, "saveBoundary", "Could not save");
+      hapticReject();
       return;
     }
 
@@ -451,7 +463,7 @@ function ScheduleBuilderScreenContent() {
         data={activeBlocks}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { paddingBottom: 120 + insets.bottom }]}
         nestedScrollEnabled={true}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
@@ -459,7 +471,7 @@ function ScheduleBuilderScreenContent() {
             <View style={styles.header}>
               <Text style={styles.title}>Build your schedule</Text>
               <Text style={styles.subtitle}>
-                Tap Edit on a block to change its days, times, or name.
+                Set the shape of a normal day. You can change any of it later.
               </Text>
             </View>
 
@@ -467,12 +479,19 @@ function ScheduleBuilderScreenContent() {
 
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Quick add</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingRight: spacing.lg, gap: spacing.sm }}
+              >
                 {BLOCK_PRESETS.map((preset) => (
                   <PressableScale
                     key={preset.name}
                     style={styles.presetChip}
-                    onPress={() => handleAddBlock(preset)}
+                    onPress={() => {
+                      hapticSelect();
+                      handleAddBlock(preset);
+                    }}
                     disabled={saving}
                   >
                     <Text style={styles.presetText}>{preset.name}</Text>
@@ -488,7 +507,13 @@ function ScheduleBuilderScreenContent() {
                 minutes={wakeTarget}
                 onChange={(m) => saveBoundary("wake_target_minutes", m)}
               />
-              <PressableScale style={styles.overrideLink} onPress={() => setOverridesOpen(true)}>
+              <PressableScale
+                style={styles.overrideLink}
+                onPress={() => {
+                  hapticSelect();
+                  setOverridesOpen(true);
+                }}
+              >
                 <Text style={styles.overrideLinkText}>
                   {Object.keys(overrides).length > 0
                     ? `Different on ${Object.keys(overrides).length} ${Object.keys(overrides).length === 1 ? "day" : "days"}`
@@ -499,9 +524,13 @@ function ScheduleBuilderScreenContent() {
           </>
         }
         ListEmptyComponent={
-          <Text style={styles.empty}>
-            Tap a quick-add button above, or add a custom block below.
-          </Text>
+          <View style={styles.emptyState}>
+            <Feather name="calendar" size={28} color={colors.textDisabled} />
+            <Text style={styles.emptyTitle}>No blocks yet</Text>
+            <Text style={styles.emptyBody}>
+              Start with a quick-add above, or build your own.
+            </Text>
+          </View>
         }
         ListFooterComponent={
           <>
@@ -512,11 +541,17 @@ function ScheduleBuilderScreenContent() {
                 minutes={sleepTarget}
                 onChange={(m) => saveBoundary("sleep_target_minutes", m)}
               />
-              <PressableScale style={styles.overrideLink} onPress={() => setOverridesOpen(true)}>
+              <PressableScale
+                style={styles.overrideLink}
+                onPress={() => {
+                  hapticSelect();
+                  setOverridesOpen(true);
+                }}
+              >
                 <Text style={styles.overrideLinkText}>
                   {Object.keys(overrides).length > 0
                     ? `Different on ${Object.keys(overrides).length} ${Object.keys(overrides).length === 1 ? "day" : "days"}`
-                    : "Different on some days?"}
+                    : "Different on some nights?"}
                 </Text>
               </PressableScale>
             </View>
@@ -524,6 +559,7 @@ function ScheduleBuilderScreenContent() {
               <PressableScale
                 style={styles.addToggle}
                 onPress={() => {
+                  hapticSelect();
                   setEditingBlock(null);
                   setFormOpen(true);
                 }}
@@ -531,19 +567,14 @@ function ScheduleBuilderScreenContent() {
                 <Text style={styles.addToggleText}>+ Add custom block</Text>
               </PressableScale>
             </View>
-            <PressableScale
-              style={styles.primaryBtn}
-              onPress={() => router.back()}
-              disabled={blocks.length === 0}
-            >
-              <View style={styles.primaryBtnRow}>
-                <Text style={styles.primaryBtnText}>Continue to today</Text>
-                <Feather name="arrow-right" size={iconSizes.xs} color={colors.onPrimary} />
-              </View>
-            </PressableScale>
             {archivedBlocks.length > 0 ? (
               <View style={styles.archivedSection}>
-                <PressableScale onPress={() => setShowArchived((v) => !v)}>
+                <PressableScale
+                  onPress={() => {
+                    hapticSelect();
+                    setShowArchived((v) => !v);
+                  }}
+                >
                   <Text style={styles.archivedToggle}>
                     {showArchived ? "Hide" : "Show"} archived ({archivedBlocks.length})
                   </Text>
@@ -564,6 +595,21 @@ function ScheduleBuilderScreenContent() {
           </>
         }
       />
+      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + spacing.md }]}>
+        <PressableScale
+          style={[styles.primaryBtn, activeBlocks.length === 0 && styles.primaryBtnDisabled]}
+          onPress={handleContinue}
+          disabled={activeBlocks.length === 0}
+        >
+          <View style={styles.primaryBtnRow}>
+            <Text style={styles.primaryBtnText}>Continue to today</Text>
+            <Feather name="arrow-right" size={iconSizes.xs} color={colors.onPrimary} />
+          </View>
+        </PressableScale>
+        {activeBlocks.length === 0 ? (
+          <Text style={styles.bottomBarHint}>Add at least one block to continue.</Text>
+        ) : null}
+      </View>
       <BlockFormSheet
         visible={formOpen}
         initial={editingBlock}
@@ -656,16 +702,15 @@ const makeStyles = (c: Colors) =>
       borderRadius: radii.round,
       paddingHorizontal: 14,
       paddingVertical: 10,
-      marginRight: spacing.sm,
     },
     presetText: { color: c.onPrimary, fontSize: 14 },
-    empty: {
-      color: c.textFaint,
-      textAlign: "center",
-      lineHeight: 22,
-      marginVertical: spacing.xxl,
-      paddingHorizontal: spacing.sm,
+    emptyState: {
+      alignItems: "center",
+      gap: spacing.sm,
+      paddingVertical: spacing.xxl,
     },
+    emptyTitle: { ...typography.bodyBold, color: c.text },
+    emptyBody: { ...typography.body, color: c.textFaint, textAlign: "center" },
     addSection: { marginTop: spacing.sm, marginBottom: spacing.md },
     archivedSection: { marginTop: spacing.xl },
     archivedToggle: {
@@ -696,10 +741,24 @@ const makeStyles = (c: Colors) =>
       paddingVertical: spacing.lg,
       alignItems: "center",
     },
+    primaryBtnDisabled: { opacity: 0.4 },
     primaryBtnRow: {
       flexDirection: "row",
       alignItems: "center",
       gap: spacing.xs,
     },
     primaryBtnText: { color: c.onPrimary, fontSize: 16, fontWeight: "600" },
+    bottomBar: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      bottom: 0,
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.md,
+      backgroundColor: c.background,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: c.border,
+      gap: spacing.sm,
+    },
+    bottomBarHint: { ...typography.caption, color: c.textFaint, textAlign: "center" },
   });

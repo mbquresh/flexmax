@@ -396,6 +396,8 @@ marker at all.
 | End time on reschedule | recovery/[id].tsx. The "Ends" picker was gated behind slotIsFallback, so duration could only be changed when the app failed to find a slot. Always available now |
 | Drag auto-scroll | today.tsx + BlockCard.tsx. Dragging near the top or bottom edge scrolls the list, so a swap target off-screen is reachable. Speed ramps with depth into a 90px edge zone. Driven by useFrameCallback rather than the gesture's onUpdate, because onUpdate only fires when the finger MOVES — holding still at the edge would stop the scroll exactly when the user is waiting for a target to appear |
 | Block recurrence UI | BlockFormSheet + src/lib/recurrence.ts. One collapsible "Repeats" section replaces the standalone day chips: summary row, expanding to days + an interval stepper + an optional end date. Modelled on Apple Calendar's repeat rule — the days, cadence and end date are one statement, not three settings, and collapsed the sheet is SHORTER than before because DayChips no longer occupies permanent space on a control nobody edits after setup. Expanded by default when adding, collapsed when editing. Inline expansion rather than a pushed screen, because a bottom sheet cannot push and sheet-over-sheet is the RecoverySheet trap. Stepper rather than a wheel: the CHECK constraint caps at 8 and a picker would need a dependency that is not installed. anchor_date is written once when a block first becomes non-weekly and never moved |
+| Block form polish | BlockFormSheet. Fixed/Flexible became a two-tile segmented control — the single pill had no visible off-state and read as an available action when unselected. Helper text now describes the current state instead of defining the word. Every field labelled, since one field having a label and the rest not is worse than none having them. Uniform gap replaced with grouped spacing so the Save button no longer sits as close to the last field as fields sit to each other. Title is a static "Edit block" / "New block" rather than repeating the name shown in the input below it. Visual grabber added, with no pan gesture — a half-working drag-to-dismiss on this sheet is worse than none |
+| Schedule builder polish | Primary action pinned to a bottom bar with safe-area inset — it previously sat inside ListFooterComponent BEFORE the archived section, so it was not even the last element on the page. Its disabled condition read blocks.length, which includes archived, so archiving every block left Continue enabled and sent the user to an empty day; now activeBlocks.length, with a hint explaining why it is disabled. Haptics added throughout: the first screen a user sees had ZERO, while six haptic functions ship and every other surface uses them. Success haptics fire only after a write resolves. Duplicate `section` key removed from makeStyles. Subtitle rewritten to orient rather than explain UI mechanics. First use of useSafeAreaInsets in the app |
 
 
 
@@ -756,6 +758,10 @@ makes it a one-line swap in theme.ts if ever revisited.
   constrains end_minutes <= 1440, so an 11pm-1am block is unrepresentable at
   the template level. This is a schema constraint, not just a rendering
   problem, and it blocks night-shift schedules and sleep-as-a-block.
+- **Safe-area insets are handled on the schedule builder only.** Every other
+  screen renders without them. react-native-safe-area-context was a dependency
+  with no call sites until now, so anything pinned near a screen edge elsewhere
+  may sit under the home indicator.
 
 ---
 

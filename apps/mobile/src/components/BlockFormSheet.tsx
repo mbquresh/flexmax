@@ -10,7 +10,6 @@ import {
   ActivityIndicator,
   Animated as RNAnimated,
   KeyboardAvoidingView,
-  TouchableOpacity,
   Platform,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
@@ -18,6 +17,7 @@ import { BlockCategory, ScheduleBlock } from "../types/database";
 import { Colors, spacing, radii, typography, iconSizes } from "../theme";
 import { useTheme } from "../providers/ThemeProvider";
 import { PressableScale } from "./PressableScale";
+import { DragHandle } from "./DragHandle";
 import { TimePicker } from "./TimePicker";
 import { CategoryChips } from "./CategoryChips";
 import { DayChips, ALL_DAYS } from "./DayChips";
@@ -123,17 +123,40 @@ export function BlockFormSheet({
   };
 
   const renderFixedToggle = (value: boolean, onToggle: () => void) => (
-    <View style={styles.fixedToggleSection}>
-      <TouchableOpacity
-        style={[styles.fixedPill, value && styles.fixedPillActive]}
-        onPress={onToggle}
-      >
-        <Text style={[styles.fixedPillText, value && styles.fixedPillTextActive]}>
-          Fixed (can't be moved)
-        </Text>
-      </TouchableOpacity>
-      <Text style={styles.fixedHelper}>
-        Fixed blocks like work or commute stay locked in place.
+    <View style={styles.fieldGroup}>
+      <Text style={styles.fieldLabel}>Movement</Text>
+      <View style={styles.segment}>
+        <PressableScale
+          style={[styles.segmentItem, !value && styles.segmentItemActive]}
+          onPress={() => {
+            if (value) onToggle();
+          }}
+        >
+          <DragHandle color={!value ? colors.text : colors.textMuted} />
+          <Text style={[styles.segmentText, !value && styles.segmentTextActive]}>
+            Flexible
+          </Text>
+        </PressableScale>
+        <PressableScale
+          style={[styles.segmentItem, value && styles.segmentItemActive]}
+          onPress={() => {
+            if (!value) onToggle();
+          }}
+        >
+          <Feather
+            name="lock"
+            size={13}
+            color={value ? colors.text : colors.textMuted}
+          />
+          <Text style={[styles.segmentText, value && styles.segmentTextActive]}>
+            Fixed
+          </Text>
+        </PressableScale>
+      </View>
+      <Text style={styles.fieldHelper}>
+        {value
+          ? "Stays locked in place. Can't be swapped or rescheduled."
+          : "Can be swapped, rescheduled, or moved around your day."}
       </Text>
     </View>
   );
@@ -145,25 +168,33 @@ export function BlockFormSheet({
         <RNAnimated.View
           style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}
         >
+          <View style={styles.grabber} />
           <ScrollView
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.form}
           >
             <Text style={styles.sectionTitle}>
-              {initial ? initial.name : "Custom block"}
+              {initial ? "Edit block" : "New block"}
             </Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Block name (e.g. Deep work)"
-              placeholderTextColor={colors.textPlaceholder}
-              value={draft.name}
-              onChangeText={(name) => setDraft((d) => ({ ...d, name }))}
-            />
-            <CategoryChips
-              value={draft.category}
-              onChange={(category) => setDraft((d) => ({ ...d, category }))}
-            />
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>Name</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Block name (e.g. Deep work)"
+                placeholderTextColor={colors.textPlaceholder}
+                value={draft.name}
+                onChangeText={(name) => setDraft((d) => ({ ...d, name }))}
+              />
+            </View>
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>Category</Text>
+              <CategoryChips
+                value={draft.category}
+                onChange={(category) => setDraft((d) => ({ ...d, category }))}
+              />
+            </View>
+            <View style={styles.fieldGroup}>
             <PressableScale
               variant="highlight"
               baseColor={colors.surface}
@@ -270,7 +301,9 @@ export function BlockFormSheet({
                 ) : null}
               </>
             ) : null}
-            <View style={styles.timeStack}>
+            </View>
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>Time</Text>
               <TimePicker
                 label="Starts"
                 valueMinutes={draft.startMinutes}
@@ -339,9 +372,23 @@ const makeStyles = (c: Colors) =>
       ...c.shadowRest,
     },
     form: {
-      gap: 10,
+      gap: spacing.lg,
     },
-    sectionTitle: { color: c.textMuted, ...typography.smallBold, marginBottom: 10 },
+    fieldGroup: { gap: spacing.sm },
+    fieldLabel: { color: c.textMuted, ...typography.smallBold },
+    grabber: {
+      width: 36,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: c.border,
+      alignSelf: "center",
+      marginBottom: spacing.md,
+    },
+    sectionTitle: {
+      color: c.text,
+      ...typography.bodyBold,
+      textAlign: "center",
+    },
     input: {
       backgroundColor: c.surface,
       borderWidth: 0.5,
@@ -390,24 +437,28 @@ const makeStyles = (c: Colors) =>
       alignItems: "center",
     },
     neverBtnText: { color: c.textSecondary, ...typography.body },
-    timeStack: { gap: 10 },
-    fixedToggleSection: { gap: spacing.xs },
-    fixedPill: {
-      alignSelf: "flex-start",
-      borderRadius: radii.pill,
-      paddingHorizontal: spacing.md,
+    segment: {
+      flexDirection: "row",
+      backgroundColor: c.surfaceNested,
+      borderRadius: radii.md,
+      padding: 3,
+    },
+    segmentItem: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: spacing.sm,
       paddingVertical: spacing.sm,
+      borderRadius: radii.sm,
+    },
+    segmentItemActive: {
       backgroundColor: c.surface,
-      borderWidth: 0.5,
-      borderColor: c.border,
+      ...c.shadowRest,
     },
-    fixedPillActive: {
-      backgroundColor: c.primaryDeep,
-      borderColor: c.primary,
-    },
-    fixedPillText: { color: c.textMuted, fontSize: 13, fontWeight: "600" },
-    fixedPillTextActive: { color: c.onPrimary },
-    fixedHelper: { color: c.textFaint, fontSize: 12, lineHeight: 18 },
+    segmentText: { ...typography.body, color: c.textMuted },
+    segmentTextActive: { color: c.text, fontWeight: "600" },
+    fieldHelper: { color: c.textFaint, fontSize: 12, lineHeight: 18 },
     errorLine: {
       backgroundColor: c.errorTint,
       borderColor: c.errorBorder,
@@ -422,6 +473,7 @@ const makeStyles = (c: Colors) =>
       borderRadius: radii.lg,
       paddingVertical: spacing.md,
       alignItems: "center",
+      marginTop: spacing.md,
     },
     addBtnText: { color: c.onPrimary, ...typography.bodyBold },
     deleteDivider: {

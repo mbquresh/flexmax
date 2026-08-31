@@ -7,6 +7,7 @@ import { describeRecurrence } from "../lib/recurrence";
 import { Colors, spacing, radii, iconSizes } from "../theme";
 import { useTheme } from "../providers/ThemeProvider";
 import { PressableScale } from "./PressableScale";
+import { hapticSelect } from "../lib/haptics";
 
 interface ScheduleBlockCardProps {
   block: ScheduleBlock;
@@ -31,7 +32,10 @@ export const ScheduleBlockCard = React.memo(function ScheduleBlockCard({
       highlightColor={colors.surfaceNested}
       style={[styles.blockCard, !block.is_active && styles.blockCardArchived]}
       onPress={() => {
-        if (block.is_active) onEdit(block);
+        if (block.is_active) {
+          hapticSelect();
+          onEdit(block);
+        }
       }}
       disabled={disabled || !block.is_active}
     >
@@ -41,11 +45,23 @@ export const ScheduleBlockCard = React.memo(function ScheduleBlockCard({
         </Text>
         <View style={styles.blockActions}>
           {block.is_active ? (
-            <TouchableOpacity onPress={() => onEdit(block)} disabled={disabled}>
+            <TouchableOpacity
+              onPress={() => {
+                hapticSelect();
+                onEdit(block);
+              }}
+              disabled={disabled}
+            >
               <Text style={styles.editText}>Edit</Text>
             </TouchableOpacity>
           ) : null}
-          <TouchableOpacity onPress={() => onArchive(block)} disabled={disabled}>
+          <TouchableOpacity
+            onPress={() => {
+              hapticSelect();
+              onArchive(block);
+            }}
+            disabled={disabled}
+          >
             <Text style={styles.archiveText}>
               {block.is_active ? "Archive" : "Restore"}
             </Text>

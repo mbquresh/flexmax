@@ -6,9 +6,17 @@ import { useTheme } from "../providers/ThemeProvider";
 const DOT_SIZE = 3.5;
 const DOT_GAP = 3.5;
 
-export function DragHandle() {
+interface DragHandleProps {
+  color?: string;
+  size?: number;
+}
+
+export function DragHandle({ color, size }: DragHandleProps = {}) {
   const { colors } = useTheme();
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const styles = useMemo(
+    () => makeStyles(colors, color, size),
+    [colors, color, size]
+  );
 
   return (
     <View style={styles.column}>
@@ -19,16 +27,18 @@ export function DragHandle() {
   );
 }
 
-const makeStyles = (c: Colors) =>
-  StyleSheet.create({
+const makeStyles = (c: Colors, color?: string, size?: number) => {
+  const dotSize = size ?? DOT_SIZE;
+  return StyleSheet.create({
     column: {
       alignItems: "center",
       rowGap: DOT_GAP,
     },
     dot: {
-      width: DOT_SIZE,
-      height: DOT_SIZE,
-      borderRadius: DOT_SIZE / 2,
-      backgroundColor: c.textDisabled,
+      width: dotSize,
+      height: dotSize,
+      borderRadius: dotSize / 2,
+      backgroundColor: color ?? c.textDisabled,
     },
   });
+};
