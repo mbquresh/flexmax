@@ -3,7 +3,7 @@ import { AppState } from "react-native";
 import { Session } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
 import { registerPushToken, unregisterPushToken } from "../lib/notifications";
-import { handleError } from "../lib/errors";
+import { handleError, isConnectivityError } from "../lib/errors";
 import { getLocalDateString } from "../lib/time";
 import { useStore } from "../store";
 import { Profile, PsychologyProfile } from "../types/database";
@@ -18,6 +18,7 @@ interface AuthContextValue {
   loading: boolean;
   profileLoaded: boolean;
   profileError: boolean;
+  profileOffline: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, name: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -72,10 +73,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [profileLoaded, setProfileLoaded] = useState(false);
   const [profileError, setProfileError] = useState(false);
+  const [profileOffline, setProfileOffline] = useState(false);
   const { setUser, setPsychologyProfile: setStorePsych, reset } = useStore();
 
   const loadUserData = async (userId: string) => {
     setProfileError(false);
+    setProfileOffline(false);
     let profileResult = await withTimeout(
       supabase.from("profiles").select("*").eq("id", userId).single(),
       10000,
@@ -175,6 +178,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return loadUserData(current.user.id).catch((err) => {
             handleError(err, "loadUserData");
             setProfileError(true);
+            setProfileOffline(isConnectivityError(err));
           });
         }
       })
@@ -183,6 +187,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // app has no exit from the loading state.
         handleError(err, "authBootstrap");
         setProfileError(true);
+        setProfileOffline(isConnectivityError(err));
       })
       .finally(() => {
         setLoading(false);
@@ -199,6 +204,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .catch((err) => {
             handleError(err, "loadUserData");
             setProfileError(true);
+            setProfileOffline(isConnectivityError(err));
           })
           .finally(() => {
             setLoading(false);
@@ -209,6 +215,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setPsychologyProfile(null);
         setProfileLoaded(false);
         setProfileError(false);
+        setProfileOffline(false);
         reset();
         setLoading(false);
       }
@@ -255,6 +262,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loading,
         profileLoaded,
         profileError,
+        profileOffline,
         signIn,
         signUp,
         signOut,

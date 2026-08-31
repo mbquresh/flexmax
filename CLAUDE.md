@@ -194,6 +194,8 @@ Cursor = implementation engine.
 | 037 | block_archive.sql | schedule_blocks.is_active; both generate_daily_instances and generate_my_daily_instances filter on it |
 | 038 | miss_reason_denominator.sql | miss_totals added beside miss_reasons; tag counts had no base. Rewrites the deployed definition in place per 033's precedent, with anchor assertions that raise on drift |
 | 039 | block_recency.sql | Per-block first_seen, days_tracked, and 7-day vs prior split. The pack was time-flat: a habit that stopped a month ago read as current, and a week-old block was diagnosed as broken |
+| 040 | block_recurrence.sql | starts_on / ends_on / interval_weeks / anchor_date on schedule_blocks, plus block_exceptions for advance skip. Both generate_* functions updated. All defaults preserve prior behaviour |
+| 041 | tracked_interval_aware.sql | tracked's floor scales with cadence: least(3, greatest(2, count(*))). A biweekly block could never reach a flat floor of 3 and was silently invisible to the whole engine |
 
 028 exists to answer the north-star metric: of users who had a bad week, what
 share opened the app the following week. Capture is fire-and-forget from
@@ -734,6 +736,20 @@ makes it a one-line swap in theme.ts if ever revisited.
   in the tracked CTE would be stronger, but would also silence a genuinely
   failing new block, so the facts are reported and the narrator is instructed
   rather than gated. Revisit if the caveat proves insufficient.
+- **A dead network costs up to 10 seconds of spinner before any feedback.**
+  The auth bootstrap timeouts are 10s each, so a user with no connection
+  watches BrandLoader for the full duration before the error screen appears.
+  Correct for a slow connection, poor for no connection. A shorter first-attempt
+  timeout with a retry would feel better, but distinguishing slow from dead
+  needs care — do not shorten it blindly.
+- **Recurrence schema exists with no UI.** 040 adds every-N-weeks, date
+  bounds and advance skip. Nothing in the schedule builder can set any of it,
+  and defaults preserve existing behaviour exactly, so the columns are inert
+  until a UI lands.
+- **Blocks can still not cross midnight.** schedule_blocks.valid_time
+  constrains end_minutes <= 1440, so an 11pm-1am block is unrepresentable at
+  the template level. This is a schema constraint, not just a rendering
+  problem, and it blocks night-shift schedules and sleep-as-a-block.
 
 ---
 
@@ -1172,6 +1188,30 @@ the chain gating the loading flag. Every await in the auth bootstrap is now
 timeout-wrapped and every path terminates in a finally. This is the same
 class as the loadToday try/finally issue: any code path that sets a loading
 flag must be unable to skip clearing it.
+
+**The cold-start error screen never said "offline" (fixed 2026-08-31).**
+RequireAuth passed offline={false} to LoadError unconditionally, because
+AuthProvider exposed profileError as a plain boolean with no record of the
+failure type. isConnectivityError was already correct and useTodayData
+already used it, so only the auth bootstrap — the exact path a user hits
+with no network at launch — showed a generic "something went wrong". Found
+after a VPN on the test device made every Supabase call unreachable; combined
+with the missing auth timeouts that produced an infinite spinner with no
+error at all, and roughly two hours were spent looking for a bug in the
+repo. AuthProvider now records profileOffline and RequireAuth passes it
+through.
+
+**A biweekly block would have been invisible to the engine (pre-empted
+2026-08-31, 041).** tracked required 3 resolved instances in 30 days, a
+floor set when every block was weekly or more frequent. 040's interval_weeks
+makes ~2-instance months possible, so such a block would have been absent
+from block_stats, quality_drift, cannibalization and the pre-block nudge with
+nothing telling the user. Caught before the recurrence UI shipped rather
+than after. The floor now scales to what the block can produce, with two
+resolved instances as the hard minimum at any cadence. A matching caveat
+tells the narrator that a low days_tracked with an OLD first_seen means
+infrequent-by-design, not neglected — two of two scheduled is perfect
+adherence.
 
 ---
 

@@ -26,6 +26,7 @@ export function RequireAuth({
     loading,
     profileLoaded,
     profileError,
+    profileOffline,
     refreshProfile,
   } = useAuth();
 
@@ -62,7 +63,7 @@ export function RequireAuth({
   if (profileError || !profile) {
     return (
       <View style={styles.centered}>
-        <LoadError offline={false} onRetry={refreshProfile} />
+        <LoadError offline={profileOffline} onRetry={refreshProfile} />
       </View>
     );
   }
