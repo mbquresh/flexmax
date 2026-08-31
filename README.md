@@ -139,7 +139,7 @@ works with, not the thing the user is asked to protect.
 
 ### The highest-signal data is text, not timestamps
 
-`reflection_why` and `reflection_improve` are the most valuable columns in the
+`reflection_why` is the most valuable column in the
 database. Users narrate their own causality in plain language, which no
 inference layer needs to reconstruct. In one month of single-user data, 29
 reflections contained two distinct causal chains sharing a single root cause,
@@ -152,14 +152,33 @@ A direct consequence: whatever the reflection UI does to encourage or discourage
 filling in these fields has more impact on product quality than any modelling
 work. Protect that input path.
 
+`reflection_improve` was a second free-text field asking what the user
+would change next time. It was removed. Adding presets to lift its fill
+rate turned it into six repeated strings, and a canned forward-looking
+intention is not evidence of anything — the chip is easier than the
+thought. The column and its history remain; nothing collects into it. This
+is the sharpest form of the point above: what the reflection UI does to
+that input path matters more than any modelling work, in both directions.
+
 ### Corroboration across independent sources
 
 An insight is trustworthy when two unrelated data sources agree. Example from
-real data: the user's reflections state that deep work overruns and consumes
-exercise blocks. Independently, `swap_drift` shows Cardio moved 13 times,
-Weights 9, Breakfast 10 — while Morning Deep Work moved twice. The text says it;
-the audit trail shows it. Prefer insights with this kind of corroboration over
-single-source patterns.
+real data: the user's reflections describe oversleeping pushing the
+morning deep work block later, which then displaces everything after it.
+Independently, `swap_drift` shows Cardio moved later in 7 of 7 moves at an
+average of five hours, and Morning Deep Work later in 6 of 6 at four and a
+half. The text says it; the audit trail shows it, and the displacement is
+perfectly unidirectional in both.
+
+This example is itself a cautionary tale. The original version of this
+paragraph cited swap counts of 13, 9 and 10 against Morning Deep Work's 2 —
+figures produced by counting every logged time change rather than net
+movement. A swap writes two rows and swapping back writes two more, so
+net-zero fiddling read as heavy drift. An audit found 817 logged changes
+resolving to 45 real moves: 5.5% signal. Migration 027 replaced the metric
+with net displacement per instance, and the ordering the original claim
+rested on reversed. Corroboration is only worth something when both sources
+are measuring what you think they are.
 
 ### Engagement asymmetry is a signal in its own right
 
@@ -261,7 +280,8 @@ offers the next real slot in the day.
 1. Seven-beat onboarding: two recognition questions, three preference
    questions, an answer playback, and a contract screen. No AI, no typing.
 2. You build a schedule of time blocks — some flexible, some fixed anchors
-3. Tips from your own answers shape the schedule as you build it
+3. Blocks can be flexible or fixed, repeat on any days, every week or
+   every few weeks, and end on a date
 4. Timezone-aware notifications through the day
 5. Check-ins: crushed it / partly / lost focus — the middle option is 
    where the signal is
@@ -269,20 +289,27 @@ offers the next real slot in the day.
 
 ## Status
 
-**v1.4 — on TestFlight, internal testing.** Built solo.
+**v2 — on TestFlight, internal testing.** Built solo.
 
-Working: preset onboarding and preference profile, schedule builder with
-drag-to-swap and fixed anchors, check-ins, miss reflections, missed-block 
-recovery with reschedule, push notifications in each user's local 
-timezone, rate-limited AI endpoint with the API key server-side only.
+The behavioral engine described above is live end to end:
+`get_behavior_evidence` in SQL, one weekly Claude call, stored beliefs
+injected free into the morning card, the recovery sheet and the weekly
+recap. Swap patterns, completion quality, miss reasons and nudge outcomes
+all feed it.
 
-Not built yet: the full behavioral learning layer. Swap patterns, 
-completion ratings, and removal reasons are captured but not yet read back 
-— miss counts are the exception, and they already feed the recovery 
-prompts. Also pending: payments, Screen Time shielding (awaiting an Apple 
-entitlement), widgets, Watch.
+Also working: schedule builder with drag-to-swap, auto-scroll, fixed
+anchors, block archiving and recurrence; per-day wake and sleep boundaries;
+a reschedule resolver that names what a move would cost instead of refusing;
+resolved blocks moving to an Accounted for section; a quality degradation
+prompt when a block starts landing at half strength; a pre-block nudge at
+the start of a block that has been failing; timezone-aware notifications;
+account deletion; rate-limited AI endpoints with the key server-side only.
 
-The app is about half of what it should be. The magic is in the other half.
+Not built yet: payments, two-tiered onboarding, calendar export, Screen Time
+shielding (awaiting an Apple entitlement), widgets, Watch.
+
+Roughly three quarters built. The remaining quarter is distribution, not
+intelligence.
 
 ## Stack
 
@@ -297,7 +324,8 @@ The app is about half of what it should be. The magic is in the other half.
 ```
 apps/mobile/          Expo app
   app/                Expo Router routes — today, schedule-builder, onboarding, account
-  src/components/     BlockCard, CheckInSheet, StreakStrip
+  src/components/     BlockCard, CheckInSheet, BlockFormSheet, ScheduleBlockCard, StreakStrip
+  src/lib/            schedule.ts (swap, reschedule, displacement), preempt.ts, recurrence.ts
   src/theme.ts        design tokens, single source of truth
 supabase/
   migrations/         schema
@@ -312,7 +340,8 @@ yarn install
 cp apps/mobile/.env.example apps/mobile/.env
 # EXPO_PUBLIC_SUPABASE_URL, EXPO_PUBLIC_SUPABASE_ANON_KEY
 # ANTHROPIC_API_KEY is a Supabase edge function secret — never client-side
-npx supabase db push
+# Migrations are applied by hand in the Supabase SQL Editor, in order.
+# `supabase db push` does not work on this project.
 yarn mobile
 ```
 
