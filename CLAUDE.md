@@ -395,6 +395,7 @@ marker at all.
 | Accounted for section | today.tsx. Completed and missed blocks move to a section at the bottom of Today, greyed, undo intact. The top list becomes exactly what is left, which is what makes a late-day reschedule legible — a morning block can be moved into an afternoon whose blocks are already resolved, and the open time reads as open. Missed blocks go here too: an answered block is not unfinished business, and the accounted-for streak already counts it as engagement. Cards here do not register onLayout and cannot be dragged or swiped, so cardPositions only ever holds open cards — this SHRINKS the drag surface. A pruning effect clears stale entries when a card leaves the open list, without which findSwapTarget could match a phantom position |
 | End time on reschedule | recovery/[id].tsx. The "Ends" picker was gated behind slotIsFallback, so duration could only be changed when the app failed to find a slot. Always available now |
 | Drag auto-scroll | today.tsx + BlockCard.tsx. Dragging near the top or bottom edge scrolls the list, so a swap target off-screen is reachable. Speed ramps with depth into a 90px edge zone. Driven by useFrameCallback rather than the gesture's onUpdate, because onUpdate only fires when the finger MOVES — holding still at the edge would stop the scroll exactly when the user is waiting for a target to appear |
+| Block recurrence UI | BlockFormSheet + src/lib/recurrence.ts. One collapsible "Repeats" section replaces the standalone day chips: summary row, expanding to days + an interval stepper + an optional end date. Modelled on Apple Calendar's repeat rule — the days, cadence and end date are one statement, not three settings, and collapsed the sheet is SHORTER than before because DayChips no longer occupies permanent space on a control nobody edits after setup. Expanded by default when adding, collapsed when editing. Inline expansion rather than a pushed screen, because a bottom sheet cannot push and sheet-over-sheet is the RecoverySheet trap. Stepper rather than a wheel: the CHECK constraint caps at 8 and a picker would need a dependency that is not installed. anchor_date is written once when a block first becomes non-weekly and never moved |
 
 
 
@@ -742,10 +743,15 @@ makes it a one-line swap in theme.ts if ever revisited.
   Correct for a slow connection, poor for no connection. A shorter first-attempt
   timeout with a retry would feel better, but distinguishing slow from dead
   needs care — do not shorten it blindly.
-- **Recurrence schema exists with no UI.** 040 adds every-N-weeks, date
-  bounds and advance skip. Nothing in the schedule builder can set any of it,
-  and defaults preserve existing behaviour exactly, so the columns are inert
-  until a UI lands.
+- **Advance skip has no UI.** block_exceptions (040) is verified in SQL and
+  reachable by nothing. The case that matters is a date RANGE across every
+  block — "away next week" — not a field on one block's form. Until it ships,
+  a week away means manual removals, each of which reads to the engine as
+  disengagement rather than as life.
+- **starts_on has no UI, deliberately.** Blocks always start immediately,
+  matching how Apple Calendar treats a repeat rule: the event's own date is
+  the start. A programme beginning next month is a real case but wants its own
+  design, not a second date picker on this sheet.
 - **Blocks can still not cross midnight.** schedule_blocks.valid_time
   constrains end_minutes <= 1440, so an 11pm-1am block is unrepresentable at
   the template level. This is a schema constraint, not just a rendering

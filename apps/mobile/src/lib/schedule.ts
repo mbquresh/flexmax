@@ -68,6 +68,9 @@ export async function createScheduleBlock(params: {
   sortOrder: number;
   daysOfWeek?: number[];
   isFixed?: boolean;
+  intervalWeeks?: number;
+  endsOn?: string | null;
+  anchorDate?: string | null;
 }): Promise<ScheduleBlock> {
   const { startMinutes: start_minutes, endMinutes: end_minutes } = params;
 
@@ -89,6 +92,9 @@ export async function createScheduleBlock(params: {
       days_of_week,
       sort_order: params.sortOrder,
       is_fixed: params.isFixed ?? false,
+      interval_weeks: params.intervalWeeks ?? 1,
+      ends_on: params.endsOn ?? null,
+      anchor_date: params.anchorDate ?? null,
     })
     .select()
     .single();

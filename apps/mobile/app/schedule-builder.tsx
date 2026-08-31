@@ -313,6 +313,10 @@ function ScheduleBuilderScreenContent() {
       showError("End time must be after start time.");
       return;
     }
+    if (data.endsOn && data.endsOn < getLocalDateString()) {
+      showError("End date can't be in the past.");
+      return;
+    }
 
     Keyboard.dismiss();
     setSaving(true);
@@ -328,6 +332,15 @@ function ScheduleBuilderScreenContent() {
             start_minutes: data.startMinutes,
             end_minutes: data.endMinutes,
             is_fixed: data.isFixed,
+            interval_weeks: data.intervalWeeks,
+            ends_on: data.endsOn,
+            // anchor_date defines week 0. Set it once when a block first becomes
+            // non-weekly and NEVER move it — a shifting anchor silently reshuffles
+            // which weeks the block lands on, and the user would only notice weeks
+            // later.
+            ...(data.intervalWeeks > 1 && !editingBlock.anchor_date
+              ? { anchor_date: getLocalDateString() }
+              : {}),
           })
           .eq("id", editingBlock.id)
           .select()
@@ -350,6 +363,9 @@ function ScheduleBuilderScreenContent() {
           sortOrder: blocks.length,
           daysOfWeek: data.days,
           isFixed: data.isFixed,
+          intervalWeeks: data.intervalWeeks,
+          endsOn: data.endsOn,
+          anchorDate: data.intervalWeeks > 1 ? getLocalDateString() : null,
         });
         setBlocks(
           [...blocks, created].sort((a, b) => a.start_minutes - b.start_minutes)

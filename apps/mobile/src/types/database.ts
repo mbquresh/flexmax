@@ -102,6 +102,10 @@ export interface ScheduleBlock {
   sort_order: number;
   is_fixed: boolean;
   is_active: boolean;
+  starts_on: string | null;
+  ends_on: string | null;
+  interval_weeks: number;
+  anchor_date: string | null;
 }
 
 export interface DailyInstance {

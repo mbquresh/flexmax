@@ -2,8 +2,8 @@ import React, { useMemo } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { ScheduleBlock } from "../types/database";
-import { formatDays } from "../lib/schedule";
 import { minutesToTime } from "../lib/time";
+import { describeRecurrence } from "../lib/recurrence";
 import { Colors, spacing, radii, iconSizes } from "../theme";
 import { useTheme } from "../providers/ThemeProvider";
 import { PressableScale } from "./PressableScale";
@@ -63,7 +63,9 @@ export const ScheduleBlockCard = React.memo(function ScheduleBlockCard({
           </>
         ) : null}
       </Text>
-      <Text style={styles.blockRepeats}>Repeats: {formatDays(block.days_of_week)}</Text>
+      <Text style={styles.blockRepeats}>
+        Repeats: {describeRecurrence(block.days_of_week, block.interval_weeks ?? 1, block.ends_on)}
+      </Text>
     </PressableScale>
   );
 });

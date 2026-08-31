@@ -20,6 +20,10 @@ function block(overrides: Partial<ScheduleBlock> = {}): ScheduleBlock {
     sort_order: 0,
     is_fixed: false,
     is_active: true,
+    starts_on: null,
+    ends_on: null,
+    interval_weeks: 1,
+    anchor_date: null,
     ...overrides,
   };
 }
