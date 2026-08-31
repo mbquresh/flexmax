@@ -43,7 +43,12 @@ export function DayChips({ value, onChange }: DayChipsProps) {
 
 const makeStyles = (c: Colors) =>
   StyleSheet.create({
-    dayRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+    dayRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 6,
+      justifyContent: "center",
+    },
     dayChip: {
       borderRadius: radii.sm,
       paddingHorizontal: spacing.sm,

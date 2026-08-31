@@ -368,6 +368,7 @@ const makeStyles = (c: Colors) =>
     stepperRow: {
       flexDirection: "row",
       alignItems: "center",
+      justifyContent: "center",
       gap: spacing.sm,
       marginTop: spacing.md,
     },
@@ -383,7 +384,7 @@ const makeStyles = (c: Colors) =>
       textAlign: "center",
     },
     stepperText: { color: c.textSecondary, ...typography.body },
-    intervalHelper: { color: c.textSecondary, ...typography.body },
+    intervalHelper: { color: c.textSecondary, ...typography.body, textAlign: "center" },
     neverBtn: {
       paddingVertical: spacing.sm,
       alignItems: "center",
