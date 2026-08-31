@@ -1162,6 +1162,17 @@ are now held in the store and passed by every call site. Any future
 notification type must be added to the store-and-pass-through path, not just
 to the managed cancel list.
 
+**AuthProvider could hang the app forever with no error (fixed 2026-08-26).**
+supabase.auth.getSession() had no .catch() and no timeout, and was the only
+path calling setLoading(false). A stalled token refresh or hung storage read
+left the app on the loading screen indefinitely with nothing thrown and
+nothing logged — indistinguishable from a bundler problem, which is what it
+was misdiagnosed as. loadUserData had the same shape: unguarded awaits inside
+the chain gating the loading flag. Every await in the auth bootstrap is now
+timeout-wrapped and every path terminates in a finally. This is the same
+class as the loadToday try/finally issue: any code path that sets a loading
+flag must be unable to skip clearing it.
+
 ---
 
 ## Retention Architecture v1 — remaining work, in order

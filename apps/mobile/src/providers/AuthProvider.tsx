@@ -26,6 +26,18 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+// Nothing in the auth bootstrap may block the app forever. Every await
+// here gates setLoading(false), so one hung request is an unrecoverable
+// white screen with no error to report.
+function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    p,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms)
+    ),
+  ]);
+}
+
 async function syncDeviceTimezone(
   userId: string,
   currentTimezone: string
@@ -38,10 +50,11 @@ async function syncDeviceTimezone(
       return currentTimezone;
     }
 
-    const { error } = await supabase
-      .from("profiles")
-      .update({ timezone: deviceTz })
-      .eq("id", userId);
+    const { error } = await withTimeout(
+      supabase.from("profiles").update({ timezone: deviceTz }).eq("id", userId),
+      10000,
+      "profiles timezone update"
+    );
 
     if (error) throw error;
     return deviceTz;
@@ -63,15 +76,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loadUserData = async (userId: string) => {
     setProfileError(false);
-    let profileResult = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", userId)
-      .single();
+    let profileResult = await withTimeout(
+      supabase.from("profiles").select("*").eq("id", userId).single(),
+      10000,
+      "profiles select"
+    );
 
     // Profile missing (migrations not run, or signed up before trigger existed)
     if (profileResult.error?.code === "PGRST116") {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      const { data: { user }, error: userError } = await withTimeout(
+        supabase.auth.getUser(),
+        10000,
+        "getUser"
+      );
 
       // Session token is valid but the user is gone (account deleted
       // elsewhere, or deleted directly in the database). Nothing can be
@@ -95,11 +112,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (profileResult.error) {
       await new Promise((r) => setTimeout(r, 1200));
-      profileResult = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", userId)
-        .single();
+      profileResult = await withTimeout(
+        supabase.from("profiles").select("*").eq("id", userId).single(),
+        10000,
+        "profiles retry select"
+      );
     }
 
     if (profileResult.error) throw profileResult.error;
@@ -113,11 +130,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         ? profileResult.data
         : { ...profileResult.data, timezone };
 
-    const psychResult = await supabase
-      .from("psychology_profiles")
-      .select("*")
-      .eq("user_id", userId)
-      .maybeSingle();
+    const psychResult = await withTimeout(
+      supabase
+        .from("psychology_profiles")
+        .select("*")
+        .eq("user_id", userId)
+        .maybeSingle(),
+      10000,
+      "psychology_profiles select"
+    );
 
     setProfile(profileData);
     setPsychologyProfile(psychResult.data);
@@ -147,23 +168,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session: current } }) => {
-      setSession(current);
-      if (current?.user.id) {
-        loadUserData(current.user.id)
-          .catch((err) => {
+    withTimeout(supabase.auth.getSession(), 10000, "getSession")
+      .then(({ data: { session: current } }) => {
+        setSession(current);
+        if (current?.user.id) {
+          return loadUserData(current.user.id).catch((err) => {
             handleError(err, "loadUserData");
             setProfileError(true);
-          })
-          .finally(() => {
-            setLoading(false);
-            setProfileLoaded(true);
           });
-      } else {
+        }
+      })
+      .catch((err) => {
+        // Reached when getSession itself fails or times out. Without this the
+        // app has no exit from the loading state.
+        handleError(err, "authBootstrap");
+        setProfileError(true);
+      })
+      .finally(() => {
         setLoading(false);
         setProfileLoaded(true);
-      }
-    });
+      });
 
     const {
       data: { subscription },
