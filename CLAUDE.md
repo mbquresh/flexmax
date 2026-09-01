@@ -197,6 +197,7 @@ Cursor = implementation engine.
 | 040 | block_recurrence.sql | starts_on / ends_on / interval_weeks / anchor_date on schedule_blocks, plus block_exceptions for advance skip. Both generate_* functions updated. All defaults preserve prior behaviour |
 | 041 | tracked_interval_aware.sql | tracked's floor scales with cadence: least(3, greatest(2, count(*))). A biweekly block could never reach a flat floor of 3 and was silently invisible to the whole engine |
 | 042 | away_periods.sql | User-level date ranges where nothing generates. Both generate_* functions updated. Chosen over per-block exception rows: an away week written that way is 60+ rows, needs consecutive dates regrouped to display or cancel, and misses blocks created during the period |
+| 043 | calendar_feed_token.sql | Secret for the public ICS feed URL, nullable and generated lazily so a user who never exports has no live endpoint. Unique partial index — the token is the sole lookup key for an unauthenticated endpoint, so a collision would serve one user another's schedule. get_or_create_calendar_token and revoke_calendar_token are SECURITY DEFINER with auth.uid() guards |
 
 028 exists to answer the north-star metric: of users who had a bad week, what
 share opened the app the following week. Capture is fire-and-forget from
@@ -400,6 +401,7 @@ marker at all.
 | Block form polish | BlockFormSheet. Fixed/Flexible became a two-tile segmented control — the single pill had no visible off-state and read as an available action when unselected. Helper text now describes the current state instead of defining the word. Every field labelled, since one field having a label and the rest not is worse than none having them. Uniform gap replaced with grouped spacing so the Save button no longer sits as close to the last field as fields sit to each other. Title is a static "Edit block" / "New block" rather than repeating the name shown in the input below it. Visual grabber added, with no pan gesture — a half-working drag-to-dismiss on this sheet is worse than none |
 | Schedule builder polish | Primary action pinned to a bottom bar with safe-area inset — it previously sat inside ListFooterComponent BEFORE the archived section, so it was not even the last element on the page. Its disabled condition read blocks.length, which includes archived, so archiving every block left Continue enabled and sent the user to an empty day; now activeBlocks.length, with a hint explaining why it is disabled. Haptics added throughout: the first screen a user sees had ZERO, while six haptic functions ship and every other surface uses them. Success haptics fire only after a write resolves. Duplicate `section` key removed from makeStyles. Subtitle rewritten to orient rather than explain UI mechanics. First use of useSafeAreaInsets in the app |
 | Time away | away_periods (042) + AwaySheet. A date range where no instances generate at all. Not skipped placeholder rows — tracked requires 25% of a block's instances resolved, so a week of unanswered rows would push blocks below the floor and drop them from the engine, which is the exact misreading this prevents. A range covering today also marks today's pending instances 'removed', since generation only prevents future ones. The accounted-for streak needed no change: computeStreakData requires relevant > 0, so an empty day neither breaks nor extends it |
+| Calendar export (feed) | supabase/functions/calendar-feed, deployed --no-verify-jwt. ICS subscription feed of the TEMPLATE, not daily instances: Google refreshes subscribed feeds every 12-24 hours with no faster setting, so publishing instances would show a Google user yesterday's arrangement all day — confidently wrong and uncorrectable from the app. The calendar holds the plan, the app holds the day. Floating DTSTART (no Z, no TZID) so a 9am block reads as 9am wherever the device is, which also avoids emitting a VTIMEZONE clients disagree about. Recurrence maps directly from 040: interval_weeks to INTERVAL, ends_on to UNTIL, block_exceptions and away_periods to EXDATE. Archived blocks omitted |
 
 
 
@@ -763,6 +765,22 @@ makes it a one-line swap in theme.ts if ever revisited.
   screen renders without them. react-native-safe-area-context was a dependency
   with no call sites until now, so anything pinned near a screen edge elsewhere
   may sit under the home indicator.
+- **RRULE INTERVAL and our generation math can disagree.**
+  generate_daily_instances computes weeks as (target - anchor) / 7,
+  anchor-relative. RRULE counts INTERVAL from DTSTART's week boundary per
+  WKST. Setting DTSTART to the anchor's first occurrence aligns them in the
+  common case, but a block whose days span the week boundary can diverge, so
+  a biweekly block may show on a different week in the calendar than in the
+  app. WKST is fixed to MO for determinism. Reconciling properly means either
+  changing generation to be week-boundary-relative or emitting explicit RDATEs
+  instead of an RRULE.
+- **The feed has no rate limiting.** _shared/rateLimit.ts keys on user_id
+  and this endpoint is unauthenticated. It is the only enumerable surface in
+  the product, and a 48-character token makes guessing impractical, but the
+  endpoint will answer as fast as it is asked. Per-token limiting or a
+  platform-level rule should land before public beta.
+- **Calendar export has no UI.** The token functions and the feed exist;
+  nothing in the app generates or shows a URL.
 
 ---
 
