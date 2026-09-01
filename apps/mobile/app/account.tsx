@@ -9,8 +9,11 @@ import {
   Alert,
   Platform,
   Linking,
+  Share,
+  ActivityIndicator,
 } from "react-native";
 import { router } from "expo-router";
+import { Feather } from "@expo/vector-icons";
 import * as Notifications from "expo-notifications";
 import { supabase } from "../src/lib/supabase";
 import { useAuth } from "../src/providers/AuthProvider";
@@ -18,10 +21,17 @@ import { useTheme, ThemeMode } from "../src/providers/ThemeProvider";
 import { RequireAuth } from "../src/components/RequireAuth";
 import { BrandMark } from "../src/components/BrandMark";
 import { PressableScale } from "../src/components/PressableScale";
-import { Colors, spacing, radii, typography } from "../src/theme";
+import { Colors, spacing, radii, typography, iconSizes } from "../src/theme";
 import { getInitials } from "../src/lib/format";
 import { handleError } from "../src/lib/errors";
-import { hapticSelect } from "../src/lib/haptics";
+import { hapticSelect, hapticCommit, hapticReject } from "../src/lib/haptics";
+import {
+  feedUrl,
+  feedUrlWebcal,
+  enableCalendarFeed,
+  rotateCalendarFeed,
+  disableCalendarFeed,
+} from "../src/lib/calendarFeed";
 
 const APPEARANCE_OPTIONS: { label: string; value: ThemeMode }[] = [
   { label: "System", value: "system" },
@@ -49,6 +59,10 @@ function AccountScreenContent() {
   const [savingTone, setSavingTone] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [notifGranted, setNotifGranted] = useState<boolean | null>(null);
+  const [token, setToken] = useState<string | null>(
+    profile?.calendar_feed_token ?? null
+  );
+  const [busy, setBusy] = useState(false);
 
   const initials = getInitials(profile?.name ?? "User");
   const currentTone = psychologyProfile?.accountability_tone ?? "firm";
@@ -58,6 +72,10 @@ function AccountScreenContent() {
       .then(({ status }) => setNotifGranted(status === "granted"))
       .catch(() => setNotifGranted(null));
   }, []);
+
+  useEffect(() => {
+    setToken(profile?.calendar_feed_token ?? null);
+  }, [profile?.calendar_feed_token]);
 
   const saveName = async () => {
     if (!nameDraft.trim() || !session) return;
@@ -129,6 +147,99 @@ function AccountScreenContent() {
       handleError(err, "deleteAccount", "Couldn't delete your account");
       setDeleting(false);
     }
+  };
+
+  const handleEnable = async () => {
+    hapticSelect();
+    setBusy(true);
+    try {
+      const t = await enableCalendarFeed();
+      setToken(t);
+      await refreshProfile();
+      hapticCommit();
+    } catch (err) {
+      hapticReject();
+      handleError(err, "enableCalendarFeed", "Couldn't create the link");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleShareFeed = async () => {
+    if (!token) return;
+    hapticSelect();
+    // Share, not Clipboard: expo-clipboard is not installed, and the iOS
+    // share sheet already offers Copy alongside AirDrop and Messages —
+    // which is how someone actually moves a URL from phone to laptop.
+    await Share.share({ message: feedUrlWebcal(token) });
+  };
+
+  const handleShareHttps = async () => {
+    if (!token) return;
+    hapticSelect();
+    await Share.share({ message: feedUrl(token) });
+  };
+
+  const handleRotate = async () => {
+    hapticSelect();
+    setBusy(true);
+    try {
+      const t = await rotateCalendarFeed();
+      setToken(t);
+      await refreshProfile();
+      hapticCommit();
+    } catch (err) {
+      hapticReject();
+      handleError(err, "rotateCalendarFeed", "Couldn't create a new link");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const confirmRotate = () => {
+    if (Platform.OS === "web") {
+      handleRotate();
+      return;
+    }
+    Alert.alert(
+      "Create a new link?",
+      "The old link stops working. Any calendar already subscribed to it will stop updating and you'll need to subscribe again.",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "New link", style: "destructive", onPress: handleRotate },
+      ]
+    );
+  };
+
+  const handleDisable = async () => {
+    hapticSelect();
+    setBusy(true);
+    try {
+      await disableCalendarFeed();
+      setToken(null);
+      await refreshProfile();
+      hapticCommit();
+    } catch (err) {
+      hapticReject();
+      handleError(err, "disableCalendarFeed", "Couldn't turn off export");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const confirmDisable = () => {
+    if (Platform.OS === "web") {
+      handleDisable();
+      return;
+    }
+    Alert.alert(
+      "Turn off calendar export?",
+      "The link stops working immediately. Subscribed calendars will stop updating.",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Turn off", style: "destructive", onPress: handleDisable },
+      ]
+    );
   };
 
   const confirmDeleteAccount = () => {
@@ -227,6 +338,64 @@ function AccountScreenContent() {
               </PressableScale>
             );
           })}
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Calendar export</Text>
+          <Text style={styles.sectionCaption}>
+            Subscribe in Apple or Google Calendar to see your schedule alongside
+            everything else.
+          </Text>
+
+          {token ? (
+            <>
+              <PressableScale
+                style={styles.settingRow}
+                onPress={handleShareFeed}
+                disabled={busy}
+              >
+                <Text style={styles.settingLabel}>Share link</Text>
+                <Feather name="share" size={iconSizes.sm} color={colors.primary} />
+              </PressableScale>
+
+              <PressableScale
+                style={styles.settingRow}
+                onPress={handleShareHttps}
+                disabled={busy}
+              >
+                <Text style={styles.settingLabel}>Copy link for Google</Text>
+                <Feather name="copy" size={iconSizes.sm} color={colors.textSecondary} />
+              </PressableScale>
+
+              <Text style={styles.feedNote}>
+                Anyone with this link can see your block names and times.
+              </Text>
+              <Text style={styles.feedNote}>
+                Subscribe on a Mac if you have one. iPhone subscriptions save to your
+                phone only unless you switch the calendar's account to iCloud.
+              </Text>
+              <Text style={styles.feedNote}>
+                Your calendar shows your regular schedule, not day-to-day swaps. Apple
+                updates within the hour; Google can take a day.
+              </Text>
+
+              <PressableScale style={styles.settingRow} onPress={confirmRotate} disabled={busy}>
+                <Text style={styles.settingLabel}>New link</Text>
+                <Text style={styles.settingValue}>Replaces the old one</Text>
+              </PressableScale>
+
+              <PressableScale style={styles.settingRow} onPress={confirmDisable} disabled={busy}>
+                <Text style={styles.settingLabel}>Turn off export</Text>
+              </PressableScale>
+            </>
+          ) : (
+            <PressableScale style={styles.settingRow} onPress={handleEnable} disabled={busy}>
+              <Text style={styles.settingLabel}>Create a calendar link</Text>
+              {busy ? <ActivityIndicator size="small" color={colors.textMuted} /> : (
+                <Feather name="plus" size={iconSizes.sm} color={colors.primary} />
+              )}
+            </PressableScale>
+          )}
         </View>
 
         <View style={styles.section}>
@@ -446,6 +615,12 @@ const makeStyles = (c: Colors) =>
     },
     settingLabel: { color: c.textSecondary, fontSize: 15 },
     settingValue: { color: c.textFaint, fontSize: 15 },
+    feedNote: {
+      ...typography.caption,
+      color: c.textFaint,
+      lineHeight: 18,
+      marginBottom: spacing.sm,
+    },
     appearanceSegment: {
       flexDirection: "row",
       borderRadius: radii.md,

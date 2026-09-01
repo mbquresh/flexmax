@@ -42,6 +42,7 @@ export interface Profile {
   sleep_target_minutes: number | null;
   wake_target_minutes: number | null;
   day_boundary_overrides: import("../lib/schedule").DayBoundaryOverrides | null;
+  calendar_feed_token: string | null;
   created_at: string;
 }
 
@@ -245,6 +246,14 @@ export interface Database {
           b_start: number;
           b_end: number;
         };
+        Returns: undefined;
+      };
+      get_or_create_calendar_token: {
+        Args: { p_rotate: boolean };
+        Returns: string;
+      };
+      revoke_calendar_token: {
+        Args: Record<string, never>;
         Returns: undefined;
       };
     };

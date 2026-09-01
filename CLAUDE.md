@@ -402,6 +402,7 @@ marker at all.
 | Schedule builder polish | Primary action pinned to a bottom bar with safe-area inset — it previously sat inside ListFooterComponent BEFORE the archived section, so it was not even the last element on the page. Its disabled condition read blocks.length, which includes archived, so archiving every block left Continue enabled and sent the user to an empty day; now activeBlocks.length, with a hint explaining why it is disabled. Haptics added throughout: the first screen a user sees had ZERO, while six haptic functions ship and every other surface uses them. Success haptics fire only after a write resolves. Duplicate `section` key removed from makeStyles. Subtitle rewritten to orient rather than explain UI mechanics. First use of useSafeAreaInsets in the app |
 | Time away | away_periods (042) + AwaySheet. A date range where no instances generate at all. Not skipped placeholder rows — tracked requires 25% of a block's instances resolved, so a week of unanswered rows would push blocks below the floor and drop them from the engine, which is the exact misreading this prevents. A range covering today also marks today's pending instances 'removed', since generation only prevents future ones. The accounted-for streak needed no change: computeStreakData requires relevant > 0, so an empty day neither breaks nor extends it |
 | Calendar export (feed) | supabase/functions/calendar-feed, deployed --no-verify-jwt. ICS subscription feed of the TEMPLATE, not daily instances: Google refreshes subscribed feeds every 12-24 hours with no faster setting, so publishing instances would show a Google user yesterday's arrangement all day — confidently wrong and uncorrectable from the app. The calendar holds the plan, the app holds the day. Floating DTSTART (no Z, no TZID) so a 9am block reads as 9am wherever the device is, which also avoids emitting a VTIMEZONE clients disagree about. Recurrence maps directly from 040: interval_weeks to INTERVAL, ends_on to UNTIL, block_exceptions and away_periods to EXDATE. Archived blocks omitted |
+| Calendar export UI | account.tsx + src/lib/calendarFeed.ts. Create, share, rotate and revoke the feed link. Token is generated lazily, so a user who never exports has no live endpoint. Sharing uses React Native's Share rather than a clipboard dependency — the iOS share sheet already offers Copy plus AirDrop, which is how a URL actually gets from phone to laptop. Two caveats shown inline: the link is unauthenticated and shows block names and times, and the feed publishes the TEMPLATE so same-day swaps do not appear. The second surprised the person who built it, which is why it is stated rather than assumed; shares a webcal:// link so tapping opens Calendar's subscribe flow directly, with a separate https:// share for Google, which takes a typed URL and rejects webcal. The UI recommends subscribing on a Mac: macOS saves the subscription to iCloud and syncs everywhere, while iPhone defaults to the local On My iPhone account and syncs nowhere, so a user who subscribes on both gets the schedule twice on their phone. The client chooses the account at subscribe time and no ICS property overrides it. |
 
 
 
@@ -779,8 +780,13 @@ makes it a one-line swap in theme.ts if ever revisited.
   the product, and a 48-character token makes guessing impractical, but the
   endpoint will answer as fast as it is asked. Per-token limiting or a
   platform-level rule should land before public beta.
-- **Calendar export has no UI.** The token functions and the feed exist;
-  nothing in the app generates or shows a URL.
+- **A swap or reschedule never reaches the calendar.** The feed publishes
+  the template deliberately: Google refreshes every 12-24 hours, so publishing
+  daily instances would show a Google subscriber yesterday's arrangement all
+  day. Someone who swaps often will see a calendar that is persistently
+  slightly wrong. Currently handled with a sentence in the UI. A hybrid feed —
+  instances for the next few days, template beyond — would close it, at the
+  cost of reintroducing staleness for Google specifically.
 
 ---
 
