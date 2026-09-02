@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -15,41 +15,16 @@ import { useStore } from "../src/store";
 import { RequireAuth } from "../src/components/RequireAuth";
 import { BrandMark } from "../src/components/BrandMark";
 import { PressableScale } from "../src/components/PressableScale";
+import { WeekDemo } from "../src/components/WeekDemo";
 import { handleError } from "../src/lib/errors";
 import { Colors, spacing, radii, typography } from "../src/theme";
 
 type Option = { label: string; value: string | string[] };
 
-const PLANNERS_OPTIONS: Option[] = [
-  { label: "One or two", value: "few" },
-  { label: "Three to five", value: "several" },
-  { label: "I've lost count", value: "lost_count" },
-];
-
-const FAILURE_OPTIONS: Option[] = [
-  { label: "The app made me feel worse", value: "shame" },
-  { label: "Life broke the plan and it couldn't adapt", value: "rigidity" },
-  { label: "I just stopped opening it", value: "faded" },
-];
-
 const TONE_OPTIONS: Option[] = [
   { label: "Direct — tell me straight", value: "firm" },
   { label: "Gentle — I'm hard enough on myself", value: "gentle" },
   { label: "Just the data — no commentary", value: "data-driven" },
-];
-
-const ENERGY_OPTIONS: Option[] = [
-  { label: "Morning", value: ["morning"] },
-  { label: "Afternoon", value: ["afternoon"] },
-  { label: "Evening", value: ["evening"] },
-  { label: "It varies", value: ["varies"] },
-];
-
-const PATTERN_OPTIONS: Option[] = [
-  { label: "I start strong and fade", value: "fader" },
-  { label: "I plan perfectly and don't start", value: "planner" },
-  { label: "I rebel against my own rules", value: "rebel" },
-  { label: "I keep going once something clicks", value: "builder" },
 ];
 
 const TONE_LINES: Record<string, string> = {
@@ -58,22 +33,7 @@ const TONE_LINES: Record<string, string> = {
   "data-driven": "Numbers, no commentary.",
 };
 
-const ENERGY_LINES: Record<string, string> = {
-  morning: "Morning energy.",
-  afternoon: "Afternoon energy.",
-  evening: "Evening energy.",
-  varies: "Energy that moves around.",
-};
-
-const PATTERN_LINES: Record<string, string> = {
-  fader: "Starts strong, fades.",
-  planner: "Plans everything, starts nothing.",
-  rebel: "Fights own rules.",
-  builder: "Keeps going once it clicks.",
-};
-
-const STEP_COUNT = 7;
-const ADVANCE_MS = 250;
+const STEP_COUNT = 5;
 
 function OptionRow({
   label,
@@ -104,37 +64,14 @@ function OnboardingContent() {
   const { session, refreshProfile } = useAuth();
   const { setPsychologyProfile } = useStore();
   const userId = session?.user.id;
-  const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [step, setStep] = useState(0);
-  const [plannersAbandoned, setPlannersAbandoned] = useState<string | null>(null);
-  const [pastFailureMode, setPastFailureMode] = useState<string | null>(null);
   const [tone, setTone] = useState<string | null>(null);
-  const [energy, setEnergy] = useState<string[] | null>(null);
-  const [pattern, setPattern] = useState<string | null>(null);
+  const [filterUsed, setFilterUsed] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    return () => {
-      if (advanceTimer.current) clearTimeout(advanceTimer.current);
-    };
-  }, []);
-
-  const advanceAfter = (nextStep: number) => {
-    if (advanceTimer.current) clearTimeout(advanceTimer.current);
-    advanceTimer.current = setTimeout(() => setStep(nextStep), ADVANCE_MS);
-  };
-
   const handleStart = async () => {
-    if (
-      !userId ||
-      !plannersAbandoned ||
-      !pastFailureMode ||
-      !tone ||
-      !energy ||
-      !pattern ||
-      saving
-    ) {
+    if (!userId || !tone || saving) {
       return;
     }
 
@@ -145,13 +82,8 @@ function OnboardingContent() {
         .upsert(
           {
             user_id: userId,
-            planners_abandoned: plannersAbandoned,
-            past_failure_mode: pastFailureMode,
             accountability_tone: tone,
-            peak_energy_times: energy,
-            motivation_style: pattern,
             completed_at: new Date().toISOString(),
-            onboarding_messages: [],
           },
           { onConflict: "user_id" }
         )
@@ -168,10 +100,6 @@ function OnboardingContent() {
       setSaving(false);
     }
   };
-
-  const toneLine = tone ? TONE_LINES[tone] : null;
-  const energyLine = energy?.[0] ? ENERGY_LINES[energy[0]] : null;
-  const patternLine = pattern ? PATTERN_LINES[pattern] : null;
 
   if (!session) return null;
 
@@ -205,39 +133,74 @@ function OnboardingContent() {
       >
         {step === 0 ? (
           <>
-            <Text style={styles.question}>How many planners have you abandoned?</Text>
-            {PLANNERS_OPTIONS.map((opt) => (
-              <OptionRow
-                key={opt.label}
-                label={opt.label}
-                selected={plannersAbandoned === opt.value}
-                onPress={() => {
-                  setPlannersAbandoned(opt.value as string);
-                  advanceAfter(1);
-                }}
-              />
-            ))}
+            <Text style={styles.question}>You already know what you should be doing.</Text>
+            <Text style={styles.body}>
+              That was never the problem. The problem is that the reason it
+              doesn't happen is spread across the week, and you only ever live
+              one day at a time.
+            </Text>
+            <PressableScale style={styles.actionBtn} onPress={() => setStep(1)}>
+              <Text style={styles.actionBtnText}>Go on</Text>
+            </PressableScale>
           </>
         ) : null}
 
         {step === 1 ? (
           <>
-            <Text style={styles.question}>What usually kills it?</Text>
-            {FAILURE_OPTIONS.map((opt) => (
-              <OptionRow
-                key={opt.label}
-                label={opt.label}
-                selected={pastFailureMode === opt.value}
-                onPress={() => {
-                  setPastFailureMode(opt.value as string);
-                  advanceAfter(2);
-                }}
-              />
-            ))}
+            <Text style={styles.question}>One month of someone's schedule.</Text>
+            <Text style={styles.body}>
+              Eight blocks, thirty days. Their gym sessions fail about 40% of
+              the time and they've been calling it a motivation problem.
+            </Text>
+            <WeekDemo onFiltered={() => setFilterUsed(true)} />
+            {filterUsed ? (
+              <PressableScale style={styles.actionBtn} onPress={() => setStep(2)}>
+                <Text style={styles.actionBtnText}>So what happened?</Text>
+              </PressableScale>
+            ) : null}
           </>
         ) : null}
 
         {step === 2 ? (
+          <>
+            <Text style={styles.question}>90% versus 15%.</Text>
+            <Text style={styles.body}>
+              On the ten days their morning block ran past its window, the gym
+              failed nine times. On the other twenty, it failed three.
+            </Text>
+            <Text style={styles.quote}>
+              These two move together. When the morning runs long, the gym is
+              what gets spent.
+            </Text>
+            <Text style={styles.body}>
+              Same block, same person, two completely different outcomes —
+              split by something that happened eight hours earlier and four
+              blocks upstream. You'd have to notice a Tuesday morning to
+              explain a Thursday evening.
+            </Text>
+            <PressableScale style={styles.actionBtn} onPress={() => setStep(3)}>
+              <Text style={styles.actionBtnText}>How does it find that?</Text>
+            </PressableScale>
+          </>
+        ) : null}
+
+        {step === 3 ? (
+          <>
+            <Text style={styles.contractTitle}>It reads your days, not your answers.</Text>
+            <Text style={styles.contractBody}>
+              FlexMax checks every pair of blocks against every condition it can
+              see, every week. That example took a month of real days. Yours
+              will take about a week before it says anything worth reading —
+              quiet at first, on purpose. You just live your schedule and close
+              out your evenings.
+            </Text>
+            <PressableScale style={styles.actionBtn} onPress={() => setStep(4)}>
+              <Text style={styles.actionBtnText}>Got it</Text>
+            </PressableScale>
+          </>
+        ) : null}
+
+        {step === 4 ? (
           <>
             <Text style={styles.question}>
               When things slip, how should FlexMax talk to you?
@@ -247,85 +210,22 @@ function OnboardingContent() {
                 key={opt.label}
                 label={opt.label}
                 selected={tone === opt.value}
-                onPress={() => {
-                  setTone(opt.value as string);
-                  advanceAfter(3);
-                }}
+                onPress={() => setTone(opt.value as string)}
               />
             ))}
-          </>
-        ) : null}
-
-        {step === 3 ? (
-          <>
-            <Text style={styles.question}>When do you actually have energy?</Text>
-            {ENERGY_OPTIONS.map((opt) => (
-              <OptionRow
-                key={opt.label}
-                label={opt.label}
-                selected={
-                  energy !== null &&
-                  JSON.stringify(energy) === JSON.stringify(opt.value)
-                }
-                onPress={() => {
-                  setEnergy(opt.value as string[]);
-                  advanceAfter(4);
-                }}
-              />
-            ))}
-          </>
-        ) : null}
-
-        {step === 4 ? (
-          <>
-            <Text style={styles.question}>Which one is you?</Text>
-            {PATTERN_OPTIONS.map((opt) => (
-              <OptionRow
-                key={opt.label}
-                label={opt.label}
-                selected={pattern === opt.value}
-                onPress={() => {
-                  setPattern(opt.value as string);
-                  advanceAfter(5);
-                }}
-              />
-            ))}
-          </>
-        ) : null}
-
-        {step === 5 && toneLine && energyLine && patternLine ? (
-          <>
-            <Text style={styles.payoffTitle}>Here's what we're working with.</Text>
-            <Text style={styles.payoffLine}>{toneLine}</Text>
-            <Text style={styles.payoffLine}>{energyLine}</Text>
-            <Text style={styles.payoffLine}>{patternLine}</Text>
-            <PressableScale
-              style={styles.actionBtn}
-              onPress={() => setStep(6)}
-            >
-              <Text style={styles.actionBtnText}>Continue</Text>
-            </PressableScale>
-          </>
-        ) : null}
-
-        {step === 6 ? (
-          <>
-            <Text style={styles.contractTitle}>FlexMax learns from what actually happens.</Text>
-            <Text style={styles.contractBody}>
-              The first days are just living your schedule and closing out your days. The
-              patterns come from what you do, not what you say. Give it a week.
-            </Text>
-            <PressableScale
-              style={styles.actionBtn}
-              onPress={handleStart}
-              disabled={saving}
-            >
-              {saving ? (
-                <ActivityIndicator color={colors.onPrimary} />
-              ) : (
-                <Text style={styles.actionBtnText}>Start</Text>
-              )}
-            </PressableScale>
+            {tone ? (
+              <PressableScale
+                style={styles.actionBtn}
+                onPress={handleStart}
+                disabled={saving}
+              >
+                {saving ? (
+                  <ActivityIndicator color={colors.onPrimary} />
+                ) : (
+                  <Text style={styles.actionBtnText}>Build my schedule</Text>
+                )}
+              </PressableScale>
+            ) : null}
             <View style={styles.footerMark}>
               <BrandMark size={28} />
             </View>
@@ -392,6 +292,17 @@ const makeStyles = (c: Colors) =>
       ...typography.title,
       marginBottom: spacing.xxl,
     },
+    body: {
+      color: c.textSecondary,
+      fontSize: 15,
+      lineHeight: 22,
+      marginBottom: spacing.xxl,
+    },
+    quote: {
+      ...typography.body,
+      color: c.textSecondary,
+      marginBottom: spacing.xxl,
+    },
     option: {
       backgroundColor: c.surface,
       borderRadius: radii.lg,
@@ -408,17 +319,6 @@ const makeStyles = (c: Colors) =>
       color: c.text,
       fontSize: 15,
       lineHeight: 22,
-    },
-    payoffTitle: {
-      color: c.text,
-      ...typography.title,
-      marginBottom: spacing.xxl,
-    },
-    payoffLine: {
-      color: c.text,
-      fontSize: 17,
-      lineHeight: 26,
-      marginBottom: spacing.md,
     },
     contractTitle: {
       color: c.text,

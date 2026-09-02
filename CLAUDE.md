@@ -403,6 +403,7 @@ marker at all.
 | Time away | away_periods (042) + AwaySheet. A date range where no instances generate at all. Not skipped placeholder rows — tracked requires 25% of a block's instances resolved, so a week of unanswered rows would push blocks below the floor and drop them from the engine, which is the exact misreading this prevents. A range covering today also marks today's pending instances 'removed', since generation only prevents future ones. The accounted-for streak needed no change: computeStreakData requires relevant > 0, so an empty day neither breaks nor extends it |
 | Calendar export (feed) | supabase/functions/calendar-feed, deployed --no-verify-jwt. ICS subscription feed of the TEMPLATE, not daily instances: Google refreshes subscribed feeds every 12-24 hours with no faster setting, so publishing instances would show a Google user yesterday's arrangement all day — confidently wrong and uncorrectable from the app. The calendar holds the plan, the app holds the day. Floating DTSTART (no Z, no TZID) so a 9am block reads as 9am wherever the device is, which also avoids emitting a VTIMEZONE clients disagree about. Recurrence maps directly from 040: interval_weeks to INTERVAL, ends_on to UNTIL, block_exceptions and away_periods to EXDATE. Archived blocks omitted |
 | Calendar export UI | account.tsx + src/lib/calendarFeed.ts. Create, share, rotate and revoke the feed link. Token is generated lazily, so a user who never exports has no live endpoint. Sharing uses React Native's Share rather than a clipboard dependency — the iOS share sheet already offers Copy plus AirDrop, which is how a URL actually gets from phone to laptop. Two caveats shown inline: the link is unauthenticated and shows block names and times, and the feed publishes the TEMPLATE so same-day swaps do not appear. The second surprised the person who built it, which is why it is stated rather than assumed; shares a webcal:// link so tapping opens Calendar's subscribe flow directly, with a separate https:// share for Google, which takes a typed URL and rejects webcal. The UI recommends subscribing on a Mac: macOS saves the subscription to iCloud and syncs everywhere, while iPhone defaults to the local On My iPhone account and syncs nowhere, so a user who subscribes on both gets the schedule twice on their phone. The client chooses the account at subscribe time and no ICS property overrides it. |
+| Onboarding rebuilt around an interactive demo | onboarding.tsx + WeekDemo. Five self-report questions cut to one. The old flow asked five and read back exactly one, and asked users to self-report about self-knowledge — the specific thing this product argues is unreliable. Replaced with a 30-day, 8-block heatmap of a fictional person: 240 outcomes that look like noise until the user taps one filter and the Gym row separates. 90% failure on days the morning block overran versus 15% otherwise, against a 40% overall rate that reads as an ordinary failing habit. The continue button is gated on applying the filter, so the user pulls the signal out themselves before being told it exists. Data is hand-authored and verified; percentages are computed from the exact cells shipped, with an exception on each side because a perfect split reads as fabricated. The reveal states co-occurrence, never causation, matching the real engine's constraint. No AI call, no network, no claim about the user |
 
 
 
@@ -787,6 +788,16 @@ makes it a one-line swap in theme.ts if ever revisited.
   slightly wrong. Currently handled with a sentence in the UI. A hybrid feed —
   instances for the next few days, template beyond — would close it, at the
   cost of reintroducing staleness for Google specifically.
+- **Four psychology_profiles columns are now unwritten as well as unread.**
+  planners_abandoned, past_failure_mode, peak_energy_times and
+  motivation_style remain in the schema and the type; new users will have them
+  null. Either wire a consumer or drop them. peak_energy_times is the
+  interesting one — findRescheduleSlot already scores candidate slots, and
+  preferring one inside a stated peak window would make that answer visibly
+  matter the first time someone reschedules.
+- **Onboarding has no paywall because there isn't one.** handleStart still
+  routes to the schedule builder. The contract screen is where the paywall
+  goes once RevenueCat lands.
 
 ---
 
