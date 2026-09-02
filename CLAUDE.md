@@ -198,6 +198,7 @@ Cursor = implementation engine.
 | 041 | tracked_interval_aware.sql | tracked's floor scales with cadence: least(3, greatest(2, count(*))). A biweekly block could never reach a flat floor of 3 and was silently invisible to the whole engine |
 | 042 | away_periods.sql | User-level date ranges where nothing generates. Both generate_* functions updated. Chosen over per-block exception rows: an away week written that way is 60+ rows, needs consecutive dates regrouped to display or cancel, and misses blocks created during the period |
 | 043 | calendar_feed_token.sql | Secret for the public ICS feed URL, nullable and generated lazily so a user who never exports has no live endpoint. Unique partial index — the token is the sole lookup key for an unauthenticated endpoint, so a collision would serve one user another's schedule. get_or_create_calendar_token and revoke_calendar_token are SECURITY DEFINER with auth.uid() guards |
+| 044 | removed_by.sql | Provenance on removal: user / displacement / archive / away. Four different things wrote 'removed' indistinguishably |
 
 028 exists to answer the north-star metric: of users who had a bad week, what
 share opened the app the following week. Capture is fire-and-forget from
@@ -404,6 +405,7 @@ marker at all.
 | Calendar export (feed) | supabase/functions/calendar-feed, deployed --no-verify-jwt. ICS subscription feed of the TEMPLATE, not daily instances: Google refreshes subscribed feeds every 12-24 hours with no faster setting, so publishing instances would show a Google user yesterday's arrangement all day — confidently wrong and uncorrectable from the app. The calendar holds the plan, the app holds the day. Floating DTSTART (no Z, no TZID) so a 9am block reads as 9am wherever the device is, which also avoids emitting a VTIMEZONE clients disagree about. Recurrence maps directly from 040: interval_weeks to INTERVAL, ends_on to UNTIL, block_exceptions and away_periods to EXDATE. Archived blocks omitted |
 | Calendar export UI | account.tsx + src/lib/calendarFeed.ts. Create, share, rotate and revoke the feed link. Token is generated lazily, so a user who never exports has no live endpoint. Sharing uses React Native's Share rather than a clipboard dependency — the iOS share sheet already offers Copy plus AirDrop, which is how a URL actually gets from phone to laptop. Two caveats shown inline: the link is unauthenticated and shows block names and times, and the feed publishes the TEMPLATE so same-day swaps do not appear. The second surprised the person who built it, which is why it is stated rather than assumed; shares a webcal:// link so tapping opens Calendar's subscribe flow directly, with a separate https:// share for Google, which takes a typed URL and rejects webcal. The UI recommends subscribing on a Mac: macOS saves the subscription to iCloud and syncs everywhere, while iPhone defaults to the local On My iPhone account and syncs nowhere, so a user who subscribes on both gets the schedule twice on their phone. The client chooses the account at subscribe time and no ICS property overrides it. |
 | Onboarding rebuilt around an interactive demo | onboarding.tsx + WeekDemo. Five self-report questions cut to one. The old flow asked five and read back exactly one, and asked users to self-report about self-knowledge — the specific thing this product argues is unreliable. Replaced with a 30-day, 8-block heatmap of a fictional person: 240 outcomes that look like noise until the user taps one filter and the Gym row separates. 90% gym failure on days morning deep work LANDED versus 15% otherwise, against a 40% overall rate that reads as an ordinary failing habit. The continue button is gated on applying the filter, so the user pulls the signal out themselves before being told it exists. Data is hand-authored and verified; percentages are computed from the exact cells shipped, with an exception on each side because a perfect split reads as fabricated. The reveal states co-occurrence, never causation, matching the real engine's constraint. No AI call, no network, no claim about the user. THE CONDITION MUST STAY AN OUTCOME THE ENGINE ACTUALLY READS: a first version conditioned on the morning block "running past its window", which nothing computes — actual_end_minutes is captured but absent from every version of get_behavior_evidence, and the pack ships a caveat forbidding the narrator from claiming a block "ran until" a time. Completion of an earlier block is the real cannibalization trigger, so the demo now uses that. Likewise the contract screen says FlexMax "looks for patterns that repeat", not that it "checks every pair of blocks against every condition" — cannibalization tests one condition on tracked pairs, mixed days only, time-ordered, behind 8-day and 25-point-lift floors |
+| Removed pile | today.tsx + planRestore. Removal was terminal — a block dropped to make room vanished with no way back. Now a third section under Accounted for, restorable. Restore routes through planRestore so it can never write the overlap 4a exists to prevent, and where the original slot is only partly free it offers to shorten the block rather than refusing. Only user and displacement removals appear: archive and away are system state, and restoring one would return a block whose template is archived or a block on a day the person is away. Muted X, never coral — a removed block is a decision, not a failure. Two supporting changes the pile does not work without: useTodayData stopped filtering 'removed' out of the day's instances (every consumer downstream — streak, completion rate, notification eligibility, occupiesTime — already filters status explicitly, so nothing else moved), and the swipe-to-remove handler now maps the row to 'removed' in local state instead of dropping it from the array, which had made restore unreachable until the next reload. MIN_BLOCK_MINUTES moved from the recovery route into schedule.ts and is imported by both, since a route file is the wrong home for a constant two screens share; restore searches the whole remaining day rather than only the original window: original slot at full length first, then any full-length slot via findRescheduleSlot, then the largest gap shortened. Full length beats original position — 90 minutes at 10pm is worth more than 45 at 1pm. Sleep is a hard bound at every tier via resolveDayEnd, and a relocate or shrink is always confirmed, never silent |
 
 
 
@@ -521,6 +523,13 @@ ICP that is the uninstall moment. Superseded by the accounted-for streak above.
 "hooked", "streak-breaking" describe our internal mechanics, never the user's
 experience. Internal-only. This has now surfaced from more than one source, so
 it is recorded as a standing copy rule.
+
+**An "extenuating circumstances" field that voids a miss.** Considered and
+dropped 2026-09-01. This ICP is defined by reasons that feel legitimate from
+the inside; a button that voids a miss makes every uncomfortable miss
+extenuating, and the engine goes blind exactly where it is most useful. The
+streak already counts a miss as alive, and the "Something came up" preset
+records an external cause without the exemption.
 
 ---
 
@@ -1134,12 +1143,12 @@ only way back. Restore now generates first (covering a restore on a later
 day, where no row exists at all) and then clears the tombstone, scoped to
 today and to status 'removed'.
 
-Known limitation: 'removed' is also written by the user's own "Remove from
-today" action, so restoring a block that was manually removed earlier the
-same day will bring it back. That requires archiving and restoring the same
-block on the same day it was manually removed, and the restore itself is a
-clear statement of intent. Distinguishing the two would need provenance on
-the status change.
+RESOLVED 2026-09-01 (044). The limitation logged here — that 'removed' is
+also written by the user's own "Remove from today", so restoring a block
+manually removed earlier the same day would bring it back — needed
+provenance on the status change, and removed_by now supplies it. Archive
+restore scopes its clear to removed_by = 'archive' and leaves a hand-removed
+row alone.
 
 **Removing an away period did not restore today (fixed 2026-08-31).**
 Creating a period covering today marks today's pending instances 'removed';
@@ -1151,11 +1160,10 @@ instances by marking them 'removed' must undo both halves: generate first
 (covering a suppression created on an earlier day, where no rows exist at
 all), then clear the tombstones.
 
-Known limitation, same as archive restore: 'removed' is also written by the
-user's own "Remove from today", so cancelling an away period that covers
-today restores blocks the user had removed manually. Distinguishing them
-needs provenance on the status change, and cancelling an absence is a clear
-statement of intent to have the day back.
+RESOLVED 2026-09-01 (044), same fix as archive restore. Cancelling an away
+period no longer restores blocks the user had removed by hand — the clear is
+scoped to removed_by = 'away'. Both halves of the undo still apply: generate
+first, then clear only this path's own tombstones.
 
 **Close-today's "skip" link read as cancel (fixed 2026-08-26).** Tapping
 Missed committed status='missed' immediately; the chips that followed offered

@@ -315,6 +315,93 @@ export function planDisplacement(
   };
 }
 
+// The shortest slot worth writing. Shared by the recovery end-time clamp and
+// planRestore's shrink floor — one constant, so "too short to bother" cannot
+// mean two different things.
+export const MIN_BLOCK_MINUTES = 5;
+
+export type RestorePlan =
+  | { kind: "clear" }
+  | { kind: "relocate"; start: number; end: number }
+  | { kind: "shrink"; start: number; end: number; lostMinutes: number }
+  | { kind: "blocked" };
+
+// Three-tier search over the remaining day. Full length beats original
+// position: 90 minutes of Cardio at 10pm is worth more than 45 at 1pm.
+// Sleep is a hard bound at every tier via resolveDayEnd.
+export function planRestore(
+  instance: DailyInstance,
+  allInstances: DailyInstance[],
+  minMinutes: number,
+  sleepTargetMinutes?: number | null,
+  wakeTargetMinutes?: number | null
+): RestorePlan {
+  const duration = instance.end_minutes - instance.start_minutes;
+  const dayEnd = resolveDayEnd(sleepTargetMinutes, wakeTargetMinutes);
+  const now = new Date();
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
+  const occupied = allInstances
+    .filter((i) => i.id !== instance.id && occupiesTime(i))
+    .map((i) => ({ start: i.start_minutes, end: i.end_minutes }))
+    .sort((a, b) => a.start - b.start);
+
+  const free = (s: number, e: number) =>
+    e <= dayEnd && !occupied.some((o) => s < o.end && e > o.start);
+
+  // 1. Exactly where it was. Only if that window has not already passed —
+  // restoring into the past would put a block on the day that can no
+  // longer happen.
+  if (
+    instance.start_minutes >= nowMinutes &&
+    free(instance.start_minutes, instance.end_minutes)
+  ) {
+    return { kind: "clear" };
+  }
+
+  // 2. Full length somewhere else. Reuses the reschedule search, which
+  // already excludes this instance, respects resolveDayEnd, and starts
+  // from now plus a 30 minute buffer.
+  const slot = findRescheduleSlot(
+    instance,
+    allInstances,
+    sleepTargetMinutes,
+    wakeTargetMinutes
+  );
+  if (slot) {
+    return {
+      kind: "relocate",
+      start: slot.start_minutes,
+      end: slot.end_minutes,
+    };
+  }
+
+  // 3. Shortened. Walk every gap between now and bedtime and take the
+  // largest that clears minMinutes.
+  const searchStart = Math.max(nowMinutes + 30, 0);
+  const gaps: { start: number; end: number }[] = [];
+  let cursor = searchStart;
+  for (const o of occupied) {
+    if (o.start > cursor) gaps.push({ start: cursor, end: Math.min(o.start, dayEnd) });
+    cursor = Math.max(cursor, o.end);
+    if (cursor >= dayEnd) break;
+  }
+  if (cursor < dayEnd) gaps.push({ start: cursor, end: dayEnd });
+
+  const best = gaps
+    .filter((g) => g.end - g.start >= minMinutes)
+    .sort((a, b) => (b.end - b.start) - (a.end - a.start))[0];
+
+  if (!best) return { kind: "blocked" };
+
+  return {
+    kind: "shrink",
+    start: best.start,
+    end: best.end,
+    lostMinutes: duration - (best.end - best.start),
+  };
+}
+
 export function getFallbackSlot(
   missedInstance: DailyInstance
 ): { start_minutes: number; end_minutes: number } {

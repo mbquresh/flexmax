@@ -144,6 +144,7 @@ export interface DailyInstance {
   displaced_by_id: string | null;
   is_fixed: boolean;
   removed_reason: string | null;
+  removed_by: string | null;
   // Joined from schedule_blocks
   block?: ScheduleBlock;
 }

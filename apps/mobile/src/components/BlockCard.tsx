@@ -44,6 +44,7 @@ interface BlockCardProps {
   onCheckIn: (instance: DailyInstance) => void;
   onMarkMissed: (instance: DailyInstance) => void;
   onUndo: (instance: DailyInstance) => void;
+  onRestore?: (instance: DailyInstance) => void;
   onTaskDetail: (instance: DailyInstance) => void;
   onSwap: (dragged: DailyInstance, target: DailyInstance) => void;
   onRemoveRequest: (instance: DailyInstance) => void;
@@ -51,6 +52,7 @@ interface BlockCardProps {
   registerFlashTrigger: (id: string, trigger: () => void) => void;
   unregisterFlashTrigger: (id: string) => void;
   accounted?: boolean;
+  removed?: boolean;
   scrollRef?: AnimatedRef<Animated.ScrollView>;
   scrollY?: SharedValue<number>;
   viewportHeight?: SharedValue<number>;
@@ -63,6 +65,7 @@ export function BlockCard({
   onCheckIn,
   onMarkMissed,
   onUndo,
+  onRestore,
   onTaskDetail,
   onSwap,
   onRemoveRequest,
@@ -70,6 +73,7 @@ export function BlockCard({
   registerFlashTrigger,
   unregisterFlashTrigger,
   accounted = false,
+  removed = false,
   scrollRef,
   scrollY,
   viewportHeight,
@@ -100,7 +104,11 @@ export function BlockCard({
     instance.status === "completed" ||
     instance.status === "missed" ||
     instance.status === "skipped";
-  const statusFade = useSharedValue(isAnswered ? 1 : 0);
+  // The removed card has no answer, but it does have a resolved state to
+  // show. Kept separate from isAnswered so the swipe gating above is
+  // untouched — removed cards are already gated by `accounted`.
+  const showsStatus = isAnswered || removed;
+  const statusFade = useSharedValue(showsStatus ? 1 : 0);
   const revealWidth = isUnanswered ? REVEAL_WIDTH_PENDING : REVEAL_WIDTH_SINGLE;
 
   const triggerFlash = () => {
@@ -125,11 +133,11 @@ export function BlockCard({
   }, [isAnswered]);
 
   useEffect(() => {
-    statusFade.value = withTiming(isAnswered ? 1 : 0, {
+    statusFade.value = withTiming(showsStatus ? 1 : 0, {
       duration: 400,
       easing: Easing.out(Easing.cubic),
     });
-  }, [isAnswered]);
+  }, [showsStatus]);
 
   const findSwapTarget = useCallback(
     (draggedId: string, dragTranslationY: number): DailyInstance | null => {
@@ -176,6 +184,11 @@ export function BlockCard({
 
   const onCardPress = () => {
     if (saving) return;
+
+    if (removed) {
+      onRestore?.(instance);
+      return;
+    }
 
     if (instance.status === "completed" || instance.status === "missed") {
       onUndo(instance);
@@ -360,11 +373,15 @@ export function BlockCard({
     backgroundColor: statusBarOverlayColor,
   }));
 
+  // Never danger for a removed block. A removal is a decision the user made,
+  // not a failure, and coral here would read as "you failed this".
   const targetBorder = isDone
     ? colors.success
     : isMissed
       ? colors.danger
-      : colors.primary;
+      : removed
+        ? colors.border
+        : colors.primary;
   const targetFill = isDone ? colors.success : colors.surface;
 
   const circleAnimatedStyle = useAnimatedStyle(() => ({
@@ -384,6 +401,12 @@ export function BlockCard({
     opacity: statusFade.value,
     transform: [{ scale: 0.5 + statusFade.value * 0.5 }],
   }));
+
+  // Displacement first: the block was dropped by the app to fit something
+  // else, which is a different fact than a reason the user typed.
+  const removalReason = instance.displaced_by_id
+    ? "Removed to make room"
+    : instance.removed_reason || "Removed";
 
   const progress = useDerivedValue(() =>
     Math.min(Math.abs(translateX.value) / revealWidth, 1)
@@ -514,6 +537,7 @@ export function BlockCard({
               </View>
               <Text style={styles.meta}>
                 {minutesToTime(instance.start_minutes)} – {minutesToTime(instance.end_minutes)}
+                {removed ? ` · ${removalReason}` : ""}
               </Text>
               <TouchableOpacity onPress={() => onTaskDetail(instance)} hitSlop={8}>
                 {instance.task_detail ? (
@@ -567,6 +591,8 @@ export function BlockCard({
                     <Feather name="check" size={iconSizes.md} color={colors.text} />
                   ) : isMissed ? (
                     <Feather name="minus" size={iconSizes.md} color={colors.danger} />
+                  ) : removed ? (
+                    <Feather name="x" size={iconSizes.sm} color={colors.textMuted} />
                   ) : null}
                 </Animated.View>
               </Animated.View>

@@ -46,7 +46,7 @@ export async function createAwayPeriod(
   if (startsOn <= today && today <= endsOn) {
     await supabase
       .from("daily_schedule_instances")
-      .update({ status: "removed" })
+      .update({ status: "removed", removed_by: "away" })
       .eq("user_id", userId)
       .eq("date", today)
       .eq("status", "pending");
@@ -75,13 +75,15 @@ export async function deleteAwayPeriod(
   });
   if (genErr) handleError(genErr, "awayRestoreGenerate");
 
-  // Then clear the tombstones left by createAwayPeriod. Scoped to today
-  // and to 'removed' so nothing historical is touched.
+  // Then clear the tombstones left by createAwayPeriod. Scoped to today, to
+  // 'removed', and to this path's own provenance — cancelling an absence
+  // must not resurrect a block the user removed by hand the same day.
   const { error: instErr } = await supabase
     .from("daily_schedule_instances")
-    .update({ status: "pending" })
+    .update({ status: "pending", removed_by: null })
     .eq("user_id", userId)
     .eq("date", today)
-    .eq("status", "removed");
+    .eq("status", "removed")
+    .eq("removed_by", "away");
   if (instErr) handleError(instErr, "awayRestoreClearRemoved");
 }

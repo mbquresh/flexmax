@@ -100,7 +100,9 @@ export function useTodayData(userId: string | undefined) {
         .select("*, block:schedule_blocks(*)")
         .eq("user_id", userId)
         .eq("date", targetDate)
-        .neq("status", "removed")
+        // 'removed' rows are loaded now — the Removed pile needs them, and
+        // every consumer downstream (streak, completion rate, notification
+        // eligibility, occupiesTime) already filters the status explicitly.
         .order("start_minutes");
 
       const { data: adhoc, error: adhocError } = await supabase

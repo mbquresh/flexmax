@@ -17,6 +17,7 @@ import {
   getFallbackSlot,
   planDisplacement,
   resolveDayBoundaries,
+  MIN_BLOCK_MINUTES,
 } from "../../src/lib/schedule";
 import { hapticSelect } from "../../src/lib/haptics";
 import { Colors, spacing, radii, typography } from "../../src/theme";
@@ -41,8 +42,6 @@ const LEGACY_IMPROVE_CHIPS = [
   "Prep the night before",
   "Break it into steps",
 ] as const;
-
-const MIN_BLOCK_MINUTES = 5;
 
 function RecoveryScreenContent() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -369,12 +368,20 @@ function RecoveryScreenContent() {
       if (plan.kind === "sacrifice") {
         const { error: dropError } = await supabase
           .from("daily_schedule_instances")
-          .update({ status: "removed", displaced_by_id: instance.id })
+          .update({
+            status: "removed",
+            removed_by: "displacement",
+            displaced_by_id: instance.id,
+          })
           .in("id", plan.targets.map((t) => t.id));
 
         if (dropError) throw dropError;
         plan.targets.forEach((t) =>
-          updateInstance(t.id, { status: "removed", displaced_by_id: instance.id })
+          updateInstance(t.id, {
+            status: "removed",
+            removed_by: "displacement",
+            displaced_by_id: instance.id,
+          })
         );
       }
 
@@ -396,7 +403,12 @@ function RecoveryScreenContent() {
           i.id === instance.id
             ? { ...i, ...payload }
             : droppedIds?.has(i.id)
-              ? { ...i, status: "removed" as const, displaced_by_id: instance.id }
+              ? {
+                  ...i,
+                  status: "removed" as const,
+                  removed_by: "displacement",
+                  displaced_by_id: instance.id,
+                }
               : i
         )
         .sort((a, b) => a.start_minutes - b.start_minutes);

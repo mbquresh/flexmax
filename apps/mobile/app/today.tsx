@@ -27,7 +27,13 @@ import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "../src/lib/supabase";
-import { getTodayLabel, occupiesTime } from "../src/lib/schedule";
+import {
+  getTodayLabel,
+  occupiesTime,
+  planRestore,
+  resolveDayBoundaries,
+  MIN_BLOCK_MINUTES,
+} from "../src/lib/schedule";
 import { handleError } from "../src/lib/errors";
 import { useAuth } from "../src/providers/AuthProvider";
 import { useStore } from "../src/store";
@@ -138,6 +144,18 @@ function TodayScreenContent() {
     insights,
   } = useTodayData(session?.user.id);
   const { setTodayInstances, updateInstance } = useStore();
+  const todayBounds = useMemo(
+    () =>
+      resolveDayBoundaries(
+        new Date().getDay(),
+        {
+          wake: profile?.wake_target_minutes ?? null,
+          sleep: profile?.sleep_target_minutes ?? null,
+        },
+        profile?.day_boundary_overrides
+      ),
+    [profile]
+  );
   const [refreshing, setRefreshing] = useState(false);
   const [checkInInstance, setCheckInInstance] = useState<DailyInstance | null>(null);
   const [qualityPrompt, setQualityPrompt] = useState<{
@@ -293,6 +311,20 @@ function TodayScreenContent() {
     () =>
       sortedInstances.filter(
         (i) => i.status === "completed" || i.status === "missed"
+      ),
+    [sortedInstances]
+  );
+
+  // Only the person's OWN decisions. Archive and away removals are system
+  // state — restoring one would put back a block whose template is archived,
+  // or a block on a day they are away. A null removed_by is historical and
+  // unclassifiable, so it stays out.
+  const removedItems = useMemo(
+    () =>
+      sortedInstances.filter(
+        (i) =>
+          i.status === "removed" &&
+          (i.removed_by === "user" || i.removed_by === "displacement")
       ),
     [sortedInstances]
   );
@@ -576,17 +608,24 @@ function TodayScreenContent() {
   const handleRemove = async () => {
     if (!removeInstance) return;
     try {
+      const payload = {
+        status: "removed" as const,
+        removed_by: "user",
+        removed_reason: removeReason.trim() || null,
+      };
       const { error } = await supabase
         .from("daily_schedule_instances")
-        .update({ status: "removed", removed_reason: removeReason.trim() || null })
+        .update(payload)
         .eq("id", removeInstance.id);
       if (error) throw error;
       hapticCommit();
-      updateInstance(removeInstance.id, {
-        status: "removed",
-        removed_reason: removeReason.trim() || null,
-      });
-      const updated = instances.filter((i) => i.id !== removeInstance.id);
+      updateInstance(removeInstance.id, payload);
+      // Kept in the list rather than dropped — it belongs to the Removed
+      // pile now, and dropping it would make restore unreachable until the
+      // next reload.
+      const updated = instances.map((i) =>
+        i.id === removeInstance.id ? { ...i, ...payload } : i
+      );
       setTodayInstances(updated);
       resyncNotifications(updated);
       showToast(`${removeInstance.block?.name ?? "Block"} removed from today`);
@@ -768,6 +807,98 @@ function TodayScreenContent() {
     }
 
     setUndoInstance(item);
+  };
+
+  const handleRestore = async (instance: DailyInstance) => {
+    const plan = planRestore(
+      instance,
+      instances,
+      MIN_BLOCK_MINUTES,
+      todayBounds.sleep,
+      todayBounds.wake
+    );
+
+    if (plan.kind === "blocked") {
+      hapticReject();
+      showToast("Nothing fits before bed.");
+      return;
+    }
+
+    const commit = async (start: number, end: number) => {
+      hapticSelect();
+      setSaving(true);
+      try {
+        // Clearing removed_by and displaced_by_id matters: a restored block
+        // that kept its displacement provenance would reappear in the pile
+        // the next time anything re-reads it.
+        const payload = {
+          status: "pending" as const,
+          removed_reason: null,
+          removed_by: null,
+          displaced_by_id: null,
+          start_minutes: start,
+          end_minutes: end,
+        };
+        const { error } = await supabase
+          .from("daily_schedule_instances")
+          .update(payload)
+          .eq("id", instance.id);
+        if (error) throw error;
+
+        updateInstance(instance.id, payload);
+        const updated = instances
+          .map((i) => (i.id === instance.id ? { ...i, ...payload } : i))
+          .sort((a, b) => a.start_minutes - b.start_minutes);
+        setTodayInstances(updated);
+        resyncNotifications(updated);
+        hapticCommit();
+      } catch (err) {
+        hapticReject();
+        handleError(err, "handleRestore", "Couldn't put that back");
+      } finally {
+        setSaving(false);
+      }
+    };
+
+    if (plan.kind === "clear") {
+      await commit(instance.start_minutes, instance.end_minutes);
+      return;
+    }
+
+    // Relocate and shrink are never silent. A block reappearing at a time
+    // the user did not choose reads as the app moving things on its own.
+    const name = instance.block?.name ?? "This block";
+    const window = `${minutesToTime(plan.start)}–${minutesToTime(plan.end)}`;
+
+    if (plan.kind === "relocate") {
+      if (Platform.OS === "web") {
+        await commit(plan.start, plan.end);
+        return;
+      }
+      Alert.alert(
+        `Put ${name} back?`,
+        `Its old slot is taken. It fits at ${window} instead.`,
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Move it there", onPress: () => commit(plan.start, plan.end) },
+        ]
+      );
+      return;
+    }
+
+    const mins = plan.end - plan.start;
+    if (Platform.OS === "web") {
+      await commit(plan.start, plan.end);
+      return;
+    }
+    Alert.alert(
+      `Only ${mins} minutes free`,
+      `${name} can go back at ${window}, ${plan.lostMinutes} minutes shorter than before.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Shorten it", onPress: () => commit(plan.start, plan.end) },
+      ]
+    );
   };
 
   const handleUndoCompletion = async (instanceId: string) => {
@@ -1073,7 +1204,9 @@ function TodayScreenContent() {
         </View>
 
         <View style={styles.list}>
-          {openItems.length === 0 && accountedItems.length === 0 ? (
+          {openItems.length === 0 &&
+          accountedItems.length === 0 &&
+          removedItems.length === 0 ? (
             <Text style={styles.empty}>
               {totalBlocks > 0
                 ? `Nothing scheduled for ${todayLabel}. Your blocks may be set for other days — go to Edit schedule and tap ${todayLabel} on each block.`
@@ -1144,6 +1277,32 @@ function TodayScreenContent() {
                   onCheckIn={setCheckInInstance}
                   onMarkMissed={handleMarkMissed}
                   onUndo={showUndoActions}
+                  onTaskDetail={openTaskDetail}
+                  onSwap={handleSwap}
+                  onRemoveRequest={setRemoveInstance}
+                  onLayout={handleCardLayout}
+                  registerFlashTrigger={registerFlashTrigger}
+                  unregisterFlashTrigger={unregisterFlashTrigger}
+                />
+              ))}
+            </View>
+          ) : null}
+
+          {removedItems.length > 0 ? (
+            <View style={styles.accountedSection}>
+              <Text style={styles.accountedTitle}>Removed</Text>
+              {removedItems.map((instance) => (
+                <BlockCard
+                  key={instance.id}
+                  instance={instance}
+                  accounted
+                  removed
+                  saving={saving}
+                  cardPositions={cardPositions}
+                  onCheckIn={setCheckInInstance}
+                  onMarkMissed={handleMarkMissed}
+                  onUndo={showUndoActions}
+                  onRestore={handleRestore}
                   onTaskDetail={openTaskDetail}
                   onSwap={handleSwap}
                   onRemoveRequest={setRemoveInstance}

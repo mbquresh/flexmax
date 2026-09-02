@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("./supabase", () => ({
   supabase: {},
@@ -8,6 +8,7 @@ import { DailyInstance, ScheduleBlock } from "../types/database";
 import {
   findRescheduleSlot,
   planDisplacement,
+  planRestore,
   resolveDayBoundaries,
   resolveDayEnd,
 } from "./schedule";
@@ -61,6 +62,7 @@ function instance(
     displaced_by_id: null,
     is_fixed: false,
     removed_reason: null,
+    removed_by: null,
     block: block({ name: overrides.block?.name ?? "Dinner" }),
     ...overrides,
   };
@@ -380,6 +382,178 @@ describe("planDisplacement", () => {
     expect(plan.kind).toBe("push");
     if (plan.kind !== "push") return;
     expect(plan.target.id).toBe("dinner");
+  });
+});
+
+describe("planRestore", () => {
+  const MIN = 5;
+
+  const gone = instance({
+    id: "gone",
+    start_minutes: 600,
+    end_minutes: 660,
+    status: "removed",
+    removed_by: "user",
+    block: block({ name: "Cardio" }),
+  });
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    // 9:00 — original 10:00–11:00 is still ahead.
+    vi.setSystemTime(new Date(2026, 7, 28, 9, 0, 0));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("returns clear when the original window is free and still ahead", () => {
+    const elsewhere = instance({
+      id: "elsewhere",
+      start_minutes: 700,
+      end_minutes: 760,
+      block: block({ name: "Dinner" }),
+    });
+    expect(planRestore(gone, [gone, elsewhere], MIN)).toEqual({ kind: "clear" });
+  });
+
+  it("does not return clear when the original window is free but already passed", () => {
+    vi.setSystemTime(new Date(2026, 7, 28, 12, 0, 0));
+    const plan = planRestore(gone, [gone], MIN);
+    expect(plan.kind).not.toBe("clear");
+    expect(plan).toEqual({
+      kind: "relocate",
+      start: 750,
+      end: 810,
+    });
+  });
+
+  it("relocates to a later full-length gap when the original window is taken", () => {
+    const covering = instance({
+      id: "covering",
+      start_minutes: 600,
+      end_minutes: 660,
+      block: block({ name: "Deep work" }),
+    });
+    expect(planRestore(gone, [gone, covering], MIN)).toEqual({
+      kind: "relocate",
+      start: 660,
+      end: 720,
+    });
+  });
+
+  it("shrinks to the largest remaining gap when no full-length slot exists", () => {
+    const morning = instance({
+      id: "morning",
+      start_minutes: 0,
+      end_minutes: 900,
+      block: block({ name: "Deep work" }),
+    });
+    const evening = instance({
+      id: "evening",
+      start_minutes: 940,
+      end_minutes: 1440,
+      block: block({ name: "Dinner" }),
+    });
+    expect(planRestore(gone, [gone, morning, evening], MIN)).toEqual({
+      kind: "shrink",
+      start: 900,
+      end: 940,
+      lostMinutes: 20,
+    });
+  });
+
+  it("picks the larger of two shortened gaps", () => {
+    const a = instance({
+      id: "a",
+      start_minutes: 0,
+      end_minutes: 800,
+      block: block({ name: "A" }),
+    });
+    const b = instance({
+      id: "b",
+      start_minutes: 840,
+      end_minutes: 1200,
+      block: block({ name: "B" }),
+    });
+    const c = instance({
+      id: "c",
+      start_minutes: 1250,
+      end_minutes: 1440,
+      block: block({ name: "C" }),
+    });
+    expect(planRestore(gone, [gone, a, b, c], MIN)).toEqual({
+      kind: "shrink",
+      start: 1200,
+      end: 1250,
+      lostMinutes: 10,
+    });
+  });
+
+  it("blocks when every surviving gap is under minMinutes", () => {
+    vi.setSystemTime(new Date(2026, 7, 28, 22, 0, 0));
+    const packed = instance({
+      id: "packed",
+      start_minutes: 1350,
+      end_minutes: 1380,
+      block: block({ name: "Packed" }),
+    });
+    expect(planRestore(gone, [gone, packed], MIN, 1380, 360)).toEqual({
+      kind: "blocked",
+    });
+  });
+
+  it("clips a gap that would end past the sleep target", () => {
+    vi.setSystemTime(new Date(2026, 7, 28, 21, 0, 0));
+    expect(planRestore(gone, [gone], MIN, 1320, 360)).toEqual({
+      kind: "shrink",
+      start: 1290,
+      end: 1320,
+      lostMinutes: 30,
+    });
+  });
+
+  it("blocks when the clipped remainder is under minMinutes", () => {
+    vi.setSystemTime(new Date(2026, 7, 28, 21, 0, 0));
+    expect(planRestore(gone, [gone], MIN, 1293, 360)).toEqual({
+      kind: "blocked",
+    });
+  });
+
+  it("finds slots when sleep is 1am, because resolveDayEnd clamps to 1440", () => {
+    vi.setSystemTime(new Date(2026, 7, 28, 22, 0, 0));
+    expect(planRestore(gone, [gone], MIN, 60, 360)).toEqual({
+      kind: "relocate",
+      start: 1350,
+      end: 1410,
+    });
+  });
+
+  it("ignores removed, missed, and completed instances as blockers", () => {
+    const alsoRemoved = instance({
+      id: "also-removed",
+      start_minutes: 610,
+      end_minutes: 650,
+      status: "removed",
+      block: block({ name: "Removed" }),
+    });
+    const alreadyMissed = instance({
+      id: "already-missed",
+      start_minutes: 615,
+      end_minutes: 655,
+      status: "missed",
+      block: block({ name: "Missed" }),
+    });
+    const done = instance({
+      id: "done",
+      start_minutes: 620,
+      end_minutes: 660,
+      status: "completed",
+      block: block({ name: "Done" }),
+    });
+    expect(
+      planRestore(gone, [gone, alsoRemoved, alreadyMissed, done], MIN)
+    ).toEqual({ kind: "clear" });
   });
 });
 

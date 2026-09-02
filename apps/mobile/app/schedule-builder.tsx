@@ -301,7 +301,7 @@ function ScheduleBuilderScreenContent() {
           // the evidence pack's tracked/base CTEs.
           const { error: instErr } = await supabase
             .from("daily_schedule_instances")
-            .update({ status: "removed" })
+            .update({ status: "removed", removed_by: "archive" })
             .eq("block_id", block.id)
             .eq("date", getLocalDateString())
             .eq("status", "pending");
@@ -317,14 +317,16 @@ function ScheduleBuilderScreenContent() {
           );
           if (genErr) handleError(genErr, "restoreGenerate");
 
-          // Then clear the tombstone from a same-day archive. Scoped to today
-          // and to 'removed' so nothing historical is touched.
+          // Then clear the tombstone from a same-day archive. Scoped to today,
+          // to 'removed', and to this path's own provenance — restoring a
+          // block must not undo the user's own "remove from today".
           const { error: instErr } = await supabase
             .from("daily_schedule_instances")
-            .update({ status: "pending" })
+            .update({ status: "pending", removed_by: null })
             .eq("block_id", block.id)
             .eq("date", getLocalDateString())
-            .eq("status", "removed");
+            .eq("status", "removed")
+            .eq("removed_by", "archive");
           if (instErr) handleError(instErr, "restoreClearRemoved");
         }
 

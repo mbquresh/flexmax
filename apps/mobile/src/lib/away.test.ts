@@ -4,6 +4,14 @@ vi.mock("./supabase", () => ({
   supabase: {},
 }));
 
+// errors.ts imports Alert and Platform from react-native, whose Flow-typed
+// entry point rolldown cannot parse. The pure helpers under test never reach
+// it, so stubbing keeps the module graph free of React Native.
+vi.mock("./errors", () => ({
+  handleError: vi.fn(),
+  isConnectivityError: () => false,
+}));
+
 import { formatAwayRange, isCurrent } from "./away";
 import { getLocalDateString } from "./time";
 import { AwayPeriod } from "../types/database";
