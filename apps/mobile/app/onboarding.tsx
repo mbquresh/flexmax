@@ -165,12 +165,12 @@ function OnboardingContent() {
           <>
             <Text style={styles.question}>90% versus 15%.</Text>
             <Text style={styles.body}>
-              On the ten days their morning block ran past its window, the gym
+              On the ten days their morning deep work actually landed, the gym
               failed nine times. On the other twenty, it failed three.
             </Text>
             <Text style={styles.quote}>
-              These two move together. When the morning runs long, the gym is
-              what gets spent.
+              These two move together. On the days the morning session happens,
+              the gym is what gets spent.
             </Text>
             <Text style={styles.body}>
               Same block, same person, two completely different outcomes —
@@ -188,11 +188,11 @@ function OnboardingContent() {
           <>
             <Text style={styles.contractTitle}>It reads your days, not your answers.</Text>
             <Text style={styles.contractBody}>
-              FlexMax checks every pair of blocks against every condition it can
-              see, every week. That example took a month of real days. Yours
-              will take about a week before it says anything worth reading —
-              quiet at first, on purpose. You just live your schedule and close
-              out your evenings.
+              Once a week, FlexMax looks for patterns that repeat across your
+              days and in your own notes. That example took a month of real
+              days. Yours will take about a week before it says anything worth
+              reading — quiet at first, on purpose. You just live your schedule
+              and close out your evenings.
             </Text>
             <PressableScale style={styles.actionBtn} onPress={() => setStep(4)}>
               <Text style={styles.actionBtnText}>Got it</Text>

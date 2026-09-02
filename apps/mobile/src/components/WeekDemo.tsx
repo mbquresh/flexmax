@@ -5,7 +5,7 @@ import { PressableScale } from "./PressableScale";
 import { Colors, spacing, radii, typography } from "../theme";
 import { hapticSelect } from "../lib/haptics";
 
-type DemoDay = { ranLong: boolean; o: number[] };
+type DemoDay = { o: number[] };
 
 export const DEMO_BLOCKS = [
   "Fajr",
@@ -18,46 +18,52 @@ export const DEMO_BLOCKS = [
   "Wind down",
 ];
 
-const GYM_INDEX = 6;
+// The condition is COMPLETION of an earlier block, because that is the only
+// cross-block relationship get_behavior_evidence actually computes: an
+// aggressor block winning and a later block failing. Overrun is not
+// available — actual_end_minutes is captured but read by nothing, and the
+// evidence pack explicitly forbids claiming a block "ran until" a time.
+const MORNING_INDEX = 1;
 
-// Hand-authored. Verified: 10 "ran long" days with 9 gym failures (90%),
-// 20 normal days with 3 failures (15%), 12 of 30 overall (40%). An exception
-// on each side is deliberate — a perfect 100/0 split reads as fabricated.
-// Do not regenerate. Percentages in the reveal are computed from these cells.
+const landed = (d: DemoDay) => d.o[MORNING_INDEX] === 1;
+
+// Hand-authored. Verified against row 7 (Gym): 10 days where morning deep
+// work landed carry 9 gym failures (90%), the other 20 carry 3 (15%), 12 of
+// 30 overall (40%). An exception on each side is deliberate — a perfect
+// 100/0 split reads as fabricated. Do not regenerate: the percentages quoted
+// in the reveal are computed from these exact cells.
 const DEMO_DAYS: DemoDay[] = [
-  { ranLong: false, o: [1, 1, 1, 0, 1, 0, 1, 0] },
-  { ranLong: false, o: [1, 1, 1, 1, 1, 1, 0, 0] },
-  { ranLong: false, o: [1, 0, 1, 1, 1, 1, 1, 0] },
-  { ranLong: true, o: [1, 0, 1, 1, 1, 0, 0, 0] },
-  { ranLong: true, o: [1, 1, 0, 1, 1, 1, 0, 0] },
-  { ranLong: true, o: [1, 1, 1, 0, 1, 1, 1, 1] },
-  { ranLong: false, o: [1, 1, 1, 0, 1, 0, 1, 1] },
-  { ranLong: true, o: [0, 0, 1, 1, 1, 1, 0, 0] },
-  { ranLong: false, o: [1, 1, 0, 0, 1, 1, 1, 0] },
-  { ranLong: true, o: [1, 0, 1, 1, 1, 0, 0, 1] },
-  { ranLong: true, o: [1, 1, 1, 1, 1, 0, 0, 0] },
-  { ranLong: true, o: [1, 0, 0, 0, 1, 0, 0, 1] },
-  { ranLong: false, o: [1, 1, 0, 1, 0, 0, 1, 1] },
-  { ranLong: false, o: [1, 1, 1, 1, 1, 0, 1, 0] },
-  { ranLong: false, o: [1, 0, 1, 1, 1, 0, 1, 1] },
-  { ranLong: false, o: [1, 0, 1, 0, 1, 0, 0, 0] },
-  { ranLong: false, o: [1, 0, 1, 1, 1, 1, 1, 1] },
-  { ranLong: false, o: [1, 1, 1, 1, 1, 0, 1, 1] },
-  { ranLong: true, o: [1, 1, 0, 1, 0, 0, 0, 1] },
-  { ranLong: false, o: [1, 1, 1, 0, 1, 0, 1, 1] },
-  { ranLong: false, o: [1, 1, 1, 0, 1, 1, 1, 1] },
-  { ranLong: false, o: [1, 1, 1, 1, 0, 0, 1, 0] },
-  { ranLong: true, o: [1, 0, 1, 1, 0, 0, 0, 1] },
-  { ranLong: false, o: [1, 0, 1, 0, 1, 1, 1, 1] },
-  { ranLong: false, o: [1, 1, 0, 1, 1, 1, 1, 0] },
-  { ranLong: false, o: [1, 1, 1, 1, 1, 1, 1, 0] },
-  { ranLong: false, o: [1, 0, 1, 1, 1, 0, 0, 0] },
-  { ranLong: true, o: [1, 0, 0, 1, 1, 1, 0, 0] },
-  { ranLong: false, o: [1, 1, 1, 1, 1, 0, 1, 1] },
-  { ranLong: false, o: [0, 1, 1, 1, 1, 1, 1, 1] },
+  { o: [1, 0, 1, 0, 1, 0, 1, 0] },
+  { o: [1, 0, 1, 1, 1, 1, 0, 0] },
+  { o: [1, 0, 1, 1, 1, 1, 1, 0] },
+  { o: [1, 1, 1, 1, 1, 0, 0, 0] },
+  { o: [1, 1, 0, 1, 1, 1, 0, 0] },
+  { o: [1, 1, 1, 0, 1, 1, 1, 1] },
+  { o: [1, 0, 1, 0, 1, 0, 1, 1] },
+  { o: [0, 1, 1, 1, 1, 1, 0, 0] },
+  { o: [1, 0, 0, 0, 1, 1, 1, 0] },
+  { o: [1, 1, 1, 1, 1, 0, 0, 1] },
+  { o: [1, 1, 1, 1, 1, 0, 0, 0] },
+  { o: [1, 1, 0, 0, 1, 0, 0, 1] },
+  { o: [1, 0, 0, 1, 0, 0, 1, 1] },
+  { o: [1, 0, 1, 1, 1, 0, 1, 0] },
+  { o: [1, 0, 1, 1, 1, 0, 1, 1] },
+  { o: [1, 0, 1, 0, 1, 0, 0, 0] },
+  { o: [1, 0, 1, 1, 1, 1, 1, 1] },
+  { o: [1, 0, 1, 1, 1, 0, 1, 1] },
+  { o: [1, 1, 0, 1, 0, 0, 0, 1] },
+  { o: [1, 0, 1, 0, 1, 0, 1, 1] },
+  { o: [1, 0, 1, 0, 1, 1, 1, 1] },
+  { o: [1, 0, 1, 1, 0, 0, 1, 0] },
+  { o: [1, 1, 1, 1, 0, 0, 0, 1] },
+  { o: [1, 0, 1, 0, 1, 1, 1, 1] },
+  { o: [1, 0, 0, 1, 1, 1, 1, 0] },
+  { o: [1, 0, 1, 1, 1, 1, 1, 0] },
+  { o: [1, 0, 1, 1, 1, 0, 0, 0] },
+  { o: [1, 1, 0, 1, 1, 1, 0, 0] },
+  { o: [1, 0, 1, 1, 1, 0, 1, 1] },
+  { o: [0, 0, 1, 1, 1, 1, 1, 1] },
 ];
-
-void GYM_INDEX;
 
 export function WeekDemo({ onFiltered }: { onFiltered: () => void }) {
   const { colors } = useTheme();
@@ -101,7 +107,7 @@ export function WeekDemo({ onFiltered }: { onFiltered: () => void }) {
                 key={di}
                 style={[
                   styles.dayCol,
-                  { opacity: day.ranLong ? 1 : dim },
+                  { opacity: landed(day) ? 1 : dim },
                 ]}
               >
                 {day.o.map((v, bi) => (
@@ -122,7 +128,7 @@ export function WeekDemo({ onFiltered }: { onFiltered: () => void }) {
         <Text style={styles.filterBtnText}>
           {filtered
             ? "Show all 30 days"
-            : "Show only days the morning block ran long"}
+            : "Show only days morning deep work landed"}
         </Text>
       </PressableScale>
     </View>
