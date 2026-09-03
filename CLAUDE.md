@@ -20,6 +20,107 @@ One-liner: "Habit trackers watch you fail. FlexMax figures out why."
 
 ---
 
+## What the product actually does (the mechanism)
+
+The failure mode is named in `Who FlexMax is for`: **unconscious inaction** —
+time that evaporates without a decision ever being made. That section describes
+what goes wrong. This one names what the product produces instead, because the
+two are a matched pair and the positive half was missing.
+
+**The state the product induces is conscientiousness.** Not motivation, not
+discipline — the plan staying consciously present in the user's mind through a
+day, instead of receding into background noise where it dies. Every ritual in
+the app serves this: the morning card, the accounting sweep, the recovery flow,
+the weekly insight. The user is repeatedly brought back into contact with their
+own intentions.
+
+Critically, this is induced without pressure. The app does not raise the stakes;
+it surfaces the user's own data and lets them look. A pattern the user had a
+hunch about becomes documented fact. The app is not telling them what to do —
+it is removing their ability to not know.
+
+**Category, internal use only: a Conscientiousness System.** Do not use this
+phrase externally. It is a clinical, five-syllable word nobody searches for, and
+conscientiousness is a Big Five personality trait, so claiming an app produces
+it reads as claiming personality change. Same rule as "Capable Drifter": correct
+internally, wrong in copy. External positioning stays as recorded in
+`Product context`.
+
+### Two value streams, and they have different dependencies
+
+This is the single most important structural fact about the product, and it
+resolves an apparent contradiction between competing outside advice.
+
+**Stream 1 — Execution salvage. Works on day one.**
+The swap resolver, displacement costs, shrink-to-fit, the Removed pile, the
+recovery flow, the accounted-for streak. A day that breaks at 2pm gets rebuilt
+instead of written off. This requires no reflections, no accumulated history,
+and no AI — `ACCOUNTED = ["completed", "missed", "skipped"]` in
+`src/lib/stats.ts` reads *status only*, and the recovery copy went deterministic
+when the AI call was removed. Value lands immediately and repeats every day.
+
+**Stream 2 — Behavioral insight. Compounds over weeks.**
+The evidence pack, `weekly-insight`, the morning InsightCard. Needs
+`engaged_days >= 5` before it says anything, and its depth scales with
+reflection quality.
+
+Roughly half the differentiation lives in each. Consequences:
+
+1. **The hard paywall is defensible on Stream 1 alone.** The long-standing
+   objection — the user pays before the engine speaks — has an answer: they are
+   buying a working execution-salvaging tool immediately, with the insight layer
+   arriving on top of it later. Marketing currently leads with Stream 2 and
+   understates Stream 1. That is backwards for the first-week experience.
+2. **Two metrics, not one.** Gate 1 (reflection fill rate) measures whether
+   Stream 2 is self-sustaining. Stream 1 needs its own: *on days the plan
+   breaks, does the user still complete the next meaningful action and return
+   tomorrow?* Stream 1's metric is the one that must hold in week one.
+3. **Outside advice that appeared contradictory was each describing one stream.**
+   Recommendations to reduce reflection burden and add fast recovery affordances
+   are Stream 1 optimizations. The argument that the accounting overhead *is*
+   the product is a Stream 2 defense. Both are correct about their own half.
+
+### The overhead is not a tax — but that is a hypothesis, not a finding
+
+The five minutes of daily accounting looks like friction and is better
+understood as the ritual that maintains conscientiousness. Without a point of
+contact, the schedule drifts back into background noise.
+
+**Treat this as a hypothesis Gate 1 tests, not a settled truth.** If reflection
+fill rate clears ~50% with real testers, the friction is load-bearing and should
+be protected. If it sits near the n=1 baseline of 31% or drops, then for most
+users the overhead is a leak rather than a mechanism, and the honest response is
+to move value into Stream 1 rather than defend the ritual on principle.
+
+### Sacred friction vs. incidental friction
+
+Not all friction is the mechanism. The distinction:
+
+- **Sacred — never automate.** Contact between the user and their own data:
+  seeing the displacement a reschedule causes, reading their own last written
+  intention, choosing a status for every block. These moments *are* the
+  consciousness-inducing event.
+- **Incidental — fair game.** The input mechanism itself. Typing prose at 11pm
+  is a keyboard tax, not a ritual. Voice reflections remove typing without
+  removing contact, which is why they are in the Vision section rather than
+  banned by this rule.
+
+**Do not build any of the following.** Each removes a point of contact and
+anesthetizes the exact mechanism the product runs on:
+
+- Auto-reschedule ("we noticed you usually move gym to 7pm — want us to just do
+  that?")
+- Notifications that let the user resolve a block without opening the app and
+  seeing the day
+- AI that writes the reflection for the user
+- Any "reduce friction" change that removes a look at the schedule rather than a
+  keystroke
+
+The moment FlexMax optimizes away contact, it becomes a calendar. Calendars are
+already frictionless, which is precisely why nobody pays attention to them.
+
+---
+
 ## Competitive positioning: FlexMax vs. Structured
 
 Structured (unorderly GmbH) is the category king in visual day-planning:
@@ -1008,6 +1109,10 @@ usable and does the user's intent survive. Not: is the debugger clean.
   didn't work, and got shown a miss. The honest promise is the opposite and it
   is stronger: *this is the system that doesn't quit on you when you quit on
   yourself.*
+- **Distinguish sacred from incidental friction before removing any.** See
+  `What the product actually does`. Contact with one's own data is the
+  mechanism; the input method is not. Removing a keystroke is fine. Removing a
+  look at the schedule is not.
 
 ---
 
@@ -1796,6 +1901,13 @@ data. They are cheaper guesses, not settled constants. Treat every one as an
 instrumented parameter to be re-fit from the first TestFlight cohort, and expect
 at least one of them to be wrong.
 
+**The founder's own fill rate proves the least.** Months of daily use
+demonstrate the accounting ritual is livable, which is worth knowing. It cannot
+indicate what a stranger does at 11pm on day nine. The person who designed the
+schema knows exactly what each field feeds and is motivated to feed it well.
+Every engagement number sourced from founder use is a lower bound on
+tolerability and tells you nothing about adoption.
+
 
 
 ## Beta success criteria
@@ -1809,17 +1921,22 @@ can be answered without real testers.
    it is being carried by notifications and the retention model collapses.
    Current baseline is 31% on n=1. Measure this before spending anything on
    acquisition — every other number downstream assumes this one reads clean.
-2. **Can strangers understand the difference in 10 seconds?** Not "is it good" —
+2. **On days the plan breaks, does the user complete the next meaningful action
+   and return tomorrow?** Stream 1's metric, and the one that must hold in week
+   one — it tests execution salvage, which works on day one and does not depend
+   on the insight engine having anything to say yet. Reopening alone is a
+   journal metric; completing the next action is the falsifiable one.
+3. **Can strangers understand the difference in 10 seconds?** Not "is it good" —
    can someone who has never heard of it tell FlexMax apart from a planner from
    the App Store listing and the showcase page alone.
-3. **Will they pay before using it?** The hard paywall is deliberate and filters
+4. **Will they pay before using it?** The hard paywall is deliberate and filters
    for the decided cohort, but the conversion floor is unknown.
-4. **Will they reopen after a bad week?** The north-star metric. Capture is
+5. **Will they reopen after a bad week?** The north-star metric. Capture is
    028; the query sits under the migrations table.
-5. **Does the behavioral insight feel surprisingly accurate?** The entire
+6. **Does the behavioral insight feel surprisingly accurate?** The entire
    differentiation reduces to this. Validated on n=1 so far.
 
-If 1-5 hold, $14.99 is not the limiting factor. If they do not, more features
+If 1-6 hold, $14.99 is not the limiting factor. If they do not, more features
 will not fix it.
 
 
