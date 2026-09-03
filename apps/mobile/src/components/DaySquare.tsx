@@ -14,6 +14,8 @@ interface DaySquareProps {
   missedRatio: number;
   isToday?: boolean;
   isFuture?: boolean;
+  /** A past day currently open on Today. */
+  isSelected?: boolean;
 }
 
 export function DaySquare({
@@ -22,6 +24,7 @@ export function DaySquare({
   missedRatio,
   isToday = false,
   isFuture = false,
+  isSelected = false,
 }: DaySquareProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -56,6 +59,7 @@ export function DaySquare({
         />
       ) : null}
       {isToday ? <View style={styles.todayRing} pointerEvents="none" /> : null}
+      {isSelected ? <View style={styles.selectedRing} pointerEvents="none" /> : null}
       <View style={styles.dayLetterWrap}>
         <Text
           style={[
@@ -107,6 +111,18 @@ const makeStyles = (c: Colors) =>
       bottom: 0,
       borderWidth: 1.5,
       borderColor: c.streak,
+      borderRadius: radii.sm,
+    },
+    // Not teal. The teal ring means today; a selected past day is a
+    // different statement and must not be mistaken for the protected one.
+    selectedRing: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      borderWidth: 1.5,
+      borderColor: c.primary,
       borderRadius: radii.sm,
     },
     daySquareFuture: {

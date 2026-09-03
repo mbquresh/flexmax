@@ -7,8 +7,10 @@ vi.mock("./supabase", () => ({
 import { DailyInstance, ScheduleBlock } from "../types/database";
 import {
   findRescheduleSlot,
+  placeShrunkBlock,
   planDisplacement,
   planRestore,
+  planShrinkToFit,
   resolveDayBoundaries,
   resolveDayEnd,
 } from "./schedule";
@@ -63,6 +65,7 @@ function instance(
     is_fixed: false,
     removed_reason: null,
     removed_by: null,
+    backfilled_at: null,
     block: block({ name: overrides.block?.name ?? "Dinner" }),
     ...overrides,
   };
@@ -554,6 +557,196 @@ describe("planRestore", () => {
     expect(
       planRestore(gone, [gone, alsoRemoved, alreadyMissed, done], MIN)
     ).toEqual({ kind: "clear" });
+  });
+});
+
+describe("planShrinkToFit", () => {
+  // Cardio 10:00–11:00. The missed block wants 10:00–10:30, which is the
+  // sacrifice case planDisplacement cannot resolve any other way.
+  const cardio = instance({
+    id: "cardio",
+    start_minutes: 600,
+    end_minutes: 660,
+    block: block({ name: "Cardio" }),
+  });
+  const slot = { start_minutes: 600, end_minutes: 630 };
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 7, 28, 9, 0, 0));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("offers half the original length by default", () => {
+    const plan = planShrinkToFit(slot, cardio, [missed, cardio], missed.id);
+    expect(plan).not.toBeNull();
+    expect(plan?.name).toBe("Cardio");
+    expect(plan?.originalMinutes).toBe(60);
+    expect(plan?.defaultMinutes).toBe(30);
+  });
+
+  it("caps maxMinutes at the original length, never above it", () => {
+    const plan = planShrinkToFit(slot, cardio, [missed, cardio], missed.id);
+    expect(plan?.maxMinutes).toBe(60);
+  });
+
+  it("caps maxMinutes at the largest remaining gap", () => {
+    // 10:00 now, so the only space left is 10:30–11:45 minus Dinner.
+    vi.setSystemTime(new Date(2026, 7, 28, 10, 0, 0));
+    const dinner = instance({
+      id: "dinner",
+      start_minutes: 660,
+      end_minutes: 705,
+      block: block({ name: "Dinner" }),
+    });
+    const plan = planShrinkToFit(
+      slot,
+      cardio,
+      [missed, cardio, dinner],
+      missed.id,
+      705,
+      360
+    );
+    expect(plan?.maxMinutes).toBe(30);
+    expect(plan?.defaultMinutes).toBe(30);
+  });
+
+  it("returns null when nothing is left that clears the floor", () => {
+    vi.setSystemTime(new Date(2026, 7, 28, 10, 0, 0));
+    const wall = instance({
+      id: "wall",
+      start_minutes: 630,
+      end_minutes: 1440,
+      block: block({ name: "Wall" }),
+    });
+    expect(
+      planShrinkToFit(slot, cardio, [missed, cardio, wall], missed.id)
+    ).toBeNull();
+  });
+
+  it("counts the window the rescheduled block is vacating as free", () => {
+    // Cardio was 10:00–11:00 and the missed 8:00 block takes 10:00–10:30.
+    // 9:00–10:00 is genuinely open, and at 9:00 it is the largest space
+    // left — so the full hour stays on the table.
+    const wall = instance({
+      id: "wall",
+      start_minutes: 630,
+      end_minutes: 1440,
+      block: block({ name: "Wall" }),
+    });
+    const plan = planShrinkToFit(slot, cardio, [missed, cardio, wall], missed.id);
+    expect(plan?.maxMinutes).toBe(60);
+  });
+
+  it("refuses a fixed target", () => {
+    const fixed = instance({
+      ...cardio,
+      id: "fixed-cardio",
+      is_fixed: true,
+    });
+    expect(
+      planShrinkToFit(slot, fixed, [missed, fixed], missed.id)
+    ).toBeNull();
+  });
+
+  it("never offers a duration it cannot place", () => {
+    const dinner = instance({
+      id: "dinner",
+      start_minutes: 700,
+      end_minutes: 760,
+      block: block({ name: "Dinner" }),
+    });
+    const all = [missed, cardio, dinner];
+    const plan = planShrinkToFit(slot, cardio, all, missed.id, 1320, 360);
+    expect(plan).not.toBeNull();
+    if (!plan) return;
+
+    for (let d = plan.minMinutes; d <= plan.maxMinutes; d++) {
+      expect(
+        placeShrunkBlock(slot, cardio, d, all, missed.id, 1320, 360)
+      ).not.toBeNull();
+    }
+  });
+});
+
+describe("placeShrunkBlock", () => {
+  const cardio = instance({
+    id: "cardio",
+    start_minutes: 600,
+    end_minutes: 660,
+    block: block({ name: "Cardio" }),
+  });
+  const slot = { start_minutes: 600, end_minutes: 630 };
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 7, 28, 9, 0, 0));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("places the shortened block immediately after the reschedule slot", () => {
+    expect(
+      placeShrunkBlock(slot, cardio, 30, [missed, cardio], missed.id)
+    ).toEqual({ start: 630, end: 660 });
+  });
+
+  it("does not place it in free time before its own original start", () => {
+    // 9:00 now, Cardio was 10:00. A 30 minute block would fit at 9:00 but
+    // that is ahead of the block it just made room for.
+    const placed = placeShrunkBlock(slot, cardio, 30, [missed, cardio], missed.id);
+    expect(placed?.start).toBeGreaterThanOrEqual(cardio.start_minutes);
+  });
+
+  it("falls back to an earlier gap when nothing later fits", () => {
+    const wall = instance({
+      id: "wall",
+      start_minutes: 630,
+      end_minutes: 1440,
+      block: block({ name: "Wall" }),
+    });
+    // 8:00 now, so 8:00–10:00 is open ahead of the slot.
+    vi.setSystemTime(new Date(2026, 7, 28, 8, 0, 0));
+    expect(
+      placeShrunkBlock(slot, cardio, 30, [missed, cardio, wall], missed.id)
+    ).toEqual({ start: 480, end: 510 });
+  });
+
+  it("never runs past the sleep boundary", () => {
+    vi.setSystemTime(new Date(2026, 7, 28, 10, 0, 0));
+    const dinner = instance({
+      id: "dinner",
+      start_minutes: 630,
+      end_minutes: 1300,
+      block: block({ name: "Dinner" }),
+    });
+    expect(
+      placeShrunkBlock(slot, cardio, 60, [missed, cardio, dinner], missed.id, 1330, 360)
+    ).toBeNull();
+  });
+
+  it("refuses a duration under the floor", () => {
+    expect(
+      placeShrunkBlock(slot, cardio, 1, [missed, cardio], missed.id)
+    ).toBeNull();
+  });
+
+  it("ignores resolved blocks when looking for space", () => {
+    const done = instance({
+      id: "done",
+      start_minutes: 630,
+      end_minutes: 720,
+      status: "completed",
+      block: block({ name: "Done" }),
+    });
+    expect(
+      placeShrunkBlock(slot, cardio, 30, [missed, cardio, done], missed.id)
+    ).toEqual({ start: 630, end: 660 });
   });
 });
 

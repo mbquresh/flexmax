@@ -161,21 +161,14 @@ function WeeklyRecapScreenContent() {
           .eq("user_id", session.user.id)
           .gte("date", week.mondayStr)
           .lte("date", week.sundayStr),
-        (
-          supabase as typeof supabase & {
-            from: (table: "behavioral_insights") => ReturnType<typeof supabase.from>;
-          }
-        )
+        supabase
           .from("behavioral_insights")
           .select("kind, belief, evidence, suggestion")
           .eq("superseded", false)
           .neq("kind", "strength")
           .order("rank")
           .limit(1)
-          .maybeSingle() as {
-          data: RecapInsight | null;
-          error: Error | null;
-        },
+          .maybeSingle(),
       ]);
 
       if (instancesResult.error) throw instancesResult.error;

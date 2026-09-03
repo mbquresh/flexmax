@@ -198,6 +198,11 @@ export function occupiesTime(i: DailyInstance): boolean {
   return i.status === "pending" || i.status === "active";
 }
 
+function nowMinutes(): number {
+  const now = new Date();
+  return now.getHours() * 60 + now.getMinutes();
+}
+
 export function findRescheduleSlot(
   missedInstance: DailyInstance,
   allInstances: DailyInstance[],
@@ -205,8 +210,7 @@ export function findRescheduleSlot(
   wakeTargetMinutes?: number | null
 ): { start_minutes: number; end_minutes: number } | null {
   const duration = missedInstance.end_minutes - missedInstance.start_minutes;
-  const nowMinutes = new Date().getHours() * 60 + new Date().getMinutes();
-  const bufferMinutes = nowMinutes + 30;
+  const bufferMinutes = nowMinutes() + 30;
 
   const dayEnd = resolveDayEnd(sleepTargetMinutes, wakeTargetMinutes);
 
@@ -320,6 +324,26 @@ export function planDisplacement(
 // mean two different things.
 export const MIN_BLOCK_MINUTES = 5;
 
+// Free intervals between `floor` and `dayEnd`. `occupied` must be sorted by
+// start. Shared by planRestore's shrink tier and the shrink-to-fit planner so
+// "what space is left today" has exactly one definition — the occupiesTime
+// postmortem is what happens when it has three.
+function freeGaps(
+  occupied: { start: number; end: number }[],
+  floor: number,
+  dayEnd: number
+): { start: number; end: number }[] {
+  const gaps: { start: number; end: number }[] = [];
+  let cursor = floor;
+  for (const o of occupied) {
+    if (o.start > cursor) gaps.push({ start: cursor, end: Math.min(o.start, dayEnd) });
+    cursor = Math.max(cursor, o.end);
+    if (cursor >= dayEnd) break;
+  }
+  if (cursor < dayEnd) gaps.push({ start: cursor, end: dayEnd });
+  return gaps.filter((g) => g.end > g.start);
+}
+
 export type RestorePlan =
   | { kind: "clear" }
   | { kind: "relocate"; start: number; end: number }
@@ -338,8 +362,7 @@ export function planRestore(
 ): RestorePlan {
   const duration = instance.end_minutes - instance.start_minutes;
   const dayEnd = resolveDayEnd(sleepTargetMinutes, wakeTargetMinutes);
-  const now = new Date();
-  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const startOfSearch = nowMinutes();
 
   const occupied = allInstances
     .filter((i) => i.id !== instance.id && occupiesTime(i))
@@ -353,7 +376,7 @@ export function planRestore(
   // restoring into the past would put a block on the day that can no
   // longer happen.
   if (
-    instance.start_minutes >= nowMinutes &&
+    instance.start_minutes >= startOfSearch &&
     free(instance.start_minutes, instance.end_minutes)
   ) {
     return { kind: "clear" };
@@ -378,17 +401,7 @@ export function planRestore(
 
   // 3. Shortened. Walk every gap between now and bedtime and take the
   // largest that clears minMinutes.
-  const searchStart = Math.max(nowMinutes + 30, 0);
-  const gaps: { start: number; end: number }[] = [];
-  let cursor = searchStart;
-  for (const o of occupied) {
-    if (o.start > cursor) gaps.push({ start: cursor, end: Math.min(o.start, dayEnd) });
-    cursor = Math.max(cursor, o.end);
-    if (cursor >= dayEnd) break;
-  }
-  if (cursor < dayEnd) gaps.push({ start: cursor, end: dayEnd });
-
-  const best = gaps
+  const best = freeGaps(occupied, Math.max(startOfSearch + 30, 0), dayEnd)
     .filter((g) => g.end - g.start >= minMinutes)
     .sort((a, b) => (b.end - b.start) - (a.end - a.start))[0];
 
@@ -399,6 +412,109 @@ export function planRestore(
     start: best.start,
     end: best.end,
     lostMinutes: duration - (best.end - best.start),
+  };
+}
+
+// A collision does not have to cost the whole block. If the collider can
+// survive at a shorter length somewhere later in the day, that is strictly
+// better than the sacrifice offer: the user gets the reschedule AND keeps a
+// reduced version of what would otherwise have been removed.
+//
+// Offered only against a SINGLE-target sacrifice. Naming what gets shortened
+// is the point, and a slider per block across two or three colliders is a
+// negotiation, not a decision — which is the freeze this flow exists to
+// avoid.
+export type ShrinkToFitPlan = {
+  target: DailyInstance;
+  name: string;
+  originalMinutes: number;
+  minMinutes: number;
+  maxMinutes: number;
+  defaultMinutes: number;
+};
+
+// Occupancy AFTER the reschedule commits: every unresolved block except the
+// one being rescheduled and the one being shortened, plus the slot the
+// rescheduled block is about to take.
+function occupancyAfterReschedule(
+  slot: { start_minutes: number; end_minutes: number },
+  targetId: string,
+  allInstances: DailyInstance[],
+  excludeId: string
+): { start: number; end: number }[] {
+  return [
+    ...allInstances
+      .filter((i) => i.id !== excludeId && i.id !== targetId && occupiesTime(i))
+      .map((i) => ({ start: i.start_minutes, end: i.end_minutes })),
+    { start: slot.start_minutes, end: slot.end_minutes },
+  ].sort((a, b) => a.start - b.start);
+}
+
+// The shortened block holds its place in the day's order where it can, and
+// only moves ahead of the rescheduled block if that is the only space left.
+// Without the two passes, the earliest-fit search would happily drop a 30
+// minute Cardio into a free hour before the block it just made room for.
+export function placeShrunkBlock(
+  slot: { start_minutes: number; end_minutes: number },
+  target: DailyInstance,
+  durationMinutes: number,
+  allInstances: DailyInstance[],
+  excludeId: string,
+  sleepTargetMinutes?: number | null,
+  wakeTargetMinutes?: number | null
+): { start: number; end: number } | null {
+  if (durationMinutes < MIN_BLOCK_MINUTES) return null;
+
+  const dayEnd = resolveDayEnd(sleepTargetMinutes, wakeTargetMinutes);
+  const occupied = occupancyAfterReschedule(slot, target.id, allInstances, excludeId);
+  const now = nowMinutes();
+
+  const fit = (floor: number) =>
+    freeGaps(occupied, floor, dayEnd).find(
+      (g) => g.end - g.start >= durationMinutes
+    );
+
+  const best = fit(Math.max(now, target.start_minutes)) ?? fit(now);
+  return best ? { start: best.start, end: best.start + durationMinutes } : null;
+}
+
+// maxMinutes is derived from the same gap set placeShrunkBlock's fallback
+// pass searches, so every value the slider can produce is guaranteed
+// placeable. A slider that can select an impossible duration is worse than
+// no slider.
+export function planShrinkToFit(
+  slot: { start_minutes: number; end_minutes: number },
+  target: DailyInstance,
+  allInstances: DailyInstance[],
+  excludeId: string,
+  sleepTargetMinutes?: number | null,
+  wakeTargetMinutes?: number | null
+): ShrinkToFitPlan | null {
+  if (isFixedInstance(target)) return null;
+
+  const originalMinutes = target.end_minutes - target.start_minutes;
+  if (originalMinutes < MIN_BLOCK_MINUTES) return null;
+
+  const dayEnd = resolveDayEnd(sleepTargetMinutes, wakeTargetMinutes);
+  const occupied = occupancyAfterReschedule(slot, target.id, allInstances, excludeId);
+  const largest = freeGaps(occupied, nowMinutes(), dayEnd).reduce(
+    (max, g) => Math.max(max, g.end - g.start),
+    0
+  );
+
+  const maxMinutes = Math.min(originalMinutes, largest);
+  if (maxMinutes < MIN_BLOCK_MINUTES) return null;
+
+  return {
+    target,
+    name: target.block?.name ?? "that block",
+    originalMinutes,
+    minMinutes: MIN_BLOCK_MINUTES,
+    maxMinutes,
+    defaultMinutes: Math.min(
+      maxMinutes,
+      Math.max(MIN_BLOCK_MINUTES, Math.round(originalMinutes / 2))
+    ),
   };
 }
 

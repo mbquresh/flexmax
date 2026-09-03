@@ -172,6 +172,43 @@ type InsightPayload = {
   nudge_line: string | null;
 };
 
+const KINDS = new Set(["causal", "pattern", "strength"]);
+
+function sanitizeInsights(raw: unknown): InsightPayload[] | null {
+  if (!Array.isArray(raw)) return null;
+
+  const out: InsightPayload[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const o = item as Record<string, unknown>;
+    if (typeof o.kind !== "string" || !KINDS.has(o.kind)) continue;
+    if (typeof o.belief !== "string" || typeof o.evidence !== "string") continue;
+
+    const related = Array.isArray(o.related_blocks)
+      ? o.related_blocks.filter((n): n is string => typeof n === "string")
+      : [];
+    const suggestion =
+      typeof o.suggestion === "string" && o.suggestion.length > 0
+        ? o.suggestion.slice(0, 150)
+        : null;
+    const nudge_line =
+      typeof o.nudge_line === "string" && o.nudge_line.length > 0
+        ? o.nudge_line.slice(0, 80)
+        : null;
+
+    out.push({
+      kind: o.kind,
+      belief: o.belief.slice(0, 200),
+      evidence: o.evidence.slice(0, 250),
+      suggestion,
+      related_blocks: related,
+      nudge_line,
+    });
+  }
+
+  return out.length > 0 ? out : null;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -275,21 +312,21 @@ ${JSON.stringify(evidence)}`,
     if (!response.ok) throw new Error(data.error?.message ?? "Claude API failed");
 
     const raw = data.content?.[0]?.text ?? "[]";
-    let parsed: InsightPayload[];
-
+    let parsed: unknown;
     try {
       parsed = JSON.parse(raw.replace(/```json|```/g, "").trim());
     } catch (parseErr) {
       console.error("[weekly-insight] 500 parse failure", parseErr);
-      return new Response(JSON.stringify({ error: String(parseErr) }), {
+      return new Response(JSON.stringify({ error: "Insight generation failed" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    if (!Array.isArray(parsed)) {
-      console.error("[weekly-insight] 500 AI response was not a JSON array");
-      return new Response(JSON.stringify({ error: "AI response was not a JSON array" }), {
+    const insights = sanitizeInsights(parsed);
+    if (!insights) {
+      console.error("[weekly-insight] 500 AI response failed schema check");
+      return new Response(JSON.stringify({ error: "Insight generation failed" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -299,7 +336,7 @@ ${JSON.stringify(evidence)}`,
       "replace_behavioral_insights",
       {
         p_user_id: user.id,
-        p_insights: parsed,
+        p_insights: insights,
       }
     );
 

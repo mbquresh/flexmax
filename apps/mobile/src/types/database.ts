@@ -81,6 +81,17 @@ export interface BehavioralInsight {
   nudge_line: string | null;
 }
 
+export interface NudgeEvent {
+  id: string;
+  user_id: string;
+  instance_id: string;
+  kind: string;
+  scheduled_for: string;
+  tapped_at: string | null;
+  response: string | null;
+  created_at: string;
+}
+
 export interface ScheduleTemplate {
   id: string;
   user_id: string;
@@ -145,6 +156,9 @@ export interface DailyInstance {
   is_fixed: boolean;
   removed_reason: string | null;
   removed_by: string | null;
+  // Set by a trigger (045) when the outcome was written after this date
+  // passed. Timing metrics must exclude these rows.
+  backfilled_at: string | null;
   // Joined from schedule_blocks
   block?: ScheduleBlock;
 }
@@ -218,13 +232,47 @@ export interface Database {
         Relationships: [];
       };
       away_periods: {
-        Row: AwayPeriod;
+        // Row must carry an index signature. AwayPeriod is an interface, and
+        // interfaces do not get TypeScript's implicit index signature — without
+        // the intersection this one table fails GenericTable, which fails the
+        // whole GenericSchema, which collapses every .from() / .rpc() to never.
+        Row: AwayPeriod & Record<string, unknown>;
         Insert: Partial<AwayPeriod> & {
           user_id: string;
           starts_on: string;
           ends_on: string;
         };
         Update: Partial<AwayPeriod>;
+        Relationships: [];
+      };
+      behavioral_insights: {
+        Row: BehavioralInsight & {
+          user_id: string;
+          evidence: string;
+          superseded: boolean;
+        } & Record<string, unknown>;
+        Insert: Partial<BehavioralInsight> & {
+          user_id: string;
+          kind: BehavioralInsight["kind"];
+          belief: string;
+          evidence: string;
+          rank: number;
+        };
+        Update: Partial<BehavioralInsight> & {
+          superseded?: boolean;
+          evidence?: string;
+        };
+        Relationships: [];
+      };
+      nudge_events: {
+        Row: NudgeEvent & Record<string, unknown>;
+        Insert: Partial<NudgeEvent> & {
+          user_id: string;
+          instance_id: string;
+          kind: string;
+          scheduled_for: string;
+        };
+        Update: Partial<NudgeEvent>;
         Relationships: [];
       };
     };
@@ -257,6 +305,16 @@ export interface Database {
         Args: Record<string, never>;
         Returns: undefined;
       };
+      delete_my_account: {
+        Args: Record<string, never>;
+        Returns: undefined;
+      };
+      record_app_open: {
+        Args: { p_local_date: string };
+        Returns: undefined;
+      };
     };
+    Enums: { [_ in never]: never };
+    CompositeTypes: { [_ in never]: never };
   };
 }

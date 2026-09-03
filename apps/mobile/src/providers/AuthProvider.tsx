@@ -30,7 +30,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 // Nothing in the auth bootstrap may block the app forever. Every await
 // here gates setLoading(false), so one hung request is an unrecoverable
 // white screen with no error to report.
-function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
+function withTimeout<T>(p: PromiseLike<T>, ms: number, label: string): Promise<T> {
   return Promise.race([
     p,
     new Promise<T>((_, reject) =>

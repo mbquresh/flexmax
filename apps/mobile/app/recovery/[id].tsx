@@ -10,12 +10,15 @@ import {
 import { router, useLocalSearchParams } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { BehavioralInsight } from "../../src/types/database";import { RecoveryCopy, buildRecoveryCopy, findInsightForBlock } from "../../src/lib/recoveryCopy";
-import { minutesToTime, getLocalDateString } from "../../src/lib/time";
+import { BehavioralInsight, DailyInstance } from "../../src/types/database";
+import { RecoveryCopy, buildRecoveryCopy, findInsightForBlock } from "../../src/lib/recoveryCopy";
+import { minutesToTime, getLocalDateString, formatDuration } from "../../src/lib/time";
 import {
   findRescheduleSlot,
   getFallbackSlot,
+  placeShrunkBlock,
   planDisplacement,
+  planShrinkToFit,
   resolveDayBoundaries,
   MIN_BLOCK_MINUTES,
 } from "../../src/lib/schedule";
@@ -28,6 +31,7 @@ import { supabase } from "../../src/lib/supabase";
 import { handleError } from "../../src/lib/errors";
 import { scheduleTodayBlockNotifications } from "../../src/lib/blockNotifications";
 import { TimePicker } from "../../src/components/TimePicker";
+import { DurationSlider } from "../../src/components/DurationSlider";
 import { PressableScale } from "../../src/components/PressableScale";
 import { RequireAuth } from "../../src/components/RequireAuth";
 
@@ -131,17 +135,13 @@ function RecoveryScreenContent() {
 
         lastNoteRow = lastNoteRowData ?? null;
 
-        const { data: insightsData } = await (
-          supabase as typeof supabase & {
-            from: (table: "behavioral_insights") => ReturnType<typeof supabase.from>;
-          }
-        )
+        const { data: insightsData } = await supabase
           .from("behavioral_insights")
           .select("id, kind, belief, suggestion, related_blocks, rank, generated_at, nudge_line")
           .eq("superseded", false)
           .order("rank");
 
-        insights = (insightsData as BehavioralInsight[] | null) ?? [];
+        insights = insightsData ?? [];
       } catch (err) {
         handleError(err, "handleMarkMissed lookups");
       }
@@ -225,6 +225,55 @@ function RecoveryScreenContent() {
     [rescheduleSlot, allInstances, instance?.id, todayBounds]
   );
 
+  // The fallback under the sacrifice offer: shorten the collider instead of
+  // removing it. Single-target only — see ShrinkToFitPlan.
+  const shrinkPlan = useMemo(() => {
+    if (!rescheduleSlot || !instance) return null;
+    if (plan.kind !== "sacrifice" || plan.targets.length !== 1) return null;
+    const target = plan.targets[0];
+    if (!target) return null;
+    return planShrinkToFit(
+      rescheduleSlot,
+      target,
+      allInstances,
+      instance.id,
+      todayBounds.sleep,
+      todayBounds.wake
+    );
+  }, [rescheduleSlot, instance?.id, plan, allInstances, todayBounds]);
+
+  const [shrinkMinutes, setShrinkMinutes] = useState<number | null>(null);
+
+  // Back to 50% whenever the offer itself changes. A duration carried over
+  // from a different block or a different slot is a stale answer to a
+  // question the user has not been asked yet.
+  useEffect(() => {
+    setShrinkMinutes(null);
+  }, [shrinkPlan?.target.id, shrinkPlan?.maxMinutes, shrinkPlan?.originalMinutes]);
+
+  const shrinkValue = shrinkPlan
+    ? Math.min(shrinkMinutes ?? shrinkPlan.defaultMinutes, shrinkPlan.maxMinutes)
+    : 0;
+
+  const shrinkPlacement = useMemo(
+    () =>
+      shrinkPlan && rescheduleSlot && instance
+        ? placeShrunkBlock(
+            rescheduleSlot,
+            shrinkPlan.target,
+            shrinkValue,
+            allInstances,
+            instance.id,
+            todayBounds.sleep,
+            todayBounds.wake
+          )
+        : null,
+    [shrinkPlan, shrinkValue, rescheduleSlot, instance?.id, allInstances, todayBounds]
+  );
+
+  const shrinkIsFullLength =
+    shrinkPlan != null && shrinkValue >= shrinkPlan.originalMinutes;
+
   const sacrificeWarning =
     plan.kind !== "sacrifice"
       ? null
@@ -278,22 +327,140 @@ function RecoveryScreenContent() {
     }
   };
 
+  const rescheduleProvenance = (inst: DailyInstance) => {
+    const isFirstReschedule = (inst.reschedule_count ?? 0) === 0;
+    return {
+      status: "pending" as const,
+      rescheduled_to_id: null,
+      reschedule_count: (inst.reschedule_count ?? 0) + 1,
+      ...(isFirstReschedule
+        ? {
+            original_start_minutes: inst.start_minutes,
+            original_end_minutes: inst.end_minutes,
+          }
+        : {}),
+    };
+  };
+
+  // Two rows must move together. swap_instance_times (008) is a generic
+  // ownership-validated "set both instances' times in one transaction" — it
+  // carries no swap-specific logic. Sequential updates here would allow a
+  // half-commit that leaves a real overlap in the database, which is the
+  // failure the whole displacement resolver exists to prevent.
+  //
+  // Shared by push and shrink-to-fit. Both are the same operation.
+  const commitPairedMove = async (params: {
+    self: DailyInstance;
+    selfStart: number;
+    selfEnd: number;
+    targetId: string;
+    targetStart: number;
+    targetEnd: number;
+    targetExtra?: Partial<DailyInstance>;
+  }) => {
+    const provenance = rescheduleProvenance(params.self);
+    const payload = {
+      start_minutes: params.selfStart,
+      end_minutes: params.selfEnd,
+      ...provenance,
+    };
+
+    const { error: rpcError } = await supabase.rpc("swap_instance_times", {
+      instance_a_id: params.self.id,
+      a_start: params.selfStart,
+      a_end: params.selfEnd,
+      instance_b_id: params.targetId,
+      b_start: params.targetStart,
+      b_end: params.targetEnd,
+    });
+    if (rpcError) throw rpcError;
+
+    // Provenance second, deliberately. Times are already correct and
+    // non-overlapping, so a failure here loses metadata, never schedule
+    // integrity.
+    const { error: provError } = await supabase
+      .from("daily_schedule_instances")
+      .update(provenance)
+      .eq("id", params.self.id);
+    if (provError) handleError(provError, "handleReschedule provenance");
+
+    if (params.targetExtra) {
+      const { error: extraError } = await supabase
+        .from("daily_schedule_instances")
+        .update(params.targetExtra)
+        .eq("id", params.targetId);
+      if (extraError) handleError(extraError, "handleReschedule targetProvenance");
+    }
+
+    const targetPayload = {
+      start_minutes: params.targetStart,
+      end_minutes: params.targetEnd,
+      ...(params.targetExtra ?? {}),
+    };
+
+    updateInstance(params.self.id, payload);
+    updateInstance(params.targetId, targetPayload);
+
+    const updatedInstances = allInstances
+      .map((i) =>
+        i.id === params.self.id
+          ? { ...i, ...payload }
+          : i.id === params.targetId
+            ? { ...i, ...targetPayload }
+            : i
+      )
+      .sort((a, b) => a.start_minutes - b.start_minutes);
+
+    setTodayInstances(updatedInstances);
+    const { todayInsights, todayPreempt } = useStore.getState();
+    scheduleTodayBlockNotifications(
+      updatedInstances,
+      getLocalDateString(),
+      todayInsights,
+      todayPreempt
+    ).catch((err) => handleError(err, "recoveryResync"));
+  };
+
+  // The collider survives at a reduced length instead of being removed.
+  // original_start/end_minutes on the target records what it was before the
+  // compression; reschedule_count is deliberately NOT bumped, matching push
+  // — the user rescheduled the missed block, not this one.
+  const handleShrinkAndMove = async () => {
+    if (!instance || !rescheduleSlot || !shrinkPlan || !shrinkPlacement) return;
+
+    const target = shrinkPlan.target;
+    const compressed =
+      !shrinkIsFullLength && target.original_start_minutes == null
+        ? {
+            original_start_minutes: target.start_minutes,
+            original_end_minutes: target.end_minutes,
+          }
+        : undefined;
+
+    setSaving(true);
+    try {
+      await commitPairedMove({
+        self: instance,
+        selfStart: rescheduleSlot.start_minutes,
+        selfEnd: rescheduleSlot.end_minutes,
+        targetId: target.id,
+        targetStart: shrinkPlacement.start,
+        targetEnd: shrinkPlacement.end,
+        targetExtra: compressed,
+      });
+      router.back();
+    } catch (err) {
+      handleError(err, "handleShrinkAndMove", "Couldn't shorten the block");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleReschedule = async () => {
     if (!instance || !rescheduleSlot) return;
     if (plan.kind === "blocked") return;
 
-    const isFirstReschedule = (instance.reschedule_count ?? 0) === 0;
-    const provenance = {
-      status: "pending" as const,
-      rescheduled_to_id: null,
-      reschedule_count: (instance.reschedule_count ?? 0) + 1,
-      ...(isFirstReschedule
-        ? {
-            original_start_minutes: instance.start_minutes,
-            original_end_minutes: instance.end_minutes,
-          }
-        : {}),
-    };
+    const provenance = rescheduleProvenance(instance);
     const payload = {
       start_minutes: rescheduleSlot.start_minutes,
       end_minutes: rescheduleSlot.end_minutes,
@@ -303,64 +470,14 @@ function RecoveryScreenContent() {
     setSaving(true);
     try {
       if (plan.kind === "push") {
-        // Two rows must move together. swap_instance_times (008) is a
-        // generic ownership-validated "set both instances' times in one
-        // transaction" — it carries no swap-specific logic. Sequential
-        // updates here would allow a half-commit that leaves a real
-        // overlap in the database, which is the failure this whole change
-        // exists to prevent.
-        const { error: rpcError } = await supabase.rpc("swap_instance_times", {
-          instance_a_id: instance.id,
-          a_start: rescheduleSlot.start_minutes,
-          a_end: rescheduleSlot.end_minutes,
-          instance_b_id: plan.target.id,
-          b_start: plan.newStart,
-          b_end: plan.newEnd,
+        await commitPairedMove({
+          self: instance,
+          selfStart: rescheduleSlot.start_minutes,
+          selfEnd: rescheduleSlot.end_minutes,
+          targetId: plan.target.id,
+          targetStart: plan.newStart,
+          targetEnd: plan.newEnd,
         });
-        if (rpcError) throw rpcError;
-
-        // Provenance second, deliberately. Times are already correct and
-        // non-overlapping, so a failure here loses metadata, never
-        // schedule integrity.
-        const { error: provError } = await supabase
-          .from("daily_schedule_instances")
-          .update(provenance)
-          .eq("id", instance.id);
-        if (provError) handleError(provError, "handleReschedule provenance");
-
-        updateInstance(instance.id, payload);
-        updateInstance(plan.target.id, {
-          start_minutes: plan.newStart,
-          end_minutes: plan.newEnd,
-        });
-
-        const displacedId = plan.target.id;
-        const displacedStart = plan.newStart;
-        const displacedEnd = plan.newEnd;
-
-        const updatedInstances = allInstances
-          .map((i) =>
-            i.id === instance.id
-              ? { ...i, ...payload }
-              : i.id === displacedId
-                ? {
-                    ...i,
-                    start_minutes: displacedStart,
-                    end_minutes: displacedEnd,
-                  }
-                : i
-          )
-          .sort((a, b) => a.start_minutes - b.start_minutes);
-
-        setTodayInstances(updatedInstances);
-        const { todayInsights, todayPreempt } = useStore.getState();
-        scheduleTodayBlockNotifications(
-          updatedInstances,
-          getLocalDateString(),
-          todayInsights,
-          todayPreempt
-        ).catch((err) => handleError(err, "recoveryResync"));
-
         router.back();
         return;
       }
@@ -557,6 +674,46 @@ function RecoveryScreenContent() {
                       : "Reschedule to this slot"}
               </Text>
             </PressableScale>
+
+            {/* Only under a sacrifice. Push already keeps the collider whole,
+                and offering to shorten a block that does not need shortening
+                would turn a resolved decision back into a question. */}
+            {shrinkPlan && shrinkPlacement ? (
+              <View style={styles.shrinkBox}>
+                <Text style={styles.shrinkLabel}>
+                  Or keep {shrinkPlan.name}, shorter
+                </Text>
+                <DurationSlider
+                  min={shrinkPlan.minMinutes}
+                  max={shrinkPlan.maxMinutes}
+                  value={shrinkValue}
+                  onChange={setShrinkMinutes}
+                  formatValue={formatDuration}
+                />
+                <Text style={styles.shrinkSentence}>
+                  {shrinkIsFullLength
+                    ? `${shrinkPlan.name} keeps its full ${formatDuration(
+                        shrinkPlan.originalMinutes
+                      )} and moves to ${minutesToTime(shrinkPlacement.start)}.`
+                    : `${shrinkPlan.name} drops from ${formatDuration(
+                        shrinkPlan.originalMinutes
+                      )} to ${formatDuration(shrinkValue)} and moves to ${minutesToTime(
+                        shrinkPlacement.start
+                      )}.`}
+                </Text>
+                <PressableScale
+                  style={styles.shrinkBtn}
+                  onPress={handleShrinkAndMove}
+                  disabled={saving}
+                >
+                  <Text style={styles.shrinkBtnText}>
+                    {shrinkIsFullLength
+                      ? "Reschedule and move"
+                      : "Reschedule and shorten"}
+                  </Text>
+                </PressableScale>
+              </View>
+            ) : null}
           </View>
         ) : null}
       </ScrollView>
@@ -705,6 +862,27 @@ const makeStyles = (c: Colors) =>
     rescheduleBtnTextBlocked: {
       color: c.textSecondary,
     },
+    shrinkBox: {
+      backgroundColor: c.surfaceNested,
+      borderRadius: radii.sm,
+      padding: spacing.md,
+      marginTop: spacing.sm,
+      gap: spacing.sm,
+    },
+    shrinkLabel: {
+      color: c.textMuted,
+      ...typography.smallBold,
+    },
+    shrinkSentence: { color: c.text, fontSize: 13, lineHeight: 20 },
+    shrinkBtn: {
+      borderRadius: radii.sm,
+      borderWidth: 1,
+      borderColor: c.success,
+      paddingVertical: 10,
+      alignItems: "center",
+      marginTop: spacing.xs,
+    },
+    shrinkBtnText: { color: c.text, fontSize: 14, fontWeight: "600" },
     footer: {
       flexDirection: "row",
       alignItems: "center",

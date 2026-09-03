@@ -50,7 +50,7 @@ results.
                                               │
                             ┌─────────────────┴─────────────────┐
                             ▼                                   ▼
-                    Today morning card                    Plan Tomorrow
+                    Today morning card                     Weekly recap
                      (injected, free)                    (injected, free)
 
 ### Data integrity rules (learned the hard way)

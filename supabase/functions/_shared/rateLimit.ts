@@ -2,6 +2,10 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const LIMITS: Record<string, number> = {
   "weekly-insight": 3,
+  // Calendar clients refresh between every 5 minutes (Apple, configurable)
+  // and every 12-24 hours (Google). 60/hour covers a noisy client plus
+  // retries without giving an enumerator a firehose on a known token.
+  "calendar-feed": 60,
 };
 
 const WINDOW_MS = 60 * 60 * 1000;

@@ -56,6 +56,7 @@ function instance(
     is_fixed: false,
     removed_reason: null,
     removed_by: null,
+    backfilled_at: null,
     block: block({ name: overrides.block?.name ?? "Gym" }),
     ...overrides,
   };

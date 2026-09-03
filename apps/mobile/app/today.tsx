@@ -28,6 +28,7 @@ import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "../src/lib/supabase";
 import {
+  WEEKDAYS,
   getTodayLabel,
   occupiesTime,
   planRestore,
@@ -42,7 +43,12 @@ import {
   AdhocTask,
   DailyInstance,
 } from "../src/types/database";
-import { minutesToTime, getLocalDateString } from "../src/lib/time";
+import {
+  minutesToTime,
+  getLocalDateString,
+  formatDayLabel,
+  parseLocalDate,
+} from "../src/lib/time";
 import { scheduleTodayBlockNotifications } from "../src/lib/blockNotifications";
 import { getInitials } from "../src/lib/format";
 import { RequireAuth } from "../src/components/RequireAuth";
@@ -60,7 +66,15 @@ import { TimePicker } from "../src/components/TimePicker";
 import { AppMenu, MenuButton } from "../src/components/AppMenu";
 import { PressableScale } from "../src/components/PressableScale";
 import { useTodayData } from "../src/hooks/useTodayData";
-import { STREAK_THRESHOLD } from "../src/lib/stats";
+import {
+  STREAK_THRESHOLD,
+  WeekView,
+  addDays,
+  fetchEarliestInstanceDate,
+  fetchWeekView,
+  isWithinEditWindow,
+  mondayOf,
+} from "../src/lib/stats";
 import {
   hapticCommit,
   hapticMissed,
@@ -129,6 +143,9 @@ function TodayScreenContent() {
   const {
     instances,
     displayDate,
+    isPastDay,
+    goToDate,
+    backToToday,
     totalBlocks,
     stats,
     loading,
@@ -144,18 +161,27 @@ function TodayScreenContent() {
     insights,
   } = useTodayData(session?.user.id);
   const { setTodayInstances, updateInstance } = useStore();
+  const todayStr = getLocalDateString();
+  // The weekday of the day on screen, not of today. Overrides are per
+  // weekday, so reading a Saturday while it is Monday must use Saturday's.
   const todayBounds = useMemo(
     () =>
       resolveDayBoundaries(
-        new Date().getDay(),
+        parseLocalDate(displayDate).getDay(),
         {
           wake: profile?.wake_target_minutes ?? null,
           sleep: profile?.sleep_target_minutes ?? null,
         },
         profile?.day_boundary_overrides
       ),
-    [profile]
+    [profile, displayDate]
   );
+  // Read all time. Write today and yesterday — a late check-in the next
+  // morning is accountability. Further back is rewriting the record.
+  const canEdit = isWithinEditWindow(displayDate, todayStr);
+  const [weekMonday, setWeekMonday] = useState(() => mondayOf(getLocalDateString()));
+  const [pastWeek, setPastWeek] = useState<WeekView | null>(null);
+  const [earliestDate, setEarliestDate] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [checkInInstance, setCheckInInstance] = useState<DailyInstance | null>(null);
   const [qualityPrompt, setQualityPrompt] = useState<{
@@ -209,13 +235,15 @@ function TodayScreenContent() {
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
-      await reload(undefined, { silent: true });
+      await reload(displayDate, { silent: true });
     } finally {
       setRefreshing(false);
     }
   };
 
   const todayLabel = getTodayLabel();
+  const viewedDayLabel =
+    WEEKDAYS[parseLocalDate(displayDate).getDay()]?.label ?? todayLabel;
 
   const sortedInstances = [...instances].sort(
     (a, b) => a.start_minutes - b.start_minutes
@@ -233,7 +261,8 @@ function TodayScreenContent() {
     [insights]
   );
 
-  const todayCompletionRatio = useMemo(() => {
+  // Ratios for the day on screen, which is not always today.
+  const viewedCompletionRatio = useMemo(() => {
     const relevant = instances.filter(
       (i) => i.status !== "removed" && i.status !== "rescheduled"
     );
@@ -241,7 +270,7 @@ function TodayScreenContent() {
     return relevant.filter((i) => i.status === "completed").length / relevant.length;
   }, [instances]);
 
-  const todayMissedRatio = useMemo(() => {
+  const viewedMissedRatio = useMemo(() => {
     const relevant = instances.filter(
       (i) => i.status !== "removed" && i.status !== "rescheduled"
     );
@@ -285,10 +314,86 @@ function TodayScreenContent() {
     return stats.streak;
   }, [instances, stats]);
 
+  // The current week's squares already arrive with stats, so no second
+  // request for the common case. Only a scrub off the current week fetches.
+  const currentWeekView = useMemo<WeekView | null>(
+    () =>
+      stats
+        ? {
+            mondayStr: mondayOf(todayStr),
+            completionRatio: stats.weekDayCompletionRatio,
+            missedRatio: stats.weekDayMissedRatio,
+            completionRate: stats.completionRate,
+          }
+        : null,
+    [stats, todayStr]
+  );
+
+  const isCurrentWeek = weekMonday === mondayOf(todayStr);
+
+  // A stale week is never rendered under the wrong header. While a fetch is
+  // in flight the squares go empty for a frame rather than showing another
+  // week's data, which would be a quiet lie about a real outcome.
+  const weekView = useMemo<WeekView>(() => {
+    if (isCurrentWeek && currentWeekView) return currentWeekView;
+    if (pastWeek?.mondayStr === weekMonday) return pastWeek;
+    return {
+      mondayStr: weekMonday,
+      completionRatio: Array(7).fill(0),
+      missedRatio: Array(7).fill(0),
+      completionRate: 0,
+    };
+  }, [isCurrentWeek, currentWeekView, pastWeek, weekMonday]);
+
+  useEffect(() => {
+    const userId = session?.user.id;
+    if (!userId || isCurrentWeek) return;
+    let cancelled = false;
+    fetchWeekView(userId, weekMonday)
+      .then((w) => {
+        if (!cancelled) setPastWeek(w);
+      })
+      .catch((err) => handleError(err, "fetchWeekView"));
+    return () => {
+      cancelled = true;
+    };
+  }, [weekMonday, isCurrentWeek, session?.user.id, instances]);
+
+  useEffect(() => {
+    const userId = session?.user.id;
+    if (!userId) return;
+    fetchEarliestInstanceDate(userId)
+      .then(setEarliestDate)
+      .catch((err) => handleError(err, "fetchEarliestInstanceDate"));
+  }, [session?.user.id]);
+
+  // "All time" ends where the data does. Scrubbing through empty weeks
+  // before the first instance reads as a broken control, not as history.
+  const canGoBack =
+    earliestDate != null && weekMonday > mondayOf(earliestDate);
+
+  const handleStepWeek = useCallback((delta: -1 | 1) => {
+    setWeekMonday((m) => addDays(m, delta * 7));
+  }, []);
+
+  const handleBackToToday = useCallback(() => {
+    setWeekMonday(mondayOf(getLocalDateString()));
+    backToToday();
+  }, [backToToday]);
+
+  // 'unaccounted' belongs here. The hourly sweep (012) rewrites every
+  // unanswered block on a past day to that status, so without it a past day
+  // renders as empty — which is precisely the day a user reaches back for.
+  // Today never holds one: the sweep only touches dates that have closed.
   const openItems = useMemo(() => {
     const items = [
       ...sortedInstances
-        .filter((i) => i.status === "pending" || i.status === "active")
+        .filter(
+          (i) =>
+            i.status === "pending" ||
+            i.status === "active" ||
+            i.status === "unaccounted"
+        )
         .map((instance) => ({
           kind: "block" as const,
           instance,
@@ -490,6 +595,10 @@ function TodayScreenContent() {
   }, []);
 
   const resyncNotifications = (updatedInstances: DailyInstance[]) => {
+    // A past day carries no notifications, and this call cancels the whole
+    // managed set before rebuilding from its arguments — so running it with
+    // last Tuesday's blocks would delete today's.
+    if (isPastDay) return;
     const { todayInsights, todayPreempt } = useStore.getState();
     // The full set is cancelled and rebuilt on every call, so anything not
     // passed here is silently dropped. Both values are derived once at load
@@ -503,6 +612,9 @@ function TodayScreenContent() {
   };
 
   const handleSwap = async (instanceA: DailyInstance, instanceB: DailyInstance) => {
+    // Gestures are already disabled on a past day; this is the backstop.
+    // Rearranging a day that has happened would rewrite the record.
+    if (isPastDay) return;
     if (instanceA.is_fixed || instanceA.block?.is_fixed) return;
     if (instanceB.is_fixed || instanceB.block?.is_fixed) return;
 
@@ -672,7 +784,7 @@ function TodayScreenContent() {
       });
       if (error) throw error;
       closeAddTask();
-      await reload();
+      await reload(displayDate);
       showToast(
         addTaskMode === "timed" ? "Task added to timeline" : "Task added to Anytime today"
       );
@@ -785,7 +897,20 @@ function TodayScreenContent() {
     setActiveTaskDetailInstance(item);
   };
 
+  const requireEditable = () => {
+    if (canEdit) return true;
+    hapticReject();
+    showToast("Only today and yesterday can be changed.");
+    return false;
+  };
+
+  const handleOpenCheckIn = (instance: DailyInstance) => {
+    if (!requireEditable()) return;
+    setCheckInInstance(instance);
+  };
+
   const showUndoActions = (item: DailyInstance) => {
+    if (!requireEditable()) return;
     const isMissed = item.status === "missed";
     const iosOption = isMissed ? "Undo — mark as pending" : "Undo completion";
 
@@ -810,6 +935,12 @@ function TodayScreenContent() {
   };
 
   const handleRestore = async (instance: DailyInstance) => {
+    // planRestore searches from now to bedtime. On a past day there is no
+    // remaining time to put anything back into.
+    if (isPastDay) {
+      showToast("That day is over — nothing to put back into it.");
+      return;
+    }
     const plan = planRestore(
       instance,
       instances,
@@ -948,6 +1079,14 @@ function TodayScreenContent() {
   };
 
   const handleMarkMissed = (instance: DailyInstance) => {
+    if (!requireEditable()) return;
+    // The recovery screen exists to reschedule into the rest of today and
+    // to catch a reflection while the miss is fresh. Neither applies to a
+    // day that is already over, so the check-in sheet carries the miss.
+    if (isPastDay) {
+      setCheckInInstance(instance);
+      return;
+    }
     hapticMissed();
     router.push(`/recovery/${instance.id}`);
   };
@@ -1172,9 +1311,11 @@ function TodayScreenContent() {
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <View>
-              <Text style={styles.title}>Today</Text>
+              <Text style={styles.title}>
+                {isPastDay ? formatDayLabel(displayDate) : "Today"}
+              </Text>
               <Text style={styles.date}>
-                {displayDate} · {todayLabel}
+                {displayDate} · {viewedDayLabel}
               </Text>
             </View>
             <View style={styles.headerRight}>
@@ -1189,17 +1330,37 @@ function TodayScreenContent() {
               </PressableScale>
             </View>
           </View>
-          {morningInsight && !insightDismissed ? (
+          {/* Today's card only. On a past day the engine's read on this
+              morning is not what the user came here for. */}
+          {morningInsight && !insightDismissed && !isPastDay ? (
             <InsightCard insight={morningInsight} onDismiss={handleDismissInsight} />
           ) : null}
           {stats ? (
             <StreakStrip
-              stats={stats}
-              todayCompletionRatio={todayCompletionRatio}
-              todayMissedRatio={todayMissedRatio}
-              liveCompletionRate={liveCompletionRate}
-              liveStreak={liveStreak}
+              week={weekView}
+              todayStr={todayStr}
+              selectedDate={displayDate}
+              streak={isPastDay ? stats.streak : liveStreak}
+              rateOverride={isPastDay ? undefined : liveCompletionRate}
+              liveDate={displayDate}
+              liveCompletionRatio={viewedCompletionRatio}
+              liveMissedRatio={viewedMissedRatio}
+              canGoBack={canGoBack}
+              onStepWeek={handleStepWeek}
+              onSelectDay={goToDate}
             />
+          ) : null}
+          {isPastDay ? (
+            <View style={styles.pastBanner}>
+              <Text style={styles.pastBannerText}>
+                {canEdit
+                  ? "Filling in yesterday. Times are fixed — only the outcome can change."
+                  : "This day is read only."}
+              </Text>
+              <PressableScale onPress={handleBackToToday} hitSlop={8}>
+                <Text style={styles.pastBannerAction}>Back to today</Text>
+              </PressableScale>
+            </View>
           ) : null}
         </View>
 
@@ -1208,9 +1369,11 @@ function TodayScreenContent() {
           accountedItems.length === 0 &&
           removedItems.length === 0 ? (
             <Text style={styles.empty}>
-              {totalBlocks > 0
-                ? `Nothing scheduled for ${todayLabel}. Your blocks may be set for other days — go to Edit schedule and tap ${todayLabel} on each block.`
-                : "No blocks yet. Add some in the schedule builder first."}
+              {isPastDay
+                ? "Nothing was scheduled on this day."
+                : totalBlocks > 0
+                  ? `Nothing scheduled for ${todayLabel}. Your blocks may be set for other days — go to Edit schedule and tap ${todayLabel} on each block.`
+                  : "No blocks yet. Add some in the schedule builder first."}
             </Text>
           ) : (
             openItems.map((item) =>
@@ -1218,9 +1381,10 @@ function TodayScreenContent() {
                 <BlockCard
                   key={item.instance.id}
                   instance={item.instance}
+                  historical={isPastDay}
                   saving={saving}
                   cardPositions={cardPositions}
-                  onCheckIn={setCheckInInstance}
+                  onCheckIn={handleOpenCheckIn}
                   onMarkMissed={handleMarkMissed}
                   onUndo={showUndoActions}
                   onTaskDetail={openTaskDetail}
@@ -1245,13 +1409,17 @@ function TodayScreenContent() {
             )
           )}
 
-          <PressableScale style={styles.addAdhocPill} onPress={openAddTask}>
-            <Text style={styles.addAdhocPlus}>+</Text>
-          </PressableScale>
+          {canEdit ? (
+            <PressableScale style={styles.addAdhocPill} onPress={openAddTask}>
+              <Text style={styles.addAdhocPlus}>+</Text>
+            </PressableScale>
+          ) : null}
 
           {anytimeAdhoc.length > 0 ? (
             <View style={styles.anytimeTray}>
-              <Text style={styles.anytimeTitle}>Anytime today</Text>
+              <Text style={styles.anytimeTitle}>
+                {isPastDay ? "Anytime" : "Anytime today"}
+              </Text>
               {anytimeAdhoc.map((task) => (
                 <AdhocAnytimeRow
                   key={task.id}
@@ -1272,9 +1440,10 @@ function TodayScreenContent() {
                   key={instance.id}
                   instance={instance}
                   accounted
+                  historical={isPastDay}
                   saving={saving}
                   cardPositions={cardPositions}
-                  onCheckIn={setCheckInInstance}
+                  onCheckIn={handleOpenCheckIn}
                   onMarkMissed={handleMarkMissed}
                   onUndo={showUndoActions}
                   onTaskDetail={openTaskDetail}
@@ -1297,9 +1466,10 @@ function TodayScreenContent() {
                   instance={instance}
                   accounted
                   removed
+                  historical={isPastDay}
                   saving={saving}
                   cardPositions={cardPositions}
-                  onCheckIn={setCheckInInstance}
+                  onCheckIn={handleOpenCheckIn}
                   onMarkMissed={handleMarkMissed}
                   onUndo={showUndoActions}
                   onRestore={handleRestore}
@@ -1356,15 +1526,22 @@ function TodayScreenContent() {
               router.push("/schedule-builder");
             },
           },
-          {
-            label: "Reset today",
-            icon: "rotate-ccw",
-            danger: true,
-            onPress: () => {
-              setMenuOpen(false);
-              confirmReset();
-            },
-          },
+          // Reset acts on the real today, not the day on screen. Offering
+          // it here would read as "reset this day" and destroy the wrong
+          // one, so it is absent rather than disabled.
+          ...(isPastDay
+            ? []
+            : [
+                {
+                  label: "Reset today",
+                  icon: "rotate-ccw" as const,
+                  danger: true,
+                  onPress: () => {
+                    setMenuOpen(false);
+                    confirmReset();
+                  },
+                },
+              ]),
         ]}
       />
 
@@ -1376,7 +1553,8 @@ function TodayScreenContent() {
         onRate={handleCheckIn}
         onClose={closeCheckIn}
         onMarkMissed={
-          checkInInstance && isInstanceFixed(checkInInstance)
+          checkInInstance &&
+          (isInstanceFixed(checkInInstance) || isPastDay)
             ? handleMarkMissedFromSheet
             : undefined
         }
@@ -1650,6 +1828,19 @@ const makeStyles = (c: Colors) =>
     },
     avatarText: { color: c.primary, ...typography.bodyBold },
     title: { ...typography.display, color: c.text },
+    pastBanner: {
+      marginHorizontal: spacing.xl,
+      marginTop: spacing.md,
+      backgroundColor: c.surfaceNested,
+      borderRadius: radii.md,
+      borderLeftWidth: 2,
+      borderLeftColor: c.primary,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.md,
+      gap: spacing.xs,
+    },
+    pastBannerText: { color: c.text, ...typography.smallRelaxed },
+    pastBannerAction: { color: c.primary, ...typography.smallBold },
     date: { ...typography.small, ...numeric, color: c.textMuted, marginTop: spacing.xs },
     list: { padding: spacing.lg, paddingBottom: 100 },
     scroll: { flex: 1 },

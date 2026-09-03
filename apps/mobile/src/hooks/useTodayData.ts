@@ -20,7 +20,11 @@ export function useTodayData(userId: string | undefined) {
   const [stats, setStats] = useState<TodayStats | null>(null);
   const [adhocTasks, setAdhocTasks] = useState<AdhocTask[]>([]);
   const [insights, setInsights] = useState<BehavioralInsight[]>([]);
-  const currentDateRef = useRef(getLocalDateString());
+  // The date on screen, which is not necessarily today. Kept apart from
+  // realTodayRef so a foreground event can tell "the clock rolled over"
+  // from "the user is looking at history".
+  const viewDateRef = useRef(getLocalDateString());
+  const realTodayRef = useRef(getLocalDateString());
   // Every load claims a token. Only the most recent load may write state —
   // an earlier, slower request that resolves last must discard its results.
   const loadSeqRef = useRef(0);
@@ -60,25 +64,37 @@ export function useTodayData(userId: string | undefined) {
       const seq = ++loadSeqRef.current;
       const isStale = () => seq !== loadSeqRef.current;
 
-      const targetDate = dateOverride ?? getLocalDateString();
+      const realToday = getLocalDateString();
+      const targetDate = dateOverride ?? realToday;
+      const isToday = targetDate === realToday;
+      const isPast = targetDate < realToday;
       setDisplayDate(targetDate);
-      currentDateRef.current = targetDate;
+      viewDateRef.current = targetDate;
+      realTodayRef.current = realToday;
       if (!options?.silent) {
         setLoading(true);
         setLoadFailed(false);
       }
 
       try {
-      // Instance generation is idempotent (on conflict do nothing) and the
-      // fetch below returns whatever already exists, so a slow or hung
-      // generate must not hold the whole screen.
-      try {
-        await Promise.race([
-          generateDailyInstances(targetDate),
-          new Promise((resolve) => setTimeout(resolve, 8000)),
-        ]);
-      } catch (err) {
-        handleError(err, "loadToday generate");
+      // Generation mints a row for every active block whose weekday matches
+      // the target date. On a past date that FABRICATES history: a block
+      // created last week would appear on days it did not exist, and a
+      // block whose days changed would appear on days it was never set for.
+      // Today and forward only — a past day shows exactly what was there.
+      //
+      // Idempotent (on conflict do nothing) and the fetch below returns
+      // whatever already exists, so a slow or hung generate must not hold
+      // the whole screen.
+      if (!isPast) {
+        try {
+          await Promise.race([
+            generateDailyInstances(targetDate),
+            new Promise((resolve) => setTimeout(resolve, 8000)),
+          ]);
+        } catch (err) {
+          handleError(err, "loadToday generate");
+        }
       }
 
       fetchTodayStats(userId)
@@ -113,15 +129,11 @@ export function useTodayData(userId: string | undefined) {
         .neq("status", "removed")
         .order("start_minutes", { nullsFirst: false });
 
-      const { data: insightsData, error: insightsError } = await (
-        supabase as typeof supabase & {
-          from: (table: "behavioral_insights") => ReturnType<typeof supabase.from>;
-        }
-      )
+      const { data: insightsData, error: insightsError } = await supabase
         .from("behavioral_insights")
         .select("id, kind, belief, suggestion, related_blocks, rank, generated_at, nudge_line")
         .eq("superseded", false)
-        .order("rank") as { data: BehavioralInsight[] | null; error: Error | null };
+        .order("rank");
 
       if (error) {
         setLoadFailed(true);
@@ -130,7 +142,16 @@ export function useTodayData(userId: string | undefined) {
       } else {
         if (isStale()) return;
         setTodayInstances(data ?? []);
-        if (data?.length) {
+        setTodayInsights(insightsData ?? []);
+        // Everything below acts on the CURRENT day: the pre-block nudge is
+        // relative to now, and scheduleTodayBlockNotifications cancels the
+        // whole managed set before rebuilding from its arguments. Running
+        // either against a past day would wipe today's notifications and
+        // replace them with nothing, since every past block is already
+        // behind us.
+        if (!isToday) {
+          setTodayPreempt(null);
+        } else if (data?.length) {
           if (isStale()) return;
           let preempt: PreemptCandidate | null = null;
           try {
@@ -161,7 +182,6 @@ export function useTodayData(userId: string | undefined) {
             handleError(err, "preemptHistory");
           }
           setTodayPreempt(preempt);
-          setTodayInsights(insightsData ?? []);
           try {
             const cutoffs = await scheduleTodayBlockNotifications(
               data,
@@ -170,11 +190,7 @@ export function useTodayData(userId: string | undefined) {
               preempt
             );
             if (cutoffs.length > 0) {
-              const { error: nudgeError } = await (
-                supabase as typeof supabase & {
-                  from: (table: "nudge_events") => ReturnType<typeof supabase.from>;
-                }
-              )
+              const { error: nudgeError } = await supabase
                 .from("nudge_events")
                 .upsert(
                   cutoffs.map((c) => ({
@@ -212,13 +228,17 @@ export function useTodayData(userId: string | undefined) {
       }
 
       // Fire-and-forget. Returns cached insights without an AI call if a fresh
-      // set exists, so this is cheap to call on every load.
-      supabase.functions
-        .invoke("weekly-insight")
-        .then(({ error }) => {
-          if (error) handleError(error, "weeklyInsightInvoke");
-        })
-        .catch((e) => handleError(e, "weeklyInsightInvoke"));
+      // set exists, so this is cheap to call on every load. Skipped while
+      // reading history: scrubbing back through ten weeks should not send
+      // ten requests at a function that is rate-limited for good reason.
+      if (isToday) {
+        supabase.functions
+          .invoke("weekly-insight")
+          .then(({ error }) => {
+            if (error) handleError(error, "weeklyInsightInvoke");
+          })
+          .catch((e) => handleError(e, "weeklyInsightInvoke"));
+      }
       } catch (err) {
         handleError(err, "loadToday");
         if (!isStale()) setLoadFailed(true);
@@ -241,19 +261,23 @@ export function useTodayData(userId: string | undefined) {
         isFirstFocus.current = false;
         return;
       }
-      loadToday(undefined, { silent: true });
+      // The day on screen, not necessarily today — returning from a check-in
+      // sheet must not silently yank the user out of the day they are
+      // backfilling.
+      loadToday(viewDateRef.current, { silent: true });
     }, [loadToday])
   );
 
   useEffect(() => {
     const subscription = AppState.addEventListener("change", (nextState) => {
-      if (nextState === "active") {
-        const freshDate = getLocalDateString();
-        if (freshDate !== currentDateRef.current) {
-          currentDateRef.current = freshDate;
-          loadToday(freshDate);
-        }
-      }
+      if (nextState !== "active") return;
+      const freshDate = getLocalDateString();
+      // Only a real rollover. Gating on the VIEWED date would reload on
+      // every foreground while reading history, and gating on nothing would
+      // reload after a Control Center swipe.
+      if (freshDate === realTodayRef.current) return;
+      realTodayRef.current = freshDate;
+      loadToday(freshDate);
     });
 
     return () => subscription.remove();
@@ -283,9 +307,25 @@ export function useTodayData(userId: string | undefined) {
     }
   }, [userId, loadToday]);
 
+  const goToDate = useCallback(
+    (dateStr: string) => {
+      loadToday(dateStr);
+    },
+    [loadToday]
+  );
+
+  const backToToday = useCallback(() => {
+    loadToday(getLocalDateString());
+  }, [loadToday]);
+
+  const isPastDay = displayDate < getLocalDateString();
+
   return {
     instances: todayInstances,
     displayDate,
+    isPastDay,
+    goToDate,
+    backToToday,
     totalBlocks,
     stats,
     loading,

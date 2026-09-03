@@ -16,6 +16,7 @@ function handleNotificationResponse(response: Notifications.NotificationResponse
   const data = response.notification.request.content.data;
 
   if (data?.type === "block_cutoff" && data?.instanceId) {
+    const instanceId = String(data.instanceId);
     const chose =
       action === "wrapping_up"
         ? "wrapping_up"
@@ -23,12 +24,10 @@ function handleNotificationResponse(response: Notifications.NotificationResponse
         ? "more_time"
         : "opened";
 
-    (supabase as typeof supabase & {
-      from: (table: "nudge_events") => ReturnType<typeof supabase.from>;
-    })
+    supabase
       .from("nudge_events")
       .update({ response: chose, tapped_at: new Date().toISOString() })
-      .eq("instance_id", data.instanceId)
+      .eq("instance_id", instanceId)
       .eq("kind", "cutoff")
       .then(
         () => {},
@@ -37,7 +36,7 @@ function handleNotificationResponse(response: Notifications.NotificationResponse
 
     if (chose === "more_time") {
       scheduleFollowUpNudge(
-        data.instanceId as string,
+        instanceId,
         (response.notification.request.content.title as string) ?? "Still going"
       ).catch(() => {});
     }

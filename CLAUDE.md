@@ -185,8 +185,11 @@ Cursor = implementation engine.
 | 025 | value_constraints.sql         | CHECK constraints on status and completion_rating (NOT VALID)                                                              |
 | 026 | cannibalization_and_interventions.sql | cannibalization, nudge_outcomes, miss_reasons in get_behavior_evidence; miss_reason_tag in base CTE                  |
 | 027 | swap_drift_net_displacement.sql | swap_drift counts NET displacement per instance, not edit rows; fidget swap-backs excluded |
-| 028 | app_sessions.sql              | app_sessions + record_app_open(date) RPC — one row per user per local date; repeats increment open_count             |
+| 028 | reschedule_provenance.sql     | reschedule_count + original_start/end_minutes. Client-written, not trigger, so swaps are not counted as reschedules |
 | 029 | quality_reason_tag.sql | quality_reason_tag column + CHECK; quality_drift window widened 5→7 rated instances; quality_reasons added to the evidence pack |
+| 030 | app_sessions.sql              | app_sessions + record_app_open(date) RPC — one row per user per local date; repeats increment open_count             |
+| 031 | account_deletion.sql          | delete_my_account() SECURITY DEFINER — deletes the caller's auth.users row; everything else cascades                 |
+| 032 | displaced_by_id.sql           | daily_schedule_instances.displaced_by_id — recovery sacrifice vs user-deleted, both previously just 'removed'        |
 | 033 | swap_drift_resolved_only.sql | swap_drift counts net displacement only on completed/missed instances; impact claim in its header is wrong, see Known issues 2026-08-26 |
 | 034 | quality_reason_note.sql | Free-text companion to quality_reason_tag; not written to the tag (CHECK-constrained, must stay countable) nor to reflection_why (means "why missed", a different question) |
 | 035 | day_boundary_overrides.sql | Sparse per-weekday wake/sleep overrides on profiles; scalar columns remain the default |
@@ -199,8 +202,9 @@ Cursor = implementation engine.
 | 042 | away_periods.sql | User-level date ranges where nothing generates. Both generate_* functions updated. Chosen over per-block exception rows: an away week written that way is 60+ rows, needs consecutive dates regrouped to display or cancel, and misses blocks created during the period |
 | 043 | calendar_feed_token.sql | Secret for the public ICS feed URL, nullable and generated lazily so a user who never exports has no live endpoint. Unique partial index — the token is the sole lookup key for an unauthenticated endpoint, so a collision would serve one user another's schedule. get_or_create_calendar_token and revoke_calendar_token are SECURITY DEFINER with auth.uid() guards |
 | 044 | removed_by.sql | Provenance on removal: user / displacement / archive / away. Four different things wrote 'removed' indistinguishably |
+| 045 | backfill_marker.sql | backfilled_at + a BEFORE UPDATE trigger. Past-day editing makes every now()-stamping timing column (acknowledged_at, rated_at, reflected_at) unreliable: a block from last Tuesday answered today reports five days of recovery time. A trigger not a client write, because a marker protecting a metric must not depend on every future call site remembering it. Compares against the user's own timezone, since yesterday is the common backfill and a UTC comparison would read it as same-day for half the world. Only an outcome write marks the row — a swap or task_detail edit is housekeeping. Once marked, always marked: the day cannot come back |
 
-028 exists to answer the north-star metric: of users who had a bad week, what
+030 exists to answer the north-star metric: of users who had a bad week, what
 share opened the app the following week. Capture is fire-and-forget from
 AuthProvider (cold start + foreground, 60s debounce). Time-in-app is not a
 signal — a phone in a pocket looks identical to engagement.
@@ -406,6 +410,11 @@ marker at all.
 | Calendar export UI | account.tsx + src/lib/calendarFeed.ts. Create, share, rotate and revoke the feed link. Token is generated lazily, so a user who never exports has no live endpoint. Sharing uses React Native's Share rather than a clipboard dependency — the iOS share sheet already offers Copy plus AirDrop, which is how a URL actually gets from phone to laptop. Two caveats shown inline: the link is unauthenticated and shows block names and times, and the feed publishes the TEMPLATE so same-day swaps do not appear. The second surprised the person who built it, which is why it is stated rather than assumed; shares a webcal:// link so tapping opens Calendar's subscribe flow directly, with a separate https:// share for Google, which takes a typed URL and rejects webcal. The UI recommends subscribing on a Mac: macOS saves the subscription to iCloud and syncs everywhere, while iPhone defaults to the local On My iPhone account and syncs nowhere, so a user who subscribes on both gets the schedule twice on their phone. The client chooses the account at subscribe time and no ICS property overrides it. |
 | Onboarding rebuilt around an interactive demo | onboarding.tsx + WeekDemo. Five self-report questions cut to one. The old flow asked five and read back exactly one, and asked users to self-report about self-knowledge — the specific thing this product argues is unreliable. Replaced with a 30-day, 8-block heatmap of a fictional person: 240 outcomes that look like noise until the user taps one filter and the Gym row separates. 90% gym failure on days morning deep work LANDED versus 15% otherwise, against a 40% overall rate that reads as an ordinary failing habit. The continue button is gated on applying the filter, so the user pulls the signal out themselves before being told it exists. Data is hand-authored and verified; percentages are computed from the exact cells shipped, with an exception on each side because a perfect split reads as fabricated. The reveal states co-occurrence, never causation, matching the real engine's constraint. No AI call, no network, no claim about the user. THE CONDITION MUST STAY AN OUTCOME THE ENGINE ACTUALLY READS: a first version conditioned on the morning block "running past its window", which nothing computes — actual_end_minutes is captured but absent from every version of get_behavior_evidence, and the pack ships a caveat forbidding the narrator from claiming a block "ran until" a time. Completion of an earlier block is the real cannibalization trigger, so the demo now uses that. Likewise the contract screen says FlexMax "looks for patterns that repeat", not that it "checks every pair of blocks against every condition" — cannibalization tests one condition on tracked pairs, mixed days only, time-ordered, behind 8-day and 25-point-lift floors |
 | Removed pile | today.tsx + planRestore. Removal was terminal — a block dropped to make room vanished with no way back. Now a third section under Accounted for, restorable. Restore routes through planRestore so it can never write the overlap 4a exists to prevent, and where the original slot is only partly free it offers to shorten the block rather than refusing. Only user and displacement removals appear: archive and away are system state, and restoring one would return a block whose template is archived or a block on a day the person is away. Muted X, never coral — a removed block is a decision, not a failure. Two supporting changes the pile does not work without: useTodayData stopped filtering 'removed' out of the day's instances (every consumer downstream — streak, completion rate, notification eligibility, occupiesTime — already filters status explicitly, so nothing else moved), and the swipe-to-remove handler now maps the row to 'removed' in local state instead of dropping it from the array, which had made restore unreachable until the next reload. MIN_BLOCK_MINUTES moved from the recovery route into schedule.ts and is imported by both, since a route file is the wrong home for a constant two screens share; restore searches the whole remaining day rather than only the original window: original slot at full length first, then any full-length slot via findRescheduleSlot, then the largest gap shortened. Full length beats original position — 90 minutes at 10pm is worth more than 45 at 1pm. Sleep is a hard bound at every tier via resolveDayEnd, and a relocate or shrink is always confirmed, never silent |
+| Shorten and move | recovery/[id].tsx + planShrinkToFit / placeShrunkBlock in schedule.ts + DurationSlider. A single-collider sacrifice now carries a fallback beneath it: shorten the collider instead of removing it, minute resolution, defaulting to 50%. The COLLIDER shrinks, not the block being rescheduled — the missed block already lost its slot once, and compressing it too would mean the recovery costs the thing being recovered. Single target only: a slider per block across two or three colliders is a negotiation, which is the freeze this flow exists to avoid. maxMinutes is derived from the same gap set placeShrunkBlock's fallback pass searches, so every value the slider can produce is guaranteed placeable — a slider that can select an impossible duration is worse than no slider. Placement runs two passes, preferring a slot at or after the collider's own original start, because a plain earliest-fit search drops a shortened Cardio into a free hour AHEAD of the block it just made room for; the earlier gap is still taken when it is the only space left, and the sentence above the button always states the resulting time, so the fallback is never silent. original_start/end_minutes on the target records the pre-compression length; reschedule_count is deliberately NOT bumped there, matching push — the user rescheduled the missed block, not this one. Built on reanimated + gesture-handler rather than a slider dependency, per the interval stepper precedent. The thumb is positioned from the value prop, not from a gesture-driven shared value: there is nothing to animate, and a spring between finger and readout reads as lag. Horizontal intent only (activeOffsetX / failOffsetY) or the pan eats every scroll that starts on the track. Haptics are a detent at each rail, once per arrival — per-minute feedback is a buzz train, which reads as an alert. Push and shrink commit through one commitPairedMove helper, since both are "set two rows' times in one transaction, then provenance", and planRestore's gap walk was extracted to a shared freeGaps for the same reason: the occupiesTime postmortem is what happens when one rule keeps three copies |
+| Past-day access | StreakStrip + useTodayData + 045. Long-press a square to open that day; horizontal pan on the strip pages weeks back to the first instance. View is unbounded; only yesterday can be filled in. A late check-in the next morning is accountability. Rewriting a week-old miss is covering for it. Generation, notification rebuild, pre-block nudge, and weekly-insight invoke are all gated to today: generating a past date would fabricate history, and scheduleTodayBlockNotifications cancels the managed set before rebuilding, so a past-day load would wipe today's notifications. Unaccounted rows appear in the open list on a past day (the sweep has already rewritten them); drag, swipe, swap, restore, and the recovery route are off — times are fixed, only the outcome can change, and the miss is taken in CheckInSheet rather than a reschedule flow that searches from now. Focus reload uses the viewed date, not today, or returning from a check-in would yank the user out of the day they are filling. AppState only reloads on a real date rollover. The backfill trigger (045) marks outcome writes after the row's own local date; paste it in the SQL Editor before shipping the client, because a marker protecting a metric must exist before the first backfill lands |
+
+
+
 
 
 
@@ -682,8 +691,12 @@ makes it a one-line swap in theme.ts if ever revisited.
 - **A displacement is indistinguishable from a swap in the audit trail.**
   Reusing swap_instance_times means the trigger writes both rows under one
   txid, exactly like a swap. This compounds the existing "swap_drift cannot
-  separate swaps from reschedules" item — there are now three event types
-  sharing one signature.
+  separate swaps from reschedules" item — there are now FOUR event types
+  sharing one signature, since shorten-and-move commits through the same
+  RPC. A compression is the one recoverable case: the shortened row carries
+  original_start/end_minutes spanning a longer window than its new times,
+  which nothing else produces. Length change is therefore separable in the
+  data even though direction is not.
 - **quality_drift's window moved from 5 to 7 rated instances (029).** The
   in-app degradation prompt and the evidence pack now share one definition of
   "degrading", so the app cannot ask about a block the weekly insight never
@@ -785,11 +798,11 @@ makes it a one-line swap in theme.ts if ever revisited.
   app. WKST is fixed to MO for determinism. Reconciling properly means either
   changing generation to be week-boundary-relative or emitting explicit RDATEs
   instead of an RRULE.
-- **The feed has no rate limiting.** _shared/rateLimit.ts keys on user_id
-  and this endpoint is unauthenticated. It is the only enumerable surface in
-  the product, and a 48-character token makes guessing impractical, but the
-  endpoint will answer as fast as it is asked. Per-token limiting or a
-  platform-level rule should land before public beta.
+- **The feed is rate-limited per known token (60/hour), via the same
+  ai_rate_limits table as weekly-insight.** Unknown tokens still 404 without
+  incrementing, so a 429 cannot confirm the space. Platform-level / IP
+  limiting on the 404 path is the remaining gap, and guessing a 48-character
+  token is already impractical.
 - **A swap or reschedule never reaches the calendar.** The feed publishes
   the template deliberately: Google refreshes every 12-24 hours, so publishing
   daily instances would show a Google subscriber yesterday's arrangement all
@@ -1054,27 +1067,30 @@ paragraph originally cited.
 These came from an independent code review and should be verified against the
 tree before being acted on — do not assume all are still present.
 
-- **CI is decorative.** The `lint` job installs dependencies and ends. No test
-  job exists despite `stats.test.ts` and `recoveryCopy.test.ts` having shipped.
-- **Expo push pipeline.** `nightly-notify` POSTs the entire message array in one
+- **CI was red for every push after 2026-08-25.** The jobs themselves were
+  fine (`typecheck` + `test` since 08-22). `away_periods` was added to the
+  handwritten `Database` type as `Row: AwayPeriod` instead of
+  `AwayPeriod & Record<string, unknown>`. An interface has no implicit index
+  signature, so that one table failed postgrest-js's `GenericTable`, which
+  failed `GenericSchema`, which collapsed every `.from()` / `.rpc()` to
+  `never`. Two honest missing-RPC errors became 87 noise errors, and the
+  signal stayed buried. FIXED 2026-09-02: the intersection is on the row,
+  `behavioral_insights` / `nudge_events` / `delete_my_account` /
+  `record_app_open` are in the type, and the five `as typeof supabase`
+  casts that existed to paper over missing tables are gone.
+- **`schedule-block-notifications` is still deployed.** Source was deleted in
+  `fe76e9d` and the local directory is empty, but the project still 401s at
+  `/functions/v1/schedule-block-notifications` (gateway JWT, `sb-error-code:
+  UNAUTHORIZED_NO_AUTH_HEADER`). The four other deleted functions 404 at the
+  platform. Delete it from the dashboard; nothing in the app calls it.
   request (Expo wants batches of ≤100). No ticket/receipt handling, so
   `DeviceNotRegistered` tokens are never pruned. No idempotency key, so a cron
   retry double-notifies.
-- **Error leakage in `weekly-insight`.** `String(err)` is returned to the client
-  in the catch; the JSON-parse failure path returns the raw parse error.
-- **Model output is under-validated.** Only `Array.isArray` is checked before
-  insights go into `replace_behavioral_insights`. Needs per-item schema
-  validation.
-- **README tree diagram drift.** Still lists `packages/ai/` and
-  `missed-block-recovery` (deleted in `fe76e9d`), and says "rate-limited AI
-  endpoints" plural when `weekly-insight` is the only one left.
-- **Architecture diagram fan-out is partly aspirational.** It shows
-  `behavioral_insights` feeding missed-block-recovery, the Today card, and Plan
-  Tomorrow. Today and weekly-recap read it; missed-block-recovery no longer
-  exists; Plan Tomorrow does not appear to read the table. Two of four arrows
-  are live.
-- **No account deletion or data export path.** This is an App Store requirement,
-  not a nicety — it is a launch blocker.
+- **README architecture diagram fan-out drifted.** `behavioral_insights` feeds
+  the Today card and weekly-recap. Plan Tomorrow does not read the table.
+  missed-block-recovery no longer exists.
+- **No data export path.** Account deletion shipped (031 + account.tsx). Apple
+  also wants a way for the user to obtain their data. Still a launch item.
 - **Undecided:** README vs CLAUDE.md as the canonical reasoning log. They
   currently overlap.
 - **`weekly-insight` leaks internals on error.** The catch at
@@ -1089,6 +1105,12 @@ tree before being acted on — do not assume all are still present.
   function had NO console output at all, on any path, so a failing invocation
   produced only boot and shutdown lines in the dashboard and could not be
   diagnosed. All five failure returns and both success returns now log.
+  The JSON-parse failure path still returned `String(parseErr)` until
+  2026-09-02, when it joined the same generic return. A `sanitizeInsights`
+  check now drops items that are not objects with a known `kind` and string
+  `belief`/`evidence` before `replace_behavioral_insights`; an empty set
+  after sanitizing is a 500, not a write. Length caps match the prompt.
+  This is still not a JSON schema.
 - **No database guard against inverted blocks.** `daily_schedule_instances`
   has no CHECK constraint on `end_minutes > start_minutes`; migration 025
   constrains `status` and `completion_rating` only. Postgres would accept a

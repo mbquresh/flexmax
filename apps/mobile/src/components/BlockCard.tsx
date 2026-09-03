@@ -53,6 +53,12 @@ interface BlockCardProps {
   unregisterFlashTrigger: (id: string) => void;
   accounted?: boolean;
   removed?: boolean;
+  /**
+   * A day that has already happened. Times are a record now, so drag and
+   * swipe are off — the same reason `accounted` turns them off. Check-in
+   * and undo stay, which is the whole point of reaching a past day.
+   */
+  historical?: boolean;
   scrollRef?: AnimatedRef<Animated.ScrollView>;
   scrollY?: SharedValue<number>;
   viewportHeight?: SharedValue<number>;
@@ -74,6 +80,7 @@ export function BlockCard({
   unregisterFlashTrigger,
   accounted = false,
   removed = false,
+  historical = false,
   scrollRef,
   scrollY,
   viewportHeight,
@@ -225,7 +232,7 @@ export function BlockCard({
   }, true);
 
   const dragGesture = Gesture.Pan()
-    .enabled(!isFixed && !accounted)
+    .enabled(!isFixed && !accounted && !historical)
     .onStart(() => {
       isDragging.value = 1;
       scale.value = withTiming(1.03, { duration: 120 });
@@ -274,7 +281,7 @@ export function BlockCard({
     });
 
   const swipeGesture = Gesture.Pan()
-    .enabled(!isFixed && !isAnswered && !accounted)
+    .enabled(!isFixed && !isAnswered && !accounted && !historical)
     .activeOffsetX([-15, 15])
     .failOffsetY([-8, 8])
     .maxPointers(1)
@@ -446,7 +453,7 @@ export function BlockCard({
     <Animated.View
       style={[styles.cardShadow, accounted && styles.cardAccounted, shadowAnimatedStyle]}
       onLayout={(e) => {
-        if (accounted) return;
+        if (accounted || historical) return;
         const { y, height } = e.nativeEvent.layout;
         onLayout(instance.id, y, height);
       }}

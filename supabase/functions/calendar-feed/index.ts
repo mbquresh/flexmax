@@ -10,7 +10,8 @@
 //     space is meaningful and turns this into an oracle
 //   * the response carries block names and times only. Never reflections,
 //     insights, miss reasons, ratings or anything else
-//   * rate limited per token, because this is the one enumerable surface
+//   * known tokens are rate-limited per user (60/hour) after lookup. Unknown
+//     tokens 404 without incrementing, so a 429 cannot confirm the space.
 //
 // WHY THE TEMPLATE AND NOT THE INSTANCES: Google refreshes subscribed feeds
 // every 12-24 hours with no faster setting (Apple is hourly, configurable to
@@ -25,6 +26,7 @@
 // emitting a VTIMEZONE component that clients disagree about.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { checkRateLimit } from "../_shared/rateLimit.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -150,6 +152,15 @@ function serve_handler() {
       }
 
       const userId = profile.id as string;
+
+      const { allowed } = await checkRateLimit(userId, "calendar-feed");
+      if (!allowed) {
+        console.warn(`[calendar-feed] 429 rate limited user=${userId}`);
+        return new Response("Too many requests", {
+          status: 429,
+          headers: { "Retry-After": "3600" },
+        });
+      }
 
       const { data: blocks, error: blocksErr } = await supabase
         .from("schedule_blocks")
@@ -277,7 +288,9 @@ function serve_handler() {
         status: 200,
         headers: {
           "Content-Type": "text/calendar; charset=utf-8",
-          "Cache-Control": "public, max-age=3600",
+          // Token-bearing per-user URL. public would let a shared cache
+          // serve one person's schedule to the next requester.
+          "Cache-Control": "private, max-age=3600",
           "Content-Disposition": 'inline; filename="flexmax.ics"',
         },
       });

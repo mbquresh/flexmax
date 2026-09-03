@@ -6,6 +6,43 @@ export function minutesToTime(minutes: number): string {
   return `${hour}:${m.toString().padStart(2, "0")} ${ampm}`;
 }
 
+const MONTH_NAMES = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+const WEEKDAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+/** Parse a local YYYY-MM-DD. Never `new Date(str)` — that reads as UTC. */
+export function parseLocalDate(dateStr: string): Date {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1);
+}
+
+/** "Mon, Aug 17" */
+export function formatDayLabel(dateStr: string): string {
+  const d = parseLocalDate(dateStr);
+  return `${WEEKDAY_NAMES[d.getDay()]}, ${MONTH_NAMES[d.getMonth()]} ${d.getDate()}`;
+}
+
+/** "Aug 17 – 23", or "Aug 31 – Sep 6" across a month boundary. */
+export function formatWeekRange(startStr: string, endStr: string): string {
+  const a = parseLocalDate(startStr);
+  const b = parseLocalDate(endStr);
+  const right =
+    a.getMonth() === b.getMonth()
+      ? `${b.getDate()}`
+      : `${MONTH_NAMES[b.getMonth()]} ${b.getDate()}`;
+  return `${MONTH_NAMES[a.getMonth()]} ${a.getDate()} – ${right}`;
+}
+
+/** A span, not a clock time. 30 -> "30m", 60 -> "1h", 90 -> "1h 30m". */
+export function formatDuration(minutes: number): string {
+  if (minutes < 60) return `${minutes}m`;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return m === 0 ? `${h}h` : `${h}h ${m}m`;
+}
+
 export type TimePeriod = "AM" | "PM";
 
 export function timeToParts(time: string): {

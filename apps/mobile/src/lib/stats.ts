@@ -31,6 +31,128 @@ function parseLocalDateStr(dateStr: string): Date {
   return new Date(y, m - 1, d);
 }
 
+/** The Monday of the week containing `dateStr`. Weeks run Mon–Sun. */
+export function mondayOf(dateStr: string): string {
+  const d = parseLocalDateStr(dateStr);
+  const dayOfWeek = d.getDay(); // 0=Sun
+  d.setDate(d.getDate() + (dayOfWeek === 0 ? -6 : 1 - dayOfWeek));
+  return toLocalDateStr(d);
+}
+
+export function addDays(dateStr: string, days: number): string {
+  const d = parseLocalDateStr(dateStr);
+  d.setDate(d.getDate() + days);
+  return toLocalDateStr(d);
+}
+
+export function daysBetween(fromStr: string, toStr: string): number {
+  const from = parseLocalDateStr(fromStr);
+  const to = parseLocalDateStr(toStr);
+  return Math.round((to.getTime() - from.getTime()) / 86400000);
+}
+
+/** The seven dates of the week starting at `mondayStr`. */
+export function weekDates(mondayStr: string): string[] {
+  return Array.from({ length: 7 }, (_, i) => addDays(mondayStr, i));
+}
+
+// Yesterday is still accountability: the evening closed without a check-in
+// and the person is catching up. Further back is rewriting the record.
+export const EDIT_WINDOW_DAYS = 1;
+
+/** Today or yesterday. Older days are view-only. */
+export function isWithinEditWindow(dateStr: string, todayStr: string): boolean {
+  const age = daysBetween(dateStr, todayStr);
+  return age >= 0 && age <= EDIT_WINDOW_DAYS;
+}
+
+export interface WeekView {
+  mondayStr: string;
+  completionRatio: number[]; // Mon–Sun, 0–1
+  missedRatio: number[]; // Mon–Sun, 0–1
+  completionRate: number; // 0–100 across elapsed days in this week
+}
+
+export function computeWeekView(
+  rows: StatsRow[],
+  mondayStr: string,
+  todayStr: string
+): WeekView {
+  const byDate = new Map<string, { relevant: number; completed: number; missed: number }>();
+  for (const r of rows) {
+    if (EXCLUDED.includes(r.status)) continue;
+    const entry = byDate.get(r.date) ?? { relevant: 0, completed: 0, missed: 0 };
+    entry.relevant++;
+    if (r.status === "completed") entry.completed++;
+    if (r.status === "missed") entry.missed++;
+    byDate.set(r.date, entry);
+  }
+
+  const dates = weekDates(mondayStr);
+  const ratio = (dateStr: string, key: "completed" | "missed") => {
+    const entry = byDate.get(dateStr);
+    if (!entry || entry.relevant === 0) return 0;
+    return entry[key] / entry.relevant;
+  };
+
+  // Days that have not happened are excluded from the rate. Plan Tomorrow
+  // pre-generates pending instances; counting them would penalize planning
+  // ahead. For a past week every day has elapsed, so nothing is dropped.
+  let elapsedRelevant = 0;
+  let elapsedCompleted = 0;
+  for (const dateStr of dates) {
+    if (dateStr > todayStr) continue;
+    const entry = byDate.get(dateStr);
+    if (!entry) continue;
+    elapsedRelevant += entry.relevant;
+    elapsedCompleted += entry.completed;
+  }
+
+  return {
+    mondayStr,
+    completionRatio: dates.map((d) => ratio(d, "completed")),
+    missedRatio: dates.map((d) => ratio(d, "missed")),
+    completionRate:
+      elapsedRelevant > 0
+        ? Math.round((elapsedCompleted / elapsedRelevant) * 100)
+        : 0,
+  };
+}
+
+/** One week of squares. Seven days of rows, so cheap to call per scrub. */
+export async function fetchWeekView(
+  userId: string,
+  mondayStr: string
+): Promise<WeekView> {
+  const { data } = await supabase
+    .from("daily_schedule_instances")
+    .select("date, status")
+    .eq("user_id", userId)
+    .gte("date", mondayStr)
+    .lte("date", addDays(mondayStr, 6));
+
+  return computeWeekView(data ?? [], mondayStr, getLocalDateString());
+}
+
+/**
+ * The earliest date this user has any instance for. Bounds the scrubber —
+ * "all time" means back to the first day there is anything to look at, and
+ * an unbounded scrub through empty weeks reads as a broken control.
+ */
+export async function fetchEarliestInstanceDate(
+  userId: string
+): Promise<string | null> {
+  const { data } = await supabase
+    .from("daily_schedule_instances")
+    .select("date")
+    .eq("user_id", userId)
+    .order("date", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  return data?.date ?? null;
+}
+
 // A block is "accounted for" when the user gave it a real status.
 // 'unaccounted' (swept by migration 012 — never acknowledged) and
 // 'pending'/'active' (not yet answered) are NOT accounted.
