@@ -112,6 +112,10 @@ anesthetizes the exact mechanism the product runs on:
   that?")
 - Notifications that let the user resolve a block without opening the app and
   seeing the day
+   *Responding to a nudge is not resolving a block. The shipped action buttons
+   record a nudge response and deliberately do not write a block status — that
+   is the line. Extending them to set status, mark complete, or close out a day
+   without the user opening the app would cross it.*
 - AI that writes the reflection for the user
 - Any "reduce friction" change that removes a look at the schedule rather than a
   keystroke
@@ -121,76 +125,40 @@ already frictionless, which is precisely why nobody pays attention to them.
 
 ---
 
-## Competitive positioning: FlexMax vs. Structured
+## Category and boundaries
 
-Structured (unorderly GmbH) is the category king in visual day-planning:
-15M+ downloads, 500K+ Pro users, 400K+ five-star reviews, Apple Editor's
-Choice. It has explicitly moved onto our ICP's turf — its App Store copy
-now says "whether dealing with ADHD, autism, or simply seeking a bit more
-structure" — and it is not standing still on AI: "Structured AI" creates
-schedules from natural language, and the team has publicly said they're
-reworking their AI assistant.
+FlexMax is not a calendar, a task manager, a habit tracker, or an AI planner.
+It is an execution companion: it salvages days that break and explains why they
+keep breaking. Day-planning apps are not the reference point and should not be
+used as one — benchmarking against them pulls the product toward planner
+feature-parity, which is a category FlexMax does not compete in and cannot win
+by entering.
 
-**Conclusion: we cannot win as "a beautiful, simple time-block planner."**
-That position is occupied, polished, and well-funded. Any positioning that
-reads as "like Structured but—" loses by default.
+These constraints are permanent. They are stated as first principles because a
+rule justified by what some other product does expires the moment that product
+changes.
 
-### Where the seam is
+**The AI's job is understanding, never authoring.** FlexMax's model reads
+demonstrated behavior and explains it. It does not generate schedules, propose
+plans from a text prompt, or decide what the user's day should contain. Faster
+schedule creation is a different product with a different value proposition, and
+every hour spent there is an hour not spent on the thing only accumulated
+behavioral history can do. If a feature proposal begins "the AI builds your…",
+it is out of scope by definition.
 
-Two findings from Structured's own reviews and marketing:
+**The miss and recovery moment is the product's core surface.** Most planning
+tools are at their weakest exactly when the user is doing badly — the plan
+becomes a rendering of everything that didn't happen. FlexMax must be at its
+strongest there. When several blocks fail at once, the response is one path
+forward, not one failure marker per block.
 
-1. ADHD-focused reviews of Structured cite the same limitation repeatedly:
-  it becomes discouraging when the timeline is overfilled, and it only
-   works well when the day plan is realistic. In other words: Structured is
-   a beautiful mirror of your plan. It works when you're already doing
-   well. When you fall behind, the mirror shows you failing, in gorgeous
-   detail — the exact shame-spiral our ICP (the "Capable Drifter") has
-   already quit every other planner over.
-2. Structured's own answer to missed tasks is "Replan — reschedule with a
-  quick swipe." That is mechanical relocation: the block moves, nothing
-   learns. Miss morning gym 40 times, replan it 40 times, and Structured
-   will happily schedule morning gym #41, identical to #1. It treats the
-   symptom (an unfinished block) and is structurally blind to the cause.
+**Depth over surface.** FlexMax competes on accumulated per-user behavioral
+understanding, which grows with every week of use and cannot be replicated by
+copying a screen. It does not compete on integrations, widget count, or platform
+breadth. Those are worth building eventually (see Honest risks) and are never
+the differentiator.
 
-
-
-### FlexMax's answer
-
-Structured answers "what is my day?" FlexMax answers "why does my day keep
-breaking, and what should change?" Structured captures the plan. FlexMax
-captures the failure data — completion_ratings, reflection_why,
-reflection_improve, removed_reason, swap patterns — and v2b's behavioral
-learning turns that into an evolving model of the person. Structured's
-Replan moves the block. FlexMax's recovery asks why, remembers the answer,
-and eventually stops proposing blocks the user's own data says don't
-survive.
-
-One-liner against them: "Structured shows you your plan. FlexMax learns
-why your plans fail."
-
-### Implications this creates (binding on future work)
-
-- **v2b is not just a feature, it is the entire differentiation.** Until
-the psychology profile evolves from behavior, FlexMax is an objectively
-worse Structured — less polish, fewer integrations, no widgets, no Apple
-Watch. The moment the profile evolves, FlexMax is in a category
-Structured cannot enter without abandoning its own identity. This raises
-the priority of the v2a capture-gap fixes (swap audit trail, notification
-response tracking, check-in timing) — they are prerequisites for v2b, and
-data not captured today is unrecoverable later.
-- **The miss/recovery moment is the battlefield.** Structured's weakest
-moment is falling behind — a timeline that turns into a wall of missed
-blocks. That exact moment must be FlexMax's strongest. When a user misses
-multiple blocks, Structured shows multiple failures; FlexMax must show
-one recovery path and zero judgment. Any UI touching missed-block
-recovery should be designed with this contrast explicitly in mind.
-- **AI scope boundary: their AI accelerates planning, ours must accelerate
-understanding.** Structured AI's job is to create a schedule faster from
-natural language — that is input/creation. If FlexMax's AI roadmap drifts
-toward "AI that builds your schedule for you" as its main value, we are
-building Structured's feature, not ours. Keep FlexMax's AI focused on
-learning and adapting to the user's demonstrated behavior, not on
-authoring the plan itself.
+---
 
 **Positioning lines that have been proposed and rejected:**
 - "The planner that learns why you quit" — reintroduces the planner category
@@ -305,7 +273,7 @@ Cursor = implementation engine.
 | 044 | removed_by.sql | Provenance on removal: user / displacement / archive / away. Four different things wrote 'removed' indistinguishably |
 | 045 | backfill_marker.sql | backfilled_at + a BEFORE UPDATE trigger. Past-day editing makes every now()-stamping timing column (acknowledged_at, rated_at, reflected_at) unreliable: a block from last Tuesday answered today reports five days of recovery time. A trigger not a client write, because a marker protecting a metric must not depend on every future call site remembering it. Compares against the user's own timezone, since yesterday is the common backfill and a UTC comparison would read it as same-day for half the world. Only an outcome write marks the row — a swap or task_detail edit is housekeeping. Once marked, always marked: the day cannot come back |
 
-030 exists to answer the north-star metric: of users who had a bad week, what
+030 exists to answer the supporting reopen signal: of users who had a bad week, what
 share opened the app the following week. Capture is fire-and-forget from
 AuthProvider (cold start + foreground, 60s debounce). Time-in-app is not a
 signal — a phone in a pocket looks identical to engagement.
@@ -473,7 +441,7 @@ marker at all.
 | Unaccounted sweep                             | 012, hourly, timezone-aware, 4am local grace          |
 | Behavioral evidence pack                      | 013                                                   |
 | Retroactive bedtime capture                   | 014 actual_end_minutes (legacy column; data migrated to day_log) |
-| Behavioral learning v1 (THE flagship)         | 015 + weekly-insight + InsightCard                    |
+| Behavioral learning v1                        | 015 + weekly-insight + InsightCard                    |
 | Deterministic recovery copy (AI call REMOVED) | src/lib/recoveryCopy.ts                               |
 | Seven-beat preset onboarding | Replaces 4-turn AI chat. Recognition screens, tone/energy/pattern questions, answer playback, contract screen. Deletes onboarding-chat, extract-psychology-profile, generate-schedule-tips |
 | Accountability streak (80% threshold)         | stats.ts; two-tone square encoding                    |
@@ -527,7 +495,7 @@ marker at all.
 | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Presence-aware nudges (block-start + mid-block) | The "smart notification suite". User requested this in their OWN reflections 3x: "harder cutoffs", "need enforcements", "maybe you can do something to help" |
 | Shareable weekly recap card                     | The weekly scorecard. Growth primitive                                                                                                                       |
-| Day-3 first observation                         | New users currently see NOTHING for 5+ days (weekly-insight gates at engaged_days < 5). Week one is when they decide to keep the app                         |
+| Day-3 first observation                         | Still worth building — weekly-insight gates at engaged_days < 5 — but Stream 1 is the week-one value and does not require the engine to speak. No longer framed as plugging a gap. |
 | Paywall + RevenueCat                            | Hard paywall $14.99/mo, fires after onboarding screen 7. Placement RESOLVED.                                                                                   |
 | "Ask me about yourself" conversational surface  | Reads get_behavior_evidence with the narrator's tone rules                                                                                                   |
 | reflection_improve UX fix                       | 31% fill rate on the highest-signal field in the DB                                                                                                          |
@@ -1816,7 +1784,8 @@ recognize immediately in themselves.
 high intention × low execution reliability. External pain sentence: "I know
 what I need to do — why can't I consistently make myself do it?"
 
-**Day-planning competitor:** Structured — see **Competitive positioning** above.
+**Competitors:** none tracked. See **Category and boundaries** for the
+constraints that used to be derived from competitive analysis.
 
 **Habit-tracker competitor:** Me+ Lifestyle Routine (Enerjoy) — 21M downloads, 4.79 stars.
 Validates market. Static tracker, MBTI "personalization," self-care framing.
@@ -1888,8 +1857,12 @@ compounds if the user keeps opening the app. Shame-churn is the named risk.
 incumbent could ship a weekly "why your plans fail" card as a feature update.
 The durable edges are tone discipline, data-integrity care, and eventually the
 behavioral corpus itself.
-- **NORTH-STAR METRIC: reopen rate after a bad week.** Everything else is
-downstream of whether people come back after failing. Capture shipped in 028
+- **NORTH-STAR METRIC: on days the plan breaks, does the user complete the
+next meaningful action and return tomorrow?** Stream 1's metric, and it must
+hold in week one, before the insight engine has said anything. Reopening
+alone is a supporting signal — it measures whether the user came back, not
+whether the product changed what they did, and returning without executing
+is a journal outcome. Capture for the supporting reopen query shipped in 028
 (`app_sessions` / `record_app_open`). The defining query sits under the
 migrations table.
 
@@ -1908,33 +1881,46 @@ schema knows exactly what each field feeds and is motivated to feed it well.
 Every engagement number sourced from founder use is a lower bound on
 tolerability and tells you nothing about adoption.
 
+**Surface coverage is thin and that is a real cost.** No widgets, no Apple
+Watch, no calendar integration, no Android. These are not the differentiator and
+should never be the pitch, but they are table stakes for a paid app in this
+space and their absence will show up in reviews and in churn. Widgets are
+targeted for v2.
+
 
 
 ## Beta success criteria
 
-Five proof points, in order. Everything else is downstream of these, and none
+Six proof points, in order. Everything else is downstream of these, and none
 can be answered without real testers.
 
-1. **Do users fill both reflection fields unprompted by day ten?** The cheapest
+1. **Do users fill `reflection_why` unprompted by day ten?** The cheapest
    decisive number in the entire plan, and the one that determines whether the
    loop is self-sustaining. Above ~50% the product works on its own; below ~25%
    it is being carried by notifications and the retention model collapses.
    Current baseline is 31% on n=1. Measure this before spending anything on
    acquisition — every other number downstream assumes this one reads clean.
+   *Threshold caveat: the >50% / <25% figures were set against a two-field ask.
+   With a single field the same numbers describe an easier action, so treat them
+   as provisional until the first cohort re-fits them. The 31% baseline is
+   likewise from the two-field era and is not directly comparable.*
 2. **On days the plan breaks, does the user complete the next meaningful action
-   and return tomorrow?** Stream 1's metric, and the one that must hold in week
-   one — it tests execution salvage, which works on day one and does not depend
-   on the insight engine having anything to say yet. Reopening alone is a
-   journal metric; completing the next action is the falsifiable one.
+   and return tomorrow?** The north star. Stream 1's metric, and the one that
+   must hold in week one — it tests execution salvage, which works on day one
+   and does not depend on the insight engine having anything to say yet.
+   Reopening alone is a supporting signal; completing the next action is the
+   falsifiable one.
 3. **Can strangers understand the difference in 10 seconds?** Not "is it good" —
    can someone who has never heard of it tell FlexMax apart from a planner from
    the App Store listing and the showcase page alone.
 4. **Will they pay before using it?** The hard paywall is deliberate and filters
    for the decided cohort, but the conversion floor is unknown.
-5. **Will they reopen after a bad week?** The north-star metric. Capture is
-   028; the query sits under the migrations table.
-6. **Does the behavioral insight feel surprisingly accurate?** The entire
-   differentiation reduces to this. Validated on n=1 so far.
+5. **Will they reopen after a bad week?** A supporting signal, not the north
+   star. Capture is 028; the query sits under the migrations table. Reopening
+   measures whether the user came back, not whether the product changed what
+   they did.
+6. **Does the behavioral insight feel surprisingly accurate?** Stream 2's proof
+   point — half the differentiation, not the whole. Validated on n=1 so far.
 
 If 1-6 hold, $14.99 is not the limiting factor. If they do not, more features
 will not fix it.
@@ -1979,8 +1965,9 @@ deleted, and the replacement earns the ask differently:
 - Screen 7 is the contract: "FlexMax learns from what actually happens. The
   patterns come from what you do, not what you say. Give it a week."
 
-That last screen reframes the $14.99 honestly — the user is funding an
-observation period, not buying a finished product. That is the true version of
+That last screen reframes the $14.99 honestly — the user is buying a working
+execution-salvaging tool immediately, with the insight layer arriving on top of
+it after about a week. That is the true version of
 the aha the AI conversation used to fake.
 
 **docs/index.html — rebuilt 2026-08-11 as an engine overview.** The previous
