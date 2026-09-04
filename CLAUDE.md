@@ -511,6 +511,26 @@ marker at all.
 | Showcase page carries the offer | docs/index.html has no pricing and no founding-member framing. With no trial it is the only pre-purchase evaluation surface, and most of the "is this enticing" work happens there and in the App Store listing, not in onboarding. See also **docs/index.html — rebuilt 2026-08-11** in Pricing & paywall below |
 
 
+### Future build — leftover from the 2026-09-03 remedy triage
+
+Accepted items from that pass have shipped (same-slot skip, stale banner dismiss, empty-Today pull hint, completion notes on `reflection_improve`, shorten-template remedy with going-forward copy and same-screen undo). The rest wait until shorten has been used on a real week. Do not start these to "complete the list."
+
+**1. Earlier / later — the rest of the decision tree.**
+Shorten is the one shipped option: lower the bar on the template. The original sketch also offered "schedule it earlier" and "schedule it later" when a block keeps slipping. Those are real, and they are a different search. Shorten writes `schedule_blocks.end_minutes`. A move writes the template's `start_minutes` (and end, same duration) against a *typical week*, not today's leftover gaps — `findRescheduleSlot` is a same-day salvage function and is the wrong engine. Build a weekday-aware slot search over the template plus today's occupancy, then offer at most one earlier and one later candidate the user confirms. Same rules as shorten: deterministic, same 4-of-7 floor, headline is the option not the miss count, no auto-apply, fixed blocks excluded. Do not ship a three-choice menu until shorten has accept/reject history.
+
+**2. Restore length after quality recovers.**
+The other half of "progressively overload." After a shorten lands, a run of `crushed` (or the quality-drift window flipping clean) should offer to put the original duration back. Same-screen Undo is not this — Undo reverses a tap you just made; restore is a later, earned offer. Needs the original duration stored beyond session state (`remedy.fromMinutes` dies when recovery closes). Do not auto-lengthen. Do not offer restore on a block that was never shortened by this path. A probation window ("try 30m for two weeks") is a second state machine; skip it until the simple restore has been used.
+
+**3. Per-block quality standards.**
+User-written bullets on the template: what "done" means for this block, shown at check-in so the rating is against their own bar. Sacred if displayed at the moment of rating; a leak if it becomes a form to fill at 11pm. No per-bullet scoring — that is a habit tracker. `task_detail` already holds today's intention; this is the standing definition, not the day's task. Defer until Gate 1 on `reflection_why` (and now optional completion notes) has a real-tester read. If fill is already thin, do not add another field.
+
+**4. Do not replace `weekly-insight` with a bigger card.**
+The complaint was right: restating "you miss Workout" is a slap, and the morning note is not the product. The fix is more *writes* (shorten shipped; earlier/later and restore above), not a smarter paragraph. Keep the weekly call as a small stored belief after `engaged_days >= 5`. If a line cannot attach to a confirmed structural option, it stays nudge-sized. Impressive means a change the user could not have computed in two seconds and can take. Text-only impressiveness rots into the same repetition.
+
+**5. Mentor / founder story — listing and showcase only.**
+Mentor-without-an-audience, the $200/mo contrast, "I built this for myself," and "solve my problem first" are App Store / `docs/index.html` voice. Not in-app copy. n=1 still does not prove adoption; the story may say it worked for the person who built it. It may not treat founder fill rate as evidence. Bundle with the pricing / founding-member pass on the showcase page, not with the remedy loop.
+
+
 ---
 
 
