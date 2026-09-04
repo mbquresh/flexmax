@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FlexMax — The Behavioral Engine</title>
+<meta name="description" content="The behavioral engine — how FlexMax captures what actually happened, how it reasons, and what it produces.">
+<meta property="og:title" content="FlexMax — The Behavioral Engine">
+<meta property="og:description" content="The behavioral engine — how FlexMax captures what actually happened, how it reasons, and what it produces.">
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+
+  :root {
+    --bg:        #ECEAE6;
+    --surface:   #F8F8F6;
+    --nested:    #F2F1EE;
+    --dim:       #E1DCD7;
+    --primary:   #43698F;
+    --deep:      #33526F;
+    --tint:      #DCE3EA;
+    --ink:       #211F1B;
+    --sec:       #38352F;
+    --muted:     #6B655B;
+    --faint:     #8C8578;
+    --border:    #D4CEC6;
+    --success:   #57BF9B;
+    --successT:  #DCEFE5;
+    --coral:     #D9694A;
+    --coralT:    #F6E3DC;
+    --missed:    #B3ADA2;
+    --markBlue:  #4E7599;
+    --markInk:   #2B2822;
+    --markCoral: #CE7358;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: "IBM Plex Sans", system-ui, sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+
+  .section {
+    max-width: 46rem;
+    margin: 0 auto;
+    padding: 5rem 1.5rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .section:first-of-type {
+    border-top: none;
+  }
+
+  .hero {
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border-top: none;
+    padding-top: 5rem;
+    padding-bottom: 5rem;
+  }
+
+  .hero svg { margin-bottom: 2.5rem; flex-shrink: 0; }
+
+  .hero h1 { font-size: 3.667rem; }
+
+  .section-close {
+    min-height: 70vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2rem;
+  }
+
+  .section-close svg { margin-bottom: 1.5rem; }
+
+  .section-end {
+    text-align: center;
+    padding-top: 3rem;
+    padding-bottom: 5rem;
+  }
+
+  .eyebrow {
+    font-size: 0.708rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--faint);
+    margin-bottom: 1.25rem;
+  }
+
+  h1 { font-size: 2.833rem; line-height: 1.14; font-weight: 700; letter-spacing: -0.02em; }
+  h2 { font-size: 2.083rem; line-height: 1.2; font-weight: 700; letter-spacing: -0.015em; margin-bottom: 1.25rem; }
+  h3 { font-size: 1.042rem; font-weight: 700; margin-bottom: 0.438rem; }
+
+  p  { font-size: 0.917rem; line-height: 1.62; color: var(--sec); margin-bottom: 0.875rem; max-width: 38rem; }
+  p.lead { font-size: 1.125rem; line-height: 1.55; color: var(--ink); }
+  p.small { font-size: 0.792rem; line-height: 1.55; color: var(--muted); }
+  strong { font-weight: 700; color: var(--ink); }
+  em { font-style: italic; }
+
+  .rule { height:1px; background: var(--border); margin: 1.5rem 0; }
+
+  .cover .sub, .hero .sub, .section-close .sub {
+    font-size: 0.875rem;
+    color: var(--muted);
+    margin-top: 1.25rem;
+    line-height: 1.5;
+    max-width: 32rem;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.875rem;
+    padding: 1.25rem 1.375rem;
+  }
+  .card.tinted { background: var(--nested); }
+  .card.accent { border-left: 3px solid var(--primary); }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+  .grid3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 1rem; }
+
+  .label {
+    font-size: 0.667rem;
+    font-weight: 700;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--faint);
+    margin-bottom: 0.5rem;
+  }
+
+  .layer {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.875rem;
+    padding: 0.85rem 1.25rem;
+    margin-bottom: 0.45rem;
+  }
+  .layer .n {
+    font-size: 0.667rem;
+    font-weight:700;
+    letter-spacing:0.13em;
+    text-transform:uppercase;
+    color: var(--primary);
+    margin-bottom: 0.25rem;
+  }
+  .layer h3 { margin-bottom: 0.2rem; font-size: 1rem; }
+  .layer p { font-size: 0.792rem; line-height: 1.5; margin: 0; color: var(--muted); }
+  .arrow { text-align:center; color: var(--faint); font-size: 0.917rem; line-height: 1; margin: 0.1rem 0 0.3rem; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; }
+  .chip {
+    font-size: 0.708rem;
+    padding: 0.25rem 0.65rem;
+    border-radius: 1.25rem;
+    background: var(--nested);
+    border: 1px solid var(--border);
+    color: var(--sec);
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+  }
+
+  .insight {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--primary);
+    border-radius: 0.75rem;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 0.875rem;
+  }
+  .insight .kind {
+    font-size: 0.625rem;
+    font-weight:700;
+    letter-spacing:0.13em;
+    text-transform:uppercase;
+    color: var(--faint);
+    margin-bottom: 0.5rem;
+  }
+  .insight .belief { font-size: 0.958rem; line-height: 1.5; color: var(--ink); font-weight: 600; }
+  .insight .evidence {
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--muted);
+    margin-top: 0.625rem;
+    padding-top: 0.625rem;
+    border-top: 1px solid var(--border);
+  }
+
+  table { width: 100%; border-collapse: collapse; }
+  td { font-size: 0.833rem; padding: 0.5rem 0; border-bottom: 1px solid var(--border); color: var(--sec); vertical-align: top; }
+  td.mark { width: 1.75rem; }
+  tr:last-child td { border-bottom: none; }
+  .dot { display:inline-block; width:9px; height:9px; border-radius:50%; }
+  .dot.on  { background: var(--success); }
+  .dot.off { background: var(--missed); }
+
+  .stat { text-align: center; }
+  .stat .big { font-size: 2.5rem; font-weight: 700; letter-spacing: -0.02em; color: var(--primary); line-height:1; }
+  .stat .cap { font-size: 0.75rem; color: var(--muted); margin-top: 0.5rem; line-height:1.45; }
+
+  .sq {
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 0.688rem;
+    background: var(--dim);
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .sq i { position: absolute; left:0; right:0; bottom:0; display:block; }
+
+  .quote {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--ink);
+    font-style: italic;
+    padding-left: 1rem;
+    border-left: 2px solid var(--coral);
+    margin-bottom: 0.875rem;
+  }
+
+  .pdf-link-wrap { margin-top: 1.75rem; }
+
+  .pdf-link {
+    display: inline-block;
+    padding: 0.625rem 1.25rem;
+    border: 1.5px solid var(--primary);
+    border-radius: 999px;
+    color: var(--primary);
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+
+  .pdf-link:hover {
+    background: var(--primary);
+    color: #fff;
+  }
+
+  @media (max-width: 40rem) {
+    .grid2, .grid3 { grid-template-columns: 1fr; }
+    h1 { font-size: 2rem; }
+    h2 { font-size: 1.5rem; }
+    .section, .hero, .section-close { padding-top: 3rem; padding-bottom: 3rem; }
+    .hero { min-height: auto; padding-top: 4rem; padding-bottom: 4rem; }
+  }
+
+</style>
+</head>
+<body>
+
+
+<!-- ============ 1 · COVER ============ -->
+<div class="section hero">
+  <svg width="70" height="86" viewBox="0 0 442 545">
+    <rect x="0" y="0" width="128" height="545" rx="64" fill="#4E7599"/>
+    <rect x="0" y="0" width="442" height="128" rx="64" fill="#4E7599"/>
+    <rect x="0" y="209" width="340" height="128" rx="64" fill="#CE7358"/>
+    <path d="M127,209 H64 A64,64 0 0,0 64,337 H127 Z" fill="#2B2822"/>
+  </svg>
+
+  <div>
+    <h1>Habit trackers watch&nbsp;you&nbsp;fail.<br>FlexMax figures out&nbsp;why.</h1>
+    <p class="sub">The behavioral engine — how it captures, how it reasons, and what it produces.</p>
+    <p class="pdf-link-wrap"><a class="pdf-link" href="flexmax-behavioral-engine.pdf">Download as PDF</a></p>
+  </div>
+
+  <div style="display:flex; justify-content:space-between; align-items:flex-end;">
+    <p class="small" style="margin:0;">FlexMax · Behavioral Engine<br>Technical &amp; product overview</p>
+    <p class="small" style="margin:0; text-align:right;">August 2026</p>
+  </div>
+</div>
+
+<!-- ============ 2 · THE PROBLEM ============ -->
+<div class="section">
+  <div class="eyebrow">The problem</div>
+  <h2>Time isn't traded away.<br>It evaporates.</h2>
+
+  <p class="lead">There is no moment of choosing distraction over the plan. There is only a later moment of noticing the plan didn't happen.</p>
+
+  <p>Most people who fail a schedule don't lack motivation and don't lack a plan. They produce an accurate, realistic day — and then fail to execute it, repeatedly, without ever making a conscious decision to abandon it.</p>
+
+  <p>Then the gap between plan and reality grows large enough that reviewing it becomes aversive. Re-engaging would mean confronting the whole accumulated shortfall at once. So it gets avoided entirely.</p>
+
+  <p><strong>That's the uninstall moment</strong> — for every planner, tracker, and calendar that person has ever tried.</p>
+
+  <div class="rule"></div>
+
+  <div class="grid3">
+    <div>
+      <h3>Calendars</h3>
+      <p class="small">The schedule was accurate. It was ignored. A calendar entry is a suggestion with no weight behind it.</p>
+    </div>
+    <div>
+      <h3>Habit trackers</h3>
+      <p class="small">Rendered the shortfall as a verdict — which accelerates the freeze rather than relieving it.</p>
+    </div>
+    <div>
+      <h3>All of them</h3>
+      <p class="small">Nothing distinguished a deliberate rest from a silent collapse. Both showed up as the same empty row.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 3 · WHAT IT SEES ============ -->
+<div class="section">
+  <div class="eyebrow">The difference</div>
+  <h2>Every other app records<br>the plan. This one records<br>what actually happened.</h2>
+
+  <div class="grid2" style="margin-top:1.800rem;">
+    <div class="card tinted">
+      <div class="label">What a planner stores</div>
+      <p style="font-size:0.833rem; margin:0; color:var(--muted);">Gym, 7:00 AM — not done.</p>
+      <div class="rule" style="margin:1.200rem 0;"></div>
+      <p class="small" style="margin:0;">A record of intent, and a record of its absence. Nothing about cause. Miss it forty times and the app schedules it a forty-first time, identical.</p>
+    </div>
+
+    <div class="card">
+      <div class="label">What FlexMax stores</div>
+      <p style="font-size:0.833rem; margin:0; color:var(--ink);">Gym, 7:00 AM — missed, acknowledged at 9:14 AM.<br>
+      Reason: ran out of time.<br>
+      Written: "I let my deep work spill into this."<br>
+      Rescheduled 13 times this month, always later.<br>
+      Preceded by a night that ended after midnight.</p>
+      <div class="rule" style="margin:1.200rem 0;"></div>
+      <p class="small" style="margin:0;">A record of the mechanism. That's what can be reasoned about.</p>
+    </div>
+  </div>
+
+  <div class="rule"></div>
+
+  <p class="lead">The distinction that makes it work: <strong>missed</strong> means the user engaged and admitted it. <strong>Unaccounted</strong> means silence.</p>
+  <p>The same completion rate describes both. They are not the same behavior. One is accountability; the other is the drift itself. An engine that can't tell them apart is measuring the wrong thing.</p>
+</div>
+
+<!-- ============ 4 · ARCHITECTURE ============ -->
+<div class="section">
+  <div class="eyebrow">Architecture</div>
+  <h2>SQL computes.<br>The model narrates.<br>Nothing learns in the dark.</h2>
+
+  <p style="margin-bottom:1.320rem;">Every number — counts, rates, trends, correlations — is computed in the database, where arithmetic is exact and auditable. The language model receives only finished figures and the user's own words. Its single job is to name the causal story and cite the evidence. It never calculates, never invents a statistic, and never decides strategy.</p>
+
+  <div class="layer">
+    <div class="n">Layer 01 · Capture</div>
+    <h3>Record what happens, including the silence</h3>
+    <p>Check-ins, completion quality, miss reasons, reschedule history, real bedtimes, nudge responses. Data not captured today cannot be recovered later.</p>
+  </div>
+  <div class="arrow">↓</div>
+
+  <div class="layer">
+    <div class="n">Layer 02 · Compute</div>
+    <h3>One SQL function turns raw rows into finished facts</h3>
+    <p>Per-block records, day shapes, weekly trends, reschedule drift, quality trajectories — plus the integrity filters that decide what may be concluded at all.</p>
+  </div>
+  <div class="arrow">↓</div>
+
+  <div class="layer">
+    <div class="n">Layer 03 · Narrate</div>
+    <h3>One AI call per user, per week</h3>
+    <p>The model reads the finished numbers and the user's verbatim reflections, then writes two or three beliefs with the evidence attached. Results are stored, not regenerated.</p>
+  </div>
+  <div class="arrow">↓</div>
+
+  <div class="layer">
+    <div class="n">Layer 04 · Surface</div>
+    <h3>Injected where it's useful — free, no further AI</h3>
+    <p>The morning card. The recovery sheet when something breaks. The weekly review. Stored beliefs are read, not recomputed.</p>
+  </div>
+</div>
+
+<!-- ============ 5 · CAPTURE ============ -->
+<div class="section">
+  <div class="eyebrow">Layer 01 · Capture</div>
+  <h2>The signals</h2>
+
+  <p>Most are invisible to the user. All of them are things a planner throws away.</p>
+
+  <div class="grid2" style="margin-top:1.560rem;">
+    <div class="card">
+      <div class="label">Outcome</div>
+      <h3 style="margin-bottom:0.480rem;">What happened, and whether you said so</h3>
+      <p class="small" style="margin:0;">Completed, missed, or unaccounted — with a timestamp for when it was acknowledged, so recovery speed is measurable.</p>
+    </div>
+    <div class="card">
+      <div class="label">Quality</div>
+      <h3 style="margin-bottom:0.480rem;">How well it went, not just whether</h3>
+      <p class="small" style="margin:0;">Crushed it, partial, pulled away. A block still completing but degrading is an earlier warning than a miss.</p>
+    </div>
+    <div class="card">
+      <div class="label">Cause</div>
+      <h3 style="margin-bottom:0.480rem;">In the user's own words</h3>
+      <p class="small" style="margin:0;">Free text on why, and what they'd change. The highest-signal column in the system — people narrate their own causality better than any model infers it.</p>
+    </div>
+    <div class="card">
+      <div class="label">Movement</div>
+      <h3 style="margin-bottom:0.480rem;">Every reschedule, permanently</h3>
+      <p class="small" style="margin:0;">Which blocks get pushed later, how far, how often. Overwriting a time destroys the strongest available signal, so nothing is overwritten.</p>
+    </div>
+    <div class="card">
+      <div class="label">Boundaries</div>
+      <h3 style="margin-bottom:0.480rem;">When the day actually started and ended</h3>
+      <p class="small" style="margin:0;">Real sleep and wake times, captured retroactively in the morning. Sleep is a moment you cross, not a block you complete.</p>
+    </div>
+    <div class="card">
+      <div class="label">Intervention</div>
+      <h3 style="margin-bottom:0.480rem;">Whether the nudge worked</h3>
+      <p class="small" style="margin:0;">Every cutoff notification, the response chosen, and the block's eventual outcome. This is the record that compounds.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 6 · INTEGRITY ============ -->
+<div class="section">
+  <div class="eyebrow">Layer 02 · Compute</div>
+  <h2>Behavioral data lies.<br>Every filter was earned.</h2>
+
+  <p style="margin-bottom:1.560rem;">Each of these exists because a simpler version produced a confident, false conclusion. They ship inside the data payload so the narrator cannot drift beyond what the evidence supports.</p>
+
+  <div class="card accent" style="margin-bottom:0.900rem;">
+    <h3>Scheduled times are not behavioral records</h3>
+    <p class="small" style="margin:0;">A recurring block reports its template time every day regardless of what happened. An early design correlated "late nights" against it and found the identical value on all forty rows — it was reading the plan, not the behavior. The engine may never claim a block "ran until" a time.</p>
+  </div>
+
+  <div class="card accent" style="margin-bottom:0.900rem;">
+    <h3>Untracked blocks are excluded entirely</h3>
+    <p class="small" style="margin:0;">A block qualifies only with at least three check-ins and engagement on a quarter of its instances. A single accidental completion once ranked "Sleep" as the user's largest failure at 24 of 26 — nobody checks off sleep.</p>
+  </div>
+
+  <div class="card accent" style="margin-bottom:0.900rem;">
+    <h3>Days the app wasn't used don't count</h3>
+    <p class="small" style="margin:0;">Instances generate on demand, so planning ahead creates rows nobody touched. Read naively, this suggested the user abandoned three quarters of their commitments — false, and precisely the shame signal the product exists to avoid.</p>
+  </div>
+
+  <div class="card accent">
+    <h3>Never trend from a partial period</h3>
+    <p class="small" style="margin:0;">An early draft claimed a four-day winning streak from morning blocks alone. Whole-day data showed two of those four were near-total collapses, and the most recent complete week was the worst of the month. Today is excluded; partial weeks are omitted.</p>
+  </div>
+</div>
+
+<!-- ============ 7 · REAL OUTPUT ============ -->
+<div class="section">
+  <div class="eyebrow">Layer 03 · Narrate — real output</div>
+  <h2>What it produced</h2>
+  <p style="margin-bottom:1.440rem;">Unedited, from one month of real use. Every figure traced back to the database and verified.</p>
+
+  <div class="insight">
+    <div class="kind">Causal</div>
+    <div class="belief">Late sleep is the upstream cause collapsing both morning blocks in sequence — when one falls, the other follows the same day.</div>
+    <div class="evidence">Fajr+Quran failed 11 of 25. Morning deep work failed 13 of 25. From the user's own reflections: "sleeping late which is caused by dopamine speedrun," "waking up on time is crucial for schedule adherence."</div>
+  </div>
+
+  <div class="insight">
+    <div class="kind">Causal · quality</div>
+    <div class="belief">Morning deep work is completing at an adequate rate overall, but the sessions that do happen have been landing at declining quality — 4 of the last 5 rated sessions were poor.</div>
+    <div class="evidence">A block degrading before it starts being missed. The earliest warning the system can produce, and one the user had not noticed.</div>
+  </div>
+
+  <div class="insight" style="border-left-color: var(--success);">
+    <div class="kind">Strength</div>
+    <div class="belief">Fajr+Quran is the most completed block with sufficient data, landing 15 of 23 — and when it happens, quality holds.</div>
+    <div class="evidence">Only 1 of the last 5 rated sessions was poor. No other block with ten or more occurrences matches this.</div>
+  </div>
+
+  <div class="rule"></div>
+  <p class="small" style="margin:0;">Every insight set includes at least one genuine, evidence-backed strength. Not consolation — a fact that happens to be good news.</p>
+</div>
+
+<!-- ============ 8 · TONE ============ -->
+<div class="section">
+  <div class="eyebrow">The hardest part</div>
+  <h2>Accuracy is kinder<br>than encouragement.</h2>
+
+  <p>Real reflection data is full of self-blame. Verbatim, from one month:</p>
+
+  <div class="quote">"Sloth."</div>
+  <div class="quote">"Bad day."</div>
+  <div class="quote">"Saturday, cut me some slack."</div>
+
+  <p>That last one is a person pre-emptively arguing with an app they built themselves. This audience arrives already fluent in self-criticism. They do not need a mirror.</p>
+
+  <div class="rule"></div>
+
+  <div class="grid2">
+    <div>
+      <div class="label">The engine must</div>
+      <p class="small">Name structural causes — a mechanism, a slot, a missing boundary. State counts with their denominators. Include a real strength. Offer at most one small structural change. Be truthful about a bad week.</p>
+    </div>
+    <div>
+      <div class="label">The engine must never</div>
+      <p class="small">Use the words lazy, failure, discipline, willpower, or "should have." Echo the user's own harshest phrasing back at them. Reassure about a judgment it isn't making — denying a verdict implies one was available.</p>
+    </div>
+  </div>
+
+  <div class="rule"></div>
+  <p class="lead" style="margin:0;">The test every line must pass: would this still be all right to read during a week where almost nothing got done?</p>
+</div>
+
+<!-- ============ 9 · SURFACES ============ -->
+<div class="section">
+  <div class="eyebrow">Layer 04 · Surface</div>
+  <h2>One useful thing,<br>at the right moment.</h2>
+
+  <p style="margin-bottom:1.560rem;">Findings sit in the background and appear only where they change something. Not a dashboard. Not a chatbot you visit.</p>
+
+  <div class="card" style="margin-bottom:1.020rem;">
+    <div class="label">Morning</div>
+    <h3>A single card, once</h3>
+    <p class="small" style="margin:0;">The top finding, dismissed permanently once read. It returns when there is genuinely something new — roughly weekly, because that is how often the app actually learns something.</p>
+  </div>
+
+  <div class="card" style="margin-bottom:1.020rem;">
+    <div class="label">The moment something breaks</div>
+    <h3>Recovery, not a verdict</h3>
+    <p class="small" style="margin:0;">Mark a block missed and the sheet names the mechanism instead of counting failures — and shows the user their own last written note on that block. If a real streak just broke, the diagnosis is suppressed entirely. That is not the moment for analysis.</p>
+  </div>
+
+  <div class="card" style="margin-bottom:1.020rem;">
+    <div class="label">Before it breaks</div>
+    <h3>A cutoff that says why</h3>
+    <p class="small" style="margin:0;">A quiet notification partway through a block: what it ends at, what comes next, and what running over has cost before. It names the consequence and leaves the decision alone.</p>
+  </div>
+
+  <div class="card">
+    <div class="label">Weekly</div>
+    <h3>The shape of the week</h3>
+    <p class="small" style="margin:0;">Seven squares, one number that is honest on a bad week, and the week's leading finding. The headline is days accounted for — never a completion percentage.</p>
+  </div>
+</div>
+
+<!-- ============ 10 · STREAK ============ -->
+<div class="section">
+  <div class="eyebrow">The mechanic</div>
+  <h2>The streak measures honesty,<br>not perfection.</h2>
+
+  <p>A completion streak breaks on the first bad day — which is the uninstall moment. So the protected number is different: a day counts when its blocks have been accounted for, whatever the outcome.</p>
+  <p><strong>Marking something missed keeps the streak alive. Only silence breaks it.</strong></p>
+
+  <div class="card" style="margin:1.440rem 0;">
+    <div class="label">The same completion rate, two different behaviors</div>
+    <table style="margin-top:0.600rem;">
+      <tr>
+        <td style="width:15.000rem;"><strong>Morning prayer block</strong><br><span style="color:var(--muted);font-size:0.750rem;">14 missed · 1 unaccounted</span></td>
+        <td>Reported almost every time, including the failures. That is accountability.</td>
+      </tr>
+      <tr>
+        <td><strong>Weights block</strong><br><span style="color:var(--muted);font-size:0.750rem;">6 missed · 15 unaccounted</span></td>
+        <td>Silently abandoned. That is the drift itself.</td>
+      </tr>
+    </table>
+  </div>
+
+  <p>The squares carry both facts at once. Filled height shows what was completed; the neutral band above it shows what was missed but reported. A fully accounted day fills the square regardless of outcome.</p>
+  <p class="small">The missed portion is deliberately not red. A week of red squares is a wall of errors, and that is the signal this product exists to avoid.</p>
+
+  <div style="display:flex; gap:0.720rem; margin-top:1.200rem;">
+    <div class="sq"><i style="height:100%;background:var(--missed)"></i><i style="height:100%;background:var(--success)"></i></div>
+    <div class="sq"><i style="height:100%;background:var(--missed)"></i><i style="height:62%;background:var(--success)"></i></div>
+    <div class="sq"><i style="height:100%;background:var(--missed)"></i><i style="height:25%;background:var(--success)"></i></div>
+    <div class="sq"><i style="height:100%;background:var(--missed)"></i></div>
+    <div class="sq"><i style="height:72%;background:var(--missed)"></i><i style="height:38%;background:var(--success)"></i></div>
+    <div class="sq"></div>
+    <div class="sq"><i style="height:88%;background:var(--missed)"></i><i style="height:88%;background:var(--success)"></i></div>
+  </div>
+  <p class="small" style="margin-top:0.780rem;">Teal completed · neutral accounted for · empty unanswered. The sixth day was never closed out — that is the one that breaks the streak.</p>
+</div>
+
+<!-- ============ 11 · STATUS ============ -->
+<div class="section">
+  <div class="eyebrow">Where it stands</div>
+  <h2>Built today</h2>
+
+  <p style="margin-bottom:1.200rem;">The engine runs end to end. It captures, computes, narrates weekly, and surfaces findings in three places.</p>
+
+  <table>
+    <tr><td class="mark"><span class="dot on"></span></td><td><strong>Capture layer</strong> — outcomes, quality, reasons, reschedule history, sleep and wake boundaries, nudge telemetry</td></tr>
+    <tr><td class="mark"><span class="dot on"></span></td><td><strong>Evidence engine</strong> — one SQL function, four integrity filters, caveats travelling inside the payload</td></tr>
+    <tr><td class="mark"><span class="dot on"></span></td><td><strong>Weekly narrator</strong> — one AI call per user per week, stored atomically, never regenerated on read</td></tr>
+    <tr><td class="mark"><span class="dot on"></span></td><td><strong>Morning card, recovery injection, weekly review</strong></td></tr>
+    <tr><td class="mark"><span class="dot on"></span></td><td><strong>Cutoff nudges</strong> — fires mid-block, cites the downstream cost, answerable from the lock screen</td></tr>
+    <tr><td class="mark"><span class="dot on"></span></td><td><strong>Accountability streak</strong> and the two-tone weekly shape</td></tr>
+    <tr><td class="mark"><span class="dot on"></span></td><td><strong>Quality drift detection</strong> — degradation caught before a block starts being missed</td></tr>
+  </table>
+
+  <div class="rule"></div>
+
+  <h3 style="font-size:1.167rem; margin-bottom:0.780rem;">Not yet built</h3>
+  <table>
+    <tr><td class="mark"><span class="dot off"></span></td><td><strong>Cross-block cannibalization</strong> — detecting that one block is sacrificed to subsidize another, and naming the pair</td></tr>
+    <tr><td class="mark"><span class="dot off"></span></td><td><strong>Intervention effectiveness</strong> — reading back which nudges actually changed outcomes for this specific person</td></tr>
+    <tr><td class="mark"><span class="dot off"></span></td><td><strong>Intention reliability</strong> — whether the user's plans are becoming more accurate over time</td></tr>
+    <tr><td class="mark"><span class="dot off"></span></td><td><strong>Drift detection</strong> — noticing attention has left, without ever seeing where it went</td></tr>
+  </table>
+</div>
+
+<!-- ============ 12 · COMPLETED CONCEPT ============ -->
+<div class="section">
+  <div class="eyebrow">What it becomes</div>
+  <h2>An app that knows<br>what works on you.</h2>
+
+  <p>Today the engine explains what happened. Completed, it closes the loop — every nudge becomes an experiment, every response an outcome, and the system learns which interventions move this specific person.</p>
+
+  <div class="card accent" style="margin:1.560rem 0;">
+    <div class="label">Month six</div>
+    <p style="font-size:1.000rem; line-height:1.6; margin:0; color:var(--ink);">"The cutoff at 10:30 has worked eleven of the last fourteen nights. The one at 9:00 never did — you dismissed it every time. Your mornings are now landing at twice the rate they were in July, and it started the week you stopped scheduling deep work after dinner."</p>
+  </div>
+
+  <p>Nothing in that paragraph is generated from a template. It requires six months of one person's interventions, responses, and outcomes — which is precisely why it can't be copied.</p>
+
+  <div class="rule"></div>
+
+  <div class="grid2">
+    <div>
+      <div class="label">Drift detection, privately</div>
+      <p class="small">The user selects which apps count as distraction. The selection is returned as opaque tokens — FlexMax is structurally incapable of knowing which apps were chosen. It learns only that attention left, for roughly how long, and what happened next.</p>
+    </div>
+    <div>
+      <div class="label">Interdependence, not isolation</div>
+      <p class="small">Blocks are not independent. Naming the pair — "your workouts disappear in the same weeks your deep work slips; cutting one doesn't protect the other" — is a different and more useful finding than either block's own numbers.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 13 · MOAT ============ -->
+<div class="section">
+  <div class="eyebrow">Why it holds</div>
+  <h2>The model is replaceable.<br>The record isn't.</h2>
+
+  <div class="grid3" style="margin:1.800rem 0;">
+    <div class="stat">
+      <div class="big">1</div>
+      <div class="cap">AI call per user<br>per week</div>
+    </div>
+    <div class="stat">
+      <div class="big">100%</div>
+      <div class="cap">of arithmetic computed<br>in the database</div>
+    </div>
+    <div class="stat">
+      <div class="big">0</div>
+      <div class="cap">figures the model<br>is permitted to invent</div>
+    </div>
+  </div>
+
+  <p>A competitor can ship a weekly "why your plans fail" card next quarter. What they cannot ship is six months of a specific person's interventions, responses, and outcomes — because that requires that person's six months.</p>
+
+  <p>The switching cost compounds with every week of use. On day one the app knows nothing. On day ninety it knows that this person's evenings overrun, that they protect deep work above everything, and that their mornings are downstream of their nights.</p>
+
+  <div class="rule"></div>
+
+  <div class="card tinted">
+    <div class="label">Stated so it can be failed</div>
+    <p style="font-size:0.958rem; line-height:1.6; margin:0; color:var(--ink);">FlexMax must make execution measurably better, not merely make the user feel understood. If people love the findings but don't follow through any better, this is a sophisticated journal and the thesis is wrong.</p>
+  </div>
+</div>
+
+<!-- ============ 14 · CLOSE ============ -->
+<div class="section section-close">
+  <svg width="52" height="64" viewBox="0 0 442 545">
+    <rect x="0" y="0" width="128" height="545" rx="64" fill="#4E7599"/>
+    <rect x="0" y="0" width="442" height="128" rx="64" fill="#4E7599"/>
+    <rect x="0" y="209" width="340" height="128" rx="64" fill="#CE7358"/>
+    <path d="M127,209 H64 A64,64 0 0,0 64,337 H127 Z" fill="#2B2822"/>
+  </svg>
+
+  <div>
+    <h1 style="font-size:2.667rem;">Your schedule keeps failing<br>because it doesn't know you.</h1>
+    <p class="sub" style="max-width:33.600rem;">FlexMax learns from what actually happens — including the parts you'd rather not report to a person.</p>
+  </div>
+
+  <div>
+    <div class="rule"></div>
+    <p class="small" style="margin:0;">The findings in this document are unedited output from one month of real use, verified against source data. Single-user validation — testing whether it generalizes is the next step, not a settled question.</p>
+  </div>
+</div>
+  <div class="section section-end">
+    <p class="pdf-link-wrap"><a class="pdf-link" href="flexmax-behavioral-engine.pdf">Download as PDF</a></p>
+    <p class="small" style="margin-top:1.75rem;"><a href="index.html" style="color:inherit;">Interactive demo</a></p>
+    <p class="small" style="margin-top:1.75rem;"><a href="privacy.html" style="color:inherit;">Privacy policy</a></p>
+  </div>
+
+</body>
+</html>

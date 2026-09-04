@@ -3,690 +3,978 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>FlexMax — The Behavioral Engine</title>
-<meta name="description" content="The behavioral engine — how FlexMax captures what actually happened, how it reasons, and what it produces.">
-<meta property="og:title" content="FlexMax — The Behavioral Engine">
-<meta property="og:description" content="The behavioral engine — how FlexMax captures what actually happened, how it reasons, and what it produces.">
-<meta property="og:type" content="website">
+<title>FlexMax — there was never a moment you decided to skip it</title>
+<meta name="description" content="The day doesn't get taken from you all at once. FlexMax finds the reason your plans keep breaking. Founding price $7.99/mo, locked.">
+<meta property="og:title" content="FlexMax">
+<meta property="og:description" content="There was never a moment you decided to skip it. That's what makes it so hard to fix.">
+<link rel="icon" type="image/png" href="data:image/png;base64,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iAAAAIBABAAAAAQiAAAAIBABAAAAgQgAAAAIRAAAAEAgAgAAAAIRAAAAEIgAAACAQAQAAAAEIgAAACAQAQAAAIEIAAAACEQAAABAIAIAAAACEQAAABCIAAAAgEAEAAAABCIAAAAgEAEAAACBCAAAAAhEAAAAQCACAAAAAhEAAAAQiAAAAIBABAAAAAQiAAAAIBABAAAAgQgAAAAIRAAAAEAgAgAAAAIRAAAAEIgAAACAQAQAAAAEIgAAACAQAQAAAIEIAAAACEQAAABAIAIAAAACEQAAABCIAAAAgEAEAAAABCIAAAAgEAEAAACBCAAAAAhEAAAAQCACAAAAAhEAAAAQiAAAAIBABAAAAAQiAAAAIBABAAAAgQgAAAAIRAAAAEAgAgAAAAIRAAAAEIgAAACAQAQAAAAEIgAAACAQAQAAAIEIAAAACEQAAABAIAIAAAACEQAAABCIAAAAgEAEAAAABCIAAAAgEAEAAACBCAAAAAhEAAAAQCACAAAAAhEAAAAQiAAAAIBABAAAAAQiAAAAIBABAAAAgQgAAAAIRAAAAEAgAgAAAAIRAAAAEIgAAACAQAQAAAAEIgAAACAQAQAAAIEIAAAACEQAAABAIAIAAAACEQAAABCIAAAAgED+L1uR7+OuFjWaAAAAAElFTkSuQmCC">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap" rel="stylesheet">
 <style>
+:root{
+  --bg:#ECEAE6; --surface:#F8F8F6; --nested:#F2F1EE; --dim:#E1DCD7;
+  --primary:#43698F; --primary-deep:#33526F; --primary-tint:#DCE3EA;
+  --on-primary:#FFFFFF;
+  --text:#211F1B; --text-2:#38352F; --muted:#6B655B; --faint:#8C8578;
+  --border:#D4CEC6; --border-light:#E1DCD7;
+  --success:#57BF9B; --danger:#D9694A; --missed:#B3ADA2;
+  --sans:'Instrument Sans',-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *{animation:none!important;transition-duration:.001ms!important}
+}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);
+  font-size:17px;line-height:1.6;-webkit-font-smoothing:antialiased}
+.tab{font-variant-numeric:tabular-nums}
+:focus-visible{outline:2px solid var(--primary);outline-offset:3px;border-radius:2px}
 
-  :root {
-    --bg:        #ECEAE6;
-    --surface:   #F8F8F6;
-    --nested:    #F2F1EE;
-    --dim:       #E1DCD7;
-    --primary:   #43698F;
-    --deep:      #33526F;
-    --tint:      #DCE3EA;
-    --ink:       #211F1B;
-    --sec:       #38352F;
-    --muted:     #6B655B;
-    --faint:     #8C8578;
-    --border:    #D4CEC6;
-    --success:   #57BF9B;
-    --successT:  #DCEFE5;
-    --coral:     #D9694A;
-    --coralT:    #F6E3DC;
-    --missed:    #B3ADA2;
-    --markBlue:  #4E7599;
-    --markInk:   #2B2822;
-    --markCoral: #CE7358;
-  }
+.wrap{width:100%;max-width:34rem;margin:0 auto;padding:0 22px}
+.wide{max-width:52rem}
+section{padding:78px 0}
+.rule{height:1px;background:var(--border);border:0;max-width:52rem;margin:0 auto}
 
-  * { margin:0; padding:0; box-sizing:border-box; }
+header{position:sticky;top:0;z-index:50;background:rgba(236,234,230,.9);
+  backdrop-filter:saturate(180%) blur(12px);border-bottom:1px solid var(--border-light)}
+.bar{display:flex;align-items:center;gap:10px;height:58px;max-width:52rem;
+  margin:0 auto;padding:0 22px}
+.mark{width:26px;height:26px;border-radius:23%;display:block;flex:none}
+.wordmark{font-weight:600;font-size:16.5px;letter-spacing:-.02em}
+.cta-sm{margin-left:auto;background:var(--primary);color:var(--on-primary);
+  border:0;border-radius:9px;padding:9px 15px;font:inherit;font-size:14px;
+  font-weight:600;cursor:pointer;text-decoration:none;line-height:1;
+  display:inline-flex;align-items:center}
+.cta-sm:hover{background:var(--primary-deep)}
 
-  html { scroll-behavior: smooth; }
+h1{font-size:clamp(34px,7vw,60px);font-weight:700;letter-spacing:-.042em;
+  line-height:1.02}
+h2{font-size:clamp(25px,4vw,36px);font-weight:700;letter-spacing:-.032em;
+  line-height:1.1;max-width:17ch}
+h3{font-size:18px;font-weight:600;letter-spacing:-.015em}
+p{margin-top:1.1em}
+.lede{font-size:20px;color:var(--text-2);margin-top:24px;line-height:1.5}
+.dim{color:var(--muted)}
 
-  body {
-    font-family: "IBM Plex Sans", system-ui, sans-serif;
-    color: var(--ink);
-    background: var(--bg);
-    -webkit-font-smoothing: antialiased;
-    font-size: 1rem;
-    line-height: 1.6;
-  }
+/* ---------- HERO: type is the whole event ---------- */
+.hero{padding:92px 0 74px}
+.hero h1{max-width:13ch}
+.hero .sub{font-size:21px;line-height:1.5;color:var(--text-2);margin-top:30px;
+  max-width:32ch}
+.hero .sub strong{font-weight:600;color:var(--text)}
 
-  .section {
-    max-width: 46rem;
-    margin: 0 auto;
-    padding: 5rem 1.5rem;
-    border-top: 1px solid var(--border);
-  }
+/* the day that got away — one quiet reveal, not a widget */
+.day{margin-top:52px;border-left:1px solid var(--border);padding-left:20px;
+  display:flex;flex-direction:column;gap:11px}
+.slot{display:flex;align-items:center;gap:14px}
+.slot time{font-size:13px;color:var(--faint);width:62px;flex:none;
+  font-variant-numeric:tabular-nums}
+.slot .b{height:34px;border-radius:8px;background:var(--dim);flex:1;
+  display:flex;align-items:center;padding:0 13px;font-size:14.5px;
+  color:var(--muted);font-weight:500;max-width:270px}
+.slot .b.kept{background:var(--success);color:#173A2C}
+.drain .b{animation:drain 1.1s cubic-bezier(.4,0,.2,1) forwards}
+.drain .slot:nth-child(2) .b{animation-delay:.75s}
+.drain .slot:nth-child(3) .b{animation-delay:1.15s}
+.drain .slot:nth-child(4) .b{animation-delay:1.5s}
+.drain .slot:nth-child(5) .b{animation-delay:1.8s}
+@keyframes drain{
+  from{background:var(--success);color:#173A2C}
+  to{background:var(--dim);color:var(--muted)}
+}
+.day-note{font-size:14px;color:var(--faint);margin-top:20px;padding-left:20px;
+  max-width:36ch;line-height:1.5}
 
-  .section:first-of-type {
-    border-top: none;
-  }
+/* ---------- generic bits ---------- */
+.cta{display:inline-flex;align-items:center;justify-content:center;
+  background:var(--primary);color:var(--on-primary);border:0;border-radius:11px;
+  padding:16px 28px;font:inherit;font-size:16.5px;font-weight:600;cursor:pointer;
+  text-decoration:none;transition:background .18s}
+.cta:hover{background:var(--primary-deep)}
+.cta.block{display:flex;width:100%}
+.cta-note{font-size:13.5px;color:var(--muted);margin-top:11px}
 
-  .hero {
-    min-height: 100vh;
-    min-height: 100dvh;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    border-top: none;
-    padding-top: 5rem;
-    padding-bottom: 5rem;
-  }
+.pull{font-size:23px;line-height:1.4;font-weight:500;letter-spacing:-.02em;
+  color:var(--text);margin-top:34px;padding-left:20px;
+  border-left:2px solid var(--primary);max-width:30ch}
 
-  .hero svg { margin-bottom: 2.5rem; flex-shrink: 0; }
+/* ---------- founder ---------- */
+.letter{background:var(--surface);border-left:2px solid var(--primary);
+  border-radius:0 14px 14px 0;padding:30px 28px;margin-top:30px}
+.letter p{font-size:16.5px;line-height:1.7}
+.letter p:first-child{margin-top:0}
+.sig{margin-top:24px;font-size:14.5px;color:var(--muted);font-style:italic}
 
-  .hero h1 { font-size: 3.667rem; }
+/* ---------- the rig: real drag-to-swap ---------- */
+.rig{background:var(--surface);border:1px solid var(--border);border-radius:16px;
+  padding:20px;margin-top:32px;user-select:none;-webkit-user-select:none}
+.rig-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;
+  padding-bottom:14px;border-bottom:1px solid var(--border-light)}
+.rig-head b{font-size:15px;font-weight:600}
+.rig-head span{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
 
-  .section-close {
-    min-height: 70vh;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 2rem;
-  }
+.coach{display:flex;gap:10px;align-items:flex-start;margin:14px 0 4px;
+  background:var(--primary-tint);border-radius:10px;padding:11px 13px;
+  font-size:14px;line-height:1.45;color:var(--primary-deep);
+  transition:background .3s,color .3s}
+.coach.win{background:#DCEFE5;color:#1C6B4F}
+.coach.stop{background:var(--danger-tint);color:#8A3520}
+.coach b{font-weight:600}
 
-  .section-close svg { margin-bottom: 1.5rem; }
+.track{position:relative;margin-top:14px;touch-action:pan-y}
+.card{position:absolute;left:0;right:0;display:flex;align-items:stretch;
+  background:var(--nested);border:1px solid var(--border-light);border-radius:11px;
+  overflow:hidden;height:60px;
+  transition:top .22s cubic-bezier(.2,.8,.2,1),background .2s,border-color .2s,
+             box-shadow .12s,transform .12s}
+.card.fixedb{background:var(--dim);border-color:var(--border)}
+.card.lifted{z-index:20;box-shadow:0 10px 24px rgba(33,31,27,.16);
+  transform:scale(1.03);transition:box-shadow .12s,transform .12s;cursor:grabbing}
+.card.target{border-color:var(--primary);background:var(--primary-tint)}
+.card.bad{border-color:var(--danger);background:var(--danger-tint)}
+.card.flash{animation:flash .5s ease-out}
+@keyframes flash{0%{background:var(--primary-tint)}100%{background:var(--nested)}}
+.grip{width:34px;flex:none;display:flex;align-items:center;justify-content:center;
+  border-right:1px solid var(--border-light);cursor:grab;touch-action:none}
+.card.fixedb .grip{cursor:default}
+.grip i{display:block;width:13px;height:1.5px;background:var(--textDisabled,#ADA69A);
+  border-radius:1px;box-shadow:0 4px 0 #ADA69A,0 -4px 0 #ADA69A}
+.card.fixedb .grip i{background:transparent;box-shadow:none;
+  width:11px;height:11px;border:1.5px solid var(--faint);border-radius:2px;
+  border-bottom-width:5px}
+.cbody{flex:1;padding:0 13px;display:flex;flex-direction:column;
+  justify-content:center;min-width:0}
+.cname{font-size:15px;font-weight:600;letter-spacing:-.01em}
+.ctime{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums;
+  margin-top:2px}
+.clock{font-size:11.5px;color:var(--faint);align-self:center;padding-right:13px;
+  flex:none}
 
-  .section-end {
-    text-align: center;
-    padding-top: 3rem;
-    padding-bottom: 5rem;
-  }
+.hint{position:absolute;left:6px;width:24px;height:24px;pointer-events:none;
+  z-index:30;opacity:0;transition:opacity .3s}
+.hint.on{opacity:1;animation:nudge 1.9s ease-in-out infinite}
+.hint svg{display:block;filter:drop-shadow(0 1px 2px rgba(33,31,27,.28))}
+@keyframes nudge{
+  0%,100%{transform:translateY(0)}
+  40%{transform:translateY(15px)}
+  70%{transform:translateY(4px)}
+}
 
-  .eyebrow {
-    font-size: 0.708rem;
-    font-weight: 700;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--faint);
-    margin-bottom: 1.25rem;
-  }
+.rig-foot{display:flex;gap:12px;align-items:center;margin-top:14px;flex-wrap:wrap}
+.rbtn{background:transparent;color:var(--muted);border:1px solid var(--border);
+  border-radius:9px;padding:9px 14px;font:inherit;font-size:13.5px;font-weight:600;
+  cursor:pointer}
+.rbtn:hover{background:var(--nested);color:var(--text)}
+.rbtn.solid{background:var(--primary);color:var(--on-primary);border-color:var(--primary)}
+.rbtn.solid:hover{background:var(--primary-deep)}
+.steps{display:flex;gap:6px;margin-left:auto}
+.pip{width:7px;height:7px;border-radius:50%;background:var(--border)}
+.pip.done{background:var(--success)}
+.pip.now{background:var(--primary)}
 
-  h1 { font-size: 2.833rem; line-height: 1.14; font-weight: 700; letter-spacing: -0.02em; }
-  h2 { font-size: 2.083rem; line-height: 1.2; font-weight: 700; letter-spacing: -0.015em; margin-bottom: 1.25rem; }
-  h3 { font-size: 1.042rem; font-weight: 700; margin-bottom: 0.438rem; }
+.toast{position:absolute;left:12px;right:12px;bottom:12px;background:var(--text);
+  color:var(--surface);border-radius:10px;padding:11px 14px;font-size:14px;
+  text-align:center;z-index:40;opacity:0;transform:translateY(10px);
+  transition:opacity .22s,transform .22s;pointer-events:none}
+.toast.on{opacity:1;transform:none}
 
-  p  { font-size: 0.917rem; line-height: 1.62; color: var(--sec); margin-bottom: 0.875rem; max-width: 38rem; }
-  p.lead { font-size: 1.125rem; line-height: 1.55; color: var(--ink); }
-  p.small { font-size: 0.792rem; line-height: 1.55; color: var(--muted); }
-  strong { font-weight: 700; color: var(--ink); }
-  em { font-style: italic; }
+/* ---------- demo ---------- */
 
-  .rule { height:1px; background: var(--border); margin: 1.5rem 0; }
+.demo{background:var(--surface);border:1px solid var(--border);border-radius:16px;
+  padding:24px 22px 22px;margin-top:32px}
+.demo-q{font-size:14px;color:var(--muted);font-weight:500}
+.seg{display:flex;margin:14px 0 22px;background:var(--nested);
+  border:1px solid var(--border-light);border-radius:11px;padding:3px}
+.seg button{flex:1;border:0;background:transparent;font:inherit;font-size:13.5px;
+  font-weight:600;color:var(--muted);padding:9px 6px;border-radius:8px;
+  cursor:pointer;transition:background .18s,color .18s;line-height:1.25}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--text);
+  box-shadow:0 1px 2px rgba(33,31,27,.07)}
+.readout{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;
+  padding-bottom:20px;border-bottom:1px solid var(--border-light)}
+.big{font-size:clamp(52px,11vw,74px);font-weight:700;letter-spacing:-.05em;
+  line-height:.9;color:var(--danger)}
+.readout-label{font-size:14.5px;color:var(--muted);max-width:22ch;line-height:1.35}
+.grid-label{font-size:12.5px;color:var(--faint);font-weight:500;
+  margin:18px 0 9px;display:flex;justify-content:space-between}
+.grid{display:grid;grid-template-columns:repeat(10,1fr);gap:5px}
+.cell{aspect-ratio:1;border-radius:4px;background:var(--dim);
+  transition:background .32s cubic-bezier(.4,0,.2,1),opacity .32s}
+.cell.done{background:var(--success)}
+.cell.miss{background:var(--missed)}
+.cell.miss.lit{background:var(--danger)}
+.cell.faded{opacity:.16}
+.legend{display:flex;gap:16px;margin-top:14px;font-size:12.5px;color:var(--muted);
+  flex-wrap:wrap}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.dot{width:9px;height:9px;border-radius:2px;display:inline-block}
+.finding{margin-top:20px;padding:15px 16px;background:var(--primary-tint);
+  border-radius:11px;font-size:15px;line-height:1.5;color:var(--primary-deep);
+  opacity:0;transform:translateY(4px);transition:opacity .3s,transform .3s}
+.finding.show{opacity:1;transform:none}
 
-  .cover .sub, .hero .sub, .section-close .sub {
-    font-size: 0.875rem;
-    color: var(--muted);
-    margin-top: 1.25rem;
-    line-height: 1.5;
-    max-width: 32rem;
-  }
+/* ---------- comparison ---------- */
+.rows{margin-top:34px;border-top:1px solid var(--border)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:26px;padding:22px 0;
+  border-bottom:1px solid var(--border)}
+@media(max-width:640px){.row{grid-template-columns:1fr;gap:8px}}
+.row .them{color:var(--muted);font-size:15.5px}
+.row .us{font-weight:500;font-size:15.5px}
+.row-h{font-size:12.5px;color:var(--faint);font-weight:600}
 
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 0.875rem;
-    padding: 1.25rem 1.375rem;
-  }
-  .card.tinted { background: var(--nested); }
-  .card.accent { border-left: 3px solid var(--primary); }
+/* ---------- state ---------- */
+.state{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:30px}
+@media(max-width:640px){.state{grid-template-columns:1fr;gap:26px}}
+.state h3{font-size:14px;color:var(--muted);font-weight:600;margin-bottom:12px}
+.state ul{list-style:none;display:flex;flex-direction:column;gap:9px}
+.state li{font-size:15px;padding-left:19px;position:relative;color:var(--text-2);
+  line-height:1.45}
+.state li::before{content:"";position:absolute;left:0;top:.6em;width:9px;height:2px;
+  border-radius:1px}
+.state .built li::before{background:var(--success)}
+.state .not li::before{background:var(--missed)}
 
-  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
-  .grid3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 1rem; }
+/* ---------- pricing ---------- */
+.price-wrap{background:var(--surface);border:1px solid var(--border);
+  border-radius:18px;padding:30px 26px;margin-top:32px}
+.badge{display:inline-block;background:var(--primary-tint);color:var(--primary-deep);
+  font-size:12.5px;font-weight:600;padding:6px 11px;border-radius:7px}
+.tiers{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:22px 0 6px}
+@media(max-width:560px){.tiers{grid-template-columns:1fr}}
+.tier{border:1px solid var(--border);border-radius:13px;padding:18px;
+  background:var(--nested)}
+.tier.best{border-color:var(--primary);background:var(--surface);position:relative}
+.tier-name{font-size:13px;color:var(--muted);font-weight:600}
+.tier-price{font-size:31px;font-weight:700;letter-spacing:-.04em;margin-top:7px;
+  line-height:1.05}
+.tier-price small{font-size:15px;font-weight:500;color:var(--muted)}
+.was{font-size:14px;color:var(--faint);margin-top:6px}
+.saves{position:absolute;top:-9px;right:14px;background:var(--primary);
+  color:var(--on-primary);font-size:11.5px;font-weight:600;padding:3px 9px;
+  border-radius:6px}
+.lock{margin-top:20px;padding-top:20px;border-top:1px solid var(--border-light);
+  font-size:14.5px;color:var(--text-2);line-height:1.55}
 
-  .label {
-    font-size: 0.667rem;
-    font-weight: 700;
-    letter-spacing: 0.13em;
-    text-transform: uppercase;
-    color: var(--faint);
-    margin-bottom: 0.5rem;
-  }
+/* ---------- faq ---------- */
+details{border-bottom:1px solid var(--border);padding:17px 0}
+details:first-of-type{border-top:1px solid var(--border)}
+summary{font-weight:600;font-size:16px;cursor:pointer;list-style:none;
+  display:flex;justify-content:space-between;gap:16px;letter-spacing:-.01em}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";color:var(--muted);font-weight:400;font-size:20px;
+  line-height:1;flex:none}
+details[open] summary::after{content:"–"}
+details p{font-size:15.5px;color:var(--text-2)}
 
-  .layer {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 0.875rem;
-    padding: 0.85rem 1.25rem;
-    margin-bottom: 0.45rem;
-  }
-  .layer .n {
-    font-size: 0.667rem;
-    font-weight:700;
-    letter-spacing:0.13em;
-    text-transform:uppercase;
-    color: var(--primary);
-    margin-bottom: 0.25rem;
-  }
-  .layer h3 { margin-bottom: 0.2rem; font-size: 1rem; }
-  .layer p { font-size: 0.792rem; line-height: 1.5; margin: 0; color: var(--muted); }
-  .arrow { text-align:center; color: var(--faint); font-size: 0.917rem; line-height: 1; margin: 0.1rem 0 0.3rem; }
-
-  .chips { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; }
-  .chip {
-    font-size: 0.708rem;
-    padding: 0.25rem 0.65rem;
-    border-radius: 1.25rem;
-    background: var(--nested);
-    border: 1px solid var(--border);
-    color: var(--sec);
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
-  }
-
-  .insight {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-left: 3px solid var(--primary);
-    border-radius: 0.75rem;
-    padding: 1.25rem 1.5rem;
-    margin-bottom: 0.875rem;
-  }
-  .insight .kind {
-    font-size: 0.625rem;
-    font-weight:700;
-    letter-spacing:0.13em;
-    text-transform:uppercase;
-    color: var(--faint);
-    margin-bottom: 0.5rem;
-  }
-  .insight .belief { font-size: 0.958rem; line-height: 1.5; color: var(--ink); font-weight: 600; }
-  .insight .evidence {
-    font-size: 0.75rem;
-    line-height: 1.5;
-    color: var(--muted);
-    margin-top: 0.625rem;
-    padding-top: 0.625rem;
-    border-top: 1px solid var(--border);
-  }
-
-  table { width: 100%; border-collapse: collapse; }
-  td { font-size: 0.833rem; padding: 0.5rem 0; border-bottom: 1px solid var(--border); color: var(--sec); vertical-align: top; }
-  td.mark { width: 1.75rem; }
-  tr:last-child td { border-bottom: none; }
-  .dot { display:inline-block; width:9px; height:9px; border-radius:50%; }
-  .dot.on  { background: var(--success); }
-  .dot.off { background: var(--missed); }
-
-  .stat { text-align: center; }
-  .stat .big { font-size: 2.5rem; font-weight: 700; letter-spacing: -0.02em; color: var(--primary); line-height:1; }
-  .stat .cap { font-size: 0.75rem; color: var(--muted); margin-top: 0.5rem; line-height:1.45; }
-
-  .sq {
-    width: 2.75rem;
-    height: 2.75rem;
-    border-radius: 0.688rem;
-    background: var(--dim);
-    position: relative;
-    overflow: hidden;
-    flex-shrink: 0;
-  }
-  .sq i { position: absolute; left:0; right:0; bottom:0; display:block; }
-
-  .quote {
-    font-size: 1rem;
-    line-height: 1.6;
-    color: var(--ink);
-    font-style: italic;
-    padding-left: 1rem;
-    border-left: 2px solid var(--coral);
-    margin-bottom: 0.875rem;
-  }
-
-  .pdf-link-wrap { margin-top: 1.75rem; }
-
-  .pdf-link {
-    display: inline-block;
-    padding: 0.625rem 1.25rem;
-    border: 1.5px solid var(--primary);
-    border-radius: 999px;
-    color: var(--primary);
-    font-size: 0.875rem;
-    font-weight: 600;
-    text-decoration: none;
-    transition: background 0.15s ease, color 0.15s ease;
-  }
-
-  .pdf-link:hover {
-    background: var(--primary);
-    color: #fff;
-  }
-
-  @media (max-width: 40rem) {
-    .grid2, .grid3 { grid-template-columns: 1fr; }
-    h1 { font-size: 2rem; }
-    h2 { font-size: 1.5rem; }
-    .section, .hero, .section-close { padding-top: 3rem; padding-bottom: 3rem; }
-    .hero { min-height: auto; padding-top: 4rem; padding-bottom: 4rem; }
-  }
-
+footer{padding:44px 0 62px;border-top:1px solid var(--border)}
+.foot{display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap;
+  font-size:13.5px;color:var(--faint)}
+.foot a{color:var(--muted)}
 </style>
 </head>
 <body>
 
-
-<!-- ============ 1 · COVER ============ -->
-<div class="section hero">
-  <svg width="70" height="86" viewBox="0 0 442 545">
-    <rect x="0" y="0" width="128" height="545" rx="64" fill="#4E7599"/>
-    <rect x="0" y="0" width="442" height="128" rx="64" fill="#4E7599"/>
-    <rect x="0" y="209" width="340" height="128" rx="64" fill="#CE7358"/>
-    <path d="M127,209 H64 A64,64 0 0,0 64,337 H127 Z" fill="#2B2822"/>
-  </svg>
-
-  <div>
-    <h1>Habit trackers watch&nbsp;you&nbsp;fail.<br>FlexMax figures out&nbsp;why.</h1>
-    <p class="sub">The behavioral engine — how it captures, how it reasons, and what it produces.</p>
-    <p class="pdf-link-wrap"><a class="pdf-link" href="flexmax-behavioral-engine.pdf">Download as PDF</a></p>
+<header>
+  <div class="bar">
+    <img class="mark" src="data:image/png;base64,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iAAAAIBABAAAAAQiAAAAIBABAAAAgQgAAAAIRAAAAEAgAgAAAAIRAAAAEIgAAACAQAQAAAAEIgAAACAQAQAAAIEIAAAACEQAAABAIAIAAAACEQAAABCIAAAAgEAEAAAABCIAAAAgEAEAAACBCAAAAAhEAAAAQCACAAAAAhEAAAAQiAAAAIBABAAAAAQiAAAAIBABAAAAgQgAAAAIRAAAAEAgAgAAAAIRAAAAEIgAAACAQAQAAAAEIgAAACAQAQAAAIEIAAAACEQAAABAIAIAAAACEQAAABCIAAAAgEAEAAAABCIAAAAgEAEAAACBCAAAAAhEAAAAQCACAAAAAhEAAAAQiAAAAIBABAAAAAQiAAAAIBABAAAAgQgAAAAIRAAAAEAgAgAAAAIRAAAAEIgAAACAQAQAAAAEIgAAACAQAQAAAIEIAAAACEQAAABAIAIAAAACEQAAABCIAAAAgEAEAAAABCIAAAAgEAEAAACBCAAAAAhEAAAAQCACAAAAAhEAAAAQiAAAAIBABAAAAAQiAAAAIBABAAAAgQgAAAAIRAAAAEAgAgAAAAIRAAAAEIgAAACAQAQAAAAEIgAAACAQAQAAAIEIAAAACEQAAABAIAIAAAACEQAAABCIAAAAgED+L1uR7+OuFjWaAAAAAElFTkSuQmCC" alt="">
+    <span class="wordmark">FlexMax</span>
+    <a class="cta-sm" href="#pricing">Founding access</a>
   </div>
+</header>
 
-  <div style="display:flex; justify-content:space-between; align-items:flex-end;">
-    <p class="small" style="margin:0;">FlexMax · Behavioral Engine<br>Technical &amp; product overview</p>
-    <p class="small" style="margin:0; text-align:right;">August 2026</p>
+<main>
+
+<!-- ================= HOOK ================= -->
+<div class="wrap hero">
+  <h1>There was never a moment you decided to skip it.</h1>
+  <p class="sub">You didn't choose the hour that disappeared. There was no decision
+    to argue with. Just a Tuesday that became a Thursday, and a plan that quietly
+    <strong>stopped being true</strong>.</p>
+  <p class="sub" style="font-size:18px;margin-top:18px;color:var(--muted)">FlexMax
+    is built for the second half of that day — and for finding out why it keeps
+    happening.</p>
+
+  <div class="day" id="day">
+    <div class="slot"><time>7:00</time><span class="b kept">Morning reset</span></div>
+    <div class="slot"><time>8:00</time><span class="b kept">Deep work</span></div>
+    <div class="slot"><time>13:00</time><span class="b kept">Gym</span></div>
+    <div class="slot"><time>16:00</time><span class="b kept">Client calls</span></div>
+    <div class="slot"><time>21:00</time><span class="b kept">Reading</span></div>
   </div>
+  <p class="day-note">This was Tuesday. You meant all of it.</p>
 </div>
 
-<!-- ============ 2 · THE PROBLEM ============ -->
-<div class="section">
-  <div class="eyebrow">The problem</div>
-  <h2>Time isn't traded away.<br>It evaporates.</h2>
+<hr class="rule">
 
-  <p class="lead">There is no moment of choosing distraction over the plan. There is only a later moment of noticing the plan didn't happen.</p>
-
-  <p>Most people who fail a schedule don't lack motivation and don't lack a plan. They produce an accurate, realistic day — and then fail to execute it, repeatedly, without ever making a conscious decision to abandon it.</p>
-
-  <p>Then the gap between plan and reality grows large enough that reviewing it becomes aversive. Re-engaging would mean confronting the whole accumulated shortfall at once. So it gets avoided entirely.</p>
-
-  <p><strong>That's the uninstall moment</strong> — for every planner, tracker, and calendar that person has ever tried.</p>
-
-  <div class="rule"></div>
-
-  <div class="grid3">
-    <div>
-      <h3>Calendars</h3>
-      <p class="small">The schedule was accurate. It was ignored. A calendar entry is a suggestion with no weight behind it.</p>
-    </div>
-    <div>
-      <h3>Habit trackers</h3>
-      <p class="small">Rendered the shortfall as a verdict — which accelerates the freeze rather than relieving it.</p>
-    </div>
-    <div>
-      <h3>All of them</h3>
-      <p class="small">Nothing distinguished a deliberate rest from a silent collapse. Both showed up as the same empty row.</p>
-    </div>
+<!-- ================= THE STAKES ================= -->
+<section>
+  <div class="wrap">
+    <h2>The hours aren't what it costs you.</h2>
+    <p class="lede">Hours you can find again. What you don't get back is the
+      evidence.</p>
+    <p>Six months of real effort goes by and nothing keeps score of it. Then someone
+      asks what you've been working on — or worse, you ask yourself — and there's
+      nothing to point at. Not because you weren't trying. Because trying leaves no
+      record, and only finishing does.</p>
+    <p>That's the part that actually breaks people. Not one missed workout. The slow
+      arrival at a place where you can't make the case for your own plans anymore,
+      because you have no proof they were ever real.</p>
+    <p class="pull">Drift doesn't take your time. It takes your argument for
+      yourself.</p>
   </div>
-</div>
+</section>
 
-<!-- ============ 3 · WHAT IT SEES ============ -->
-<div class="section">
-  <div class="eyebrow">The difference</div>
-  <h2>Every other app records<br>the plan. This one records<br>what actually happened.</h2>
+<hr class="rule">
 
-  <div class="grid2" style="margin-top:1.800rem;">
-    <div class="card tinted">
-      <div class="label">What a planner stores</div>
-      <p style="font-size:0.833rem; margin:0; color:var(--muted);">Gym, 7:00 AM — not done.</p>
-      <div class="rule" style="margin:1.200rem 0;"></div>
-      <p class="small" style="margin:0;">A record of intent, and a record of its absence. Nothing about cause. Miss it forty times and the app schedules it a forty-first time, identical.</p>
-    </div>
-
-    <div class="card">
-      <div class="label">What FlexMax stores</div>
-      <p style="font-size:0.833rem; margin:0; color:var(--ink);">Gym, 7:00 AM — missed, acknowledged at 9:14 AM.<br>
-      Reason: ran out of time.<br>
-      Written: "I let my deep work spill into this."<br>
-      Rescheduled 13 times this month, always later.<br>
-      Preceded by a night that ended after midnight.</p>
-      <div class="rule" style="margin:1.200rem 0;"></div>
-      <p class="small" style="margin:0;">A record of the mechanism. That's what can be reasoned about.</p>
+<!-- ================= FOUNDER ================= -->
+<section>
+  <div class="wrap">
+    <h2>I built this because it happened to me.</h2>
+    <div class="letter">
+      <p>For a while I had real accountability — someone who asked what my plan was
+        in the morning and what I'd actually done by evening. It worked. My execution
+        was better than it had ever been.</p>
+      <p>It also came with something I didn't expect. I spent energy managing how my
+        week looked. If a block didn't happen, I'd lead with what did. I wasn't
+        lying, exactly. I was presenting. And the parts I smoothed over were the parts
+        that would have actually helped — the afternoon that vanished, the rest I
+        didn't want to admit I needed.</p>
+      <p>That's when it landed. The problem wasn't accountability. It was the
+        audience. There is no version of a person you can be completely honest with
+        about a wasted Tuesday, because a person forms an opinion.</p>
+      <p>Software doesn't. Nothing to perform for, no status to protect, no reason to
+        round anything up. So it gets told the truth — which means it can see the
+        pattern a mentor structurally can't, because I never showed him the pattern.</p>
+      <p>I've been the only user of this for months. Every block and every note in it
+        is mine. I built the recovery flow because I needed it on one specific bad
+        Thursday. I rebuilt the streak because the old one made me want to close the
+        app. <strong>It's the first one I haven't quit.</strong></p>
+      <p>This isn't a company entering a category. It's one person solving one
+        problem in painful detail, then finding out whether anyone else has it too.</p>
+      <p class="sig">— Belal, Houston</p>
     </div>
   </div>
+</section>
 
-  <div class="rule"></div>
+<hr class="rule">
 
-  <p class="lead">The distinction that makes it work: <strong>missed</strong> means the user engaged and admitted it. <strong>Unaccounted</strong> means silence.</p>
-  <p>The same completion rate describes both. They are not the same behavior. One is accountability; the other is the drift itself. An engine that can't tell them apart is measuring the wrong thing.</p>
-</div>
+<!-- ================= STREAM 1: SALVAGE — the real mechanic ================= -->
+<section>
+  <div class="wrap">
+    <h2>It's 2:47 and the day just broke.</h2>
+    <p class="lede">This is the moment every other planner leaves you alone with.
+      So try it. This is the actual mechanic from the app — same rules, same
+      maths, same refusals.</p>
 
-<!-- ============ 4 · ARCHITECTURE ============ -->
-<div class="section">
-  <div class="eyebrow">Architecture</div>
-  <h2>SQL computes.<br>The model narrates.<br>Nothing learns in the dark.</h2>
+    <div class="rig">
+      <div class="rig-head">
+        <b>Tuesday</b>
+        <span id="rig-status">5 blocks</span>
+      </div>
 
-  <p style="margin-bottom:1.320rem;">Every number — counts, rates, trends, correlations — is computed in the database, where arithmetic is exact and auditable. The language model receives only finished figures and the user's own words. Its single job is to name the causal story and cite the evidence. It never calculates, never invents a statistic, and never decides strategy.</p>
+      <div class="coach" id="coach">
+        <span id="coach-text">Grab a block by its handle on the left and drag it
+          onto another one.</span>
+      </div>
 
-  <div class="layer">
-    <div class="n">Layer 01 · Capture</div>
-    <h3>Record what happens, including the silence</h3>
-    <p>Check-ins, completion quality, miss reasons, reschedule history, real bedtimes, nudge responses. Data not captured today cannot be recovered later.</p>
-  </div>
-  <div class="arrow">↓</div>
+      <div class="track" id="track">
+        <div class="hint" id="hint" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M9 3.5a1.6 1.6 0 013.2 0v7.2M12.2 9.4a1.6 1.6 0 013.2 0v1.6M15.4 10.2a1.6 1.6 0 013.2 0v5.6c0 2.9-2.1 5.2-5 5.2h-1.9c-2 0-3.3-1-4.2-2.5l-2.4-4a1.6 1.6 0 012.6-1.8l1.3 1.6V3.5z"
+              fill="#43698F" stroke="#F8F8F6" stroke-width="1.1" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="toast" id="toast"></div>
+      </div>
 
-  <div class="layer">
-    <div class="n">Layer 02 · Compute</div>
-    <h3>One SQL function turns raw rows into finished facts</h3>
-    <p>Per-block records, day shapes, weekly trends, reschedule drift, quality trajectories — plus the integrity filters that decide what may be concluded at all.</p>
-  </div>
-  <div class="arrow">↓</div>
-
-  <div class="layer">
-    <div class="n">Layer 03 · Narrate</div>
-    <h3>One AI call per user, per week</h3>
-    <p>The model reads the finished numbers and the user's verbatim reflections, then writes two or three beliefs with the evidence attached. Results are stored, not regenerated.</p>
-  </div>
-  <div class="arrow">↓</div>
-
-  <div class="layer">
-    <div class="n">Layer 04 · Surface</div>
-    <h3>Injected where it's useful — free, no further AI</h3>
-    <p>The morning card. The recovery sheet when something breaks. The weekly review. Stored beliefs are read, not recomputed.</p>
-  </div>
-</div>
-
-<!-- ============ 5 · CAPTURE ============ -->
-<div class="section">
-  <div class="eyebrow">Layer 01 · Capture</div>
-  <h2>The signals</h2>
-
-  <p>Most are invisible to the user. All of them are things a planner throws away.</p>
-
-  <div class="grid2" style="margin-top:1.560rem;">
-    <div class="card">
-      <div class="label">Outcome</div>
-      <h3 style="margin-bottom:0.480rem;">What happened, and whether you said so</h3>
-      <p class="small" style="margin:0;">Completed, missed, or unaccounted — with a timestamp for when it was acknowledged, so recovery speed is measurable.</p>
+      <div class="rig-foot">
+        <button class="rbtn" id="reset">Reset the day</button>
+        <button class="rbtn solid" id="skip" style="display:none">Now miss the gym</button>
+        <div class="steps" id="steps">
+          <i class="pip now"></i><i class="pip"></i><i class="pip"></i>
+        </div>
+      </div>
     </div>
-    <div class="card">
-      <div class="label">Quality</div>
-      <h3 style="margin-bottom:0.480rem;">How well it went, not just whether</h3>
-      <p class="small" style="margin:0;">Crushed it, partial, pulled away. A block still completing but degrading is an earlier warning than a miss.</p>
+
+    <p style="margin-top:30px">Every rule you just hit is the real one. Durations
+      and the gap between blocks are preserved rather than recomputed. Anchored
+      blocks refuse the drop. A swap that would land on something else is turned
+      down by name, before it happens — not silently allowed and discovered later.</p>
+    <p>No history, no learning period, nothing typed. It works the hour you
+      install it.</p>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- ================= STREAM 2: THE PATTERN ================= -->
+<section>
+  <div class="wrap">
+    <h2>Then, after about a week, it starts explaining you.</h2>
+    <p class="lede">One month of my own schedule. My gym block was failing about 40%
+      of the time and I'd been calling it a motivation problem for a year.</p>
+
+    <div class="demo">
+      <p class="demo-q">The gym block, 30 days. Which days are you looking at?</p>
+      <div class="seg" role="group" aria-label="Filter days">
+        <button data-view="all" aria-pressed="true">All 30 days</button>
+        <button data-view="deep" aria-pressed="false">Days deep work landed</button>
+        <button data-view="nodeep" aria-pressed="false">Days it didn't</button>
+      </div>
+      <div class="readout">
+        <span class="big tab" id="pct">40%</span>
+        <span class="readout-label" id="label">of gym sessions missed. Looks like a
+          motivation problem.</span>
+      </div>
+      <div class="grid-label">
+        <span>Each square is one day</span>
+        <span class="tab" id="counts">12 of 30 missed</span>
+      </div>
+      <div class="grid" id="grid" aria-hidden="true"></div>
+      <div class="legend">
+        <span><i class="dot" style="background:var(--success)"></i>Gym completed</span>
+        <span><i class="dot" style="background:var(--missed)"></i>Gym missed</span>
+      </div>
+      <div class="finding" id="finding"></div>
     </div>
-    <div class="card">
-      <div class="label">Cause</div>
-      <h3 style="margin-bottom:0.480rem;">In the user's own words</h3>
-      <p class="small" style="margin:0;">Free text on why, and what they'd change. The highest-signal column in the system — people narrate their own causality better than any model infers it.</p>
-    </div>
-    <div class="card">
-      <div class="label">Movement</div>
-      <h3 style="margin-bottom:0.480rem;">Every reschedule, permanently</h3>
-      <p class="small" style="margin:0;">Which blocks get pushed later, how far, how often. Overwriting a time destroys the strongest available signal, so nothing is overwritten.</p>
-    </div>
-    <div class="card">
-      <div class="label">Boundaries</div>
-      <h3 style="margin-bottom:0.480rem;">When the day actually started and ended</h3>
-      <p class="small" style="margin:0;">Real sleep and wake times, captured retroactively in the morning. Sleep is a moment you cross, not a block you complete.</p>
-    </div>
-    <div class="card">
-      <div class="label">Intervention</div>
-      <h3 style="margin-bottom:0.480rem;">Whether the nudge worked</h3>
-      <p class="small" style="margin:0;">Every cutoff notification, the response chosen, and the block's eventual outcome. This is the record that compounds.</p>
-    </div>
+
+    <p style="margin-top:30px">It was never motivation. On days my morning session
+      actually landed, it ran long and the gym was what paid for it. The cause sat
+      eight hours earlier and four blocks upstream — you'd have to notice a Tuesday
+      morning to explain a Thursday evening, and nobody does that from memory.</p>
+    <p>That's the whole product. It reads across your days and finds the thing you
+      can't see from inside one of them.</p>
   </div>
-</div>
+</section>
 
-<!-- ============ 6 · INTEGRITY ============ -->
-<div class="section">
-  <div class="eyebrow">Layer 02 · Compute</div>
-  <h2>Behavioral data lies.<br>Every filter was earned.</h2>
+<hr class="rule">
 
-  <p style="margin-bottom:1.560rem;">Each of these exists because a simpler version produced a confident, false conclusion. They ship inside the data payload so the narrator cannot drift beyond what the evidence supports.</p>
-
-  <div class="card accent" style="margin-bottom:0.900rem;">
-    <h3>Scheduled times are not behavioral records</h3>
-    <p class="small" style="margin:0;">A recurring block reports its template time every day regardless of what happened. An early design correlated "late nights" against it and found the identical value on all forty rows — it was reading the plan, not the behavior. The engine may never claim a block "ran until" a time.</p>
-  </div>
-
-  <div class="card accent" style="margin-bottom:0.900rem;">
-    <h3>Untracked blocks are excluded entirely</h3>
-    <p class="small" style="margin:0;">A block qualifies only with at least three check-ins and engagement on a quarter of its instances. A single accidental completion once ranked "Sleep" as the user's largest failure at 24 of 26 — nobody checks off sleep.</p>
-  </div>
-
-  <div class="card accent" style="margin-bottom:0.900rem;">
-    <h3>Days the app wasn't used don't count</h3>
-    <p class="small" style="margin:0;">Instances generate on demand, so planning ahead creates rows nobody touched. Read naively, this suggested the user abandoned three quarters of their commitments — false, and precisely the shame signal the product exists to avoid.</p>
-  </div>
-
-  <div class="card accent">
-    <h3>Never trend from a partial period</h3>
-    <p class="small" style="margin:0;">An early draft claimed a four-day winning streak from morning blocks alone. Whole-day data showed two of those four were near-total collapses, and the most recent complete week was the worst of the month. Today is excluded; partial weeks are omitted.</p>
-  </div>
-</div>
-
-<!-- ============ 7 · REAL OUTPUT ============ -->
-<div class="section">
-  <div class="eyebrow">Layer 03 · Narrate — real output</div>
-  <h2>What it produced</h2>
-  <p style="margin-bottom:1.440rem;">Unedited, from one month of real use. Every figure traced back to the database and verified.</p>
-
-  <div class="insight">
-    <div class="kind">Causal</div>
-    <div class="belief">Late sleep is the upstream cause collapsing both morning blocks in sequence — when one falls, the other follows the same day.</div>
-    <div class="evidence">Fajr+Quran failed 11 of 25. Morning deep work failed 13 of 25. From the user's own reflections: "sleeping late which is caused by dopamine speedrun," "waking up on time is crucial for schedule adherence."</div>
-  </div>
-
-  <div class="insight">
-    <div class="kind">Causal · quality</div>
-    <div class="belief">Morning deep work is completing at an adequate rate overall, but the sessions that do happen have been landing at declining quality — 4 of the last 5 rated sessions were poor.</div>
-    <div class="evidence">A block degrading before it starts being missed. The earliest warning the system can produce, and one the user had not noticed.</div>
-  </div>
-
-  <div class="insight" style="border-left-color: var(--success);">
-    <div class="kind">Strength</div>
-    <div class="belief">Fajr+Quran is the most completed block with sufficient data, landing 15 of 23 — and when it happens, quality holds.</div>
-    <div class="evidence">Only 1 of the last 5 rated sessions was poor. No other block with ten or more occurrences matches this.</div>
-  </div>
-
-  <div class="rule"></div>
-  <p class="small" style="margin:0;">Every insight set includes at least one genuine, evidence-backed strength. Not consolation — a fact that happens to be good news.</p>
-</div>
-
-<!-- ============ 8 · TONE ============ -->
-<div class="section">
-  <div class="eyebrow">The hardest part</div>
-  <h2>Accuracy is kinder<br>than encouragement.</h2>
-
-  <p>Real reflection data is full of self-blame. Verbatim, from one month:</p>
-
-  <div class="quote">"Sloth."</div>
-  <div class="quote">"Bad day."</div>
-  <div class="quote">"Saturday, cut me some slack."</div>
-
-  <p>That last one is a person pre-emptively arguing with an app they built themselves. This audience arrives already fluent in self-criticism. They do not need a mirror.</p>
-
-  <div class="rule"></div>
-
-  <div class="grid2">
-    <div>
-      <div class="label">The engine must</div>
-      <p class="small">Name structural causes — a mechanism, a slot, a missing boundary. State counts with their denominators. Include a real strength. Offer at most one small structural change. Be truthful about a bad week.</p>
-    </div>
-    <div>
-      <div class="label">The engine must never</div>
-      <p class="small">Use the words lazy, failure, discipline, willpower, or "should have." Echo the user's own harshest phrasing back at them. Reassure about a judgment it isn't making — denying a verdict implies one was available.</p>
+<!-- ================= DIFFERENTIATION ================= -->
+<section>
+  <div class="wrap wide">
+    <h2>What everything else does when your day breaks.</h2>
+    <p class="lede" style="max-width:44ch">It moves the block. That's the entire
+      response. Miss the gym forty times and you get session forty-one, identical to
+      the first.</p>
+    <div class="rows">
+      <div class="row"><span class="row-h">Everyone else</span><span class="row-h">FlexMax</span></div>
+      <div class="row">
+        <span class="them">A missed block turns red and breaks your streak.</span>
+        <span class="us">A missed block you account for keeps your streak. Only
+          silence breaks it.</span>
+      </div>
+      <div class="row">
+        <span class="them">Rescheduling means dragging a block and hoping it fits.</span>
+        <span class="us">Drop it anywhere. If it collides, it names the block in
+          the way.</span>
+      </div>
+      <div class="row">
+        <span class="them">Four misses on a bad day means four red marks.</span>
+        <span class="us">Four misses means one screen and one way forward.</span>
+      </div>
+      <div class="row">
+        <span class="them">Notifications fire on a timer and become wallpaper.</span>
+        <span class="us">A nudge arrives because your own history says this block
+          is where the day usually breaks.</span>
+      </div>
+      <div class="row">
+        <span class="them">Stats show you what you completed.</span>
+        <span class="us">Once a week it tells you why, with the counts attached.</span>
+      </div>
+      <div class="row">
+        <span class="them">Getting better means trying harder.</span>
+        <span class="us">Getting better means the schedule gets less wrong about
+          you every week.</span>
+      </div>
     </div>
   </div>
+</section>
 
-  <div class="rule"></div>
-  <p class="lead" style="margin:0;">The test every line must pass: would this still be all right to read during a week where almost nothing got done?</p>
-</div>
+<hr class="rule">
 
-<!-- ============ 9 · SURFACES ============ -->
-<div class="section">
-  <div class="eyebrow">Layer 04 · Surface</div>
-  <h2>One useful thing,<br>at the right moment.</h2>
-
-  <p style="margin-bottom:1.560rem;">Findings sit in the background and appear only where they change something. Not a dashboard. Not a chatbot you visit.</p>
-
-  <div class="card" style="margin-bottom:1.020rem;">
-    <div class="label">Morning</div>
-    <h3>A single card, once</h3>
-    <p class="small" style="margin:0;">The top finding, dismissed permanently once read. It returns when there is genuinely something new — roughly weekly, because that is how often the app actually learns something.</p>
-  </div>
-
-  <div class="card" style="margin-bottom:1.020rem;">
-    <div class="label">The moment something breaks</div>
-    <h3>Recovery, not a verdict</h3>
-    <p class="small" style="margin:0;">Mark a block missed and the sheet names the mechanism instead of counting failures — and shows the user their own last written note on that block. If a real streak just broke, the diagnosis is suppressed entirely. That is not the moment for analysis.</p>
-  </div>
-
-  <div class="card" style="margin-bottom:1.020rem;">
-    <div class="label">Before it breaks</div>
-    <h3>A cutoff that says why</h3>
-    <p class="small" style="margin:0;">A quiet notification partway through a block: what it ends at, what comes next, and what running over has cost before. It names the consequence and leaves the decision alone.</p>
-  </div>
-
-  <div class="card">
-    <div class="label">Weekly</div>
-    <h3>The shape of the week</h3>
-    <p class="small" style="margin:0;">Seven squares, one number that is honest on a bad week, and the week's leading finding. The headline is days accounted for — never a completion percentage.</p>
-  </div>
-</div>
-
-<!-- ============ 10 · STREAK ============ -->
-<div class="section">
-  <div class="eyebrow">The mechanic</div>
-  <h2>The streak measures honesty,<br>not perfection.</h2>
-
-  <p>A completion streak breaks on the first bad day — which is the uninstall moment. So the protected number is different: a day counts when its blocks have been accounted for, whatever the outcome.</p>
-  <p><strong>Marking something missed keeps the streak alive. Only silence breaks it.</strong></p>
-
-  <div class="card" style="margin:1.440rem 0;">
-    <div class="label">The same completion rate, two different behaviors</div>
-    <table style="margin-top:0.600rem;">
-      <tr>
-        <td style="width:15.000rem;"><strong>Morning prayer block</strong><br><span style="color:var(--muted);font-size:0.750rem;">14 missed · 1 unaccounted</span></td>
-        <td>Reported almost every time, including the failures. That is accountability.</td>
-      </tr>
-      <tr>
-        <td><strong>Weights block</strong><br><span style="color:var(--muted);font-size:0.750rem;">6 missed · 15 unaccounted</span></td>
-        <td>Silently abandoned. That is the drift itself.</td>
-      </tr>
-    </table>
-  </div>
-
-  <p>The squares carry both facts at once. Filled height shows what was completed; the neutral band above it shows what was missed but reported. A fully accounted day fills the square regardless of outcome.</p>
-  <p class="small">The missed portion is deliberately not red. A week of red squares is a wall of errors, and that is the signal this product exists to avoid.</p>
-
-  <div style="display:flex; gap:0.720rem; margin-top:1.200rem;">
-    <div class="sq"><i style="height:100%;background:var(--missed)"></i><i style="height:100%;background:var(--success)"></i></div>
-    <div class="sq"><i style="height:100%;background:var(--missed)"></i><i style="height:62%;background:var(--success)"></i></div>
-    <div class="sq"><i style="height:100%;background:var(--missed)"></i><i style="height:25%;background:var(--success)"></i></div>
-    <div class="sq"><i style="height:100%;background:var(--missed)"></i></div>
-    <div class="sq"><i style="height:72%;background:var(--missed)"></i><i style="height:38%;background:var(--success)"></i></div>
-    <div class="sq"></div>
-    <div class="sq"><i style="height:88%;background:var(--missed)"></i><i style="height:88%;background:var(--success)"></i></div>
-  </div>
-  <p class="small" style="margin-top:0.780rem;">Teal completed · neutral accounted for · empty unanswered. The sixth day was never closed out — that is the one that breaks the streak.</p>
-</div>
-
-<!-- ============ 11 · STATUS ============ -->
-<div class="section">
-  <div class="eyebrow">Where it stands</div>
-  <h2>Built today</h2>
-
-  <p style="margin-bottom:1.200rem;">The engine runs end to end. It captures, computes, narrates weekly, and surfaces findings in three places.</p>
-
-  <table>
-    <tr><td class="mark"><span class="dot on"></span></td><td><strong>Capture layer</strong> — outcomes, quality, reasons, reschedule history, sleep and wake boundaries, nudge telemetry</td></tr>
-    <tr><td class="mark"><span class="dot on"></span></td><td><strong>Evidence engine</strong> — one SQL function, four integrity filters, caveats travelling inside the payload</td></tr>
-    <tr><td class="mark"><span class="dot on"></span></td><td><strong>Weekly narrator</strong> — one AI call per user per week, stored atomically, never regenerated on read</td></tr>
-    <tr><td class="mark"><span class="dot on"></span></td><td><strong>Morning card, recovery injection, weekly review</strong></td></tr>
-    <tr><td class="mark"><span class="dot on"></span></td><td><strong>Cutoff nudges</strong> — fires mid-block, cites the downstream cost, answerable from the lock screen</td></tr>
-    <tr><td class="mark"><span class="dot on"></span></td><td><strong>Accountability streak</strong> and the two-tone weekly shape</td></tr>
-    <tr><td class="mark"><span class="dot on"></span></td><td><strong>Quality drift detection</strong> — degradation caught before a block starts being missed</td></tr>
-  </table>
-
-  <div class="rule"></div>
-
-  <h3 style="font-size:1.167rem; margin-bottom:0.780rem;">Not yet built</h3>
-  <table>
-    <tr><td class="mark"><span class="dot off"></span></td><td><strong>Cross-block cannibalization</strong> — detecting that one block is sacrificed to subsidize another, and naming the pair</td></tr>
-    <tr><td class="mark"><span class="dot off"></span></td><td><strong>Intervention effectiveness</strong> — reading back which nudges actually changed outcomes for this specific person</td></tr>
-    <tr><td class="mark"><span class="dot off"></span></td><td><strong>Intention reliability</strong> — whether the user's plans are becoming more accurate over time</td></tr>
-    <tr><td class="mark"><span class="dot off"></span></td><td><strong>Drift detection</strong> — noticing attention has left, without ever seeing where it went</td></tr>
-  </table>
-</div>
-
-<!-- ============ 12 · COMPLETED CONCEPT ============ -->
-<div class="section">
-  <div class="eyebrow">What it becomes</div>
-  <h2>An app that knows<br>what works on you.</h2>
-
-  <p>Today the engine explains what happened. Completed, it closes the loop — every nudge becomes an experiment, every response an outcome, and the system learns which interventions move this specific person.</p>
-
-  <div class="card accent" style="margin:1.560rem 0;">
-    <div class="label">Month six</div>
-    <p style="font-size:1.000rem; line-height:1.6; margin:0; color:var(--ink);">"The cutoff at 10:30 has worked eleven of the last fourteen nights. The one at 9:00 never did — you dismissed it every time. Your mornings are now landing at twice the rate they were in July, and it started the week you stopped scheduling deep work after dinner."</p>
-  </div>
-
-  <p>Nothing in that paragraph is generated from a template. It requires six months of one person's interventions, responses, and outcomes — which is precisely why it can't be copied.</p>
-
-  <div class="rule"></div>
-
-  <div class="grid2">
-    <div>
-      <div class="label">Drift detection, privately</div>
-      <p class="small">The user selects which apps count as distraction. The selection is returned as opaque tokens — FlexMax is structurally incapable of knowing which apps were chosen. It learns only that attention left, for roughly how long, and what happened next.</p>
+<!-- ================= HONEST STATE ================= -->
+<section>
+  <div class="wrap wide">
+    <h2>Where it actually stands.</h2>
+    <p class="lede" style="max-width:42ch">You pay before you use it, so you should
+      know exactly what you're buying.</p>
+    <div class="state">
+      <div class="built">
+        <h3>Working the hour you install it</h3>
+        <ul>
+          <li>Time-block schedule with one-tap swapping and fixed anchors</li>
+          <li>Rebuild a broken day — shrink, move, or drop with the cost named</li>
+          <li>The Removed pile, so nothing dropped is gone for good</li>
+          <li>Check-ins, miss reasons, and the recovery flow</li>
+          <li>The accounted-for streak</li>
+          <li>Evening close-out and next-day planning</li>
+          <li>Light and dark, notifications in your timezone</li>
+        </ul>
+        <h3 style="margin-top:22px">Working from about week two</h3>
+        <ul>
+          <li>Weekly behavioral insights drawn from your own days</li>
+          <li>Nudges timed from your own patterns</li>
+        </ul>
+      </div>
+      <div class="not">
+        <h3>Not built yet</h3>
+        <ul>
+          <li>Daily predictions the app scores itself against — and tells you
+            when you proved it wrong</li>
+          <li>A written profile of how you work, that you can argue with when
+            it gets you wrong</li>
+          <li>Twelve-week chapters, each ending in a real review</li>
+          <li>Blocks that retire themselves once they've gone automatic</li>
+          <li>Rest you declare in advance, which never counts against you</li>
+          <li>Voice reflections</li>
+          <li>Widgets, Apple Watch, Android</li>
+        </ul>
+      </div>
     </div>
-    <div>
-      <div class="label">Interdependence, not isolation</div>
-      <p class="small">Blocks are not independent. Naming the pair — "your workouts disappear in the same weeks your deep work slips; cutting one doesn't protect the other" — is a different and more useful finding than either block's own numbers.</p>
+    <p style="margin-top:26px" class="dim">It gets about a week of your days before
+      it says anything worth reading. That's deliberate — an app that tells you
+      something profound on day two is guessing.</p>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- ================= PRICING ================= -->
+<section id="pricing">
+  <div class="wrap">
+    <h2>Founding price, kept for good.</h2>
+    <div class="price-wrap">
+      <span class="badge">Beta and early users</span>
+      <div class="tiers">
+        <div class="tier">
+          <div class="tier-name">Monthly</div>
+          <div class="tier-price tab">$7.99<small>/mo</small></div>
+          <div class="was tab"><s>$14.99</s> at launch</div>
+        </div>
+        <div class="tier best">
+          <span class="saves">Best value</span>
+          <div class="tier-name">Yearly</div>
+          <div class="tier-price tab">$5.83<small>/mo</small></div>
+          <div class="was tab">$69.99 billed yearly · <s>$99</s> at launch</div>
+        </div>
+      </div>
+      <div class="lock">
+        <strong>Your price never moves.</strong> Join now and you keep $7.99 or
+        $69.99 for as long as your subscription stays active — including after the
+        public price goes to $14.99 and $99. There's no trial: the day-rebuilding
+        half works the hour you install it, and you pay first because this works for
+        people who have already decided.
+      </div>
+      <p style="margin-top:22px"><a class="cta block" href="#">Start with FlexMax</a></p>
+      <p class="cta-note" style="text-align:center">iOS. Cancel anytime from your
+        Apple subscription settings.</p>
     </div>
   </div>
-</div>
+</section>
 
-<!-- ============ 13 · MOAT ============ -->
-<div class="section">
-  <div class="eyebrow">Why it holds</div>
-  <h2>The model is replaceable.<br>The record isn't.</h2>
+<hr class="rule">
 
-  <div class="grid3" style="margin:1.800rem 0;">
-    <div class="stat">
-      <div class="big">1</div>
-      <div class="cap">AI call per user<br>per week</div>
+<!-- ================= FAQ ================= -->
+<section>
+  <div class="wrap">
+    <h2>Reasonable questions.</h2>
+    <div style="margin-top:28px">
+      <details>
+        <summary>I've quit five of these. Why is this different?</summary>
+        <p>The ones you quit were mirrors. They showed your plan back to you, which
+          is pleasant when you're doing well and brutal when you're not. None of them
+          could tell you <em>why</em> a block keeps dying, because none of them were
+          reading across your days. That's the entire thing this does.</p>
+      </details>
+      <details>
+        <summary>Why is there no free trial?</summary>
+        <p>Fair question, and here's the honest version: the rebuilding half works
+          the hour you install it, so you're not paying to wait. The pattern-finding
+          half does need about a week of real days before it says anything worth
+          reading. As for why there's no trial at all — a trial recruits people who
+          are browsing, and this doesn't work for people who are browsing. Paying
+          first is the first thing you do that proves you've decided, and it's why
+          the founding price is roughly half what it will be.</p>
+      </details>
+      <details>
+        <summary>What happens in a week where I do almost nothing?</summary>
+        <p>You come back, account for it, and the streak you're protecting stays
+          intact — because it counts days you were honest about, not days you were
+          perfect. Then you get a readable explanation of what happened instead of a
+          wall of red. This is the specific moment the app was designed around.</p>
+      </details>
+      <details>
+        <summary>What if it's wrong about me?</summary>
+        <p>It will be sometimes, especially early. Every insight carries the counts
+          it's based on, so you can check the reasoning instead of taking its word.
+          The numbers stay small and honest on purpose — "four of your last five",
+          never a dressed-up percentage.</p>
+      </details>
+      <details>
+        <summary>Is my data used to train anything?</summary>
+        <p>No. Your history is yours, and it's the thing that makes the app useful to
+          you specifically. No ads, nothing sold.</p>
+      </details>
+      <details>
+        <summary>Who is this genuinely not for?</summary>
+        <p>Anyone who needs talking into wanting the thing in the first place — this
+          assumes the wanting is already there. And anyone whose current system works.
+          If you're getting where you want to go, there's nothing here you need.</p>
+      </details>
     </div>
-    <div class="stat">
-      <div class="big">100%</div>
-      <div class="cap">of arithmetic computed<br>in the database</div>
-    </div>
-    <div class="stat">
-      <div class="big">0</div>
-      <div class="cap">figures the model<br>is permitted to invent</div>
-    </div>
   </div>
+</section>
 
-  <p>A competitor can ship a weekly "why your plans fail" card next quarter. What they cannot ship is six months of a specific person's interventions, responses, and outcomes — because that requires that person's six months.</p>
-
-  <p>The switching cost compounds with every week of use. On day one the app knows nothing. On day ninety it knows that this person's evenings overrun, that they protect deep work above everything, and that their mornings are downstream of their nights.</p>
-
-  <div class="rule"></div>
-
-  <div class="card tinted">
-    <div class="label">Stated so it can be failed</div>
-    <p style="font-size:0.958rem; line-height:1.6; margin:0; color:var(--ink);">FlexMax must make execution measurably better, not merely make the user feel understood. If people love the findings but don't follow through any better, this is a sophisticated journal and the thesis is wrong.</p>
+<!-- ================= CLOSE ================= -->
+<section style="padding-top:14px">
+  <div class="wrap">
+    <h2>You already know what you should be doing.</h2>
+    <p class="lede">That was never the problem.</p>
+    <p style="margin-top:26px"><a class="cta" href="#pricing">Get founding access — $7.99/mo</a></p>
+    <p class="cta-note">$14.99 at public launch. Your price stays where you joined.</p>
   </div>
-</div>
+</section>
 
-<!-- ============ 14 · CLOSE ============ -->
-<div class="section section-close">
-  <svg width="52" height="64" viewBox="0 0 442 545">
-    <rect x="0" y="0" width="128" height="545" rx="64" fill="#4E7599"/>
-    <rect x="0" y="0" width="442" height="128" rx="64" fill="#4E7599"/>
-    <rect x="0" y="209" width="340" height="128" rx="64" fill="#CE7358"/>
-    <path d="M127,209 H64 A64,64 0 0,0 64,337 H127 Z" fill="#2B2822"/>
-  </svg>
+</main>
 
-  <div>
-    <h1 style="font-size:2.667rem;">Your schedule keeps failing<br>because it doesn't know you.</h1>
-    <p class="sub" style="max-width:33.600rem;">FlexMax learns from what actually happens — including the parts you'd rather not report to a person.</p>
+<footer>
+  <div class="wrap wide foot">
+    <span>FlexMax — built in Houston, Texas</span>
+    <span><a href="https://github.com/mbquresh/flexmax">Source</a></span>
+    <span><a href="engine.html">Engine overview</a></span>
   </div>
+</footer>
 
-  <div>
-    <div class="rule"></div>
-    <p class="small" style="margin:0;">The findings in this document are unedited output from one month of real use, verified against source data. Single-user validation — testing whether it generalizes is the next step, not a settled question.</p>
-  </div>
-</div>
-  <div class="section section-end">
-    <p class="pdf-link-wrap"><a class="pdf-link" href="flexmax-behavioral-engine.pdf">Download as PDF</a></p>
-    <p class="small" style="margin-top:1.75rem;"><a href="privacy.html" style="color:inherit;">Privacy policy</a></p>
-  </div>
+<script>
+(function(){
+  // Hero: the day drains once, on view. Not a loop, not decoration.
+  var day = document.getElementById('day');
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+    day.querySelectorAll('.b').forEach(function(b,i){ if(i) b.classList.remove('kept'); });
+  } else {
+    setTimeout(function(){ day.classList.add('drain'); }, 700);
+  }
 
+  /* =========================================================================
+     Drag-to-swap. Ported from apps/mobile/app/today.tsx handleSwap() and
+     BlockCard.tsx findSwapTarget(). Same anchor arithmetic, same collision
+     test, same refusal strings. Minutes-from-midnight throughout.
+
+     Everything the coach says is computed against the CURRENT arrangement.
+     Legality is a property of the layout, not of a pair — a refused swap can
+     become legal once something else moves, and the lookahead below finds
+     exactly which move unlocks it.
+     ========================================================================= */
+  var H = 60, GAPY = 8, MIN_BLOCK_MINUTES = 5, DAY_END = 1380;
+
+  var SEED = [
+    { id:'reset', name:'Morning reset', s:420, e:450, fixed:false },
+    { id:'deep',  name:'Deep work',     s:480, e:570, fixed:false },
+    { id:'stand', name:'Standup',       s:660, e:675, fixed:true  },
+    { id:'gym',   name:'Gym',           s:780, e:840, fixed:false },
+    { id:'calls', name:'Client calls',  s:900, e:990, fixed:false }
+  ];
+  var blocks, stage = 0, shrunk = false;
+
+  var track=document.getElementById('track'), hint=document.getElementById('hint'),
+      toastEl=document.getElementById('toast'), coach=document.getElementById('coach'),
+      coachT=document.getElementById('coach-text'), statusEl=document.getElementById('rig-status'),
+      skipBtn=document.getElementById('skip'), pips=document.querySelectorAll('#steps .pip');
+
+  function hhmm(m){
+    var hr=Math.floor(m/60), mi=m%60, ap=hr>=12?'PM':'AM', h12=hr%12; if(h12===0)h12=12;
+    return h12+':'+(mi<10?'0':'')+mi+' '+ap;
+  }
+  function buzz(p){ if(navigator.vibrate) try{ navigator.vibrate(p); }catch(e){} }
+  var tTimer;
+  function toast(m){ toastEl.textContent=m; toastEl.classList.add('on');
+    clearTimeout(tTimer); tTimer=setTimeout(function(){toastEl.classList.remove('on');},3000); }
+  function say(m,tone){ coachT.innerHTML=m; coach.className='coach'+(tone?' '+tone:''); }
+  function setPips(n){ pips.forEach(function(p,i){
+    p.className='pip'+(i<n?' done':(i===n?' now':'')); }); }
+
+  /* ---- pure model: snapshot in, result out. No DOM, no mutation. ---- */
+  function snap(){ return blocks.map(function(b){
+    return {id:b.id,name:b.name,s:b.s,e:b.e,fixed:b.fixed}; }); }
+
+  function computeSwap(state, aId, bId){
+    var a=null,b=null;
+    state.forEach(function(x){ if(x.id===aId)a=x; if(x.id===bId)b=x; });
+    if(!a||!b||a.fixed||b.fixed) return {ok:false,why:'anchored'};
+    var E = a.s<b.s?a:b, L = a.s<b.s?b:a;
+    var eD=E.e-E.s, lD=L.e-L.s, gap=L.s-E.e, anchor=E.s;
+    var lS=anchor, lE=anchor+lD, eS=lE+gap, eE=eS+eD;
+    if(lS<0||lE>1440||eS<0||eE>1440)
+      return {ok:false,why:"Can't swap — that wouldn't fit in the day"};
+    var hits=function(s,e,o){ return s<o.e && e>o.s; };
+    var clash=null;
+    state.forEach(function(o){
+      if(clash||o.id===a.id||o.id===b.id) return;
+      if(hits(lS,lE,o)||hits(eS,eE,o)) clash=o;
+    });
+    if(clash) return {ok:false, why:"Can't swap — would overlap "+clash.name,
+                      conflict:clash.name};
+    return {ok:true, changes:[{id:L.id,s:lS,e:lE},{id:E.id,s:eS,e:eE}]};
+  }
+
+  function applyTo(state, changes){
+    return state.map(function(b){
+      var c=null; changes.forEach(function(x){ if(x.id===b.id)c=x; });
+      return c?{id:b.id,name:b.name,s:c.s,e:c.e,fixed:b.fixed}:b;
+    });
+  }
+
+  function movable(state){ return state.filter(function(b){ return !b.fixed; }); }
+
+  function pairsWhere(state, wantOk){
+    var m=movable(state), out=[];
+    for(var i=0;i<m.length;i++) for(var j=i+1;j<m.length;j++){
+      var r=computeSwap(state,m[i].id,m[j].id);
+      if(!!r.ok===wantOk) out.push({a:m[i],b:m[j],r:r});
+    }
+    return out;
+  }
+
+  // One-move lookahead: which legal swap, performed first, unlocks (aId,bId)?
+  function findUnlock(state, aId, bId){
+    var legal=pairsWhere(state,true), found=null;
+    legal.forEach(function(p){
+      if(found) return;
+      if(p.a.id===aId||p.a.id===bId||p.b.id===aId||p.b.id===bId) return;
+      var after=applyTo(state,p.r.changes);
+      if(computeSwap(after,aId,bId).ok) found={a:p.a,b:p.b};
+    });
+    if(found) return found;
+    // Allow the unlocking move to involve one of the two, as long as it's a
+    // different partner — still a legitimate "shuffle then retry".
+    legal.forEach(function(p){
+      if(found) return;
+      var after=applyTo(state,p.r.changes);
+      if(computeSwap(after,aId,bId).ok) found={a:p.a,b:p.b};
+    });
+    return found;
+  }
+
+  /* ---- rendering ---- */
+  function build(){
+    blocks = SEED.map(function(b){ return Object.assign({},b); });
+    Array.prototype.slice.call(track.querySelectorAll('.card')).forEach(function(c){c.remove();});
+    blocks.forEach(function(b){
+      var el=document.createElement('div');
+      el.className='card'+(b.fixed?' fixedb':'');
+      el.innerHTML='<span class="grip"><i></i></span><span class="cbody">'+
+        '<span class="cname"></span><span class="ctime"></span></span>'+
+        (b.fixed?'<span class="clock">anchored</span>':'');
+      track.appendChild(el); b.el=el;
+      el.querySelector('.cname').textContent=b.name;
+    });
+    layout();
+  }
+  function layout(){
+    var ord=blocks.slice().sort(function(a,b){return a.s-b.s;});
+    ord.forEach(function(b,i){
+      b.el.style.top=(i*(H+GAPY))+'px';
+      b.el.querySelector('.ctime').textContent=hhmm(b.s)+' – '+hhmm(b.e);
+    });
+    track.style.height=(ord.length*(H+GAPY)-GAPY)+'px';
+  }
+  function commit(changes){
+    changes.forEach(function(c){
+      blocks.forEach(function(b){ if(b.id===c.id){ b.s=c.s; b.e=c.e; } });
+    });
+    layout();
+  }
+  function byId(id){ var r=null; blocks.forEach(function(b){ if(b.id===id)r=b; }); return r; }
+
+  function findTarget(dragged, dy){
+    var base=parseFloat(dragged.el.style.top), centre=base+H/2+dy, hit=null;
+    blocks.forEach(function(b){
+      if(b===dragged||b.fixed) return;
+      var top=parseFloat(b.el.style.top);
+      if(centre>=top && centre<=top+H) hit=b;
+    });
+    return hit;
+  }
+
+  /* ---- coaching, always computed from the live layout ---- */
+  function nextHint(){
+    var st=snap();
+    var bad=pairsWhere(st,false).filter(function(p){ return p.r.conflict; });
+    if(stage===0){
+      say('Grab a block by its handle and drag it onto another. '+
+          '<b>Standup is anchored</b> — it won\u2019t take a drop.');
+      statusEl.textContent=pairsWhere(st,true).length+' legal swaps right now';
+      return;
+    }
+    if(stage===1){
+      if(bad.length){
+        say('Now find a refusal. From where things sit, <b>'+bad[0].a.name+
+            '</b> onto <b>'+bad[0].b.name+'</b> won\u2019t go — try it.');
+      } else {
+        say('Every pair fits from here. That\u2019s the point — legality depends on '+
+            'the arrangement, not the blocks. Swap something and check again.','win');
+      }
+      statusEl.textContent=bad.length+' refusals from here';
+      return;
+    }
+    statusEl.textContent=pairsWhere(st,true).length+' legal swaps right now';
+  }
+
+  /* ---- drag ---- */
+  var drag=null;
+  track.addEventListener('pointerdown',function(ev){
+    var grip=ev.target.closest('.grip'); if(!grip) return;
+    var el=grip.closest('.card'), b=null;
+    blocks.forEach(function(x){ if(x.el===el)b=x; });
+    if(!b||b.fixed) return;
+    ev.preventDefault(); grip.setPointerCapture(ev.pointerId);
+    hint.classList.remove('on');
+    drag={b:b,y0:ev.clientY,dy:0,target:null};
+    el.classList.add('lifted'); buzz(8);
+  });
+  track.addEventListener('pointermove',function(ev){
+    if(!drag) return;
+    drag.dy=ev.clientY-drag.y0;
+    drag.b.el.style.transform='translateY('+drag.dy+'px) scale(1.03)';
+    var t=findTarget(drag.b,drag.dy);
+    if(t!==drag.target){
+      blocks.forEach(function(x){ x.el.classList.remove('target','bad'); });
+      if(t) t.el.classList.add(computeSwap(snap(),drag.b.id,t.id).ok?'target':'bad');
+      drag.target=t;
+    }
+  });
+  function endDrag(){
+    if(!drag) return;
+    var d=drag; drag=null;
+    d.b.el.classList.remove('lifted'); d.b.el.style.transform='';
+    blocks.forEach(function(x){ x.el.classList.remove('target','bad'); });
+    var t=findTarget(d.b,d.dy); if(!t) return;
+
+    var st=snap(), r=computeSwap(st,d.b.id,t.id);
+
+    if(!r.ok){
+      buzz([18,40,18]); toast(r.why);
+      var unlock=findUnlock(st,d.b.id,t.id);
+      if(unlock){
+        say('Refused — <b>'+r.conflict+'</b> is in the way, and nothing moved. '+
+            'But it isn\u2019t permanent: swap <b>'+unlock.a.name+'</b> with <b>'+
+            unlock.b.name+'</b> first, and this exact drop becomes legal.','stop');
+      } else {
+        say('Refused — <b>'+r.conflict+'</b> is in the way, and nothing moved. '+
+            'No single other swap clears it from here, so this one needs a '+
+            'different route.','stop');
+      }
+      if(stage<2){ stage=2; setPips(2); skipBtn.style.display=''; }
+      statusEl.textContent='refused, nothing moved';
+      return;
+    }
+
+    buzz(14); commit(r.changes);
+    [d.b,t].forEach(function(x){
+      x.el.classList.add('flash');
+      setTimeout(function(){ x.el.classList.remove('flash'); },500);
+    });
+    var dur=d.b.e-d.b.s;
+    say('Swapped. Both kept their length and the gap travelled with them — <b>'+
+        d.b.name+'</b> is '+dur+' minutes either way, now at '+hhmm(d.b.s)+'.','win');
+    if(stage===0){ stage=1; setPips(1); }
+    setTimeout(nextHint,2500);
+  }
+  track.addEventListener('pointerup',endDrag);
+  track.addEventListener('pointercancel',endDrag);
+
+  /* ---- shrink-to-fit (planRestore tier 3) ---- */
+  skipBtn.addEventListener('click',function(){
+    var gym=byId('gym'); if(!gym||shrunk) return;
+    var dur=gym.e-gym.s, now=887;
+    var occ=blocks.filter(function(b){ return b.id!=='gym'; })
+      .map(function(b){ return {s:b.s,e:b.e}; })
+      .sort(function(x,y){ return x.s-y.s; });
+    var gaps=[], cursor=Math.max(now+30,0);
+    occ.forEach(function(o){
+      if(o.s>cursor) gaps.push({s:cursor,e:Math.min(o.s,DAY_END)});
+      cursor=Math.max(cursor,o.e);
+    });
+    if(cursor<DAY_END) gaps.push({s:cursor,e:DAY_END});
+    gaps=gaps.filter(function(g){ return g.e-g.s>=MIN_BLOCK_MINUTES; })
+             .sort(function(x,y){ return (y.e-y.s)-(x.e-x.s); });
+    if(!gaps.length){
+      say('No room left today. It goes to the Removed pile and returns tomorrow.','stop');
+    } else {
+      var g=gaps[0], len=Math.min(g.e-g.s,dur), lost=dur-len;
+      gym.s=g.s; gym.e=g.s+len; layout();
+      gym.el.classList.add('flash');
+      setTimeout(function(){ gym.el.classList.remove('flash'); },500);
+      say(lost>0
+        ? 'Gym couldn\u2019t fit at full length, so it took the largest gap left and '+
+          'says what that cost: <b>'+lost+' minutes shorter</b>, at '+hhmm(gym.s)+
+          '. Shortened beats skipped.'
+        : 'Gym found a full-length slot at '+hhmm(gym.s)+'.','win');
+      shrunk=true;
+    }
+    setPips(3); skipBtn.style.display='none';
+    statusEl.textContent='rebuilt';
+  });
+
+  document.getElementById('reset').addEventListener('click',function(){
+    stage=0; shrunk=false; setPips(0); skipBtn.style.display='none';
+    build(); nextHint(); hint.classList.add('on');
+  });
+
+  build(); nextHint();
+  setTimeout(function(){ hint.style.top=(H+GAPY+16)+'px'; hint.classList.add('on'); },900);
+
+  // Demo: 10 deep-work days, gym failed 9 of them. 20 others, 3 failed. 12/30 = 40%.
+  var deepDays=[1,4,7,9,13,16,20,23,26,29], okOnDeep=[16], missOther=[2,11,24];
+  var days=[];
+  for (var i=0;i<30;i++){
+    var isDeep=deepDays.indexOf(i)>-1;
+    days.push({deep:isDeep, gym:isDeep?okOnDeep.indexOf(i)>-1:missOther.indexOf(i)===-1});
+  }
+  var grid=document.getElementById('grid');
+  var cells=days.map(function(d){
+    var el=document.createElement('span');
+    el.className='cell '+(d.gym?'done':'miss');
+    grid.appendChild(el); return el;
+  });
+  var pct=document.getElementById('pct'), label=document.getElementById('label'),
+      counts=document.getElementById('counts'), finding=document.getElementById('finding');
+  var VIEWS={
+    all:{test:function(){return true;},
+      label:'of gym sessions missed. Looks like a motivation problem.',finding:''},
+    deep:{test:function(d){return d.deep;},
+      label:'missed — on days the morning deep work actually landed.',
+      finding:'These two move together. On days the morning session happens, the gym is what gets spent.'},
+    nodeep:{test:function(d){return !d.deep;},
+      label:'missed — on every other day.',
+      finding:'Same block, same person. The gym was never the problem.'}
+  };
+  function render(view){
+    var v=VIEWS[view], n=0, m=0;
+    days.forEach(function(d,i){
+      var on=v.test(d);
+      cells[i].classList.toggle('faded',!on);
+      cells[i].classList.toggle('lit', on && !d.gym && view!=='all');
+      if(on){ n++; if(!d.gym) m++; }
+    });
+    pct.textContent=Math.round(m/n*100)+'%';
+    label.textContent=v.label;
+    counts.textContent=m+' of '+n+' missed';
+    if(v.finding){ finding.textContent=v.finding; finding.classList.add('show'); }
+    else finding.classList.remove('show');
+  }
+  document.querySelectorAll('.seg button').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      document.querySelectorAll('.seg button').forEach(function(b){
+        b.setAttribute('aria-pressed',String(b===btn));
+      });
+      render(btn.dataset.view);
+    });
+  });
+  render('all');
+})();
+</script>
 </body>
 </html>

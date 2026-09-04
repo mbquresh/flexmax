@@ -1562,15 +1562,26 @@ not expire when the current problem is solved.
 
 ### The Evidence Archive
 
-A running, exportable record of what the user actually did — hours executed,
-blocks completed, accounted-for streaks, the arc of a chapter. Not analytics:
-**proof**.
+A running, in-app record of what the user actually did — hours executed,
+blocks completed, accounted-for streaks, the arc of a chapter. Not
+analytics: **proof**.
 
 This exists because of the long-arc failure in `Who FlexMax is for`: drift
 leaves a person with nothing to point at, and a person with nothing to point at
 loses the argument for their own ambition — first to someone else, then to
 themselves. The Archive is the counter-evidence. It is not for the app. It is
 for the day someone asks what they've been doing.
+
+**Export is deliberately excluded.** A portable behavioral history is
+switching cost handed back — the accumulated per-user understanding is the
+moat, and a file the user can carry elsewhere is the one form of it a
+competitor could ingest. The Archive is for looking at, in the app, on the
+day someone asks what you've been doing.
+
+Not to be confused with account deletion (shipped, an App Store
+requirement) or with any statutory data-portability obligation, which is a
+separate legal question and unresolved. This decision is about export as a
+*product feature*, not about compliance.
 
 ### Chapters
 
