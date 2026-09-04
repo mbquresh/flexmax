@@ -12,6 +12,7 @@ import { Feather } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { BehavioralInsight, DailyInstance } from "../../src/types/database";
 import { RecoveryCopy, buildRecoveryCopy, findInsightForBlock } from "../../src/lib/recoveryCopy";
+import { planShortenTemplate, ShortenRemedy } from "../../src/lib/remedy";
 import { minutesToTime, getLocalDateString, formatDuration } from "../../src/lib/time";
 import {
   findRescheduleSlot,
@@ -78,6 +79,8 @@ function RecoveryScreenContent() {
   const [slotIsFallback, setSlotIsFallback] = useState(false);
   const [saving, setSaving] = useState(false);
   const [adjustOpen, setAdjustOpen] = useState(slotIsFallback);
+  const [remedy, setRemedy] = useState<ShortenRemedy | null>(null);
+  const [remedyAccepted, setRemedyAccepted] = useState(false);
 
   useEffect(() => {
     if (!instance) {
@@ -97,11 +100,13 @@ function RecoveryScreenContent() {
     setSlotIsFallback(found === null);
     setRescheduleSlot(found ?? getFallbackSlot(instance));
     setReflectionWhy("");
+    setRemedy(null);
+    setRemedyAccepted(false);
 
     let cancelled = false;
 
     (async () => {
-      let recent: { date: string; status: string }[] = [];
+      let recent: { date: string; status: string; completion_rating: string | null }[] = [];
       let lastNoteRow: {
         date: string;
         reflection_why: string | null;
@@ -112,7 +117,7 @@ function RecoveryScreenContent() {
       try {
         const { data: recentData } = await supabase
           .from("daily_schedule_instances")
-          .select("date, status")
+          .select("date, status, completion_rating")
           .eq("block_id", instance.block_id)
           .order("date", { ascending: false })
           .limit(14);
@@ -160,6 +165,15 @@ function RecoveryScreenContent() {
           ? improveNote
           : null;
       const noteText = typedImprove || lastNoteRow?.reflection_why?.trim() || null;
+
+      const templateDuration =
+        instance.block != null
+          ? instance.block.end_minutes - instance.block.start_minutes
+          : instance.end_minutes - instance.start_minutes;
+      const fixed = instance.is_fixed || !!instance.block?.is_fixed;
+      setRemedy(
+        fixed ? null : planShortenTemplate(templateDuration, recent)
+      );
 
       const copy = buildRecoveryCopy(
         instance.block?.name ?? "this block",
@@ -322,6 +336,27 @@ function RecoveryScreenContent() {
       router.back();
     } catch (err) {
       handleError(err, "handleSaveRecovery", "Could not save reflection");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleShortenTemplate = async () => {
+    if (!instance?.block_id || !remedy || !instance.block) return;
+
+    hapticSelect();
+    setSaving(true);
+    try {
+      const end_minutes = instance.block.start_minutes + remedy.toMinutes;
+      const { error } = await supabase
+        .from("schedule_blocks")
+        .update({ end_minutes })
+        .eq("id", instance.block_id);
+
+      if (error) throw error;
+      setRemedyAccepted(true);
+    } catch (err) {
+      handleError(err, "handleShortenTemplate", "Couldn't shorten the block");
     } finally {
       setSaving(false);
     }
@@ -716,6 +751,34 @@ function RecoveryScreenContent() {
             ) : null}
           </View>
         ) : null}
+
+        {remedy ? (
+          <View style={styles.remedyBox}>
+            {remedyAccepted ? (
+              <Text style={styles.remedyBody}>
+                {instance.block?.name ?? "This block"} is{" "}
+                {formatDuration(remedy.toMinutes)} going forward.
+              </Text>
+            ) : (
+              <>
+                <Text style={styles.remedyBody}>
+                  Initiation can feel daunting. Try{" "}
+                  {formatDuration(remedy.toMinutes)} instead of{" "}
+                  {formatDuration(remedy.fromMinutes)}.
+                </Text>
+                <PressableScale
+                  style={styles.remedyBtn}
+                  onPress={handleShortenTemplate}
+                  disabled={saving}
+                >
+                  <Text style={styles.remedyBtnText}>
+                    Shorten to {formatDuration(remedy.toMinutes)}
+                  </Text>
+                </PressableScale>
+              </>
+            )}
+          </View>
+        ) : null}
       </ScrollView>
 
       <View style={styles.footer}>
@@ -899,4 +962,24 @@ const makeStyles = (c: Colors) =>
     },
     saveBtnText: { color: c.onPrimary, ...typography.bodyBold },
     skipText: { color: c.textPlaceholder, fontSize: 14 },
+    remedyBox: {
+      backgroundColor: c.surfaceNested,
+      borderRadius: radii.md,
+      padding: spacing.lg,
+      gap: spacing.md,
+      marginBottom: spacing.lg,
+    },
+    remedyBody: {
+      color: c.text,
+      fontSize: 13,
+      lineHeight: 20,
+    },
+    remedyBtn: {
+      borderRadius: radii.sm,
+      borderWidth: 1,
+      borderColor: c.primary,
+      paddingVertical: 10,
+      alignItems: "center",
+    },
+    remedyBtnText: { color: c.text, fontSize: 14, fontWeight: "600" },
   });

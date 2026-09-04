@@ -830,4 +830,59 @@ describe("findRescheduleSlot", () => {
       vi.useRealTimers();
     }
   });
+
+  it("does not offer the missed block's own window as a slot", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 7, 28, 14, 0, 0));
+    try {
+      const packed = instance({
+        id: "packed",
+        start_minutes: 870,
+        end_minutes: 1080,
+        status: "pending",
+        block: block({ name: "Deep work" }),
+      });
+      const workout = instance({
+        id: "workout",
+        start_minutes: 1080,
+        end_minutes: 1140,
+        status: "missed",
+        block: block({ name: "Gym" }),
+      });
+      // 2pm, afternoon filled until 6pm. The gym's own 6–7pm hour is the
+      // first gap that fits — that is where it already is, not a move.
+      expect(findRescheduleSlot(workout, [packed, workout])).toEqual({
+        start_minutes: 1140,
+        end_minutes: 1200,
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("returns null when the only fit is the missed block's own window", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 7, 28, 20, 30, 0));
+    try {
+      const packed = instance({
+        id: "packed",
+        start_minutes: 1260,
+        end_minutes: 1380,
+        status: "pending",
+        block: block({ name: "Dinner" }),
+      });
+      const workout = instance({
+        id: "workout",
+        start_minutes: 1380,
+        end_minutes: 1440,
+        status: "missed",
+        block: block({ name: "Gym" }),
+      });
+      // 8:30pm + 30 buffer = 9pm. Dinner holds 9–11. The gym's own 11–12
+      // is the only remaining hour, and nothing fits after midnight.
+      expect(findRescheduleSlot(workout, [packed, workout])).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

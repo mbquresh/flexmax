@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,8 @@ import {
   ActivityIndicator,
   Animated as RNAnimated,
   Platform,
+  TextInput,
+  KeyboardAvoidingView,
 } from "react-native";
 import { CompletionRating, DailyInstance } from "../types/database";
 import { hapticSelect } from "../lib/haptics";
@@ -59,7 +61,7 @@ interface CheckInSheetProps {
   visible: boolean;
   slideAnim: RNAnimated.Value;
   saving: boolean;
-  onRate: (rating: CompletionRating) => void;
+  onRate: (rating: CompletionRating, note: string | null) => void;
   onClose: () => void;
   onMarkMissed?: () => void;
   qualityPrompt?: { blockName: string } | null;
@@ -84,10 +86,19 @@ export function CheckInSheet({
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const ratingOptions = useMemo(() => makeRatingOptions(colors), [colors]);
+  const [note, setNote] = useState("");
+
+  useEffect(() => {
+    if (visible) setNote("");
+  }, [visible, instance?.id]);
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={styles.overlay} onPress={onClose}>
+      <KeyboardAvoidingView
+        style={styles.overlay}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+      <Pressable style={styles.overlayFill} onPress={onClose}>
         <Pressable onPress={(e) => e.stopPropagation()}>
           <RNAnimated.View
             style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}
@@ -143,6 +154,17 @@ export function CheckInSheet({
               </Text>
             ) : null}
 
+            <TextInput
+              style={styles.noteInput}
+              value={note}
+              onChangeText={setNote}
+              placeholder="Any completion notes?"
+              placeholderTextColor={colors.textPlaceholder}
+              multiline
+              textAlignVertical="top"
+              editable={!saving}
+            />
+
             <View style={styles.ratingRow}>
               {ratingOptions.map((opt) => (
                 <Pressable
@@ -157,7 +179,7 @@ export function CheckInSheet({
                   ]}
                   onPress={() => {
                     hapticSelect();
-                    onRate(opt.value);
+                    onRate(opt.value, note.trim() || null);
                   }}
                   disabled={saving}
                 >
@@ -190,6 +212,7 @@ export function CheckInSheet({
           </RNAnimated.View>
         </Pressable>
       </Pressable>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
@@ -200,6 +223,21 @@ const makeStyles = (c: Colors) =>
       flex: 1,
       backgroundColor: "rgba(0,0,0,0.55)",
       justifyContent: "flex-end",
+    },
+    overlayFill: {
+      flex: 1,
+      justifyContent: "flex-end",
+    },
+    noteInput: {
+      backgroundColor: c.surfaceNested,
+      borderWidth: 0.5,
+      borderColor: c.border,
+      borderRadius: radii.md,
+      padding: spacing.md,
+      color: c.text,
+      ...typography.body,
+      minHeight: 64,
+      marginBottom: spacing.lg,
     },
     sheet: {
       backgroundColor: c.surface,

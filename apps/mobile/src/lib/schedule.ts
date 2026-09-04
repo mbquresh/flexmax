@@ -218,7 +218,9 @@ export function findRescheduleSlot(
     .filter((i) => i.id !== missedInstance.id && occupiesTime(i))
     .map((i) => ({ start: i.start_minutes, end: i.end_minutes }));
 
-  const candidates = [bufferMinutes, ...occupied.map((o) => o.end)];
+  const ownStart = missedInstance.start_minutes;
+  const ownEnd = missedInstance.end_minutes;
+  const candidates = [bufferMinutes, ...occupied.map((o) => o.end), ownEnd];
 
   for (const start of candidates) {
     if (start < bufferMinutes) continue;
@@ -226,7 +228,11 @@ export function findRescheduleSlot(
     if (end > dayEnd) continue;
 
     const conflicts = occupied.some((o) => start < o.end && end > o.start);
-    if (!conflicts) return { start_minutes: start, end_minutes: end };
+    if (conflicts) continue;
+    // The missed row is excluded from occupancy, so its own window is a
+    // free gap. Offering that window is a no-op, not a reschedule.
+    if (start === ownStart && end === ownEnd) continue;
+    return { start_minutes: start, end_minutes: end };
   }
 
   return null;

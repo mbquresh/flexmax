@@ -1132,7 +1132,7 @@ function TodayScreenContent() {
     }
   };
 
-  const handleCheckIn = async (rating: CompletionRating) => {
+  const handleCheckIn = async (rating: CompletionRating, note: string | null) => {
     if (!checkInInstance) return;
 
     setSaving(true);
@@ -1143,6 +1143,7 @@ function TodayScreenContent() {
           status: "completed",
           completion_rating: rating,
           miss_reason_tag: null,
+          reflection_improve: note,
         })
         .eq("id", checkInInstance.id);
 
@@ -1152,6 +1153,7 @@ function TodayScreenContent() {
         status: "completed" as const,
         completion_rating: rating,
         miss_reason_tag: null,
+        reflection_improve: note,
       };
       updateInstance(checkInInstance.id, payload);
       resyncNotifications(
@@ -1374,6 +1376,7 @@ function TodayScreenContent() {
                 : totalBlocks > 0
                   ? `Nothing scheduled for ${todayLabel}. Your blocks may be set for other days — go to Edit schedule and tap ${todayLabel} on each block.`
                   : "No blocks yet. Add some in the schedule builder first."}
+              {isPastDay ? "" : "\nPull down to refresh."}
             </Text>
           ) : (
             openItems.map((item) =>

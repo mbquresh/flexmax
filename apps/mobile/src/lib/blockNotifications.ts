@@ -48,11 +48,47 @@ export async function scheduleFollowUpNudge(
 // rebuilds it from its arguments. Any caller that omits an optional
 // argument therefore DELETES that category rather than leaving it alone.
 // Every call site must pass the full set.
+const MANAGED_TYPES = [
+  "block_complete",
+  "block_cutoff",
+  "block_followup",
+  "block_preempt",
+];
+
+// Scheduled cancel does not clear a banner that already fired. Completing
+// a block after "How'd it go?" has landed left the stale prompt sitting
+// in Notification Center. Dismiss anything whose instance is no longer open.
+async function dismissResolvedBanners(instances: DailyInstance[]): Promise<void> {
+  const openIds = new Set(
+    instances
+      .filter((i) => i.status === "pending" || i.status === "active")
+      .map((i) => i.id)
+  );
+  try {
+    const presented = await Notifications.getPresentedNotificationsAsync();
+    await Promise.all(
+      presented
+        .filter((n) => {
+          const type = n.request.content.data?.type as string | undefined;
+          const id = n.request.content.data?.instanceId as string | undefined;
+          return (
+            !!type &&
+            MANAGED_TYPES.includes(type) &&
+            !!id &&
+            !openIds.has(id)
+          );
+        })
+        .map((n) => Notifications.dismissNotificationAsync(n.request.identifier))
+    );
+  } catch {
+    // Presented-notification APIs are missing in some Expo Go builds.
+  }
+}
+
 export async function cancelTodayBlockNotifications(): Promise<void> {
   const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-  const managed = ["block_complete", "block_cutoff", "block_followup", "block_preempt"];
   const todayBlockNotifs = scheduled.filter((n) =>
-    managed.includes(n.content.data?.type as string)
+    MANAGED_TYPES.includes(n.content.data?.type as string)
   );
   await Promise.all(
     todayBlockNotifs.map((n) =>
@@ -69,6 +105,7 @@ export async function scheduleTodayBlockNotifications(
 ): Promise<ScheduledCutoff[]> {
   // Cancel existing ones first to avoid duplicates on refresh
   await cancelTodayBlockNotifications();
+  await dismissResolvedBanners(instances);
 
   const scheduledCutoffs: ScheduledCutoff[] = [];
   const now = new Date();
