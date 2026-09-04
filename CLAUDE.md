@@ -484,7 +484,7 @@ marker at all.
 | Same-slot reschedule skipped | findRescheduleSlot. The missed row is excluded from occupancy, so its own window was a free gap and "Reschedule to this slot" could offer the time the block already occupied. That window is skipped; the search continues after it, and returns null (picker fallback) when nothing else fits |
 | Stale check-in banners dismissed | scheduleTodayBlockNotifications. Cancel only hits the scheduled set. A "How'd it go?" that had already fired stayed in Notification Center after the block was completed. Presented banners whose instance is no longer pending/active are dismissed on every rebuild |
 | Completion notes on check-in | CheckInSheet optional free text, written to reflection_improve. No chips — those are why capture was removed. Typed notes feed the existing "Last time you wrote" path |
-| Shorten-template remedy | src/lib/remedy.ts + recovery. Same 4-of-7 floor as preempt/quality-drift. Offers half duration (not below 40 minutes to start, floor MIN_BLOCK_MINUTES). User confirms. Writes schedule_blocks.end_minutes so tomorrow generates shorter. Headline is the option, not the miss count. Fixed blocks excluded. Restore-length is not built |
+| Shorten-template remedy | src/lib/remedy.ts + recovery. Same 4-of-7 floor as preempt/quality-drift. Offers half duration (not below 40 minutes to start, floor MIN_BLOCK_MINUTES). Copy states this changes the repeating block from tomorrow on, not today's miss. User confirms. Writes schedule_blocks.end_minutes so tomorrow generates shorter. Undo on the same screen writes the original length back. Headline is the option, not the miss count. Fixed blocks excluded. A later restore-after-quality-recovers offer is not built |
 
 
 

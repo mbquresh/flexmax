@@ -341,22 +341,39 @@ function RecoveryScreenContent() {
     }
   };
 
-  const handleShortenTemplate = async () => {
-    if (!instance?.block_id || !remedy || !instance.block) return;
+  const writeTemplateDuration = async (durationMinutes: number) => {
+    if (!instance?.block_id || !instance.block) return;
+    const end_minutes = instance.block.start_minutes + durationMinutes;
+    const { error } = await supabase
+      .from("schedule_blocks")
+      .update({ end_minutes })
+      .eq("id", instance.block_id);
+    if (error) throw error;
+  };
 
+  const handleShortenTemplate = async () => {
+    if (!remedy) return;
     hapticSelect();
     setSaving(true);
     try {
-      const end_minutes = instance.block.start_minutes + remedy.toMinutes;
-      const { error } = await supabase
-        .from("schedule_blocks")
-        .update({ end_minutes })
-        .eq("id", instance.block_id);
-
-      if (error) throw error;
+      await writeTemplateDuration(remedy.toMinutes);
       setRemedyAccepted(true);
     } catch (err) {
       handleError(err, "handleShortenTemplate", "Couldn't shorten the block");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleUndoShorten = async () => {
+    if (!remedy) return;
+    hapticSelect();
+    setSaving(true);
+    try {
+      await writeTemplateDuration(remedy.fromMinutes);
+      setRemedyAccepted(false);
+    } catch (err) {
+      handleError(err, "handleUndoShorten", "Couldn't undo that");
     } finally {
       setSaving(false);
     }
@@ -755,16 +772,25 @@ function RecoveryScreenContent() {
         {remedy ? (
           <View style={styles.remedyBox}>
             {remedyAccepted ? (
-              <Text style={styles.remedyBody}>
-                {instance.block?.name ?? "This block"} is{" "}
-                {formatDuration(remedy.toMinutes)} going forward.
-              </Text>
+              <>
+                <Text style={styles.remedyBody}>
+                  {instance.block?.name ?? "This block"} is{" "}
+                  {formatDuration(remedy.toMinutes)} from tomorrow on.
+                </Text>
+                <PressableScale
+                  onPress={handleUndoShorten}
+                  disabled={saving}
+                >
+                  <Text style={styles.remedyUndo}>Undo</Text>
+                </PressableScale>
+              </>
             ) : (
               <>
                 <Text style={styles.remedyBody}>
                   Initiation can feel daunting. Try{" "}
                   {formatDuration(remedy.toMinutes)} instead of{" "}
-                  {formatDuration(remedy.fromMinutes)}.
+                  {formatDuration(remedy.fromMinutes)} — this changes the
+                  repeating block from tomorrow on, not today's miss.
                 </Text>
                 <PressableScale
                   style={styles.remedyBtn}
@@ -772,7 +798,7 @@ function RecoveryScreenContent() {
                   disabled={saving}
                 >
                   <Text style={styles.remedyBtnText}>
-                    Shorten to {formatDuration(remedy.toMinutes)}
+                    Make it {formatDuration(remedy.toMinutes)} going forward
                   </Text>
                 </PressableScale>
               </>
@@ -982,4 +1008,5 @@ const makeStyles = (c: Colors) =>
       alignItems: "center",
     },
     remedyBtnText: { color: c.text, fontSize: 14, fontWeight: "600" },
+    remedyUndo: { color: c.text, fontSize: 14, fontWeight: "600" },
   });
