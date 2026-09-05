@@ -1547,11 +1547,11 @@ function TodayScreenContent() {
             },
           },
           {
-            label: "Last week",
-            icon: "bar-chart-2",
+            label: "Theory of You",
+            icon: "user",
             onPress: () => {
               setMenuOpen(false);
-              router.push("/weekly-recap");
+              router.push("/you");
             },
           },
           {

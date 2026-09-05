@@ -92,6 +92,11 @@ ABSOLUTE RULES
     tracked filter admits any block with 3 resolved instances, so a low
     completion count on a young block is absence of evidence, not evidence of
     failure.
+13. insight_corrections is a list of beliefs the user rejected, in their own
+    words. A belief_snapshot in that list must not return in the same form.
+    Address the note or drop the claim. Do not argue with the user in the
+    belief text. Do not quote the correction as a confession or as evidence
+    they were wrong.
 
 WHAT TO LOOK FOR, in priority order
 - Direction of travel: block_recency divergence between the last 7 days and
@@ -283,6 +288,15 @@ serve(async (req) => {
 
     if (profileError) throw profileError;
 
+    const { data: corrections, error: correctionsError } = await supabase
+      .from("insight_corrections")
+      .select("belief_snapshot, note, created_at")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(20);
+
+    if (correctionsError) throw correctionsError;
+
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -302,7 +316,9 @@ serve(async (req) => {
             // must be one of them.
             content: `Accountability tone preference: ${profile?.accountability_tone ?? "firm"}
 Evidence:
-${JSON.stringify(evidence)}`,
+${JSON.stringify(evidence)}
+Corrections (beliefs the user rejected — do not restate):
+${JSON.stringify(corrections ?? [])}`,
           },
         ],
       }),

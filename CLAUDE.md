@@ -277,6 +277,7 @@ Cursor = implementation engine.
 | 044 | removed_by.sql | Provenance on removal: user / displacement / archive / away. Four different things wrote 'removed' indistinguishably |
 | 045 | backfill_marker.sql | backfilled_at + a BEFORE UPDATE trigger. Past-day editing makes every now()-stamping timing column (acknowledged_at, rated_at, reflected_at) unreliable: a block from last Tuesday answered today reports five days of recovery time. A trigger not a client write, because a marker protecting a metric must not depend on every future call site remembering it. Compares against the user's own timezone, since yesterday is the common backfill and a UTC comparison would read it as same-day for half the world. Only an outcome write marks the row — a swap or task_detail edit is housekeeping. Once marked, always marked: the day cannot come back |
 | 046 | block_time_overrides.sql | Sparse per-weekday time_overrides jsonb on schedule_blocks, keyed 0-6, NOT NULL DEFAULT '{}'. Both generate_* resolve the target dow and fall back to start_minutes/end_minutes. A client write of null is a 23502 — send `{}`. Nothing backfilled |
+| 047 | insight_corrections.sql | behavioral_insights.disputed_at + insight_corrections + dispute_insight RPC. Argue on Theory of You. Corrections survive weekly replace; the line hides immediately. Paste before opening /you. |
 
 030 exists to answer the supporting reopen signal: of users who had a bad week, what
 share opened the app the following week. Capture is fire-and-forget from
@@ -491,6 +492,7 @@ marker at all.
 | Completion notes on check-in | CheckInSheet optional free text, written to reflection_improve. No chips — those are why capture was removed. Typed notes feed the existing "Last time you wrote" path |
 | Shorten-template remedy | src/lib/remedy.ts + recovery. Same 4-of-7 floor as preempt/quality-drift. Offers half duration (not below 40 minutes to start, floor MIN_BLOCK_MINUTES). Copy states this changes the repeating block from tomorrow on, not today's miss. User confirms. Writes schedule_blocks.end_minutes so tomorrow generates shorter. Undo on the same screen writes the original length back. Headline is the option, not the miss count. Fixed blocks excluded. A later restore-after-quality-recovers offer is not built |
 | Day selector and per-day times | schedule-builder.tsx + DayStrip + 046. The builder was a flat list of rules ABOUT the week, so the user reconstructed their week mentally; and a block held one time, so different times on different days forced a second block — which the engine already merged, since get_behavior_evidence groups by name. Tapping a day filters to that day, sorted by resolved time, and the time pickers then edit that day only. Defaults to All, not today: this screen is visited to set up a week, and starting on one day hides six sevenths of it. Adding a block while a day is selected defaults to that day. Archiving from a day view that still runs elsewhere asks whether to drop the day or the block. All-view time changes shift overrides by the same delta. Calendar-feed splits a block with overrides into disjoint BYDAY VEVENTs |
+| Theory of You | app/you.tsx + DisputeSheet + 047. Menu and title are "Theory of You". Twelve-week two-tone chart, 30-day accounted/landed as one caption, then the current insight set as tappable sentences (strengths first). Tap a line: "That's not right" → one note → the line leaves immediately. dispute_insight writes insight_corrections (survives supersede) and stamps disputed_at. Morning InsightCard and recovery omit disputed rows. weekly-insight reads the last 20 corrections and must not restate a rejected belief. No second AI call on the tap. No Done button — the X is enough. |
 
 
 
@@ -539,6 +541,12 @@ The complaint was right: restating "you miss Workout" is a slap, and the morning
 
 **5. Mentor / founder story — listing and showcase only.**
 Mentor-without-an-audience, the $200/mo contrast, "I built this for myself," and "solve my problem first" are App Store / `docs/index.html` voice. Not in-app copy. The $200/mo contrast is load-bearing positioning at rung 2 and above, not optional flavor. n=1 still does not prove adoption; the story may say it worked for the person who built it. It may not treat founder fill rate as evidence. Bundle with the pricing / founding-member pass on the showcase page, not with the remedy loop.
+
+**6. Standing theory lines.** Argue shipped. The page still reprints the
+current `behavioral_insights` set, which is replaced weekly. Durable claims
+that stay until the evidence flips or the user disputes — a `theory_lines`
+table the weekly job writes into — are the remaining half. Do not rebuild
+the weekly call around a second document until argue has been used.
 
 
 ---
@@ -927,6 +935,9 @@ makes it a one-line swap in theme.ts if ever revisited.
 - **calendar-feed must be redeployed** after a time_overrides split: one
   VEVENT per distinct window, disjoint BYDAY. The function source is updated;
   the deployed copy is not until `supabase functions deploy calendar-feed --no-verify-jwt`.
+- **weekly-insight must be redeployed** after 047. The function now reads
+  `insight_corrections` and the prompt forbids restating a rejected belief.
+  Until deploy, argue hides the line but the next generation can say it again.
 
 ---
 
@@ -1198,7 +1209,7 @@ tree before being acted on — do not assume all are still present.
   `DeviceNotRegistered` tokens are never pruned. No idempotency key, so a cron
   retry double-notifies.
 - **README architecture diagram fan-out drifted.** `behavioral_insights` feeds
-  the Today card and weekly-recap. Plan Tomorrow does not read the table.
+  the Today card and the You page. Plan Tomorrow does not read the table.
   missed-block-recovery no longer exists.
 - **No data export path.** Account deletion shipped (031 + account.tsx). Apple
   also wants a way for the user to obtain their data. Still a launch item.
@@ -1602,12 +1613,13 @@ separate legal question and unresolved. This decision is about export as a
 Twelve-week arcs that end in a real review. Life has arcs; a schedule should not
 be an undifferentiated stream.
 
-**Chapters are the ONLY place charts and visualizations belong.** The daily and
-weekly surfaces stay textual and small-number honest ("4 of your last 5", never
-a dressed-up percentage). A chapter boundary is an explicit look-backward
-moment where the user is deciding what changes next, and visuals earn their
-place there. Charts on Today, or a daily dashboard, is the journal trap: a
-product people enjoy reading and do not act on.
+**Chapters are the ONLY place charts and visualizations belong**, with one
+shipped exception: the You page (`/you`) is a 12-week two-tone bar
+series of real weeks, same encoding as the day squares. It is historical. It
+does not project. A completion-rate forecast and any line drawn to motivate
+are still forbidden — predictions are never tuned on response. Today stays
+textual. A chapter boundary is still the place for a look-back that decides
+what changes next. A chart on Today remains the journal trap.
 
 ### Supporting features
 

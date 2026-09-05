@@ -7,6 +7,9 @@ vi.mock("./supabase", () => ({
 import {
   computeStreakData,
   computeWeekView,
+  computeWeekSeries,
+  computeHistoryFacts,
+  HISTORY_WEEKS,
   addDays,
   daysBetween,
   isWithinEditWindow,
@@ -256,5 +259,50 @@ describe("computeWeekView", () => {
     const week = computeWeekView([], monday, "2026-09-01");
     expect(week.completionRate).toBe(0);
     expect(week.completionRatio).toEqual([0, 0, 0, 0, 0, 0, 0]);
+  });
+});
+
+describe("computeWeekSeries", () => {
+  it("emits one bar per Monday and uses the same two-tone as the squares", () => {
+    const rows = [
+      ...rowsForDay("2026-08-17", ["completed", "completed", "missed", "missed"]),
+      ...rowsForDay("2026-08-18", ["completed", "completed", "completed", "completed"]),
+    ];
+    const series = computeWeekSeries(rows, "2026-08-17", "2026-08-24", "2026-08-23");
+    expect(series).toHaveLength(2);
+    expect(series[0].completedRatio).toBe(0.75);
+    expect(series[0].missedRatio).toBe(0.25);
+    expect(series[0].accountedDays).toBe(2);
+    expect(series[0].hasData).toBe(true);
+    expect(series[1].hasData).toBe(false);
+  });
+
+  it("drops future days so a planned week does not flatten the live bar", () => {
+    const rows = [
+      ...rowsForDay("2026-08-17", ["completed", "completed"]),
+      ...rowsForDay("2026-08-19", ["pending", "pending", "pending", "pending"]),
+    ];
+    const series = computeWeekSeries(rows, "2026-08-17", "2026-08-17", "2026-08-18");
+    expect(series[0].completedRatio).toBe(1);
+    expect(series[0].elapsedDays).toBe(1);
+  });
+
+  it("keeps HISTORY_WEEKS at twelve", () => {
+    expect(HISTORY_WEEKS).toBe(12);
+  });
+});
+
+describe("computeHistoryFacts", () => {
+  it("counts days at the streak threshold and landed blocks in the window", () => {
+    const rows = [
+      ...rowsForDay("2026-08-01", ["completed", "completed", "completed", "missed"]),
+      ...rowsForDay("2026-08-02", ["missed", "unaccounted", "unaccounted", "unaccounted"]),
+      ...rowsForDay("2026-07-20", ["completed", "completed"]),
+    ];
+    const facts = computeHistoryFacts(rows, "2026-08-01", "2026-08-31");
+    expect(facts.daysWithBlocks).toBe(2);
+    expect(facts.daysAccounted).toBe(1);
+    expect(facts.landed).toBe(3);
+    expect(facts.relevant).toBe(8);
   });
 });

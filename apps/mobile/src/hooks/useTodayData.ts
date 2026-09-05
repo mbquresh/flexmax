@@ -131,8 +131,9 @@ export function useTodayData(userId: string | undefined) {
 
       const { data: insightsData, error: insightsError } = await supabase
         .from("behavioral_insights")
-        .select("id, kind, belief, suggestion, related_blocks, rank, generated_at, nudge_line")
+        .select("id, kind, belief, suggestion, related_blocks, rank, generated_at, nudge_line, disputed_at")
         .eq("superseded", false)
+        .is("disputed_at", null)
         .order("rank");
 
       if (error) {

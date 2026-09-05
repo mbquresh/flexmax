@@ -14,6 +14,7 @@ function insight(
     related_blocks: overrides.related_blocks ?? ["Gym"],
     generated_at: overrides.generated_at ?? "2026-08-01T00:00:00Z",
     nudge_line: overrides.nudge_line ?? null,
+    disputed_at: overrides.disputed_at ?? null,
     ...overrides,
   };
 }

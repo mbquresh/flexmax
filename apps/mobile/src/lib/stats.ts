@@ -198,6 +198,124 @@ const EXCLUDED = ["removed", "rescheduled"];
 // closed out honestly, but a real collapse still breaks the streak.
 export const STREAK_THRESHOLD = 0.8;
 
+/** Closed weeks on the history chart, plus the week that contains today. */
+export const HISTORY_WEEKS = 12;
+
+export interface WeekBar {
+  mondayStr: string;
+  completedRatio: number;
+  missedRatio: number;
+  accountedDays: number;
+  elapsedDays: number;
+  hasData: boolean;
+}
+
+export interface HistoryFacts {
+  daysWithBlocks: number;
+  daysAccounted: number;
+  landed: number;
+  relevant: number;
+}
+
+/**
+ * One bar per week, same two-tone as the day squares: teal = completed
+ * share of relevant instances, gray = missed share, empty = unanswered.
+ * Future days in the current week are dropped so Plan Tomorrow cannot
+ * shorten the live bar.
+ */
+export function computeWeekSeries(
+  rows: StatsRow[],
+  fromMonday: string,
+  toMonday: string,
+  todayStr: string
+): WeekBar[] {
+  const byDate = new Map<
+    string,
+    { relevant: number; accounted: number; completed: number; missed: number }
+  >();
+  for (const r of rows) {
+    if (EXCLUDED.includes(r.status)) continue;
+    const entry = byDate.get(r.date) ?? {
+      relevant: 0,
+      accounted: 0,
+      completed: 0,
+      missed: 0,
+    };
+    entry.relevant++;
+    if (ACCOUNTED.includes(r.status)) entry.accounted++;
+    if (r.status === "completed") entry.completed++;
+    if (r.status === "missed") entry.missed++;
+    byDate.set(r.date, entry);
+  }
+
+  return mondaysThrough(fromMonday, toMonday).map((mondayStr) => {
+    let relevant = 0;
+    let completed = 0;
+    let missed = 0;
+    let accountedDays = 0;
+    let elapsedDays = 0;
+    for (const dateStr of weekDates(mondayStr)) {
+      if (dateStr > todayStr) continue;
+      const entry = byDate.get(dateStr);
+      if (!entry || entry.relevant === 0) continue;
+      elapsedDays++;
+      relevant += entry.relevant;
+      completed += entry.completed;
+      missed += entry.missed;
+      if (entry.accounted / entry.relevant >= STREAK_THRESHOLD) {
+        accountedDays++;
+      }
+    }
+    return {
+      mondayStr,
+      completedRatio: relevant > 0 ? completed / relevant : 0,
+      missedRatio: relevant > 0 ? missed / relevant : 0,
+      accountedDays,
+      elapsedDays,
+      hasData: relevant > 0,
+    };
+  });
+}
+
+export function computeHistoryFacts(
+  rows: StatsRow[],
+  fromDate: string,
+  toDate: string
+): HistoryFacts {
+  const byDate = new Map<
+    string,
+    { relevant: number; accounted: number; completed: number }
+  >();
+  for (const r of rows) {
+    if (r.date < fromDate || r.date > toDate) continue;
+    if (EXCLUDED.includes(r.status)) continue;
+    const entry = byDate.get(r.date) ?? {
+      relevant: 0,
+      accounted: 0,
+      completed: 0,
+    };
+    entry.relevant++;
+    if (ACCOUNTED.includes(r.status)) entry.accounted++;
+    if (r.status === "completed") entry.completed++;
+    byDate.set(r.date, entry);
+  }
+
+  let daysWithBlocks = 0;
+  let daysAccounted = 0;
+  let landed = 0;
+  let relevant = 0;
+  for (const entry of byDate.values()) {
+    if (entry.relevant === 0) continue;
+    daysWithBlocks++;
+    relevant += entry.relevant;
+    landed += entry.completed;
+    if (entry.accounted / entry.relevant >= STREAK_THRESHOLD) {
+      daysAccounted++;
+    }
+  }
+  return { daysWithBlocks, daysAccounted, landed, relevant };
+}
+
 export function computeStreakData(
   windowRows: StatsRow[],
   todayStr: string,

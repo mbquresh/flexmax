@@ -79,6 +79,16 @@ export interface BehavioralInsight {
   rank: number;
   generated_at: string;
   nudge_line: string | null;
+  disputed_at: string | null;
+}
+
+export interface InsightCorrection {
+  id: string;
+  user_id: string;
+  insight_id: string | null;
+  belief_snapshot: string;
+  note: string;
+  created_at: string;
 }
 
 export interface NudgeEvent {
@@ -262,7 +272,18 @@ export interface Database {
         Update: Partial<BehavioralInsight> & {
           superseded?: boolean;
           evidence?: string;
+          disputed_at?: string | null;
         };
+        Relationships: [];
+      };
+      insight_corrections: {
+        Row: InsightCorrection & Record<string, unknown>;
+        Insert: Partial<InsightCorrection> & {
+          user_id: string;
+          belief_snapshot: string;
+          note: string;
+        };
+        Update: Partial<InsightCorrection>;
         Relationships: [];
       };
       nudge_events: {
@@ -312,6 +333,10 @@ export interface Database {
       };
       record_app_open: {
         Args: { p_local_date: string };
+        Returns: undefined;
+      };
+      dispute_insight: {
+        Args: { p_insight_id: string; p_note: string };
         Returns: undefined;
       };
     };
