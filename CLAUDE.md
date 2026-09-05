@@ -70,7 +70,11 @@ Roughly half the differentiation lives in each. Consequences:
    objection — the user pays before the engine speaks — has an answer: they are
    buying a working execution-salvaging tool immediately, with the insight layer
    arriving on top of it later. Marketing currently leads with Stream 2 and
-   understates Stream 1. That is backwards for the first-week experience.
+   understates Stream 1. That is backwards for the first-week experience. The
+   specific instance: the line about the rebuilding half working the hour you
+   install is buried in FAQ item 2 on `docs/index.html`, under a question about
+   the trial. It belongs next to the price, as an explicit today-versus-week-one
+   split. Work item, not done here.
 2. **Two metrics, not one.** Gate 1 (reflection fill rate) measures whether
    Stream 2 is self-sustaining. Stream 1 needs its own: *on days the plan
    breaks, does the user still complete the next meaningful action and return
@@ -444,7 +448,7 @@ marker at all.
 | Retroactive bedtime capture                   | 014 actual_end_minutes (legacy column; data migrated to day_log) |
 | Behavioral learning v1                        | 015 + weekly-insight + InsightCard                    |
 | Deterministic recovery copy (AI call REMOVED) | src/lib/recoveryCopy.ts                               |
-| Seven-beat preset onboarding | Replaces 4-turn AI chat. Recognition screens, tone/energy/pattern questions, answer playback, contract screen. Deletes onboarding-chat, extract-psychology-profile, generate-schedule-tips |
+| Seven-beat preset onboarding | SUPERSEDED by the 5-step WeekDemo flow below. Recognition screens, answer playback, and four of five self-report questions are gone. |
 | Accountability streak (80% threshold)         | stats.ts; two-tone square encoding                    |
 | Close-today sweep merged into evening ritual  | plan-tomorrow.tsx + CloseTodayRow; Done/Missed only, preset miss reasons |
 | Preset miss reasons                           | 019 miss_reason_tag; structural labels only, never stored as reflection prose |
@@ -478,7 +482,7 @@ marker at all.
 | Time away | away_periods (042) + AwaySheet. A date range where no instances generate at all. Not skipped placeholder rows — tracked requires 25% of a block's instances resolved, so a week of unanswered rows would push blocks below the floor and drop them from the engine, which is the exact misreading this prevents. A range covering today also marks today's pending instances 'removed', since generation only prevents future ones. The accounted-for streak needed no change: computeStreakData requires relevant > 0, so an empty day neither breaks nor extends it |
 | Calendar export (feed) | supabase/functions/calendar-feed, deployed --no-verify-jwt. ICS subscription feed of the TEMPLATE, not daily instances: Google refreshes subscribed feeds every 12-24 hours with no faster setting, so publishing instances would show a Google user yesterday's arrangement all day — confidently wrong and uncorrectable from the app. The calendar holds the plan, the app holds the day. Floating DTSTART (no Z, no TZID) so a 9am block reads as 9am wherever the device is, which also avoids emitting a VTIMEZONE clients disagree about. Recurrence maps directly from 040: interval_weeks to INTERVAL, ends_on to UNTIL, block_exceptions and away_periods to EXDATE. Archived blocks omitted |
 | Calendar export UI | account.tsx + src/lib/calendarFeed.ts. Create, share, rotate and revoke the feed link. Token is generated lazily, so a user who never exports has no live endpoint. Sharing uses React Native's Share rather than a clipboard dependency — the iOS share sheet already offers Copy plus AirDrop, which is how a URL actually gets from phone to laptop. Two caveats shown inline: the link is unauthenticated and shows block names and times, and the feed publishes the TEMPLATE so same-day swaps do not appear. The second surprised the person who built it, which is why it is stated rather than assumed; shares a webcal:// link so tapping opens Calendar's subscribe flow directly, with a separate https:// share for Google, which takes a typed URL and rejects webcal. The UI recommends subscribing on a Mac: macOS saves the subscription to iCloud and syncs everywhere, while iPhone defaults to the local On My iPhone account and syncs nowhere, so a user who subscribes on both gets the schedule twice on their phone. The client chooses the account at subscribe time and no ICS property overrides it. |
-| Onboarding rebuilt around an interactive demo | onboarding.tsx + WeekDemo. Five self-report questions cut to one. The old flow asked five and read back exactly one, and asked users to self-report about self-knowledge — the specific thing this product argues is unreliable. Replaced with a 30-day, 8-block heatmap of a fictional person: 240 outcomes that look like noise until the user taps one filter and the Gym row separates. 90% gym failure on days morning deep work LANDED versus 15% otherwise, against a 40% overall rate that reads as an ordinary failing habit. The continue button is gated on applying the filter, so the user pulls the signal out themselves before being told it exists. Data is hand-authored and verified; percentages are computed from the exact cells shipped, with an exception on each side because a perfect split reads as fabricated. The reveal states co-occurrence, never causation, matching the real engine's constraint. No AI call, no network, no claim about the user. THE CONDITION MUST STAY AN OUTCOME THE ENGINE ACTUALLY READS: a first version conditioned on the morning block "running past its window", which nothing computes — actual_end_minutes is captured but absent from every version of get_behavior_evidence, and the pack ships a caveat forbidding the narrator from claiming a block "ran until" a time. Completion of an earlier block is the real cannibalization trigger, so the demo now uses that. Likewise the contract screen says FlexMax "looks for patterns that repeat", not that it "checks every pair of blocks against every condition" — cannibalization tests one condition on tracked pairs, mixed days only, time-ordered, behind 8-day and 25-point-lift floors |
+| Onboarding rebuilt around an interactive demo | onboarding.tsx + WeekDemo. `STEP_COUNT = 5`: step 0 cold open, 1–2 demonstration and reveal, 3 contract, 4 accountability tone — the only question left, and last. No recognition screens, no answer playback. A 30-day × 8-block grid (240 outcomes) looks like noise until the user applies the filter themselves; non-matching days dim and "So what happened?" is gated behind `onFiltered`. Stronger than the originally specified fix (a real generated insight, labelled as another user's) because it demonstrates by participation rather than display. Quoted figures verify exactly against `DEMO_DAYS`: 10 days where morning deep work landed carry 9 gym failures (90%), the other 20 carry 3 (15%), 12 of 30 overall (40%). An exception on each side is deliberate — a perfect split reads as fabricated. The reveal states co-occurrence, never causation. No AI call, no network, no claim about the user. THE CONDITION MUST STAY AN OUTCOME THE ENGINE ACTUALLY READS (`MORNING_INDEX` comment): the demo keys on completion of an earlier block, the only cross-block relationship `get_behavior_evidence` computes. Overrun is unavailable — `actual_end_minutes` is captured but read by nothing, and the pack forbids claiming a block "ran until" a time. The contract (step 3) says FlexMax "looks for patterns that repeat", not that it "checks every pair of blocks against every condition" — cannibalization tests one condition on tracked pairs, mixed days only, time-ordered, behind 8-day and 25-point-lift floors |
 | Removed pile | today.tsx + planRestore. Removal was terminal — a block dropped to make room vanished with no way back. Now a third section under Accounted for, restorable. Restore routes through planRestore so it can never write the overlap 4a exists to prevent, and where the original slot is only partly free it offers to shorten the block rather than refusing. Only user and displacement removals appear: archive and away are system state, and restoring one would return a block whose template is archived or a block on a day the person is away. Muted X, never coral — a removed block is a decision, not a failure. Two supporting changes the pile does not work without: useTodayData stopped filtering 'removed' out of the day's instances (every consumer downstream — streak, completion rate, notification eligibility, occupiesTime — already filters status explicitly, so nothing else moved), and the swipe-to-remove handler now maps the row to 'removed' in local state instead of dropping it from the array, which had made restore unreachable until the next reload. MIN_BLOCK_MINUTES moved from the recovery route into schedule.ts and is imported by both, since a route file is the wrong home for a constant two screens share; restore searches the whole remaining day rather than only the original window: original slot at full length first, then any full-length slot via findRescheduleSlot, then the largest gap shortened. Full length beats original position — 90 minutes at 10pm is worth more than 45 at 1pm. Sleep is a hard bound at every tier via resolveDayEnd, and a relocate or shrink is always confirmed, never silent |
 | Shorten and move | recovery/[id].tsx + planShrinkToFit / placeShrunkBlock in schedule.ts + DurationSlider. A single-collider sacrifice now carries a fallback beneath it: shorten the collider instead of removing it, minute resolution, defaulting to 50%. The COLLIDER shrinks, not the block being rescheduled — the missed block already lost its slot once, and compressing it too would mean the recovery costs the thing being recovered. Single target only: a slider per block across two or three colliders is a negotiation, which is the freeze this flow exists to avoid. maxMinutes is derived from the same gap set placeShrunkBlock's fallback pass searches, so every value the slider can produce is guaranteed placeable — a slider that can select an impossible duration is worse than no slider. Placement runs two passes, preferring a slot at or after the collider's own original start, because a plain earliest-fit search drops a shortened Cardio into a free hour AHEAD of the block it just made room for; the earlier gap is still taken when it is the only space left, and the sentence above the button always states the resulting time, so the fallback is never silent. original_start/end_minutes on the target records the pre-compression length; reschedule_count is deliberately NOT bumped there, matching push — the user rescheduled the missed block, not this one. Built on reanimated + gesture-handler rather than a slider dependency, per the interval stepper precedent. The thumb is positioned from the value prop, not from a gesture-driven shared value: there is nothing to animate, and a spring between finger and readout reads as lag. Horizontal intent only (activeOffsetX / failOffsetY) or the pan eats every scroll that starts on the track. Haptics are a detent at each rail, once per arrival — per-minute feedback is a buzz train, which reads as an alert. Push and shrink commit through one commitPairedMove helper, since both are "set two rows' times in one transaction, then provenance", and planRestore's gap walk was extracted to a shared freeGaps for the same reason: the occupiesTime postmortem is what happens when one rule keeps three copies |
 | Past-day access | StreakStrip + useTodayData + 045. Long-press a square to open that day; horizontal pan on the strip pages weeks back to the first instance. View is unbounded; only yesterday can be filled in. A late check-in the next morning is accountability. Rewriting a week-old miss is covering for it. Generation, notification rebuild, pre-block nudge, and weekly-insight invoke are all gated to today: generating a past date would fabricate history, and scheduleTodayBlockNotifications cancels the managed set before rebuilding, so a past-day load would wipe today's notifications. Unaccounted rows appear in the open list on a past day (the sweep has already rewritten them); drag, swipe, swap, restore, and the recovery route are off — times are fixed, only the outcome can change, and the miss is taken in CheckInSheet rather than a reschedule flow that searches from now. Focus reload uses the viewed date, not today, or returning from a check-in would yank the user out of the day they are filling. AppState only reloads on a real date rollover. The backfill trigger (045) marks outcome writes after the row's own local date; paste it in the SQL Editor before shipping the client, because a marker protecting a metric must exist before the first backfill lands |
@@ -502,15 +506,19 @@ marker at all.
 | Presence-aware nudges (block-start + mid-block) | The "smart notification suite". User requested this in their OWN reflections 3x: "harder cutoffs", "need enforcements", "maybe you can do something to help" |
 | Shareable weekly recap card                     | The weekly scorecard. Growth primitive                                                                                                                       |
 | Day-3 first observation                         | Still worth building — weekly-insight gates at engaged_days < 5 — but Stream 1 is the week-one value and does not require the engine to speak. No longer framed as plugging a gap. |
-| Paywall + RevenueCat                            | Hard paywall $14.99/mo, fires after onboarding screen 7. Placement RESOLVED.                                                                                   |
+| Paywall + RevenueCat                            | Unbuilt. No RevenueCat in either package.json; `handleStart` still `router.replace("/schedule-builder")`. Placement OPEN — recommend after step 3 of 5 (the contract), not after the tone question. Ladder, not a flat $14.99. See Pricing & paywall. |
 | "Ask me about yourself" conversational surface  | Reads get_behavior_evidence with the narrator's tone rules                                                                                                   |
 | reflection_improve UX fix                       | 31% fill rate on the highest-signal field in the DB                                                                                                          |
 | External TestFlight                             | Needs Beta App Review (~1 day) + a demo account or auto-rejection                                                                                            |
 | Device activity detection (Screen Time) | Policy-verified design: user self-selects distraction apps via FamilyActivityPicker → OPAQUE TOKENS, so FlexMax structurally cannot know which apps were chosen. Each focus block registers a DeviceActivitySchedule with a threshold event (e.g. 5 cumulative minutes); eventDidReachThreshold fires a local notification reusing the existing **Notification action buttons** (018 nudge_response) infrastructure. The extension records to an App Group store; the app syncs a minimal derived record only — drift occurred, duration bucket, response, block outcome. Never raw usage. NOTE: DeviceActivityReport data is render-only and not readable programmatically, so the threshold event IS the data model — and it happens to be exactly the intervention→response→outcome shape. CONSTRAINTS: entitlement is per bundle ID, main app AND every extension; unrequested extension IDs fail signing at distribution. Requires native Swift extensions — config plugin (react-native-device-activity) or prebuild. Approval takes days to weeks. See UNBLOCKED ACTION above. |
 | Night routine block is hard to answer           | Excluded from the evening sweep (hasn't happened yet) and from bedtime notifications (by design). Drifts to unaccounted unless answered from Today. Candidate fix: a third question on the morning DayBoundaryCard |
 | User instructions page                          | The streak rises on a day where everything was missed. The label qualifier was removed for width, so there is no in-app explanation. Owed |
-| Onboarding demonstration beat | Onboarding establishes the pain (screens 1-2) and sets the contract (screen 7), but never shows what the product DOES. A stranger goes from "how many planners have you abandoned?" to a $14.99 wall without seeing FlexMax work. Fix: show a REAL generated insight, explicitly labelled as another user's, before the contract screen. Not a claim about them — a demonstration. See rejected approaches below |
-| Showcase page carries the offer | docs/index.html has no pricing and no founding-member framing. With no trial it is the only pre-purchase evaluation surface, and most of the "is this enticing" work happens there and in the App Store listing, not in onboarding. See also **docs/index.html — rebuilt 2026-08-11** in Pricing & paywall below |
+| Showcase copy: strike fake former prices | `docs/index.html` still shows struck-through `$14.99` and `$99` as "at launch." Nothing has ever sold at those prices — no App Store listing, paywall unbuilt — so they are a future intention presented as a former price. Remove them. |
+| Showcase copy: cohort cap, not "half" | Replace "roughly half what it will be" with the published 100–200 founding cap and a visible remaining count. $7.99 → $14.99 is a 47% gap; later rungs do not sustain that copy. Unverifiable scarcity reads as a marketing device. |
+| Showcase copy: WeekDemo provenance | Framing says "One month of someone's schedule," but `DEMO_DAYS` is hand-authored and the file says so. That implies a real person — the one external place the product makes a provenance claim it cannot back. Fix the copy or substitute the founder's real month. |
+| Showcase + listing: disqualify up front | Move "Who is this genuinely not for?" up `docs/index.html`. Mirror it in the App Store listing. Highest-leverage paragraph on the page; it is the mitigation for no-trial bad-review risk. |
+| Showcase: Stream 1 next to the price | The rebuilding-half-works-the-hour-you-install line is buried in FAQ item 2 (the trial question). Put an explicit today-versus-week-one split next to the price. |
+| `docs/offline-mode.md` price pointer | Lines ~34–35 still say "$14.99/mo with no trial." Re-point once the ladder is live. Annual at each rung: $69.99 / ~$129 / ~$169. |
 
 
 ### Future build — leftover from the 2026-09-03 remedy triage
@@ -530,7 +538,7 @@ User-written bullets on the template: what "done" means for this block, shown at
 The complaint was right: restating "you miss Workout" is a slap, and the morning note is not the product. The fix is more *writes* (shorten shipped; earlier/later and restore above), not a smarter paragraph. Keep the weekly call as a small stored belief after `engaged_days >= 5`. If a line cannot attach to a confirmed structural option, it stays nudge-sized. Impressive means a change the user could not have computed in two seconds and can take. Text-only impressiveness rots into the same repetition.
 
 **5. Mentor / founder story — listing and showcase only.**
-Mentor-without-an-audience, the $200/mo contrast, "I built this for myself," and "solve my problem first" are App Store / `docs/index.html` voice. Not in-app copy. n=1 still does not prove adoption; the story may say it worked for the person who built it. It may not treat founder fill rate as evidence. Bundle with the pricing / founding-member pass on the showcase page, not with the remedy loop.
+Mentor-without-an-audience, the $200/mo contrast, "I built this for myself," and "solve my problem first" are App Store / `docs/index.html` voice. Not in-app copy. The $200/mo contrast is load-bearing positioning at rung 2 and above, not optional flavor. n=1 still does not prove adoption; the story may say it worked for the person who built it. It may not treat founder fill rate as evidence. Bundle with the pricing / founding-member pass on the showcase page, not with the remedy loop.
 
 
 ---
@@ -611,11 +619,11 @@ data that no user has yet.
 reflections back to them. Needs months of history, and overlaps with the planned
 shareable weekly recap card — these should be ONE surface, not two.
 
-**Declared rest days / rebellion valve.** Onboarding turn 4 currently asks
-whether accountability makes the user rebel and nothing consumes the answer.
-The "closes an existing loop" argument dies with the AI onboarding removal.
-Salvageable later as a preset question, but it needs new schema (a rest-day
-flag), so it is not free.
+**Declared rest days / rebellion valve.** The AI onboarding used to ask
+whether accountability makes the user rebel; the five-step flow does not.
+The "closes an existing loop" argument died with that removal. Salvageable
+later as a preset question, but it needs new schema (a rest-day flag), so it
+is not free.
 
 ### Rejected
 
@@ -912,9 +920,10 @@ makes it a one-line swap in theme.ts if ever revisited.
   interesting one — findRescheduleSlot already scores candidate slots, and
   preferring one inside a stated peak window would make that answer visibly
   matter the first time someone reschedules.
-- **Onboarding has no paywall because there isn't one.** handleStart still
-  routes to the schedule builder. The contract screen is where the paywall
-  goes once RevenueCat lands.
+- **Onboarding has no paywall because there isn't one.** `handleStart` still
+  routes to the schedule builder. Placement is OPEN: recommend immediately
+  after step 3 of 5 (the contract), not after the tone question. See Pricing
+  & paywall.
 - **calendar-feed must be redeployed** after a time_overrides split: one
   VEVENT per distinct window, disjoint BYDAY. The function source is updated;
   the deployed copy is not until `supabase functions deploy calendar-feed --no-verify-jwt`.
@@ -1604,8 +1613,8 @@ product people enjoy reading and do not act on.
 
 - **Declared rest.** Rest days chosen in advance, honored by the mentor,
   excluded from stats. Directly addresses design constraint 1 — rest must be
-  legitimate and chooseable, never something to hide. The onboarding question
-  about rebellion currently has no downstream effect; this closes that loop.
+  legitimate and chooseable, never something to hide. The rebellion question
+  left with the AI onboarding; this is the remaining reason to ask it later.
 - **The intervention ledger.** What actually works *on this person*: which nudge
   timings land, which don't, when moving the block beats nudging at all.
   `nudge_outcomes` (026) is the foundation. This — not behavioral history alone
@@ -1925,6 +1934,20 @@ schema knows exactly what each field feeds and is motivated to feed it well.
 Every engagement number sourced from founder use is a lower bound on
 tolerability and tells you nothing about adoption.
 
+**The 50% execution-improvement figure does not go in copy.** The founder
+reports self-reported execution improvement of roughly 50% from the act of
+inputting data alone. n=1, founder-generated, and it falls under the
+constraints already in this section: founder fill rate proves the least;
+every engagement number from founder use is a lower bound on tolerability;
+and the 2026-08-24 swap audit found 69% of logged time changes landing
+within 30 seconds of the previous edit to the same instance — interaction
+signals are contaminated by the author testing the app, not merely thin.
+**App Store, showcase page, and in-app copy do not get this number until a
+non-founder tester produces it.** Pricing consequence in both directions: if
+it generalizes, rung 3 is underpriced and a single cohort will show it; if
+it does not, no rung on the ladder saves the product. Both readings argue
+for the ladder.
+
 **Surface coverage is thin and that is a real cost.** No widgets, no Apple
 Watch, no calendar integration, no Android. These are not the differentiator and
 should never be the pitch, but they are table stakes for a paid app in this
@@ -1958,7 +1981,9 @@ can be answered without real testers.
    can someone who has never heard of it tell FlexMax apart from a planner from
    the App Store listing and the showcase page alone.
 4. **Will they pay before using it?** The hard paywall is deliberate and filters
-   for the decided cohort, but the conversion floor is unknown.
+   for the decided cohort, but the conversion floor is unknown. A 100–200
+   founding cohort cannot produce a significant price read — the ladder is a
+   choice of a number to live with, not a price test.
 5. **Will they reopen after a bad week?** A supporting signal, not the north
    star. Capture is 028; the query sits under the migrations table. Reopening
    measures whether the user came back, not whether the product changed what
@@ -1966,53 +1991,105 @@ can be answered without real testers.
 6. **Does the behavioral insight feel surprisingly accurate?** Stream 2's proof
    point — half the differentiation, not the whole. Validated on n=1 so far.
 
-If 1-6 hold, $14.99 is not the limiting factor. If they do not, more features
-will not fix it.
+If 1-6 hold, price is not the limiting factor — grow into later rungs with new
+users. If they do not, more features will not fix it.
 
 
 
-## Pricing & paywall (DECIDED — supersedes all earlier versions)
+## Pricing & paywall (current decision — 2026-09-05)
 
-- **$14.99/month. NO free trial.** Hard paywall.
-- **~$99/year**, shown at checkout as monthly-equivalent ("$8.25/mo, billed
-  annually"), never as a lump sum.
-- **No weekly plan.** Weekly billing selects for the user this product serves worst.
-- **Grandfathering: early users lock their price permanently.** "Locked for life"
-  must be explicit copy on the paywall and account screen, not implied. At $14.99
-  this is a materially stronger retention lever than at $9.99.
+Three-rung ladder. No weekly plan. Annual always shown as monthly-equivalent,
+never as a lump sum. "Locked for life" must be explicit copy on the paywall
+and account screen, not implied. Before that copy ships, confirm the App Store
+Connect mechanics for preserving existing subscribers through a price increase
+— founding lock means carrying that SKU indefinitely.
 
-**Founding-member framing.** For the first 100-500 users, present the annual
-plan as founding membership rather than a discount: "Founding members: $99/year,
-locked forever." Same price, different frame — it creates urgency and positions
-early buyers as participants in something being built rather than customers of
-something finished. Consistent with the contract screen's framing.
+**Rung 1 — founding.** $7.99/mo, $69.99/yr. Capped at 100–200 members, locked
+for life. The cap is published in the copy with a visible remaining count;
+unverifiable scarcity reads as a marketing device.
 
-**Rationale for no trial at this stage:** every free user costs real Anthropic
-spend; payment is itself the first commitment device in an accountability
-product; direct buyers outperform trial-converted users on LTV in productivity;
-and 200 paying users produce cleaner retention data than 5,000 free installs.
+**Rung 2 — production.** $14.99/mo, ~$129/yr. This is the durable price.
+Cohort two is not grandfathered — $14.99 is the current price, not a second
+permanent locked tier. Carrying two locked tiers plus a headline price means
+three SKUs and a blended revenue per user well under the headline. Grow into
+higher prices with new users, not by re-pricing old ones.
+
+**Rung 3 — $19.99/mo MAX, ~$169/yr.** Earned, not scheduled. Gate it on the
+beta gates, not on signup count: reflection fill rate clearing threshold on a
+real (non-founder) cohort, and the north-star metric holding on days the plan
+breaks. Signups prove the landing page works; only the gates prove the
+product does.
+
+**No trial.** A trial recruits people who are browsing, and users without
+existing motivation will not succeed with this product and will tank early App
+Store ratings on their way out. Early ratings are a compounding asset. Cohort
+quality is the point, not a side effect.
+
+The three supporting reasons that still hold: payment is the first commitment
+device in an accountability product; direct buyers outperform trial-converted
+users on LTV in productivity; 200 paying users produce cleaner retention data
+than 5,000 free installs.
+
+The reason that does not: "every free user costs real Anthropic spend." There
+is exactly one Claude call in the product (`claude-sonnet-4-6`, `max_tokens:
+1200` in `weekly-insight`), cached, rate-limited via `checkRateLimit`, and
+gated behind `engaged_days >= 5`. A free user who churns in week one triggers
+zero calls.
+
+**Counterpoint — carry, do not let it drift.** No trial does not remove the
+bad-review risk, it changes who writes them. A paying user who churns at day
+20 is out money and can write something angrier than a free trialler who
+drifts off. The mitigation is hard disqualification up front, not a trial —
+the FAQ's "Who is this genuinely not for?" answer is the highest-leverage
+paragraph on the page and belongs higher up it, and the same disqualification
+belongs in the App Store listing.
+
 This is a STAGE decision — value-gated freemium is the correct scale strategy
-later, once the insight engine is proven.
+later, once the insight engine is proven. Do not write a 100k-user pivot plan
+today; the first thousand users will rewrite it.
 
 **Accepted cost:** some "paywalled instantly, didn't get to try it" reviews.
 That is the tax of the approach, not a signal something is broken.
 
-**Paywall placement (RESOLVED).** The wall fires immediately after onboarding
-completes — after screen 7 of the seven-beat preset flow. Earlier strategy
-anchored it to the AI onboarding's psychology-profile reveal; that flow was
-deleted, and the replacement earns the ask differently:
+**Paywall placement (OPEN).** Previously marked RESOLVED against a seven-beat
+preset flow that no longer exists. Onboarding is five steps (`STEP_COUNT = 5`):
+0 cold open, 1–2 WeekDemo demonstration and reveal, 3 contract, 4
+accountability tone — the only remaining question, and last. There are no
+recognition screens and no answer playback. The paywall itself is unbuilt: no
+RevenueCat in either `package.json`, and `handleStart` still
+`router.replace("/schedule-builder")`.
 
-- Screens 1-2 are RECOGNITION ("how many planners have you abandoned?", "what
-  usually kills it?"). They name the user's failure history before the pitch.
-- Screen 6 plays their answers back as declarative fragments. Proof of
-  listening, with zero fabrication.
-- Screen 7 is the contract: "FlexMax learns from what actually happens. The
-  patterns come from what you do, not what you say. Give it a week."
+The conviction peak is step 2 into step 3 — the reveal, then the contract
+stating what you get today versus in a week. Step 4 is a tone preference,
+settings-grade and already editable post-onboarding in `account.tsx`
+(`accountability_tone` upsert). Firing the wall after it puts a preferences
+question between the pitch and the ask. Recommendation: ask immediately after
+step 3; move tone to first launch or leave it to the account screen.
+Counterargument considered and rejected: a three-option tone picker is too
+low-stakes to do foot-in-the-door work.
 
-That last screen reframes the $14.99 honestly — the user is buying a working
-execution-salvaging tool immediately, with the insight layer arriving on top of
-it after about a week. That is the true version of
-the aha the AI conversation used to fake.
+### Category-of-one — standing constraint
+
+Having no real competitor is a positioning fact, not a pricing fact. It gives
+pricing freedom, not pricing immunity, because a stranger's comparison set is
+set by what occupies the same slot in their budget, not by how the product
+defines its category. When you are genuinely first there is no reference
+price, so users borrow one from whatever the product resembles. The category
+has to be taught before category-defining prices can be charged — which is an
+argument *for* the ladder, not for skipping to the top of it.
+
+Comparable band as of September 2026 (re-check the date): Sunsama $22/mo
+month-to-month or $17/mo billed annually ($204/yr); Motion Pro AI individual
+$19/mo or ~$12.73/mo billed annually. Both have trials — Sunsama 14 days no
+card, Motion 7 days card required. At $19.99 FlexMax sits in that band with no
+trial, no widgets, no Watch, no Android, and one-way ICS export in place of
+calendar integration. This is the predicted review narrative and it is already
+consistent with the existing "surface coverage is thin" risk.
+
+The **$200/mo mentor contrast** is load-bearing positioning at rung 2 and
+above, not optional listing flavor. If the comparison class is a coach at
+$200/mo, $14.99 is trivially cheap; if it is a planner at $5, it is absurd.
+The landing page decides which comparison a stranger makes.
 
 **docs/index.html — rebuilt 2026-08-11 as an engine overview.** The previous
 version was a hand-built replica of the app's UI and had drifted twice
@@ -2020,11 +2097,11 @@ version was a hand-built replica of the app's UI and had drifted twice
 replacement describes the engine — architecture, integrity rules, real
 generated output, honest build status — and contains no UI replica, so it has
 no drift surface. A print-formatted PDF of the same content is published
-alongside it at docs/flexmax-behavioral-engine.pdf for handouts.
-
-Still open: with no free trial this page is the only pre-purchase evaluation
-surface and it does not yet carry pricing or founding-member framing. When the
-in-app interactive demo ships, its screen recordings belong on this page.
+alongside it at docs/flexmax-behavioral-engine.pdf for handouts. Founding
+pricing and founding-member framing are now on the page. Remaining copy
+fixes (struck-through reference prices, "half" urgency, WeekDemo provenance,
+disqualification placement, Stream 1 next to the price) sit in the Not built
+table. Screen recordings of the shipped WeekDemo belong on this page.
 
 ### Rejected: generating an "insight" from onboarding answers
 
@@ -2040,8 +2117,9 @@ the data does not support), and it creates a promise the product must then honor
 — if the genuine day-7 insight contradicts the fabricated one, the user learns
 to distrust the thing they paid for.
 
-Screen 6 solves the same problem honestly: it reflects the user's own answers
-back without interpreting them. Recognition, not fabrication.
+The answer-playback screen that used to solve this honestly (reflect the
+user's own answers back without interpreting them) is gone. The five-step
+flow has one question, last, and it is a tone preference.
 
 This proposal has now surfaced three times from external strategy sources, each
 time more specific — most recently as a four-line "execution profile" ("You tend
@@ -2052,7 +2130,6 @@ for the same reason each time: three taps cannot support a behavioral claim, and
 a fabricated day-zero profile that the genuine day-7 insight contradicts teaches
 the user to distrust the product's core output.
 
-The legitimate version of the same instinct is to DEMONSTRATE rather than claim:
-show a real insight the engine actually produced, explicitly labelled as another
-user's, and let it speak for what the product does. See "Onboarding
-demonstration beat" in the roadmap.
+The legitimate version of the same instinct is to DEMONSTRATE rather than claim.
+That shipped as WeekDemo: the user applies the filter themselves and watches
+non-matching days dim. Participation, not a labelled third-party insight.
