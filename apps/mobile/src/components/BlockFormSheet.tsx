@@ -20,10 +20,16 @@ import { PressableScale } from "./PressableScale";
 import { DragHandle } from "./DragHandle";
 import { TimePicker } from "./TimePicker";
 import { CategoryChips } from "./CategoryChips";
-import { DayChips, ALL_DAYS } from "./DayChips";
+import { DayChips, ALL_DAYS, WEEKDAYS } from "./DayChips";
 import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { getLocalDateString } from "../lib/time";
-import { describeRecurrence, formatEndDate } from "../lib/recurrence";
+import {
+  describeRecurrence,
+  formatEndDate,
+  resolveBlockTimes,
+  setOverride,
+  TimeOverrides,
+} from "../lib/recurrence";
 
 export type BlockFormData = {
   name: string;
@@ -34,18 +40,28 @@ export type BlockFormData = {
   isFixed: boolean;
   intervalWeeks: number;
   endsOn: string | null;
+  timeOverrides: TimeOverrides;
 };
 
-const EMPTY_DRAFT: BlockFormData = {
-  name: "",
-  category: "deep_work",
-  days: ALL_DAYS,
-  startMinutes: 9 * 60,
-  endMinutes: 10 * 60,
-  isFixed: false,
-  intervalWeeks: 1,
-  endsOn: null,
-};
+function emptyDraft(defaultDay?: number | null): BlockFormData {
+  return {
+    name: "",
+    category: "deep_work",
+    days: defaultDay != null ? [defaultDay] : ALL_DAYS,
+    startMinutes: 9 * 60,
+    endMinutes: 10 * 60,
+    isFixed: false,
+    intervalWeeks: 1,
+    endsOn: null,
+    timeOverrides: {},
+  };
+}
+
+function weekdayLong(day: number): string {
+  return WEEKDAYS[day]
+    ? new Date(2026, 0, 4 + day).toLocaleDateString("en-US", { weekday: "long" })
+    : "?";
+}
 
 function parseLocalYmd(ymd: string): Date {
   const [y, m, d] = ymd.split("-").map(Number);
@@ -57,6 +73,8 @@ interface BlockFormSheetProps {
   initial: ScheduleBlock | null;
   saving: boolean;
   error: string | null;
+  selectedDay?: number | null;
+  defaultDay?: number | null;
   onSave: (data: BlockFormData) => void;
   onClose: () => void;
   onDelete?: () => void;
@@ -67,6 +85,8 @@ export function BlockFormSheet({
   initial,
   saving,
   error,
+  selectedDay = null,
+  defaultDay = null,
   onSave,
   onClose,
   onDelete,
@@ -74,7 +94,7 @@ export function BlockFormSheet({
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const slideAnim = useRef(new RNAnimated.Value(400)).current;
-  const [draft, setDraft] = useState<BlockFormData>(EMPTY_DRAFT);
+  const [draft, setDraft] = useState<BlockFormData>(() => emptyDraft(defaultDay));
   // Expanded when ADDING, collapsed when EDITING. A new block's days are a
   // real decision and hiding them behind a tap would cost people the
   // setting; an existing block's recurrence is almost never changed.
@@ -96,10 +116,11 @@ export function BlockFormSheet({
             isFixed: initial.is_fixed,
             intervalWeeks: initial.interval_weeks ?? 1,
             endsOn: initial.ends_on,
+            timeOverrides: initial.time_overrides ?? {},
           }
-        : EMPTY_DRAFT
+        : emptyDraft(defaultDay)
     );
-  }, [visible, initial]);
+  }, [visible, initial, defaultDay]);
 
   useEffect(() => {
     if (!visible) return;
@@ -306,14 +327,94 @@ export function BlockFormSheet({
               <Text style={styles.fieldLabel}>Time</Text>
               <TimePicker
                 label="Starts"
-                valueMinutes={draft.startMinutes}
-                onChange={(startMinutes) => setDraft((d) => ({ ...d, startMinutes }))}
+                valueMinutes={
+                  selectedDay != null
+                    ? resolveBlockTimes(
+                        {
+                          start_minutes: draft.startMinutes,
+                          end_minutes: draft.endMinutes,
+                          time_overrides: draft.timeOverrides,
+                        },
+                        selectedDay
+                      ).start
+                    : draft.startMinutes
+                }
+                onChange={(startMinutes) =>
+                  setDraft((d) => {
+                    if (selectedDay == null) return { ...d, startMinutes };
+                    const current = resolveBlockTimes(
+                      {
+                        start_minutes: d.startMinutes,
+                        end_minutes: d.endMinutes,
+                        time_overrides: d.timeOverrides,
+                      },
+                      selectedDay
+                    );
+                    return {
+                      ...d,
+                      timeOverrides: setOverride(d.timeOverrides, selectedDay, {
+                        start: startMinutes,
+                        end: current.end,
+                      }),
+                    };
+                  })
+                }
               />
               <TimePicker
                 label="Ends"
-                valueMinutes={draft.endMinutes}
-                onChange={(endMinutes) => setDraft((d) => ({ ...d, endMinutes }))}
+                valueMinutes={
+                  selectedDay != null
+                    ? resolveBlockTimes(
+                        {
+                          start_minutes: draft.startMinutes,
+                          end_minutes: draft.endMinutes,
+                          time_overrides: draft.timeOverrides,
+                        },
+                        selectedDay
+                      ).end
+                    : draft.endMinutes
+                }
+                onChange={(endMinutes) =>
+                  setDraft((d) => {
+                    if (selectedDay == null) return { ...d, endMinutes };
+                    const current = resolveBlockTimes(
+                      {
+                        start_minutes: d.startMinutes,
+                        end_minutes: d.endMinutes,
+                        time_overrides: d.timeOverrides,
+                      },
+                      selectedDay
+                    );
+                    return {
+                      ...d,
+                      timeOverrides: setOverride(d.timeOverrides, selectedDay, {
+                        start: current.start,
+                        end: endMinutes,
+                      }),
+                    };
+                  })
+                }
               />
+              <Text style={styles.fieldHelper}>
+                {selectedDay != null
+                  ? `Changing ${weekdayLong(selectedDay)} only`
+                  : "Changing every day"}
+              </Text>
+              {selectedDay != null &&
+              draft.timeOverrides[String(selectedDay)] != null ? (
+                <PressableScale
+                  onPress={() =>
+                    setDraft((d) => ({
+                      ...d,
+                      timeOverrides: setOverride(d.timeOverrides, selectedDay, null),
+                    }))
+                  }
+                >
+                  <Text style={styles.overrideReset}>
+                    {weekdayLong(selectedDay)} is different · Use the usual time
+                  </Text>
+                </PressableScale>
+              ) : null}
             </View>
             {renderFixedToggle(draft.isFixed, () =>
               setDraft((d) => ({ ...d, isFixed: !d.isFixed }))
@@ -459,6 +560,7 @@ const makeStyles = (c: Colors) =>
     segmentText: { ...typography.body, color: c.textMuted },
     segmentTextActive: { color: c.text, fontWeight: "600" },
     fieldHelper: { color: c.textFaint, fontSize: 12, lineHeight: 18 },
+    overrideReset: { color: c.textSecondary, ...typography.small },
     errorLine: {
       backgroundColor: c.errorTint,
       borderColor: c.errorBorder,

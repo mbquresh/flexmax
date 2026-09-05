@@ -174,6 +174,7 @@ const makeStyles = (c: Colors) =>
       borderColor: c.border,
       alignItems: "center",
       justifyContent: "center",
+      ...c.shadowRest,
     },
     menuBar: {
       width: 18,

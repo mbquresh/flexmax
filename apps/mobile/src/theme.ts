@@ -153,7 +153,10 @@ export const darkColors: Colors = {
   errorTint: "#4A2721",
   errorBorder: "#7A4038",
 
-  streak: "#5FCBA6",
+  // Dusted teal, not the success mint. success is a chip; this is a field
+  // that can fill a whole square. #5FCBA6 on warm charcoal reads as a neon
+  // and kills the weekday blue sitting on it.
+  streak: "#3F7A66",
   streakMissed: "#5E594F",
   streakHousing: "#433E39",
   streakBorder: "#625B51",

@@ -33,6 +33,7 @@ function block(overrides: Partial<ScheduleBlock> = {}): ScheduleBlock {
     ends_on: null,
     interval_weeks: 1,
     anchor_date: null,
+    time_overrides: null,
     ...overrides,
   };
 }

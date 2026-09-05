@@ -24,6 +24,29 @@ export function formatDayLabel(dateStr: string): string {
   return `${WEEKDAY_NAMES[d.getDay()]}, ${MONTH_NAMES[d.getMonth()]} ${d.getDate()}`;
 }
 
+/** "Friday, September 4" — year included when it isn't this year. */
+export function formatDisplayDate(dateStr: string): string {
+  const d = parseLocalDate(dateStr);
+  const weekday = d.toLocaleDateString("en-US", { weekday: "long" });
+  const month = d.toLocaleDateString("en-US", { month: "long" });
+  const day = d.getDate();
+  const year = d.getFullYear();
+  const thisYear = parseLocalDate(getLocalDateString()).getFullYear();
+  return year === thisYear
+    ? `${weekday}, ${month} ${day}`
+    : `${weekday}, ${month} ${day}, ${year}`;
+}
+
+/** "September 4" — year included when it isn't this year. */
+export function formatMonthDay(dateStr: string): string {
+  const d = parseLocalDate(dateStr);
+  const month = d.toLocaleDateString("en-US", { month: "long" });
+  const day = d.getDate();
+  const year = d.getFullYear();
+  const thisYear = parseLocalDate(getLocalDateString()).getFullYear();
+  return year === thisYear ? `${month} ${day}` : `${month} ${day}, ${year}`;
+}
+
 /** "Aug 17 – 23", or "Aug 31 – Sep 6" across a month boundary. */
 export function formatWeekRange(startStr: string, endStr: string): string {
   const a = parseLocalDate(startStr);

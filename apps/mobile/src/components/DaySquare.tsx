@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { Colors, radii, typography } from "../theme";
+import { Colors, numeric, radii, typography } from "../theme";
 import { useTheme } from "../providers/ThemeProvider";
 
 export function segmentHeightPct(ratio: number): number {
@@ -8,8 +8,20 @@ export function segmentHeightPct(ratio: number): number {
   return Math.max(12, Math.round(ratio * 100));
 }
 
+/** Monday-first, matching weekDates. */
+export const WEEK_STRIP_LABELS = [
+  "Mon",
+  "Tue",
+  "Wed",
+  "Thu",
+  "Fri",
+  "Sat",
+  "Sun",
+] as const;
+
 interface DaySquareProps {
-  letter: string;
+  weekday: string;
+  date?: number;
   completionRatio: number;
   missedRatio: number;
   isToday?: boolean;
@@ -19,7 +31,8 @@ interface DaySquareProps {
 }
 
 export function DaySquare({
-  letter,
+  weekday,
+  date,
   completionRatio,
   missedRatio,
   isToday = false,
@@ -32,10 +45,15 @@ export function DaySquare({
   const combinedRatio = completionRatio + missedRatio;
   const combinedPct = segmentHeightPct(combinedRatio);
   const completedPct = segmentHeightPct(completionRatio);
-  const isFilledOut = combinedRatio >= 1;
 
   return (
-    <View style={[styles.daySquare, isFuture && styles.daySquareFuture]}>
+    <View
+      style={[
+        styles.daySquare,
+        (isToday || isSelected) && styles.daySquareActive,
+        isFuture && styles.daySquareFuture,
+      ]}
+    >
       {combinedPct > 0 ? (
         <View
           style={[
@@ -60,16 +78,25 @@ export function DaySquare({
       ) : null}
       {isToday ? <View style={styles.todayRing} pointerEvents="none" /> : null}
       {isSelected ? <View style={styles.selectedRing} pointerEvents="none" /> : null}
-      <View style={styles.dayLetterWrap}>
+      <View style={styles.labelWrap}>
         <Text
           style={[
-            styles.daySquareLetter,
-            isFilledOut && styles.daySquareLetterDone,
-            isFuture && styles.daySquareLetterFuture,
+            styles.weekday,
+            isFuture && styles.weekdayFuture,
           ]}
         >
-          {letter}
+          {weekday}
         </Text>
+        {date != null ? (
+          <Text
+            style={[
+              styles.date,
+              isFuture && styles.dateFuture,
+            ]}
+          >
+            {date}
+          </Text>
+        ) : null}
       </View>
     </View>
   );
@@ -80,6 +107,9 @@ export const daySquareStripStyles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     gap: 6,
+  },
+  dayHit: {
+    flex: 1,
   },
 });
 
@@ -92,16 +122,22 @@ const makeStyles = (c: Colors) =>
       backgroundColor: c.streakSquare,
       overflow: "hidden",
     },
+    daySquareActive: {
+      backgroundColor: c.surface,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: c.border,
+    },
     fill: {
       position: "absolute",
       left: 0,
       right: 0,
       bottom: 0,
     },
-    dayLetterWrap: {
+    labelWrap: {
       ...StyleSheet.absoluteFillObject,
       alignItems: "center",
       justifyContent: "center",
+      gap: 1,
     },
     todayRing: {
       position: "absolute",
@@ -128,14 +164,23 @@ const makeStyles = (c: Colors) =>
     daySquareFuture: {
       backgroundColor: c.streakSquare,
     },
-    daySquareLetter: {
-      color: c.streakMuted,
-      ...typography.smallBold,
+    weekday: {
+      color: c.primary,
+      ...typography.label,
+      letterSpacing: 0,
     },
-    daySquareLetterDone: {
+    weekdayFuture: {
+      opacity: 0.45,
+    },
+    date: {
       color: c.text,
+      fontSize: 15,
+      fontWeight: "700",
+      letterSpacing: -0.3,
+      lineHeight: 18,
+      ...numeric,
     },
-    daySquareLetterFuture: {
-      color: c.streakMuted,
+    dateFuture: {
+      color: c.textFaint,
     },
   });

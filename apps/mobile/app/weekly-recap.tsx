@@ -14,13 +14,16 @@ import { useAuth } from "../src/providers/AuthProvider";
 import { RequireAuth } from "../src/components/RequireAuth";
 import { BrandLoader } from "../src/components/BrandLoader";
 import { LoadError } from "../src/components/LoadError";
-import { DaySquare, daySquareStripStyles } from "../src/components/DaySquare";
+import {
+  DaySquare,
+  WEEK_STRIP_LABELS,
+  daySquareStripStyles,
+} from "../src/components/DaySquare";
 import { PressableScale } from "../src/components/PressableScale";
 import { BehavioralInsight } from "../src/types/database";
 import { Colors, spacing, radii, iconSizes } from "../src/theme";
 import { useTheme } from "../src/providers/ThemeProvider";
 
-const DAY_LETTERS = ["M", "T", "W", "T", "F", "S", "S"];
 const MONTHS = [
   "Jan",
   "Feb",
@@ -242,14 +245,19 @@ function WeeklyRecapScreenContent() {
       <Text style={styles.range}>{weekLabel}</Text>
 
       <View style={daySquareStripStyles.weekStrip}>
-        {DAY_LETTERS.map((letter, i) => (
-          <DaySquare
-            key={i}
-            letter={letter}
-            completionRatio={completionRatio[i]}
-            missedRatio={missedRatio[i]}
-          />
-        ))}
+        {WEEK_STRIP_LABELS.map((weekday, i) => {
+          const day = new Date(week.monday);
+          day.setDate(week.monday.getDate() + i);
+          return (
+            <DaySquare
+              key={i}
+              weekday={weekday}
+              date={day.getDate()}
+              completionRatio={completionRatio[i]}
+              missedRatio={missedRatio[i]}
+            />
+          );
+        })}
       </View>
 
       <Text style={styles.accounted}>

@@ -1,45 +1,114 @@
-import React, { useMemo, useState } from "react";
-import { View, Text, StyleSheet, LayoutChangeEvent } from "react-native";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Pressable,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
+  LayoutChangeEvent,
+} from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { Gesture, GestureDetector } from "react-native-gesture-handler";
-import { runOnJS, useSharedValue } from "react-native-reanimated";
 import { WeekView, addDays, mondayOf, weekDates } from "../lib/stats";
-import { formatWeekRange } from "../lib/time";
+import { formatWeekRange, parseLocalDate } from "../lib/time";
 import { hapticSelect, hapticPickUp, hapticReject } from "../lib/haptics";
-import { DaySquare, daySquareStripStyles } from "./DaySquare";
+import {
+  DaySquare,
+  WEEK_STRIP_LABELS,
+  daySquareStripStyles,
+} from "./DaySquare";
 import { PressableScale } from "./PressableScale";
-import { Colors, spacing, radii, typography, numeric, iconSizes } from "../theme";
+import { Colors, spacing, typography, numeric, iconSizes } from "../theme";
 import { useTheme } from "../providers/ThemeProvider";
 
-const SQUARE_GAP = 6;
-// Travel per week step. Short enough to feel like a scrub, long enough that
-// a diagonal flick during a vertical scroll does not jump two months.
-const STEP_PX = 44;
+export const WEEK_STRIP_GAP = 6;
 
-interface StreakStripProps {
-  /** The week on screen, already resolved to ratios by the caller. */
+interface WeekRowProps {
   week: WeekView;
   todayStr: string;
-  /** The day currently open on Today. Ringed. */
   selectedDate: string;
-  streak: number;
-  /** Live rate for the current week, which the fetched WeekView lags. */
-  rateOverride?: number;
-  /**
-   * The square whose ratios come from the loaded day rather than from the
-   * fetched week. Always the day on screen — a backfill has to move its own
-   * square immediately, which is the entire payoff for doing it.
-   */
   liveDate?: string;
   liveCompletionRatio?: number;
   liveMissedRatio?: number;
-  canGoBack: boolean;
-  onStepWeek: (delta: -1 | 1) => void;
+  applyLive: boolean;
+  onSelectDay: (dateStr: string) => void;
+}
+
+function WeekRow({
+  week,
+  todayStr,
+  selectedDate,
+  liveDate,
+  liveCompletionRatio,
+  liveMissedRatio,
+  applyLive,
+  onSelectDay,
+}: WeekRowProps) {
+  const dates = weekDates(week.mondayStr);
+  return (
+    <View style={daySquareStripStyles.weekStrip}>
+      {WEEK_STRIP_LABELS.map((weekday, i) => {
+        const dateStr = dates[i] ?? "";
+        const isToday = dateStr === todayStr;
+        const isLive = applyLive && dateStr === liveDate;
+        const completionRatio =
+          isLive && liveCompletionRatio !== undefined
+            ? liveCompletionRatio
+            : week.completionRatio[i] ?? 0;
+        const missedRatio =
+          isLive && liveMissedRatio !== undefined
+            ? liveMissedRatio
+            : week.missedRatio[i] ?? 0;
+
+        return (
+          <Pressable
+            key={`${week.mondayStr}-${i}`}
+            style={daySquareStripStyles.dayHit}
+            delayLongPress={350}
+            onLongPress={() => {
+              if (!dateStr) return;
+              if (dateStr > todayStr) {
+                hapticReject();
+                return;
+              }
+              hapticPickUp();
+              onSelectDay(dateStr);
+            }}
+          >
+            <DaySquare
+              weekday={weekday}
+              date={dateStr ? parseLocalDate(dateStr).getDate() : undefined}
+              completionRatio={completionRatio}
+              missedRatio={missedRatio}
+              isToday={isToday}
+              isFuture={dateStr > todayStr}
+              isSelected={dateStr === selectedDate && !isToday}
+            />
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+interface StreakStripProps {
+  weeks: WeekView[];
+  selectedMonday: string;
+  todayStr: string;
+  selectedDate: string;
+  streak: number;
+  rateOverride?: number;
+  liveDate?: string;
+  liveCompletionRatio?: number;
+  liveMissedRatio?: number;
+  onSelectMonday: (mondayStr: string) => void;
   onSelectDay: (dateStr: string) => void;
 }
 
 export function StreakStrip({
-  week,
+  weeks,
+  selectedMonday,
   todayStr,
   selectedDate,
   streak,
@@ -47,83 +116,77 @@ export function StreakStrip({
   liveDate,
   liveCompletionRatio,
   liveMissedRatio,
-  canGoBack,
-  onStepWeek,
+  onSelectMonday,
   onSelectDay,
 }: StreakStripProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const [stripWidth, setStripWidth] = useState(0);
+  const scrollRef = useRef<ScrollView>(null);
+  const offsetX = useRef(0);
+  const [pageWidth, setPageWidth] = useState(0);
 
-  const dates = useMemo(() => weekDates(week.mondayStr), [week.mondayStr]);
-  const isCurrentWeek = week.mondayStr === mondayOf(todayStr);
-  const canGoForward = !isCurrentWeek;
-  const rate = isCurrentWeek ? rateOverride ?? week.completionRate : week.completionRate;
+  const currentMonday = mondayOf(todayStr);
+  const selected =
+    weeks.find((w) => w.mondayStr === selectedMonday) ?? weeks[weeks.length - 1];
+  const selectedIndex = Math.max(
+    0,
+    weeks.findIndex((w) => w.mondayStr === selected?.mondayStr)
+  );
+  const isCurrentWeek = selected?.mondayStr === currentMonday;
+  const canGoBack = selectedIndex > 0;
+  const canGoForward = selectedIndex < weeks.length - 1;
+  const rate = isCurrentWeek
+    ? rateOverride ?? selected?.completionRate ?? 0
+    : selected?.completionRate ?? 0;
 
-  const widthShared = useSharedValue(0);
-  const stepped = useSharedValue(0);
+  const snap = pageWidth + WEEK_STRIP_GAP;
 
   const handleLayout = (e: LayoutChangeEvent) => {
     const w = e.nativeEvent.layout.width;
-    setStripWidth(w);
-    widthShared.value = w;
+    if (w <= 0 || w === pageWidth) return;
+    setPageWidth(w);
+  };
+
+  useEffect(() => {
+    if (pageWidth <= 0 || !weeks.length) return;
+    const i = weeks.findIndex((w) => w.mondayStr === selectedMonday);
+    const index = i >= 0 ? i : weeks.length - 1;
+    const x = index * (pageWidth + WEEK_STRIP_GAP);
+    if (Math.abs(offsetX.current - x) < 2) return;
+    scrollRef.current?.scrollTo({ x, animated: offsetX.current > 0 });
+    offsetX.current = x;
+  }, [pageWidth, selectedMonday, weeks]);
+
+  const commitFromOffset = (x: number) => {
+    if (snap <= 0 || !weeks.length) return;
+    const index = Math.max(
+      0,
+      Math.min(weeks.length - 1, Math.round(x / snap))
+    );
+    const monday = weeks[index]?.mondayStr;
+    if (!monday || monday === selectedMonday) return;
+    hapticSelect();
+    onSelectMonday(monday);
+  };
+
+  const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    offsetX.current = e.nativeEvent.contentOffset.x;
+  };
+
+  const handleScrollEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    offsetX.current = e.nativeEvent.contentOffset.x;
+    commitFromOffset(e.nativeEvent.contentOffset.x);
   };
 
   const step = (delta: -1 | 1) => {
-    if (delta === -1 && !canGoBack) {
-      hapticReject();
-      return;
-    }
-    if (delta === 1 && !canGoForward) {
+    const next = selectedIndex + delta;
+    if (next < 0 || next >= weeks.length) {
       hapticReject();
       return;
     }
     hapticSelect();
-    onStepWeek(delta);
+    onSelectMonday(weeks[next].mondayStr);
   };
-
-  const selectAt = (x: number) => {
-    if (stripWidth <= 0) return;
-    const cell = (stripWidth - SQUARE_GAP * 6) / 7;
-    const index = Math.min(
-      6,
-      Math.max(0, Math.floor(x / (cell + SQUARE_GAP)))
-    );
-    const dateStr = dates[index];
-    if (!dateStr) return;
-    // A day that has not happened has nothing to account for.
-    if (dateStr > todayStr) {
-      hapticReject();
-      return;
-    }
-    hapticPickUp();
-    onSelectDay(dateStr);
-  };
-
-  // Dragging right reveals earlier weeks, matching every paged surface on
-  // the platform. failOffsetY keeps the page scrollable from the strip.
-  const pan = Gesture.Pan()
-    .activeOffsetX([-12, 12])
-    .failOffsetY([-16, 16])
-    .onStart(() => {
-      stepped.value = 0;
-    })
-    .onUpdate((e) => {
-      const steps = Math.trunc(e.translationX / STEP_PX);
-      if (steps === stepped.value) return;
-      const delta = steps > stepped.value ? -1 : 1;
-      stepped.value = steps;
-      runOnJS(step)(delta);
-    });
-
-  // Long press rather than tap: the strip is a status display first, and a
-  // tap target that navigates would fire on every mis-swipe.
-  const longPress = Gesture.LongPress()
-    .minDuration(350)
-    .maxDistance(14)
-    .onStart((e) => {
-      runOnJS(selectAt)(e.x);
-    });
 
   return (
     <View style={styles.streakContainer}>
@@ -133,7 +196,9 @@ export function StreakStrip({
             ? streak > 0
               ? `${streak}-day streak`
               : "Start streak today"
-            : formatWeekRange(week.mondayStr, addDays(week.mondayStr, 6))}
+            : selected
+              ? formatWeekRange(selected.mondayStr, addDays(selected.mondayStr, 6))
+              : ""}
         </Text>
         <View style={styles.streakHeaderRight}>
           <Text style={styles.streakSub}>
@@ -163,35 +228,49 @@ export function StreakStrip({
           </PressableScale>
         </View>
       </View>
-      <GestureDetector gesture={Gesture.Race(pan, longPress)}>
-        <View style={daySquareStripStyles.weekStrip} onLayout={handleLayout}>
-          {["M", "T", "W", "T", "F", "S", "S"].map((day, i) => {
-            const dateStr = dates[i] ?? "";
-            const isToday = dateStr === todayStr;
-            const isLive = dateStr === liveDate;
-            const completionRatio =
-              isLive && liveCompletionRatio !== undefined
-                ? liveCompletionRatio
-                : week.completionRatio[i] ?? 0;
-            const missedRatio =
-              isLive && liveMissedRatio !== undefined
-                ? liveMissedRatio
-                : week.missedRatio[i] ?? 0;
-
-            return (
-              <DaySquare
-                key={`${week.mondayStr}-${i}`}
-                letter={day}
-                completionRatio={completionRatio}
-                missedRatio={missedRatio}
-                isToday={isToday}
-                isFuture={dateStr > todayStr}
-                isSelected={dateStr === selectedDate && !isToday}
-              />
-            );
-          })}
-        </View>
-      </GestureDetector>
+      <View onLayout={handleLayout}>
+        {pageWidth > 0 ? (
+          <ScrollView
+            key={`${weeks[0]?.mondayStr ?? ""}-${weeks.length}`}
+            ref={scrollRef}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            decelerationRate="fast"
+            snapToInterval={snap}
+            snapToAlignment="start"
+            disableIntervalMomentum
+            directionalLockEnabled
+            nestedScrollEnabled
+            bounces
+            contentOffset={{ x: selectedIndex * snap, y: 0 }}
+            onScroll={handleScroll}
+            onScrollEndDrag={handleScrollEnd}
+            onMomentumScrollEnd={handleScrollEnd}
+            scrollEventThrottle={16}
+          >
+            {weeks.map((week, i) => (
+              <View
+                key={week.mondayStr}
+                style={{
+                  width: pageWidth,
+                  marginRight: i < weeks.length - 1 ? WEEK_STRIP_GAP : 0,
+                }}
+              >
+                <WeekRow
+                  week={week}
+                  todayStr={todayStr}
+                  selectedDate={selectedDate}
+                  liveDate={liveDate}
+                  liveCompletionRatio={liveCompletionRatio}
+                  liveMissedRatio={liveMissedRatio}
+                  applyLive={week.mondayStr === currentMonday}
+                  onSelectDay={onSelectDay}
+                />
+              </View>
+            ))}
+          </ScrollView>
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -199,15 +278,7 @@ export function StreakStrip({
 const makeStyles = (c: Colors) =>
   StyleSheet.create({
     streakContainer: {
-      marginHorizontal: spacing.xl,
-      marginTop: spacing.md,
-      marginBottom: spacing.xs,
-      backgroundColor: c.streakHousing,
-      borderRadius: radii.xl,
-      padding: 14,
-      borderWidth: 0,
-      borderColor: c.streakBorder,
-      ...c.shadowRest,
+      marginTop: spacing.lg,
     },
     streakHeader: {
       flexDirection: "row",

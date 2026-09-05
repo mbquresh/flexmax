@@ -28,7 +28,6 @@ import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "../src/lib/supabase";
 import {
-  WEEKDAYS,
   getTodayLabel,
   occupiesTime,
   planRestore,
@@ -46,7 +45,8 @@ import {
 import {
   minutesToTime,
   getLocalDateString,
-  formatDayLabel,
+  formatDisplayDate,
+  formatMonthDay,
   parseLocalDate,
 } from "../src/lib/time";
 import { scheduleTodayBlockNotifications } from "../src/lib/blockNotifications";
@@ -71,9 +71,10 @@ import {
   WeekView,
   addDays,
   fetchEarliestInstanceDate,
-  fetchWeekView,
+  fetchWeekViewsInRange,
   isWithinEditWindow,
   mondayOf,
+  mondaysThrough,
 } from "../src/lib/stats";
 import {
   hapticCommit,
@@ -82,6 +83,7 @@ import {
   hapticSelect,
 } from "../src/lib/haptics";
 import { useTheme } from "../src/providers/ThemeProvider";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors, spacing, radii, typography, numeric, iconSizes } from "../src/theme";
 
 const BOTTOM_SHEET_OFFSET = 400;
@@ -139,6 +141,7 @@ function isInstanceFixed(instance: DailyInstance): boolean {
 function TodayScreenContent() {
   const { colors, scheme } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const insets = useSafeAreaInsets();
   const { session, psychologyProfile, profile } = useAuth();
   const {
     instances,
@@ -180,7 +183,7 @@ function TodayScreenContent() {
   // morning is accountability. Further back is rewriting the record.
   const canEdit = isWithinEditWindow(displayDate, todayStr);
   const [weekMonday, setWeekMonday] = useState(() => mondayOf(getLocalDateString()));
-  const [pastWeek, setPastWeek] = useState<WeekView | null>(null);
+  const [weekCache, setWeekCache] = useState<Record<string, WeekView>>({});
   const [earliestDate, setEarliestDate] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [checkInInstance, setCheckInInstance] = useState<DailyInstance | null>(null);
@@ -227,6 +230,7 @@ function TodayScreenContent() {
   const scrollRef = useAnimatedRef<Animated.ScrollView>();
   const scrollY = useSharedValue(0);
   const viewportHeight = useSharedValue(0);
+  const [viewportH, setViewportH] = useState(0);
   const flashTriggers = useRef<Record<string, () => void>>({});
 
   const scrollHandler = useAnimatedScrollHandler((e) => {
@@ -242,8 +246,6 @@ function TodayScreenContent() {
   };
 
   const todayLabel = getTodayLabel();
-  const viewedDayLabel =
-    WEEKDAYS[parseLocalDate(displayDate).getDay()]?.label ?? todayLabel;
 
   const sortedInstances = [...instances].sort(
     (a, b) => a.start_minutes - b.start_minutes
@@ -329,35 +331,39 @@ function TodayScreenContent() {
     [stats, todayStr]
   );
 
-  const isCurrentWeek = weekMonday === mondayOf(todayStr);
-
-  // A stale week is never rendered under the wrong header. While a fetch is
-  // in flight the squares go empty for a frame rather than showing another
-  // week's data, which would be a quiet lie about a real outcome.
-  const weekView = useMemo<WeekView>(() => {
-    if (isCurrentWeek && currentWeekView) return currentWeekView;
-    if (pastWeek?.mondayStr === weekMonday) return pastWeek;
-    return {
-      mondayStr: weekMonday,
-      completionRatio: Array(7).fill(0),
-      missedRatio: Array(7).fill(0),
-      completionRate: 0,
-    };
-  }, [isCurrentWeek, currentWeekView, pastWeek, weekMonday]);
+  const weeks = useMemo<WeekView[]>(() => {
+    const currentMon = mondayOf(todayStr);
+    const floor = earliestDate ? mondayOf(earliestDate) : currentMon;
+    return mondaysThrough(floor, currentMon).map((m) => {
+      if (m === currentMon && currentWeekView) return currentWeekView;
+      return (
+        weekCache[m] ?? {
+          mondayStr: m,
+          completionRatio: [0, 0, 0, 0, 0, 0, 0],
+          missedRatio: [0, 0, 0, 0, 0, 0, 0],
+          completionRate: 0,
+        }
+      );
+    });
+  }, [currentWeekView, earliestDate, todayStr, weekCache]);
 
   useEffect(() => {
     const userId = session?.user.id;
-    if (!userId || isCurrentWeek) return;
+    if (!userId || !earliestDate) return;
     let cancelled = false;
-    fetchWeekView(userId, weekMonday)
-      .then((w) => {
-        if (!cancelled) setPastWeek(w);
+    const currentMon = mondayOf(getLocalDateString());
+    fetchWeekViewsInRange(userId, mondayOf(earliestDate), currentMon)
+      .then((views) => {
+        if (cancelled) return;
+        const next: Record<string, WeekView> = {};
+        for (const w of views) next[w.mondayStr] = w;
+        setWeekCache(next);
       })
-      .catch((err) => handleError(err, "fetchWeekView"));
+      .catch((err) => handleError(err, "fetchWeekViewsInRange"));
     return () => {
       cancelled = true;
     };
-  }, [weekMonday, isCurrentWeek, session?.user.id, instances]);
+  }, [session?.user.id, earliestDate, instances]);
 
   useEffect(() => {
     const userId = session?.user.id;
@@ -369,13 +375,6 @@ function TodayScreenContent() {
 
   // "All time" ends where the data does. Scrubbing through empty weeks
   // before the first instance reads as a broken control, not as history.
-  const canGoBack =
-    earliestDate != null && weekMonday > mondayOf(earliestDate);
-
-  const handleStepWeek = useCallback((delta: -1 | 1) => {
-    setWeekMonday((m) => addDays(m, delta * 7));
-  }, []);
-
   const handleBackToToday = useCallback(() => {
     setWeekMonday(mondayOf(getLocalDateString()));
     backToToday();
@@ -1296,10 +1295,13 @@ function TodayScreenContent() {
         onScroll={scrollHandler}
         scrollEventThrottle={16}
         onLayout={(e) => {
-          viewportHeight.value = e.nativeEvent.layout.height;
+          const h = e.nativeEvent.layout.height;
+          viewportHeight.value = h;
+          setViewportH(h);
         }}
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
+        contentInsetAdjustmentBehavior="never"
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -1310,14 +1312,34 @@ function TodayScreenContent() {
           />
         }
       >
-        <View style={styles.header}>
+        <View style={styles.topBleed} />
+        <View
+          style={[
+            styles.dayColumn,
+            viewportH > 0 ? { minHeight: viewportH } : null,
+          ]}
+        >
+        <View
+          style={[
+            styles.topHousing,
+            { paddingTop: Math.max(insets.top, 12) + 8 },
+          ]}
+        >
           <View style={styles.headerTop}>
-            <View>
-              <Text style={styles.title}>
-                {isPastDay ? formatDayLabel(displayDate) : "Today"}
+            <View style={styles.headerTitle}>
+              <Text style={styles.title} numberOfLines={1}>
+                {isPastDay
+                  ? displayDate === addDays(todayStr, -1)
+                    ? "Yesterday"
+                    : parseLocalDate(displayDate).toLocaleDateString("en-US", {
+                        weekday: "long",
+                      })
+                  : "Today"}
               </Text>
-              <Text style={styles.date}>
-                {displayDate} · {viewedDayLabel}
+              <Text style={styles.date} numberOfLines={1}>
+                {isPastDay
+                  ? formatMonthDay(displayDate)
+                  : formatDisplayDate(displayDate)}
               </Text>
             </View>
             <View style={styles.headerRight}>
@@ -1332,14 +1354,10 @@ function TodayScreenContent() {
               </PressableScale>
             </View>
           </View>
-          {/* Today's card only. On a past day the engine's read on this
-              morning is not what the user came here for. */}
-          {morningInsight && !insightDismissed && !isPastDay ? (
-            <InsightCard insight={morningInsight} onDismiss={handleDismissInsight} />
-          ) : null}
           {stats ? (
             <StreakStrip
-              week={weekView}
+              weeks={weeks}
+              selectedMonday={weekMonday}
               todayStr={todayStr}
               selectedDate={displayDate}
               streak={isPastDay ? stats.streak : liveStreak}
@@ -1347,8 +1365,7 @@ function TodayScreenContent() {
               liveDate={displayDate}
               liveCompletionRatio={viewedCompletionRatio}
               liveMissedRatio={viewedMissedRatio}
-              canGoBack={canGoBack}
-              onStepWeek={handleStepWeek}
+              onSelectMonday={setWeekMonday}
               onSelectDay={goToDate}
             />
           ) : null}
@@ -1365,6 +1382,15 @@ function TodayScreenContent() {
             </View>
           ) : null}
         </View>
+        {/* Today's card only. On a past day the engine's read on this
+            morning is not what the user came here for. Lives below the
+            housing so a card is not nested inside the header band. */}
+        <View style={styles.body}>
+        {morningInsight && !insightDismissed && !isPastDay ? (
+          <View style={styles.insightWrap}>
+            <InsightCard insight={morningInsight} onDismiss={handleDismissInsight} />
+          </View>
+        ) : null}
 
         <View style={styles.list}>
           {openItems.length === 0 &&
@@ -1493,7 +1519,14 @@ function TodayScreenContent() {
             </Text>
           ) : null}
         </View>
+        </View>
+        </View>
+        <View style={styles.bottomBleed} />
       </Animated.ScrollView>
+      <View
+        pointerEvents="none"
+        style={[styles.upperRealm, { height: insets.top }]}
+      />
 
       {toastMessage ? (
         <Animated.View style={[styles.toast, toastAnimatedStyle]} pointerEvents="none">
@@ -1810,16 +1843,53 @@ const makeStyles = (c: Colors) =>
       alignItems: "center",
       justifyContent: "center",
     },
-    header: { paddingTop: 60, paddingHorizontal: spacing.xl, paddingBottom: spacing.lg },
+    topBleed: {
+      height: 400,
+      marginTop: -400,
+      backgroundColor: c.surface,
+    },
+    bottomBleed: {
+      height: 400,
+      marginBottom: -400,
+      backgroundColor: c.background,
+    },
+    dayColumn: {
+      flexGrow: 1,
+    },
+    upperRealm: {
+      position: "absolute",
+      top: 0,
+      left: 0,
+      right: 0,
+      backgroundColor: c.surface,
+    },
+    topHousing: {
+      backgroundColor: c.surface,
+      paddingHorizontal: spacing.lg,
+      paddingBottom: spacing.lg,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: c.border,
+    },
+    body: { backgroundColor: c.background, flexGrow: 1 },
+    insightWrap: {
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.lg,
+    },
     headerTop: {
       flexDirection: "row",
       justifyContent: "space-between",
       alignItems: "center",
     },
+    headerTitle: {
+      flex: 1,
+      minWidth: 0,
+      marginRight: spacing.md,
+    },
     headerRight: {
       flexDirection: "row",
       alignItems: "center",
       gap: 10,
+      flexShrink: 0,
     },
     avatar: {
       width: 40,
@@ -1828,11 +1898,11 @@ const makeStyles = (c: Colors) =>
       backgroundColor: c.primaryDeep,
       alignItems: "center",
       justifyContent: "center",
+      ...c.shadowRest,
     },
     avatarText: { color: c.primary, ...typography.bodyBold },
     title: { ...typography.display, color: c.text },
     pastBanner: {
-      marginHorizontal: spacing.xl,
       marginTop: spacing.md,
       backgroundColor: c.surfaceNested,
       borderRadius: radii.md,
@@ -1846,7 +1916,7 @@ const makeStyles = (c: Colors) =>
     pastBannerAction: { color: c.primary, ...typography.smallBold },
     date: { ...typography.small, ...numeric, color: c.textMuted, marginTop: spacing.xs },
     list: { padding: spacing.lg, paddingBottom: 100 },
-    scroll: { flex: 1 },
+    scroll: { flex: 1, backgroundColor: c.background },
     scrollContent: { flexGrow: 1 },
     empty: { color: c.textFaint, textAlign: "center", marginTop: 40, ...typography.body },
     addAdhocPill: {

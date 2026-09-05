@@ -11,6 +11,7 @@ import {
   daysBetween,
   isWithinEditWindow,
   mondayOf,
+  mondaysThrough,
   weekDates,
   EDIT_WINDOW_DAYS,
   STREAK_THRESHOLD,
@@ -174,6 +175,14 @@ describe("week date helpers", () => {
     // US DST ends 2026-11-01. A naive millisecond division rounds to 0.96
     // of a day here, which would floor to the wrong answer.
     expect(daysBetween("2026-10-31", "2026-11-02")).toBe(2);
+  });
+
+  it("lists Mondays from the first week through the last", () => {
+    expect(mondaysThrough("2026-08-17", "2026-08-31")).toEqual([
+      "2026-08-17",
+      "2026-08-24",
+      "2026-08-31",
+    ]);
   });
 
   it("lists seven consecutive dates for a week", () => {

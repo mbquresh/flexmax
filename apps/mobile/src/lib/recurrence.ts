@@ -31,6 +31,35 @@ export function formatEndDate(iso: string): string {
   });
 }
 
+export type TimeOverrides = Record<string, { start: number; end: number }>;
+
+export function resolveBlockTimes(
+  block: { start_minutes: number; end_minutes: number; time_overrides?: TimeOverrides | null },
+  dayOfWeek: number
+): { start: number; end: number } {
+  const o = block.time_overrides?.[String(dayOfWeek)];
+  return o
+    ? { start: o.start, end: o.end }
+    : { start: block.start_minutes, end: block.end_minutes };
+}
+
+export function overrideDays(o?: TimeOverrides | null): number[] {
+  return Object.keys(o ?? {}).map(Number).sort((a, b) => a - b);
+}
+
+// Both keys move together. A half-override means inheriting one end of a
+// window and not the other, which is never what someone means.
+export function setOverride(
+  o: TimeOverrides | null | undefined,
+  day: number,
+  times: { start: number; end: number } | null
+): TimeOverrides {
+  const next = { ...(o ?? {}) };
+  if (times) next[String(day)] = times;
+  else delete next[String(day)];
+  return next;
+}
+
 export function describeRecurrence(
   days: number[],
   intervalWeeks: number,

@@ -118,6 +118,7 @@ export interface ScheduleBlock {
   ends_on: string | null;
   interval_weeks: number;
   anchor_date: string | null;
+  time_overrides: Record<string, { start: number; end: number }> | null;
 }
 
 export interface AwayPeriod {

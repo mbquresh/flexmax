@@ -56,6 +56,18 @@ export function weekDates(mondayStr: string): string[] {
   return Array.from({ length: 7 }, (_, i) => addDays(mondayStr, i));
 }
 
+/** Inclusive Monday list from `fromMonday` through `toMonday`. */
+export function mondaysThrough(fromMonday: string, toMonday: string): string[] {
+  if (fromMonday > toMonday) return [toMonday];
+  const out: string[] = [];
+  let m = fromMonday;
+  while (m <= toMonday) {
+    out.push(m);
+    m = addDays(m, 7);
+  }
+  return out;
+}
+
 // Yesterday is still accountability: the evening closed without a check-in
 // and the person is catching up. Further back is rewriting the record.
 export const EDIT_WINDOW_DAYS = 1;
@@ -132,6 +144,25 @@ export async function fetchWeekView(
     .lte("date", addDays(mondayStr, 6));
 
   return computeWeekView(data ?? [], mondayStr, getLocalDateString());
+}
+
+/** Every week from fromMonday through toMonday, one query. */
+export async function fetchWeekViewsInRange(
+  userId: string,
+  fromMonday: string,
+  toMonday: string
+): Promise<WeekView[]> {
+  const { data } = await supabase
+    .from("daily_schedule_instances")
+    .select("date, status")
+    .eq("user_id", userId)
+    .gte("date", fromMonday)
+    .lte("date", addDays(toMonday, 6));
+
+  const today = getLocalDateString();
+  return mondaysThrough(fromMonday, toMonday).map((m) =>
+    computeWeekView(data ?? [], m, today)
+  );
 }
 
 /**

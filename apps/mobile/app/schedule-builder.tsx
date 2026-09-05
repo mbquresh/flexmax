@@ -21,7 +21,9 @@ import {
   setBlockArchived,
   ensureActiveTemplate,
   DayBoundaryOverrides,
+  WEEKDAYS,
 } from "../src/lib/schedule";
+import { resolveBlockTimes, setOverride } from "../src/lib/recurrence";
 import { getLocalDateString } from "../src/lib/time";
 import { useAuth } from "../src/providers/AuthProvider";
 import { useTheme } from "../src/providers/ThemeProvider";
@@ -31,11 +33,13 @@ import { handleError, getErrorMessage, isConnectivityError } from "../src/lib/er
 
 import { RequireAuth } from "../src/components/RequireAuth";
 import { BrandLoader } from "../src/components/BrandLoader";
+import { BrandMark } from "../src/components/BrandMark";
 import { LoadError } from "../src/components/LoadError";
 import { PressableScale } from "../src/components/PressableScale";
 import { BoundaryRow } from "../src/components/BoundaryRow";
 import { ScheduleBlockCard } from "../src/components/ScheduleBlockCard";
 import { BlockFormSheet, BlockFormData } from "../src/components/BlockFormSheet";
+import { DayStrip } from "../src/components/DayStrip";
 import { DayBoundariesSheet } from "../src/components/DayBoundariesSheet";
 import { AwaySheet } from "../src/components/AwaySheet";
 import { Colors, spacing, radii, typography, iconSizes } from "../src/theme";
@@ -46,6 +50,12 @@ import {
   deleteAwayPeriod,
   formatAwayRange,
 } from "../src/lib/away";
+
+function weekdayLong(day: number): string {
+  return WEEKDAYS[day]
+    ? new Date(2026, 0, 4 + day).toLocaleDateString("en-US", { weekday: "long" })
+    : "?";
+}
 
 function featuredAwayPeriod(periods: AwayPeriod[]): AwayPeriod | null {
   if (!periods.length) return null;
@@ -92,6 +102,7 @@ function ScheduleBuilderScreenContent() {
   const [awaySaving, setAwaySaving] = useState(false);
   const [awayPeriods, setAwayPeriods] = useState<AwayPeriod[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
 
   const activeBlocks = useMemo(
     () => blocks.filter((b) => b.is_active),
@@ -101,6 +112,13 @@ function ScheduleBuilderScreenContent() {
     () => blocks.filter((b) => !b.is_active),
     [blocks]
   );
+  const visibleBlocks = useMemo(() => {
+    if (selectedDay === null) return activeBlocks;
+    return activeBlocks
+      .filter((b) => (b.days_of_week ?? []).includes(selectedDay))
+      .map((b) => ({ ...b, __resolved: resolveBlockTimes(b, selectedDay) }))
+      .sort((a, b) => a.__resolved.start - b.__resolved.start);
+  }, [activeBlocks, selectedDay]);
 
   const loadBlocks = async (quiet = false) => {
     if (!session?.user.id) {
@@ -286,6 +304,35 @@ function ScheduleBuilderScreenContent() {
     }
   };
 
+  const handleClearDayOverride = useCallback(
+    async (block: ScheduleBlock, day: number) => {
+      const next = setOverride(block.time_overrides, day, null);
+      const payload = Object.keys(next).length ? next : null;
+      setSaving(true);
+      setError(null);
+      try {
+        const { data: updated, error } = await supabase
+          .from("schedule_blocks")
+          .update({ time_overrides: payload })
+          .eq("id", block.id)
+          .select()
+          .single();
+        if (error) throw error;
+        setBlocks(blocks.map((b) => (b.id === block.id ? updated : b)));
+        hapticCommit();
+      } catch (err) {
+        const message = getErrorMessage(err);
+        handleError(err, "handleClearDayOverride");
+        hapticReject();
+        setError(message);
+        if (Platform.OS !== "web") Alert.alert("Error", message);
+      } finally {
+        setSaving(false);
+      }
+    },
+    [blocks, setBlocks]
+  );
+
   const handleArchiveToggle = useCallback(
     async (block: ScheduleBlock) => {
       const archiving = block.is_active;
@@ -349,16 +396,43 @@ function ScheduleBuilderScreenContent() {
     [blocks, setBlocks]
   );
 
+  const handleArchivePress = useCallback(
+    (block: ScheduleBlock) => {
+      if (
+        block.is_active &&
+        selectedDay != null &&
+        block.time_overrides?.[String(selectedDay)]
+      ) {
+        const dayName = weekdayLong(selectedDay);
+        Alert.alert(`Change ${block.name} on ${dayName}?`, undefined, [
+          {
+            text: `Use the usual time on ${dayName}`,
+            onPress: () => handleClearDayOverride(block, selectedDay),
+          },
+          {
+            text: "Archive the whole block",
+            onPress: () => handleArchiveToggle(block),
+          },
+          { text: "Cancel", style: "cancel" },
+        ]);
+        return;
+      }
+      handleArchiveToggle(block);
+    },
+    [selectedDay, handleClearDayOverride, handleArchiveToggle]
+  );
+
   const renderItem = useCallback(
     ({ item }: { item: ScheduleBlock }) => (
       <ScheduleBlockCard
         block={item}
+        selectedDay={selectedDay}
         onEdit={handleEditPress}
-        onArchive={handleArchiveToggle}
+        onArchive={handleArchivePress}
         disabled={saving}
       />
     ),
-    [handleEditPress, handleArchiveToggle, saving]
+    [handleEditPress, handleArchivePress, saving, selectedDay]
   );
 
   if (!session) return null;
@@ -435,6 +509,12 @@ function ScheduleBuilderScreenContent() {
       showError("End time must be after start time.");
       return;
     }
+    for (const times of Object.values(data.timeOverrides)) {
+      if (times.end <= times.start) {
+        showError("End time must be after start time.");
+        return;
+      }
+    }
     if (data.endsOn && data.endsOn < getLocalDateString()) {
       showError("End date can't be in the past.");
       return;
@@ -456,6 +536,9 @@ function ScheduleBuilderScreenContent() {
             is_fixed: data.isFixed,
             interval_weeks: data.intervalWeeks,
             ends_on: data.endsOn,
+            time_overrides: Object.keys(data.timeOverrides).length
+              ? data.timeOverrides
+              : null,
             // anchor_date defines week 0. Set it once when a block first becomes
             // non-weekly and NEVER move it — a shifting anchor silently reshuffles
             // which weeks the block lands on, and the user would only notice weeks
@@ -489,8 +572,19 @@ function ScheduleBuilderScreenContent() {
           endsOn: data.endsOn,
           anchorDate: data.intervalWeeks > 1 ? getLocalDateString() : null,
         });
+        let saved = created;
+        if (Object.keys(data.timeOverrides).length) {
+          const { data: withOverrides, error: overrideError } = await supabase
+            .from("schedule_blocks")
+            .update({ time_overrides: data.timeOverrides })
+            .eq("id", created.id)
+            .select()
+            .single();
+          if (overrideError) throw overrideError;
+          saved = withOverrides;
+        }
         setBlocks(
-          [...blocks, created].sort((a, b) => a.start_minutes - b.start_minutes)
+          [...blocks, saved].sort((a, b) => a.start_minutes - b.start_minutes)
         );
       }
       setFormOpen(false);
@@ -512,7 +606,7 @@ function ScheduleBuilderScreenContent() {
     const blockCategory = preset.category;
     const blockStart = preset.startMinutes;
     const blockEnd = preset.endMinutes;
-    const daysOfWeek = ALL_DAYS;
+    const daysOfWeek = selectedDay != null ? [selectedDay] : ALL_DAYS;
 
     if (!blockName) {
       showError("Give the block a name.");
@@ -570,7 +664,7 @@ function ScheduleBuilderScreenContent() {
   return (
     <View style={styles.container}>
       <FlatList
-        data={activeBlocks}
+        data={visibleBlocks}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         contentContainerStyle={[styles.list, { paddingBottom: 120 + insets.bottom }]}
@@ -586,13 +680,15 @@ function ScheduleBuilderScreenContent() {
         ListHeaderComponent={
           <>
             <View style={styles.header}>
+              <View style={styles.headerMark}>
+                <BrandMark size={28} />
+              </View>
               <Text style={styles.title}>Build your schedule</Text>
-              <Text style={styles.subtitle}>
-                Set the shape of a normal day. You can change any of it later.
-              </Text>
             </View>
 
             {error ? <Text style={styles.errorBox}>{error}</Text> : null}
+
+            <DayStrip value={selectedDay} onChange={setSelectedDay} />
 
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Quick add</Text>
@@ -641,13 +737,21 @@ function ScheduleBuilderScreenContent() {
           </>
         }
         ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Feather name="calendar" size={28} color={colors.textDisabled} />
-            <Text style={styles.emptyTitle}>No blocks yet</Text>
-            <Text style={styles.emptyBody}>
-              Start with a quick-add above, or build your own.
-            </Text>
-          </View>
+          selectedDay != null && activeBlocks.length > 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyTitle}>
+                Nothing on {weekdayLong(selectedDay)} yet
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.emptyState}>
+              <Feather name="calendar" size={28} color={colors.textDisabled} />
+              <Text style={styles.emptyTitle}>No blocks yet</Text>
+              <Text style={styles.emptyBody}>
+                Start with a quick-add above, or build your own.
+              </Text>
+            </View>
+          )
         }
         ListFooterComponent={
           <>
@@ -742,6 +846,8 @@ function ScheduleBuilderScreenContent() {
       <BlockFormSheet
         visible={formOpen}
         initial={editingBlock}
+        selectedDay={selectedDay}
+        defaultDay={selectedDay}
         saving={saving}
         error={error}
         onSave={handleFormSave}
@@ -797,9 +903,9 @@ const makeStyles = (c: Colors) =>
       alignItems: "center",
       justifyContent: "center",
     },
-    header: { paddingTop: 60, paddingHorizontal: spacing.xl, paddingBottom: spacing.md },
-    title: { fontSize: 24, fontWeight: "600", color: c.text },
-    subtitle: { fontSize: 14, color: c.textMuted, marginTop: 6 },
+    header: { paddingTop: 60, paddingBottom: spacing.md },
+    headerMark: { alignItems: "center", marginBottom: spacing.md },
+    title: { fontSize: 24, fontWeight: "600", color: c.text, textAlign: "left" },
     boundaryLabel: {
       color: c.textMuted,
       fontSize: 11,

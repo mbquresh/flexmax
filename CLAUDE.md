@@ -272,6 +272,7 @@ Cursor = implementation engine.
 | 043 | calendar_feed_token.sql | Secret for the public ICS feed URL, nullable and generated lazily so a user who never exports has no live endpoint. Unique partial index — the token is the sole lookup key for an unauthenticated endpoint, so a collision would serve one user another's schedule. get_or_create_calendar_token and revoke_calendar_token are SECURITY DEFINER with auth.uid() guards |
 | 044 | removed_by.sql | Provenance on removal: user / displacement / archive / away. Four different things wrote 'removed' indistinguishably |
 | 045 | backfill_marker.sql | backfilled_at + a BEFORE UPDATE trigger. Past-day editing makes every now()-stamping timing column (acknowledged_at, rated_at, reflected_at) unreliable: a block from last Tuesday answered today reports five days of recovery time. A trigger not a client write, because a marker protecting a metric must not depend on every future call site remembering it. Compares against the user's own timezone, since yesterday is the common backfill and a UTC comparison would read it as same-day for half the world. Only an outcome write marks the row — a swap or task_detail edit is housekeeping. Once marked, always marked: the day cannot come back |
+| 046 | block_time_overrides.sql | Sparse per-weekday time overrides on schedule_blocks; both generate_* functions resolve them. Base columns unchanged, nothing backfilled |
 
 030 exists to answer the supporting reopen signal: of users who had a bad week, what
 share opened the app the following week. Capture is fire-and-forget from
@@ -485,6 +486,7 @@ marker at all.
 | Stale check-in banners dismissed | scheduleTodayBlockNotifications. Cancel only hits the scheduled set. A "How'd it go?" that had already fired stayed in Notification Center after the block was completed. Presented banners whose instance is no longer pending/active are dismissed on every rebuild |
 | Completion notes on check-in | CheckInSheet optional free text, written to reflection_improve. No chips — those are why capture was removed. Typed notes feed the existing "Last time you wrote" path |
 | Shorten-template remedy | src/lib/remedy.ts + recovery. Same 4-of-7 floor as preempt/quality-drift. Offers half duration (not below 40 minutes to start, floor MIN_BLOCK_MINUTES). Copy states this changes the repeating block from tomorrow on, not today's miss. User confirms. Writes schedule_blocks.end_minutes so tomorrow generates shorter. Undo on the same screen writes the original length back. Headline is the option, not the miss count. Fixed blocks excluded. A later restore-after-quality-recovers offer is not built |
+| Day selector and per-day times | schedule-builder.tsx + DayStrip + 046. The builder was a flat list of rules ABOUT the week, so the user reconstructed their week mentally; and a block held one time, so different times on different days forced a second block — which the engine already merged, since get_behavior_evidence groups by name. Tapping a day filters to that day, sorted by resolved time, and the time pickers then edit that day only. Defaults to All, not today: this screen is visited to set up a week, and starting on one day hides six sevenths of it. Adding a block while a day is selected defaults to that day. Archiving from a day view with an override asks whether to drop the day or the block, rather than guessing |
 
 
 
@@ -913,6 +915,12 @@ makes it a one-line swap in theme.ts if ever revisited.
 - **Onboarding has no paywall because there isn't one.** handleStart still
   routes to the schedule builder. The contract screen is where the paywall
   goes once RevenueCat lands.
+- **Calendar export ignores time_overrides.** calendar-feed emits one
+  VEVENT per block using base start_minutes/end_minutes, so a block with a
+  Saturday override reports the wrong Saturday time to every subscribed
+  calendar. Fixing it means splitting such a block into multiple VEVENTs with
+  disjoint BYDAY sets. Until then the feed is silently wrong for any block
+  with an override.
 
 ---
 
