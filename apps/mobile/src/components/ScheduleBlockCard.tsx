@@ -5,6 +5,7 @@ import { ScheduleBlock } from "../types/database";
 import { minutesToTime } from "../lib/time";
 import {
   describeRecurrence,
+  hasDistinctOverride,
   overrideDays,
   resolveBlockTimes,
 } from "../lib/recurrence";
@@ -20,11 +21,12 @@ function weekdayLong(day: number): string {
     : "?";
 }
 
-function overrideSummary(
-  overrides: NonNullable<ScheduleBlock["time_overrides"]>
-): string {
+function overrideSummary(block: ScheduleBlock): string {
+  const overrides = block.time_overrides;
+  if (!overrides) return "";
   const groups = new Map<number, number[]>();
   for (const day of overrideDays(overrides)) {
+    if (!hasDistinctOverride(block, day)) continue;
     const start = overrides[String(day)]?.start;
     if (start == null) continue;
     const days = groups.get(start) ?? [];
@@ -62,11 +64,9 @@ export const ScheduleBlockCard = React.memo(function ScheduleBlockCard({
       ? resolveBlockTimes(block, selectedDay)
       : { start: block.start_minutes, end: block.end_minutes };
   const dayHasOverride =
-    selectedDay != null && block.time_overrides?.[String(selectedDay)] != null;
+    selectedDay != null && hasDistinctOverride(block, selectedDay);
   const allViewSummary =
-    selectedDay == null && block.time_overrides
-      ? overrideSummary(block.time_overrides)
-      : "";
+    selectedDay == null ? overrideSummary(block) : "";
 
   return (
     <PressableScale
@@ -126,7 +126,9 @@ export const ScheduleBlockCard = React.memo(function ScheduleBlockCard({
       </Text>
       {dayHasOverride ? (
         <View style={styles.differentTag}>
-          <Text style={styles.differentTagText}>different today</Text>
+          <Text style={styles.differentTagText}>
+            different on {weekdayLong(selectedDay ?? 0)}
+          </Text>
         </View>
       ) : null}
       <Text style={styles.blockRepeats}>

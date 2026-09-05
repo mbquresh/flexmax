@@ -98,6 +98,40 @@ function dowOf(iso: string): number {
 // DTSTART must be the block's FIRST occurrence on or after its anchor, not
 // today. RRULE counts INTERVAL from DTSTART, so a DTSTART on the wrong week
 // puts every biweekly occurrence on the wrong weeks.
+type TimeOverrides = Record<string, { start: number; end: number }>;
+
+function resolveTimes(
+  start: number,
+  end: number,
+  overrides: TimeOverrides | null | undefined,
+  day: number
+): { start: number; end: number } {
+  const o = overrides?.[String(day)];
+  return o ? { start: o.start, end: o.end } : { start, end };
+}
+
+// One VEVENT per distinct time window. A Saturday override cannot share a
+// BYDAY set with the weekday base, or every subscriber sees the wrong Saturday.
+function timeGroups(
+  days: number[],
+  start: number,
+  end: number,
+  overrides: TimeOverrides | null | undefined
+): { days: number[]; start: number; end: number; base: boolean }[] {
+  const groups = new Map<string, { days: number[]; start: number; end: number }>();
+  for (const day of days) {
+    const t = resolveTimes(start, end, overrides, day);
+    const key = `${t.start}-${t.end}`;
+    const g = groups.get(key);
+    if (g) g.days.push(day);
+    else groups.set(key, { days: [day], start: t.start, end: t.end });
+  }
+  return [...groups.values()].map((g) => ({
+    ...g,
+    base: g.start === start && g.end === end,
+  }));
+}
+
 function firstOccurrence(
   anchor: string,
   days: number[]
@@ -165,7 +199,7 @@ function serve_handler() {
       const { data: blocks, error: blocksErr } = await supabase
         .from("schedule_blocks")
         .select(
-          "id, name, start_minutes, end_minutes, days_of_week, is_fixed, is_active, starts_on, ends_on, interval_weeks, anchor_date, created_at"
+          "id, name, start_minutes, end_minutes, days_of_week, is_fixed, is_active, starts_on, ends_on, interval_weeks, anchor_date, created_at, time_overrides"
         )
         .eq("user_id", userId)
         .eq("is_active", true)
@@ -223,55 +257,69 @@ function serve_handler() {
 
         const anchor =
           b.anchor_date ?? b.starts_on ?? String(b.created_at).slice(0, 10);
-        const first = firstOccurrence(anchor, days);
-        if (!first) continue;
-
-        const byDay = days
-          .slice()
-          .sort((x, y) => x - y)
-          .map((d) => DAY_CODES[d])
-          .join(",");
-
         const interval = b.interval_weeks ?? 1;
-
-        let rrule = `RRULE:FREQ=WEEKLY;BYDAY=${byDay}`;
-        if (interval > 1) rrule += `;INTERVAL=${interval}`;
-        // WKST affects how INTERVAL counts weeks for a rule whose BYDAY spans
-        // the week boundary. Fixed to MO so the output is at least
-        // deterministic across clients.
-        if (interval > 1) rrule += ";WKST=MO";
-        if (b.ends_on) {
-          // RFC 5545: UNTIL must match DTSTART's value type. DTSTART is
-          // floating, so UNTIL is floating too -- no trailing Z.
-          rrule += `;UNTIL=${dateToICS(b.ends_on)}T${minutesToTime(b.end_minutes)}`;
-        }
-
         const skipped = new Set<string>([
           ...(exByBlock.get(b.id) ?? []),
           ...awayDates,
         ]);
-        // Only exclude dates this block would actually fall on, or clients
-        // warn about EXDATEs that match no occurrence.
-        const relevant = [...skipped]
-          .filter((d) => days.includes(dowOf(d)) && d >= first)
-          .sort();
+        const groups = timeGroups(
+          days,
+          b.start_minutes,
+          b.end_minutes,
+          b.time_overrides as TimeOverrides | null
+        );
 
-        lines.push("BEGIN:VEVENT");
-        lines.push(`UID:${b.id}@flexmax.app`);
-        lines.push(`DTSTAMP:${stamp}`);
-        lines.push(`SUMMARY:${escapeText(b.name)}`);
-        lines.push(`DTSTART:${dateToICS(first)}T${minutesToTime(b.start_minutes)}`);
-        lines.push(`DTEND:${dateToICS(first)}T${minutesToTime(b.end_minutes)}`);
-        lines.push(rrule);
-        if (relevant.length) {
-          lines.push(
-            `EXDATE:${relevant
-              .map((d) => `${dateToICS(d)}T${minutesToTime(b.start_minutes)}`)
-              .join(",")}`
-          );
+        for (const group of groups) {
+          const first = firstOccurrence(anchor, group.days);
+          if (!first) continue;
+
+          const byDay = group.days
+            .slice()
+            .sort((x, y) => x - y)
+            .map((d) => DAY_CODES[d])
+            .join(",");
+
+          let rrule = `RRULE:FREQ=WEEKLY;BYDAY=${byDay}`;
+          if (interval > 1) rrule += `;INTERVAL=${interval}`;
+          // WKST affects how INTERVAL counts weeks for a rule whose BYDAY spans
+          // the week boundary. Fixed to MO so the output is at least
+          // deterministic across clients.
+          if (interval > 1) rrule += ";WKST=MO";
+          if (b.ends_on) {
+            // RFC 5545: UNTIL must match DTSTART's value type. DTSTART is
+            // floating, so UNTIL is floating too -- no trailing Z.
+            rrule += `;UNTIL=${dateToICS(b.ends_on)}T${minutesToTime(group.end)}`;
+          }
+
+          // Only exclude dates this group would actually fall on, or clients
+          // warn about EXDATEs that match no occurrence.
+          const relevant = [...skipped]
+            .filter((d) => group.days.includes(dowOf(d)) && d >= first)
+            .sort();
+
+          // Keep the historical UID on the base-time group so existing
+          // subscriptions update in place. Override groups need their own UID.
+          const uid = group.base
+            ? `${b.id}@flexmax.app`
+            : `${b.id}-${group.start}-${group.end}@flexmax.app`;
+
+          lines.push("BEGIN:VEVENT");
+          lines.push(`UID:${uid}`);
+          lines.push(`DTSTAMP:${stamp}`);
+          lines.push(`SUMMARY:${escapeText(b.name)}`);
+          lines.push(`DTSTART:${dateToICS(first)}T${minutesToTime(group.start)}`);
+          lines.push(`DTEND:${dateToICS(first)}T${minutesToTime(group.end)}`);
+          lines.push(rrule);
+          if (relevant.length) {
+            lines.push(
+              `EXDATE:${relevant
+                .map((d) => `${dateToICS(d)}T${minutesToTime(group.start)}`)
+                .join(",")}`
+            );
+          }
+          lines.push("TRANSP:OPAQUE");
+          lines.push("END:VEVENT");
         }
-        lines.push("TRANSP:OPAQUE");
-        lines.push("END:VEVENT");
       }
 
       lines.push("END:VCALENDAR");

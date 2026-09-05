@@ -60,6 +60,65 @@ export function setOverride(
   return next;
 }
 
+// The live column is NOT NULL with no DEFAULT. An omitted or null write
+// is a 23502, and because days_of_week rides in the same UPDATE the
+// weekday-only choice never lands — the block stays on every day.
+export function packedTimeOverrides(
+  days: number[],
+  o?: TimeOverrides | null,
+  base?: { start: number; end: number }
+): TimeOverrides {
+  const next: TimeOverrides = {};
+  for (const [k, v] of Object.entries(o ?? {})) {
+    if (!days.includes(Number(k))) continue;
+    if (base && v.start === base.start && v.end === base.end) continue;
+    next[k] = v;
+  }
+  return next;
+}
+
+export function hasDistinctOverride(
+  block: {
+    start_minutes: number;
+    end_minutes: number;
+    time_overrides?: TimeOverrides | null;
+  },
+  dayOfWeek: number
+): boolean {
+  const o = block.time_overrides?.[String(dayOfWeek)];
+  if (!o) return false;
+  return o.start !== block.start_minutes || o.end !== block.end_minutes;
+}
+
+export function shiftOverrides(
+  o: TimeOverrides | null | undefined,
+  deltaStart: number,
+  deltaEnd: number
+): TimeOverrides {
+  if (!deltaStart && !deltaEnd) return { ...(o ?? {}) };
+  const next: TimeOverrides = {};
+  for (const [k, v] of Object.entries(o ?? {})) {
+    const start = v.start + deltaStart;
+    const end = v.end + deltaEnd;
+    if (start < 0 || end > 1440 || end <= start) continue;
+    next[k] = { start, end };
+  }
+  return next;
+}
+
+export function earliestResolvedStart(
+  block: {
+    start_minutes: number;
+    end_minutes: number;
+    days_of_week?: number[] | null;
+    time_overrides?: TimeOverrides | null;
+  }
+): number {
+  const days = (block.days_of_week ?? []).map(Number);
+  if (!days.length) return block.start_minutes;
+  return Math.min(...days.map((d) => resolveBlockTimes(block, d).start));
+}
+
 export function describeRecurrence(
   days: number[],
   intervalWeeks: number,

@@ -40,7 +40,7 @@ export function DayStrip({ value, onChange }: DayStripProps) {
             onPress={() => select(day.value)}
           >
             <Text style={[styles.segText, selected && styles.segTextSelected]}>
-              {day.label[0]}
+              {day.label.slice(0, 2)}
             </Text>
           </PressableScale>
         );

@@ -7,8 +7,12 @@ import {
   describeRecurrence,
   formatEndDate,
   overrideDays,
+  packedTimeOverrides,
+  hasDistinctOverride,
+  earliestResolvedStart,
   resolveBlockTimes,
   setOverride,
+  shiftOverrides,
 } from "./recurrence";
 
 const BASE = { start_minutes: 360, end_minutes: 420 };
@@ -73,6 +77,90 @@ describe("overrideDays", () => {
 
   it("returns an empty list when time_overrides is null", () => {
     expect(overrideDays(null)).toEqual([]);
+  });
+});
+
+describe("packedTimeOverrides", () => {
+  it("returns an empty object rather than null", () => {
+    expect(packedTimeOverrides([1, 2, 3, 4, 5], null)).toEqual({});
+    expect(packedTimeOverrides([1, 2, 3, 4, 5], {})).toEqual({});
+  });
+
+  it("drops overrides for days that are no longer in the repeat set", () => {
+    expect(
+      packedTimeOverrides([1, 2, 3, 4, 5], {
+        "6": { start: 540, end: 600 },
+        "1": { start: 360, end: 420 },
+      })
+    ).toEqual({ "1": { start: 360, end: 420 } });
+  });
+
+  it("drops overrides that match the base times", () => {
+    expect(
+      packedTimeOverrides(
+        [0, 6],
+        { "0": { start: 360, end: 420 } },
+        { start: 360, end: 420 }
+      )
+    ).toEqual({});
+  });
+});
+
+describe("hasDistinctOverride", () => {
+  const block = {
+    start_minutes: 360,
+    end_minutes: 420,
+    time_overrides: { "0": { start: 360, end: 420 }, "6": { start: 540, end: 600 } },
+  };
+
+  it("is false when the day's override matches the base", () => {
+    expect(hasDistinctOverride(block, 0)).toBe(false);
+  });
+
+  it("is true when the day's override differs", () => {
+    expect(hasDistinctOverride(block, 6)).toBe(true);
+  });
+
+  it("is false when the day has no override", () => {
+    expect(hasDistinctOverride(block, 1)).toBe(false);
+  });
+});
+
+describe("shiftOverrides", () => {
+  it("moves every override by the same delta", () => {
+    expect(
+      shiftOverrides({ "6": { start: 540, end: 600 } }, 60, 60)
+    ).toEqual({ "6": { start: 600, end: 660 } });
+  });
+
+  it("drops an override that would invert or leave the day", () => {
+    expect(
+      shiftOverrides({ "6": { start: 1380, end: 1440 } }, 120, 120)
+    ).toEqual({});
+  });
+});
+
+describe("earliestResolvedStart", () => {
+  it("uses a single day's resolved time, not a leftover base", () => {
+    expect(
+      earliestResolvedStart({
+        start_minutes: 360,
+        end_minutes: 420,
+        days_of_week: [6],
+        time_overrides: { "6": { start: 1260, end: 1320 } },
+      })
+    ).toBe(1260);
+  });
+
+  it("returns the earliest resolved start across the week", () => {
+    expect(
+      earliestResolvedStart({
+        start_minutes: 540,
+        end_minutes: 600,
+        days_of_week: [1, 6],
+        time_overrides: { "6": { start: 360, end: 420 } },
+      })
+    ).toBe(360);
   });
 });
 

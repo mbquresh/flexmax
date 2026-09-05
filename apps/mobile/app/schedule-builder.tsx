@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
-import { supabase } from "../src/lib/supabase";
+import { generateDailyInstances, supabase } from "../src/lib/supabase";
 import {
   ALL_DAYS,
   BLOCK_PRESETS,
@@ -23,8 +23,12 @@ import {
   DayBoundaryOverrides,
   WEEKDAYS,
 } from "../src/lib/schedule";
-import { resolveBlockTimes, setOverride } from "../src/lib/recurrence";
-import { getLocalDateString } from "../src/lib/time";
+import {
+  earliestResolvedStart,
+  packedTimeOverrides,
+  resolveBlockTimes,
+} from "../src/lib/recurrence";
+import { getLocalDateString, parseLocalDate } from "../src/lib/time";
 import { useAuth } from "../src/providers/AuthProvider";
 import { useTheme } from "../src/providers/ThemeProvider";
 import { useStore } from "../src/store";
@@ -55,6 +59,42 @@ function weekdayLong(day: number): string {
   return WEEKDAYS[day]
     ? new Date(2026, 0, 4 + day).toLocaleDateString("en-US", { weekday: "long" })
     : "?";
+}
+
+function runsOn(block: ScheduleBlock, day: number): boolean {
+  return (block.days_of_week ?? []).map(Number).includes(day);
+}
+
+async function syncTodayInstance(block: ScheduleBlock) {
+  const today = getLocalDateString();
+  const dow = parseLocalDate(today).getDay();
+  if (!runsOn(block, dow)) {
+    await supabase
+      .from("daily_schedule_instances")
+      .delete()
+      .eq("block_id", block.id)
+      .eq("date", today)
+      .eq("status", "pending");
+    return;
+  }
+  const times = resolveBlockTimes(block, dow);
+  const { data, error } = await supabase
+    .from("daily_schedule_instances")
+    .update({ start_minutes: times.start, end_minutes: times.end })
+    .eq("block_id", block.id)
+    .eq("date", today)
+    .eq("status", "pending")
+    .select("id");
+  if (error) throw error;
+  if (data?.length) return;
+  await generateDailyInstances(today);
+  const { error: retryError } = await supabase
+    .from("daily_schedule_instances")
+    .update({ start_minutes: times.start, end_minutes: times.end })
+    .eq("block_id", block.id)
+    .eq("date", today)
+    .eq("status", "pending");
+  if (retryError) throw retryError;
 }
 
 function featuredAwayPeriod(periods: AwayPeriod[]): AwayPeriod | null {
@@ -113,9 +153,13 @@ function ScheduleBuilderScreenContent() {
     [blocks]
   );
   const visibleBlocks = useMemo(() => {
-    if (selectedDay === null) return activeBlocks;
+    if (selectedDay === null) {
+      return [...activeBlocks].sort(
+        (a, b) => earliestResolvedStart(a) - earliestResolvedStart(b)
+      );
+    }
     return activeBlocks
-      .filter((b) => (b.days_of_week ?? []).includes(selectedDay))
+      .filter((b) => runsOn(b, selectedDay))
       .map((b) => ({ ...b, __resolved: resolveBlockTimes(b, selectedDay) }))
       .sort((a, b) => a.__resolved.start - b.__resolved.start);
   }, [activeBlocks, selectedDay]);
@@ -304,35 +348,6 @@ function ScheduleBuilderScreenContent() {
     }
   };
 
-  const handleClearDayOverride = useCallback(
-    async (block: ScheduleBlock, day: number) => {
-      const next = setOverride(block.time_overrides, day, null);
-      const payload = Object.keys(next).length ? next : null;
-      setSaving(true);
-      setError(null);
-      try {
-        const { data: updated, error } = await supabase
-          .from("schedule_blocks")
-          .update({ time_overrides: payload })
-          .eq("id", block.id)
-          .select()
-          .single();
-        if (error) throw error;
-        setBlocks(blocks.map((b) => (b.id === block.id ? updated : b)));
-        hapticCommit();
-      } catch (err) {
-        const message = getErrorMessage(err);
-        handleError(err, "handleClearDayOverride");
-        hapticReject();
-        setError(message);
-        if (Platform.OS !== "web") Alert.alert("Error", message);
-      } finally {
-        setSaving(false);
-      }
-    },
-    [blocks, setBlocks]
-  );
-
   const handleArchiveToggle = useCallback(
     async (block: ScheduleBlock) => {
       const archiving = block.is_active;
@@ -382,6 +397,11 @@ function ScheduleBuilderScreenContent() {
             .map((b) => (b.id === block.id ? updated : b))
             .sort((a, b) => a.start_minutes - b.start_minutes)
         );
+        if (!archiving) {
+          await syncTodayInstance(updated).catch((err) =>
+            handleError(err, "syncTodayInstance")
+          );
+        }
         hapticCommit();
       } catch (err) {
         const message = getErrorMessage(err);
@@ -396,18 +416,59 @@ function ScheduleBuilderScreenContent() {
     [blocks, setBlocks]
   );
 
+  const handleDropDay = useCallback(
+    async (block: ScheduleBlock, day: number) => {
+      const nextDays = (block.days_of_week ?? [])
+        .map(Number)
+        .filter((d) => d !== day);
+      if (!nextDays.length) {
+        await handleArchiveToggle(block);
+        return;
+      }
+      setSaving(true);
+      setError(null);
+      try {
+        const { data: updated, error } = await supabase
+          .from("schedule_blocks")
+          .update({
+            days_of_week: nextDays,
+            time_overrides: packedTimeOverrides(nextDays, block.time_overrides, {
+              start: block.start_minutes,
+              end: block.end_minutes,
+            }),
+          })
+          .eq("id", block.id)
+          .select()
+          .single();
+        if (error) throw error;
+        setBlocks(blocks.map((b) => (b.id === block.id ? updated : b)));
+        await syncTodayInstance(updated);
+        hapticCommit();
+      } catch (err) {
+        const message = getErrorMessage(err);
+        handleError(err, "handleDropDay");
+        hapticReject();
+        setError(message);
+        if (Platform.OS !== "web") Alert.alert("Error", message);
+      } finally {
+        setSaving(false);
+      }
+    },
+    [blocks, setBlocks, handleArchiveToggle]
+  );
+
   const handleArchivePress = useCallback(
     (block: ScheduleBlock) => {
       if (
         block.is_active &&
         selectedDay != null &&
-        block.time_overrides?.[String(selectedDay)]
+        (block.days_of_week ?? []).map(Number).some((d) => d !== selectedDay)
       ) {
         const dayName = weekdayLong(selectedDay);
         Alert.alert(`Change ${block.name} on ${dayName}?`, undefined, [
           {
-            text: `Use the usual time on ${dayName}`,
-            onPress: () => handleClearDayOverride(block, selectedDay),
+            text: `Don't run on ${dayName}`,
+            onPress: () => handleDropDay(block, selectedDay),
           },
           {
             text: "Archive the whole block",
@@ -419,7 +480,7 @@ function ScheduleBuilderScreenContent() {
       }
       handleArchiveToggle(block);
     },
-    [selectedDay, handleClearDayOverride, handleArchiveToggle]
+    [selectedDay, handleDropDay, handleArchiveToggle]
   );
 
   const renderItem = useCallback(
@@ -505,11 +566,15 @@ function ScheduleBuilderScreenContent() {
       showError("Pick at least one day for this block.");
       return;
     }
+    const packed = packedTimeOverrides(data.days, data.timeOverrides, {
+      start: data.startMinutes,
+      end: data.endMinutes,
+    });
     if (data.endMinutes <= data.startMinutes) {
       showError("End time must be after start time.");
       return;
     }
-    for (const times of Object.values(data.timeOverrides)) {
+    for (const times of Object.values(packed)) {
       if (times.end <= times.start) {
         showError("End time must be after start time.");
         return;
@@ -536,9 +601,7 @@ function ScheduleBuilderScreenContent() {
             is_fixed: data.isFixed,
             interval_weeks: data.intervalWeeks,
             ends_on: data.endsOn,
-            time_overrides: Object.keys(data.timeOverrides).length
-              ? data.timeOverrides
-              : null,
+            time_overrides: packed,
             // anchor_date defines week 0. Set it once when a block first becomes
             // non-weekly and NEVER move it — a shifting anchor silently reshuffles
             // which weeks the block lands on, and the user would only notice weeks
@@ -556,6 +619,9 @@ function ScheduleBuilderScreenContent() {
             .map((b) => (b.id === editingBlock.id ? updated : b))
             .sort((a, b) => a.start_minutes - b.start_minutes)
         );
+        await syncTodayInstance(updated).catch((err) =>
+          handleError(err, "syncTodayInstance")
+        );
       } else {
         if (!templateId) return;
         const created = await createScheduleBlock({
@@ -571,20 +637,13 @@ function ScheduleBuilderScreenContent() {
           intervalWeeks: data.intervalWeeks,
           endsOn: data.endsOn,
           anchorDate: data.intervalWeeks > 1 ? getLocalDateString() : null,
+          timeOverrides: packed,
         });
-        let saved = created;
-        if (Object.keys(data.timeOverrides).length) {
-          const { data: withOverrides, error: overrideError } = await supabase
-            .from("schedule_blocks")
-            .update({ time_overrides: data.timeOverrides })
-            .eq("id", created.id)
-            .select()
-            .single();
-          if (overrideError) throw overrideError;
-          saved = withOverrides;
-        }
         setBlocks(
-          [...blocks, saved].sort((a, b) => a.start_minutes - b.start_minutes)
+          [...blocks, created].sort((a, b) => a.start_minutes - b.start_minutes)
+        );
+        await syncTodayInstance(created).catch((err) =>
+          handleError(err, "syncTodayInstance")
         );
       }
       setFormOpen(false);
@@ -636,6 +695,9 @@ function ScheduleBuilderScreenContent() {
         isFixed: false,
       });
       setBlocks([...blocks, created].sort((a, b) => a.start_minutes - b.start_minutes));
+      await syncTodayInstance(created).catch((err) =>
+        handleError(err, "syncTodayInstance")
+      );
     } catch (err) {
       const message = getErrorMessage(err);
       handleError(err, "handleAddBlock");

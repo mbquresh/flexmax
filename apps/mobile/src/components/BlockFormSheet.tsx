@@ -26,8 +26,10 @@ import { getLocalDateString } from "../lib/time";
 import {
   describeRecurrence,
   formatEndDate,
+  hasDistinctOverride,
   resolveBlockTimes,
   setOverride,
+  shiftOverrides,
   TimeOverrides,
 } from "../lib/recurrence";
 
@@ -341,7 +343,21 @@ export function BlockFormSheet({
                 }
                 onChange={(startMinutes) =>
                   setDraft((d) => {
-                    if (selectedDay == null) return { ...d, startMinutes };
+                    // A new block's first day IS the usual time. Writing it
+                    // as an override against the 9–10 default leaves a ghost
+                    // "different today" after the person adds more days.
+                    if (!initial) return { ...d, startMinutes };
+                    if (selectedDay == null) {
+                      return {
+                        ...d,
+                        startMinutes,
+                        timeOverrides: shiftOverrides(
+                          d.timeOverrides,
+                          startMinutes - d.startMinutes,
+                          0
+                        ),
+                      };
+                    }
                     const current = resolveBlockTimes(
                       {
                         start_minutes: d.startMinutes,
@@ -376,7 +392,18 @@ export function BlockFormSheet({
                 }
                 onChange={(endMinutes) =>
                   setDraft((d) => {
-                    if (selectedDay == null) return { ...d, endMinutes };
+                    if (!initial) return { ...d, endMinutes };
+                    if (selectedDay == null) {
+                      return {
+                        ...d,
+                        endMinutes,
+                        timeOverrides: shiftOverrides(
+                          d.timeOverrides,
+                          0,
+                          endMinutes - d.endMinutes
+                        ),
+                      };
+                    }
                     const current = resolveBlockTimes(
                       {
                         start_minutes: d.startMinutes,
@@ -396,12 +423,19 @@ export function BlockFormSheet({
                 }
               />
               <Text style={styles.fieldHelper}>
-                {selectedDay != null
+                {selectedDay != null && initial
                   ? `Changing ${weekdayLong(selectedDay)} only`
                   : "Changing every day"}
               </Text>
               {selectedDay != null &&
-              draft.timeOverrides[String(selectedDay)] != null ? (
+              hasDistinctOverride(
+                {
+                  start_minutes: draft.startMinutes,
+                  end_minutes: draft.endMinutes,
+                  time_overrides: draft.timeOverrides,
+                },
+                selectedDay
+              ) ? (
                 <PressableScale
                   onPress={() =>
                     setDraft((d) => ({

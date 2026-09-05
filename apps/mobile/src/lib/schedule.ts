@@ -1,5 +1,6 @@
 import { supabase } from "./supabase";
 import { BlockCategory, DailyInstance, ScheduleBlock } from "../types/database";
+import type { TimeOverrides } from "./recurrence";
 
 export const WEEKDAYS = [
   { value: 0, label: "Sun" },
@@ -71,6 +72,7 @@ export async function createScheduleBlock(params: {
   intervalWeeks?: number;
   endsOn?: string | null;
   anchorDate?: string | null;
+  timeOverrides?: TimeOverrides;
 }): Promise<ScheduleBlock> {
   const { startMinutes: start_minutes, endMinutes: end_minutes } = params;
 
@@ -95,6 +97,7 @@ export async function createScheduleBlock(params: {
       interval_weeks: params.intervalWeeks ?? 1,
       ends_on: params.endsOn ?? null,
       anchor_date: params.anchorDate ?? null,
+      time_overrides: params.timeOverrides ?? {},
     })
     .select()
     .single();
