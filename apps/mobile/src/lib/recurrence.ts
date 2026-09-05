@@ -60,9 +60,9 @@ export function setOverride(
   return next;
 }
 
-// The live column is NOT NULL with no DEFAULT. An omitted or null write
-// is a 23502, and because days_of_week rides in the same UPDATE the
-// weekday-only choice never lands — the block stays on every day.
+// The live column is NOT NULL DEFAULT '{}'. An explicit null is a 23502,
+// and because days_of_week rides in the same UPDATE the weekday-only
+// choice never lands — the block stays on every day.
 export function packedTimeOverrides(
   days: number[],
   o?: TimeOverrides | null,
