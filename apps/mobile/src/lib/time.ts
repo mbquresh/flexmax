@@ -163,6 +163,12 @@ export function clampMinute(value: number): number {
   return Math.min(59, Math.max(0, Math.round(value)));
 }
 
+// A fixed winter date. `new Date()` plus setHours hits a spring-forward
+// hole two days a year and V8 jumps the clock forward, so 2:30 becomes 3:30.
+export function minutesToDate(m: number): Date {
+  return new Date(2001, 0, 1, Math.floor(m / 60), m % 60, 0, 0);
+}
+
 export function getLocalDateString(d: Date = new Date()): string {
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, "0");

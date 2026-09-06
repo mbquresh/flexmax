@@ -59,6 +59,13 @@ function emptyDraft(defaultDay?: number | null): BlockFormData {
   };
 }
 
+function movedStart(d: BlockFormData, startMinutes: number) {
+  return {
+    startMinutes,
+    endMinutes: d.endMinutes + (startMinutes - d.startMinutes),
+  };
+}
+
 function weekdayLong(day: number): string {
   return WEEKDAYS[day]
     ? new Date(2026, 0, 4 + day).toLocaleDateString("en-US", { weekday: "long" })
@@ -343,18 +350,23 @@ export function BlockFormSheet({
                 }
                 onChange={(startMinutes) =>
                   setDraft((d) => {
+                    // Duration travels with the start, matching shiftOverrides
+                    // and setOverride. Leaving the end behind made every later
+                    // move two edits plus an inverted-window error.
+                    const times = movedStart(d, startMinutes);
+                    const delta = startMinutes - d.startMinutes;
                     // A new block's first day IS the usual time. Writing it
                     // as an override against the 9–10 default leaves a ghost
                     // "different today" after the person adds more days.
-                    if (!initial) return { ...d, startMinutes };
+                    if (!initial) return { ...d, ...times };
                     if (selectedDay == null) {
                       return {
                         ...d,
-                        startMinutes,
+                        ...times,
                         timeOverrides: shiftOverrides(
                           d.timeOverrides,
-                          startMinutes - d.startMinutes,
-                          0
+                          delta,
+                          delta
                         ),
                       };
                     }
@@ -370,7 +382,7 @@ export function BlockFormSheet({
                       ...d,
                       timeOverrides: setOverride(d.timeOverrides, selectedDay, {
                         start: startMinutes,
-                        end: current.end,
+                        end: current.end + (startMinutes - current.start),
                       }),
                     };
                   })

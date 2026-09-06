@@ -570,17 +570,29 @@ function ScheduleBuilderScreenContent() {
       start: data.startMinutes,
       end: data.endMinutes,
     });
+    if (data.endMinutes > 1440) {
+      showError("That time doesn't fit before midnight.");
+      return;
+    }
     if (data.endMinutes <= data.startMinutes) {
       showError("End time must be after start time.");
       return;
     }
     for (const times of Object.values(packed)) {
+      if (times.end > 1440) {
+        showError("That time doesn't fit before midnight.");
+        return;
+      }
       if (times.end <= times.start) {
         showError("End time must be after start time.");
         return;
       }
     }
-    if (data.endsOn && data.endsOn < getLocalDateString()) {
+    if (
+      data.endsOn &&
+      data.endsOn !== editingBlock?.ends_on &&
+      data.endsOn < getLocalDateString()
+    ) {
       showError("End date can't be in the past.");
       return;
     }

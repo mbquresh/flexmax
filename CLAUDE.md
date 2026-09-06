@@ -918,6 +918,11 @@ makes it a one-line swap in theme.ts if ever revisited.
   constrains end_minutes <= 1440, so an 11pm-1am block is unrepresentable at
   the template level. This is a schema constraint, not just a rendering
   problem, and it blocks night-shift schedules and sleep-as-a-block.
+- **`shiftOverrides` silently drops an override that would leave the day.**
+  Base 9:00–10:00 with a Saturday override at 23:00–23:59; moving the base
+  start to 10:00 lands Saturday at 24:00 and the override is omitted, so
+  Saturday reverts to the usual time with no notice. Refusing the base
+  change would be worse. Narrow, and the same midnight bound as above.
 - **Safe-area insets are not universal.** schedule-builder, Today, Theory of
   You, recovery, and quality-note handle them. account, onboarding, and
   plan-tomorrow use a hardcoded `paddingTop: 60`. sign-in has neither. Anything
