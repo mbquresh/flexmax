@@ -99,6 +99,9 @@ function RecoveryScreenContent() {
     );
     setSlotIsFallback(found === null);
     setRescheduleSlot(found ?? getFallbackSlot(instance));
+    // Leave the box empty on a return visit. Prefilling would invite editing
+    // the earlier miss's words; lastIntention already shows them in the
+    // right frame. An empty write must not null the column — see reflectionPatch.
     setReflectionWhy("");
     setRemedy(null);
     setRemedyAccepted(false);
@@ -301,6 +304,11 @@ function RecoveryScreenContent() {
       ? `${plan.names[0]} is fixed and can't move. Pick another time.`
       : null;
 
+  const reflectionPatch = () => {
+    const text = reflectionWhy.trim();
+    return text ? { reflection_why: text } : {};
+  };
+
   const commitMissed = async (instanceId: string, extra = {}) => {
     const { error } = await supabase
       .from("daily_schedule_instances")
@@ -331,9 +339,7 @@ function RecoveryScreenContent() {
 
     setSaving(true);
     try {
-      await commitMissed(instance.id, {
-        reflection_why: reflectionWhy.trim() || null,
-      });
+      await commitMissed(instance.id, reflectionPatch());
       router.back();
     } catch (err) {
       handleError(err, "handleSaveRecovery", "Could not save reflection");
@@ -385,7 +391,7 @@ function RecoveryScreenContent() {
     return {
       status: "pending" as const,
       rescheduled_to_id: null,
-      reflection_why: reflectionWhy.trim() || null,
+      ...reflectionPatch(),
       reschedule_count: (inst.reschedule_count ?? 0) + 1,
       ...(isFirstReschedule
         ? {

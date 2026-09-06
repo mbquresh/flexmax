@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppState } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "expo-router";
 import { generateDailyInstances, supabase } from "../lib/supabase";
 import { scheduleTodayBlockNotifications } from "../lib/blockNotifications";
@@ -28,6 +29,9 @@ export function useTodayData(userId: string | undefined) {
   // Every load claims a token. Only the most recent load may write state —
   // an earlier, slower request that resolves last must discard its results.
   const loadSeqRef = useRef(0);
+  // Same-session guard so overlapping loadToday calls cannot both miss the
+  // AsyncStorage read and double-invoke.
+  const insightInvokedDateRef = useRef<string | null>(null);
 
   const timedAdhoc = useMemo(
     () => adhocTasks.filter((t) => t.start_minutes != null),
@@ -228,17 +232,28 @@ export function useTodayData(userId: string | undefined) {
         setInsights(insightsData ?? []);
       }
 
-      // Fire-and-forget. Returns cached insights without an AI call if a fresh
-      // set exists, so this is cheap to call on every load. Skipped while
-      // reading history: scrubbing back through ten weeks should not send
-      // ten requests at a function that is rate-limited for good reason.
-      if (isToday) {
-        supabase.functions
-          .invoke("weekly-insight")
-          .then(({ error }) => {
-            if (error) handleError(error, "weeklyInsightInvoke");
-          })
-          .catch((e) => handleError(e, "weeklyInsightInvoke"));
+      // Fire-and-forget, at most once per local date. The function returns
+      // cached insights without an AI call when a fresh set exists — but a
+      // new user misses that cache on every Today load, burns a rate-limit
+      // slot, and runs the full evidence RPC for insufficient_data. The
+      // client ignores the body. Mark before the call so overlapping loads
+      // cannot double-fire. History loads stay skipped: scrubbing weeks
+      // must not spend the day's slot.
+      if (isToday && insightInvokedDateRef.current !== realToday) {
+        const key = `weekly_insight_invoked_${userId}`;
+        const last = await AsyncStorage.getItem(key).catch(() => null);
+        if (last !== realToday) {
+          insightInvokedDateRef.current = realToday;
+          AsyncStorage.setItem(key, realToday).catch(() => {});
+          supabase.functions
+            .invoke("weekly-insight")
+            .then(({ error }) => {
+              if (error) handleError(error, "weeklyInsightInvoke");
+            })
+            .catch((e) => handleError(e, "weeklyInsightInvoke"));
+        } else {
+          insightInvokedDateRef.current = realToday;
+        }
       }
       } catch (err) {
         handleError(err, "loadToday");
