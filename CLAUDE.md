@@ -31,8 +31,8 @@ two are a matched pair and the positive half was missing.
 discipline — the plan staying consciously present in the user's mind through a
 day, instead of receding into background noise where it dies. Every ritual in
 the app serves this: the morning card, the accounting sweep, the recovery flow,
-the weekly insight. The user is repeatedly brought back into contact with their
-own intentions.
+the weekly insight, the Theory of You. The user is repeatedly brought back into
+contact with their own intentions.
 
 Critically, this is induced without pressure. The app does not raise the stakes;
 it surfaces the user's own data and lets them look. A pattern the user had a
@@ -60,21 +60,20 @@ and no AI — `ACCOUNTED = ["completed", "missed", "skipped"]` in
 when the AI call was removed. Value lands immediately and repeats every day.
 
 **Stream 2 — Behavioral insight. Compounds over weeks.**
-The evidence pack, `weekly-insight`, the morning InsightCard. Needs
-`engaged_days >= 5` before it says anything, and its depth scales with
-reflection quality.
+The evidence pack, `weekly-insight`, the morning InsightCard, and the Theory
+of You (`/you`). Needs `engaged_days >= 5` before it says anything, and its
+depth scales with reflection quality.
 
 Roughly half the differentiation lives in each. Consequences:
 
 1. **The hard paywall is defensible on Stream 1 alone.** The long-standing
    objection — the user pays before the engine speaks — has an answer: they are
    buying a working execution-salvaging tool immediately, with the insight layer
-   arriving on top of it later. Marketing currently leads with Stream 2 and
-   understates Stream 1. That is backwards for the first-week experience. The
-   specific instance: the line about the rebuilding half working the hour you
-   install is buried in FAQ item 2 on `docs/index.html`, under a question about
-   the trial. It belongs next to the price, as an explicit today-versus-week-one
-   split. Work item, not done here.
+   arriving on top of it later. The showcase now has a today-versus-week-two
+   split under "Where it actually stands" and the price lock names the
+   rebuilding half. Remaining copy bugs — struck fake former prices, "roughly
+   half," WeekDemo first-person provenance, Theory of You listed as unbuilt,
+   disqualification still in the FAQ — sit in the Not built table.
 2. **Two metrics, not one.** Gate 1 (reflection fill rate) measures whether
    Stream 2 is self-sustaining. Stream 1 needs its own: *on days the plan
    breaks, does the user still complete the next meaningful action and return
@@ -169,7 +168,7 @@ the differentiator.
   this document explicitly refuses. Any line containing "planner" concedes
   Structured's ground.
 - Headline recap copy leading with completion percentage — fails the bad-week
-  test. The weekly recap deliberately leads with days accounted for.
+  test. The look-back surface (Theory of You) leads with days accounted for.
 - Any claim of the form "moving X increased completion by N%" — a causal claim
   requiring a controlled comparison that the data cannot support.
 
@@ -324,13 +323,15 @@ Bounds check (0–1440) before RPC call.
 
 ### Gesture architecture (territorial — took 4+ iterations)
 
-- **⠿ handle rail only** → vertical drag-to-swap (plain pan, immediate)
+- **DragHandle rail only** → vertical drag-to-swap (plain pan, immediate)
 - **Card body horizontal swipe** → reveals Missed + Remove (activeOffsetX(-15), failOffsetY([-8,8]))
 - **Card body tap** → check-in
 - **Vertical scroll** → passes through (gestures yield to ScrollView)
 - Composed with Gesture.Race(dragGesture, swipeGesture)
 - Fixed blocks: .enabled(false) on both gestures
-- **Do not add long-press anywhere — it collides with drag and breaks scroll**
+- **Do not add long-press on block cards** — it collides with drag and breaks
+  scroll. StreakStrip long-press to open a past day is the exception; that
+  square is not a card that also drags.
 
 
 
@@ -350,9 +351,10 @@ AppState listener handles date rollover at midnight.
 
 Claude API key never on client.
 
-Edge functions (2):
+Edge functions (3):
   weekly-insight   — 1 AI call per user per week; the only AI call in the product
   nightly-notify   — cron-triggered, no AI; MUST deploy with --no-verify-jwt
+  calendar-feed    — public ICS of the template, no AI; MUST deploy with --no-verify-jwt
 
 weekly-insight hardcodes the Anthropic client. There is no provider
 abstraction and no fallback — if the API is down, insights do not
@@ -360,9 +362,12 @@ regenerate and the previous set remains active until they do.
 
 ### Nightly notifications
 
-pg_cron '0 2 * * *' (9PM CST) → nightly-notify edge function.
+Hourly cron → nightly-notify → `users_to_notify_now(21)`. Sends only to
+users whose local hour is 9pm. DST-proof; not a 2am-UTC / "9PM CST" job.
 Auth: CRON_SECRET Bearer token (NOT service-role key — see SETUP.md).
-config.json has verifyJWT:false for this function.
+config.json has verifyJWT:false for this function. SETUP.md still shows
+the old `'0 2 * * *'` schedule — that is wrong for any timezone that is
+not UTC-5 at 21:00.
 
 ### Post-block check-in notifications
 
@@ -400,17 +405,23 @@ Captured → read by the engine:
 - removed_reason, swap patterns via instance_time_changes (009)
 - rated_at / reflected_at check-in timing (010)
 - unaccounted status from the hourly sweep (012)
-- actual_end_minutes — real bedtime, retroactively captured (014)
+- nudge_events.response (018) → nudge_outcomes in the pack (026)
+- miss_reason_tag (019), quality_reason_tag (029)
+- insight_corrections (047) — weekly-insight must not restate a rejected belief
 
 Pipeline:
   get_behavior_evidence(user_id)  [SQL, 013 — does ALL arithmetic]
     → weekly-insight edge function [1 AI call per user per week]
     → behavioral_insights table [015 — stored beliefs, superseded weekly]
-    → injected FREE at read time into: recovery sheet, morning InsightCard
+    → injected FREE at read time into: recovery sheet, morning InsightCard,
+      Theory of You (`/you`). Disputed rows are omitted from the first two
+      and hidden on `/you`.
 
 Still captured but NOT yet read:
 
-- Notification response (whether a nudge was acted on) — not captured at all yet
+- quality_reason_note — lastIntention reads reflection_improve / reflection_why only
+- day_log / actual_end_minutes — UI capture removed 2026-08-24; pack does not read them
+- Pre-block nudge (block_preempt) outcome — cutoff nudges have fired-versus-completed; this type does not
 
 ---
 
@@ -510,16 +521,16 @@ marker at all.
 | Day-3 first observation                         | Still worth building — weekly-insight gates at engaged_days < 5 — but Stream 1 is the week-one value and does not require the engine to speak. No longer framed as plugging a gap. |
 | Paywall + RevenueCat                            | Unbuilt. No RevenueCat in either package.json; `handleStart` still `router.replace("/schedule-builder")`. Placement OPEN — recommend after step 3 of 5 (the contract), not after the tone question. Ladder, not a flat $14.99. See Pricing & paywall. |
 | "Ask me about yourself" conversational surface  | Reads get_behavior_evidence with the narrator's tone rules                                                                                                   |
-| reflection_improve UX fix                       | 31% fill rate on the highest-signal field in the DB                                                                                                          |
 | External TestFlight                             | Needs Beta App Review (~1 day) + a demo account or auto-rejection                                                                                            |
 | Device activity detection (Screen Time) | Policy-verified design: user self-selects distraction apps via FamilyActivityPicker → OPAQUE TOKENS, so FlexMax structurally cannot know which apps were chosen. Each focus block registers a DeviceActivitySchedule with a threshold event (e.g. 5 cumulative minutes); eventDidReachThreshold fires a local notification reusing the existing **Notification action buttons** (018 nudge_response) infrastructure. The extension records to an App Group store; the app syncs a minimal derived record only — drift occurred, duration bucket, response, block outcome. Never raw usage. NOTE: DeviceActivityReport data is render-only and not readable programmatically, so the threshold event IS the data model — and it happens to be exactly the intervention→response→outcome shape. CONSTRAINTS: entitlement is per bundle ID, main app AND every extension; unrequested extension IDs fail signing at distribution. Requires native Swift extensions — config plugin (react-native-device-activity) or prebuild. Approval takes days to weeks. See UNBLOCKED ACTION above. |
-| Night routine block is hard to answer           | Excluded from the evening sweep (hasn't happened yet) and from bedtime notifications (by design). Drifts to unaccounted unless answered from Today. Candidate fix: a third question on the morning DayBoundaryCard |
+| Night routine block is hard to answer           | Wind-down is excluded from the evening sweep (hasn't happened yet) and from bedtime notifications (by design). Drifts to unaccounted unless answered from Today. DayBoundaryCard is gone — it suppressed InsightCard. Do not bring it back as the fix. |
 | User instructions page                          | The streak rises on a day where everything was missed. The label qualifier was removed for width, so there is no in-app explanation. Owed |
 | Showcase copy: strike fake former prices | `docs/index.html` still shows struck-through `$14.99` and `$99` as "at launch." Nothing has ever sold at those prices — no App Store listing, paywall unbuilt — so they are a future intention presented as a former price. Remove them. |
 | Showcase copy: cohort cap, not "half" | Replace "roughly half what it will be" with the published 100–200 founding cap and a visible remaining count. $7.99 → $14.99 is a 47% gap; later rungs do not sustain that copy. Unverifiable scarcity reads as a marketing device. |
-| Showcase copy: WeekDemo provenance | Framing says "One month of someone's schedule," but `DEMO_DAYS` is hand-authored and the file says so. That implies a real person — the one external place the product makes a provenance claim it cannot back. Fix the copy or substitute the founder's real month. |
+| Showcase copy: WeekDemo provenance | Framing now says "One month of my own schedule." `DEMO_DAYS` is still hand-authored (`WeekDemo.tsx`). First-person does not make it the founder's month. Fix the copy or substitute the real month. |
 | Showcase + listing: disqualify up front | Move "Who is this genuinely not for?" up `docs/index.html`. Mirror it in the App Store listing. Highest-leverage paragraph on the page; it is the mitigation for no-trial bad-review risk. |
-| Showcase: Stream 1 next to the price | The rebuilding-half-works-the-hour-you-install line is buried in FAQ item 2 (the trial question). Put an explicit today-versus-week-one split next to the price. |
+| Showcase: Theory listed as unbuilt | `docs/index.html` "Not built yet" still lists "A written profile of how you work, that you can argue with." Argue shipped. Standing `theory_lines` has not — do not delete the row, rewrite it. |
+| Showcase: FAQ still says "roughly half" | The today-versus-week-two split now exists next to the price and under "Where it actually stands." FAQ item 2 still repeats the rebuild line under the trial question and still says "roughly half what it will be." |
 | `docs/offline-mode.md` price pointer | Lines ~34–35 still say "$14.99/mo with no trial." Re-point once the ladder is live. Annual at each rung: $69.99 / ~$129 / ~$169. |
 
 
@@ -560,10 +571,10 @@ recorded so they are not re-argued from scratch.
 ### Accepted — build
 
 **1. The accounted-for streak (replaces the completion streak).**
-The streak currently counts days with at least one `completed` block, so a bad
-day accelerates toward the freeze — confronting the accumulated shortfall at
-once is the historical uninstall trigger for this ICP, not the first missed
-block alone.
+At the time of this triage the streak counted days with at least one
+`completed` block, so a bad day accelerated toward the freeze — confronting
+the accumulated shortfall at once is the historical uninstall trigger for
+this ICP, not the first missed block alone.
 Change the protected number to "every block accounted for, honestly": a day
 counts if every instance has a real user-set status, regardless of outcome.
 `missed` (engaged, admitted) keeps it alive; only `unaccounted` (silence)
@@ -581,10 +592,13 @@ two-tone fill: teal for completed, neutral for missed, empty for unanswered.
 A fully-accounted day fills completely. The missed segment must never be coral.
 
 **2. Quality-drift signal in the evidence pack.**
-`completion_rating` (crushed it / partly / lost focus) is captured on every
-check-in and read by nothing — it appears zero times in
-`get_behavior_evidence`. A block still completing but trending toward "lost
-focus" is an earlier warning than a miss. ~15 lines of SQL, no new AI cost.
+At the time of this triage `completion_rating` was captured on every
+check-in and read by nothing. A block still completing but trending toward
+"lost focus" is an earlier warning than a miss. ~15 lines of SQL, no new AI
+cost.
+
+SHIPPED (021 / 029). Window is 7 rated instances, shared with the in-app
+degradation prompt.
 
 **3. Merged evening ritual: close today → plan tomorrow.**
 An external proposal for a "close the day" screen conflicts with the existing
@@ -598,6 +612,9 @@ reality, push back on an overbuilt tomorrow by comparing planned flexible
 minutes against the trailing 30-day *completed* median. TONE WARNING: "you're
 scheduling 9 hours, your real median is 5.5" is one word away from "you are not
 capable of this." Structural framing only.
+
+SHIPPED for the merge (plan-tomorrow + CloseTodayRow). The load governor
+itself did not ship.
 
 ### Deferred — with reasons
 
@@ -711,7 +728,10 @@ Motion added under this section is STATE TRANSITION and PHYSICS — a status
 changing, a card settling, a list reflowing. It is not celebration. The
 no-confetti / no-cheerleading rule is unaffected.
 
-### Evidence found in code
+### Evidence found in code (2026-08-08 snapshot — not current)
+
+All five build-order items below this list have since shipped or been
+rejected. Do not read these bullets as the tree.
 
 - `expo-haptics` is not in `apps/mobile/package.json`. There are zero haptics in
   the app. Every check-in, swipe-open, swap commit, rating tap and sheet
@@ -896,10 +916,10 @@ makes it a one-line swap in theme.ts if ever revisited.
   constrains end_minutes <= 1440, so an 11pm-1am block is unrepresentable at
   the template level. This is a schema constraint, not just a rendering
   problem, and it blocks night-shift schedules and sleep-as-a-block.
-- **Safe-area insets are handled on the schedule builder only.** Every other
-  screen renders without them. react-native-safe-area-context was a dependency
-  with no call sites until now, so anything pinned near a screen edge elsewhere
-  may sit under the home indicator.
+- **Safe-area insets are not universal.** schedule-builder, Today, Theory of
+  You, recovery, and quality-note handle them. account, onboarding, and
+  plan-tomorrow use a hardcoded `paddingTop: 60`. sign-in has neither. Anything
+  pinned near a screen edge on those screens may sit under the home indicator.
 - **RRULE INTERVAL and our generation math can disagree.**
   generate_daily_instances computes weeks as (target - anchor) / 7,
   anchor-relative. RRULE counts INTERVAL from DTSTART's week boundary per
@@ -1057,15 +1077,16 @@ mode.
 "Something else" text escape hatch, writing their own label as a string into the
 existing column. No schema change — but the data's character changed from
 all-unique freeform sentences to mostly six repeated strings.
-ARCHITECTURE CHAT MUST DECIDE: whether get_behavior_evidence() and the weekly
-insight should weight canned answers differently from typed ones. Eight
-instances of "Start earlier" may reflect a real pattern or just the easiest chip
-to tap. Cheaper to decide before the data accumulates.
+MOOT 2026-08-24: chip capture was deleted rather than decided. No new canned
+answers. Legacy chip labels are filtered out of lastIntention.
 
-**All modals slide, none fade.** `animationType="none"` with scrim opacity and
-sheet translateY animated together, ~220ms open with `Easing.out(Easing.cubic)`,
-~180ms close. The sheet stays fully opaque — animate the scrim's opacity and the
-sheet's position, never the sheet's own opacity.
+**All modals slide, none fade** — the rule for new sheets. Tree has drifted:
+CheckInSheet, BlockFormSheet, AwaySheet, DayBoundariesSheet, and
+TaskDetailSheet ship `animationType="fade"`. TimePicker uses `"slide"`.
+DisputeSheet, AppMenu, AdhocEditSheet, and the Today undo/toast modals still
+use `"none"` plus a driven scrim. New sheets follow the original recipe:
+`animationType="none"`, scrim opacity and sheet translateY together, ~220ms
+open / ~180ms close, sheet stays fully opaque.
 
 **Undo is not destructive.** The undo sheet's primary action uses `c.text`, not
 `c.danger`. Coral is reserved for Remove ONLY — Missed uses `c.primaryTint`
@@ -1205,11 +1226,12 @@ tree before being acted on — do not assume all are still present.
   `/functions/v1/schedule-block-notifications` (gateway JWT, `sb-error-code:
   UNAUTHORIZED_NO_AUTH_HEADER`). The four other deleted functions 404 at the
   platform. Delete it from the dashboard; nothing in the app calls it.
-  request (Expo wants batches of ≤100). No ticket/receipt handling, so
-  `DeviceNotRegistered` tokens are never pruned. No idempotency key, so a cron
-  retry double-notifies.
-- **README architecture diagram fan-out drifted.** `behavioral_insights` feeds
-  the Today card and the You page. Plan Tomorrow does not read the table.
+- **`nightly-notify` Expo push is one unbatched request.** Expo wants batches
+  of ≤100. No ticket/receipt handling, so `DeviceNotRegistered` tokens are
+  never pruned. No idempotency key, so a cron retry double-notifies.
+- **README has drifted past a fan-out diagram.** It still says seven-beat
+  onboarding, injects beliefs into "the weekly recap," and does not name
+  Theory of You. Plan Tomorrow does not read `behavioral_insights`.
   missed-block-recovery no longer exists.
 - **No data export path.** Account deletion shipped (031 + account.tsx). Apple
   also wants a way for the user to obtain their data. Still a launch item.
@@ -1233,15 +1255,21 @@ tree before being acted on — do not assume all are still present.
   `belief`/`evidence` before `replace_behavioral_insights`; an empty set
   after sanitizing is a 500, not a write. Length caps match the prompt.
   This is still not a JSON schema.
+- **LoadError `onRetry` forwarded the press event.** FIXED 2026-09-05.
+  `onPress={() => onRetry()}` was `onPress={onRetry}`, so Today called
+  `loadToday(event)` and `parseLocalDate` threw; schedule-builder treated the
+  event as `quiet` and stuck on the error screen. Same class as any handler
+  that accepts an optional argument a gesture will fill.
 - **No database guard against inverted blocks.** STRUCK 2026-09-05. The tree
   wins: `001_initial_schema.sql` defines `valid_time` on both
   `schedule_blocks` and `daily_schedule_instances` —
   `start_minutes >= 0 and end_minutes <= 1440 and start_minutes < end_minutes`.
   Nothing later drops it. The three client-side guards are backstops, not the
   only defense. There is no work item to add a CHECK.
-- **`removed` now carries two meanings.** User-deleted and displaced,
-  distinguished only by `displaced_by_id`. Any query filtering on status
-  `'removed'` will return more rows than a reader expects.
+- **`removed` is still one status for four provenances.** 044's `removed_by`
+  distinguishes user / displacement / archive / away; `displaced_by_id` names
+  the instance that took the slot. Any query filtering on status `'removed'`
+  alone still returns more rows than a reader expects.
 - **CORRECTED 2026-08-26.** The "0 entries before and after" measurement was
   wrong — almost certainly a null or wrong user id, which makes
   get_behavior_evidence return empty arrays for every key. Verified against
@@ -1268,12 +1296,10 @@ overrides would have made it common.
 removing a block permanently deletes every instance — completions, misses,
 ratings, reflections, quality tags, miss reasons. It shipped with no
 confirmation, one tap from a card. Now behind an Alert naming the specific
-cost. The underlying problem stands: there is no way to retire a block
-without destroying its record, and no start/end date on a block, so a user
-finishing a fixed-length programme must choose between a dead block
-cluttering every day and losing the data. Archiving (is_active on the block,
-excluded from generation but retained for the evidence pack) is the real
-fix.
+cost. Archiving (037, `is_active`) is the retirement path — excluded from
+generation, retained for the evidence pack. Permanent delete from the edit
+sheet still cascades and still destroys history. There is still no
+start/end date for a fixed-length programme that should expire on its own.
 
 **Restoring an archived block did not return it to Today (fixed
 2026-08-26).** Archiving marks today's pending instance 'removed'; restore
@@ -1507,11 +1533,14 @@ Things that corrupt the ledger or lose data permanently.
 
 ## Vision — designed, not built
 
-*Everything in this section is unbuilt. Nothing here is scheduled, and nothing
-downstream should assume it exists. It is recorded because the data it consumes
-is now shipped — migration 026 closed the last input gap — and because the
-constraints attached to these features are easier to write down before the
-features exist than after.*
+*Most of this section is unbuilt. The Theory of You page (`/you`) shipped the
+argue half and a 12-week historical chart — current `behavioral_insights` as
+tappable sentences, `dispute_insight`, no second AI call. Standing
+`theory_lines` (durable claims that survive weekly replace) has not. Nothing
+else here is scheduled, and nothing downstream should assume it exists. It is
+recorded because the data it consumes is now shipped — migration 026 closed
+the last input gap — and because the constraints attached to these features
+are easier to write down before the features exist than after.*
 
 ### The frame: Software as a Mentor
 
@@ -1582,6 +1611,11 @@ cannot correct is a verdict. This is also the answer to what the product is for
 after a schedule stabilizes — the Theory is portable to every new goal, and does
 not expire when the current problem is solved.
 
+SHIPPED for the current-set slice (047 + `/you`). The page reprints this
+week's `behavioral_insights` and hides a line the user disputes. The
+living document that stays until the evidence flips — Future build #6 — is
+the remaining half.
+
 ### The Evidence Archive
 
 A running, in-app record of what the user actually did — hours executed,
@@ -1611,7 +1645,7 @@ Twelve-week arcs that end in a real review. Life has arcs; a schedule should not
 be an undifferentiated stream.
 
 **Chapters are the ONLY place charts and visualizations belong**, with one
-shipped exception: the You page (`/you`) is a 12-week two-tone bar
+shipped exception: Theory of You (`/you`) is a 12-week two-tone bar
 series of real weeks, same encoding as the day squares. It is historical. It
 does not project. A completion-rate forecast and any line drawn to motivate
 are still forbidden — predictions are never tuned on response. Today stays
