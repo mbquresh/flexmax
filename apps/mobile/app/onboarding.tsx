@@ -27,12 +27,6 @@ const TONE_OPTIONS: Option[] = [
   { label: "Just the data — no commentary", value: "data-driven" },
 ];
 
-const TONE_LINES: Record<string, string> = {
-  firm: "Direct feedback.",
-  gentle: "A lighter touch.",
-  "data-driven": "Numbers, no commentary.",
-};
-
 const STEP_COUNT = 5;
 
 function OptionRow({

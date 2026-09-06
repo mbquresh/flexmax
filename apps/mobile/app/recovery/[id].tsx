@@ -385,6 +385,7 @@ function RecoveryScreenContent() {
     return {
       status: "pending" as const,
       rescheduled_to_id: null,
+      reflection_why: reflectionWhy.trim() || null,
       reschedule_count: (inst.reschedule_count ?? 0) + 1,
       ...(isFirstReschedule
         ? {

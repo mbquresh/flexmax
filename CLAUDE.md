@@ -1233,15 +1233,12 @@ tree before being acted on — do not assume all are still present.
   `belief`/`evidence` before `replace_behavioral_insights`; an empty set
   after sanitizing is a 500, not a write. Length caps match the prompt.
   This is still not a JSON schema.
-- **No database guard against inverted blocks.** `daily_schedule_instances`
-  has no CHECK constraint on `end_minutes > start_minutes`; migration 025
-  constrains `status` and `completion_rating` only. Postgres would accept a
-  block that ends before it starts and the day render would break. Three
-  client-side guards currently carry this: the add-block check in
-  `schedule-builder.tsx`, the edit-block check, and the `MIN_BLOCK_MINUTES`
-  clamp in the recovery route's end-time picker. A CHECK constraint would make
-  all three backstops rather than the only defense — but it would need to
-  tolerate existing rows, so verify no inverted rows exist before adding one.
+- **No database guard against inverted blocks.** STRUCK 2026-09-05. The tree
+  wins: `001_initial_schema.sql` defines `valid_time` on both
+  `schedule_blocks` and `daily_schedule_instances` —
+  `start_minutes >= 0 and end_minutes <= 1440 and start_minutes < end_minutes`.
+  Nothing later drops it. The three client-side guards are backstops, not the
+  only defense. There is no work item to add a CHECK.
 - **`removed` now carries two meanings.** User-deleted and displaced,
   distinguished only by `displaced_by_id`. Any query filtering on status
   `'removed'` will return more rows than a reader expects.

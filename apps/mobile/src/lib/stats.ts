@@ -351,12 +351,6 @@ export function computeStreakData(
       .map(([date]) => date)
   );
 
-  // Days with nothing scheduled are transparent — they neither break the
-  // streak nor extend it. A user should not lose a streak to an empty day.
-  const emptyDates = new Set(
-    [...byDate.entries()].filter(([, v]) => v.relevant === 0).map(([d]) => d)
-  );
-
   const monday = parseLocalDateStr(weekMondayStr);
 
   const weekDayCompletionRatio = Array.from({ length: 7 }, (_, i) => {
@@ -393,8 +387,9 @@ export function computeStreakData(
 
     if (accountedDates.has(dateStr)) {
       streak++;
-    } else if (!byDate.has(dateStr) || emptyDates.has(dateStr)) {
-      // Nothing was scheduled — transparent, skip without breaking.
+    } else if (!byDate.has(dateStr)) {
+      // No relevant rows — nothing scheduled, or only removed/rescheduled.
+      // Transparent: skip without breaking.
     } else {
       break;
     }

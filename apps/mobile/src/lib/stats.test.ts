@@ -91,6 +91,16 @@ describe("computeStreakData", () => {
     expect(streak).toBe(1);
   });
 
+  it("treats a day of only removed rows as transparent, same as no rows", () => {
+    const rows = [
+      ...rowsForDay("2026-08-16", ["completed", "completed", "completed", "completed"]),
+      ...rowsForDay("2026-08-15", ["removed", "removed"]),
+    ];
+
+    const { streak } = computeStreakData(rows, today, monday);
+    expect(streak).toBe(1);
+  });
+
   it("does not break the streak when today is below threshold", () => {
     const rows = [
       ...rowsForDay(today, ["completed", "pending", "pending", "pending", "pending"]),

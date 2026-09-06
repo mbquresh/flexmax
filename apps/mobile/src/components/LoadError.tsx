@@ -21,7 +21,7 @@ export function LoadError({ offline, onRetry }: LoadErrorProps) {
           ? "Check your connection and try again."
           : "Something went wrong loading this screen."}
       </Text>
-      <PressableScale style={styles.button} onPress={onRetry}>
+      <PressableScale style={styles.button} onPress={() => onRetry()}>
         <Text style={styles.buttonText}>Try again</Text>
       </PressableScale>
     </View>
