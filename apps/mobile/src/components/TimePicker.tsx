@@ -10,16 +10,12 @@ import {
 import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { Colors, spacing, radii, typography } from "../theme";
 import { useTheme } from "../providers/ThemeProvider";
-import { minutesToDate, minutesToTime } from "../lib/time";
+import { dateToMinutes, minutesToDate, minutesToTime } from "../lib/time";
 
 interface Props {
   label: string;
   valueMinutes: number;
   onChange: (minutes: number) => void;
-}
-
-function dateToMinutes(d: Date): number {
-  return d.getHours() * 60 + d.getMinutes();
 }
 
 export function TimePicker({ label, valueMinutes, onChange }: Props) {

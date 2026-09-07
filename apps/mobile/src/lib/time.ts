@@ -1,8 +1,8 @@
 export function minutesToTime(minutes: number): string {
-  const h = Math.floor(minutes / 60);
+  const h24 = Math.floor(minutes / 60) % 24;
   const m = minutes % 60;
-  const ampm = h < 12 ? "AM" : "PM";
-  const hour = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  const ampm = h24 < 12 ? "AM" : "PM";
+  const hour = h24 === 0 ? 12 : h24 > 12 ? h24 - 12 : h24;
   return `${hour}:${m.toString().padStart(2, "0")} ${ampm}`;
 }
 
@@ -167,6 +167,10 @@ export function clampMinute(value: number): number {
 // hole two days a year and V8 jumps the clock forward, so 2:30 becomes 3:30.
 export function minutesToDate(m: number): Date {
   return new Date(2001, 0, 1, Math.floor(m / 60), m % 60, 0, 0);
+}
+
+export function dateToMinutes(d: Date): number {
+  return d.getHours() * 60 + d.getMinutes();
 }
 
 export function getLocalDateString(d: Date = new Date()): string {

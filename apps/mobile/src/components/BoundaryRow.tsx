@@ -7,7 +7,7 @@ import {
   Platform,
 } from "react-native";
 import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
-import { minutesToDate, minutesToTime } from "../lib/time";
+import { dateToMinutes, minutesToDate, minutesToTime } from "../lib/time";
 import { Colors, spacing, radii, typography } from "../theme";
 import { useTheme } from "../providers/ThemeProvider";
 
@@ -15,10 +15,6 @@ interface BoundaryRowProps {
   label: string;
   minutes: number | null;
   onChange: (m: number) => void;
-}
-
-function dateToMinutes(date: Date): number {
-  return date.getHours() * 60 + date.getMinutes();
 }
 
 export function BoundaryRow({ label, minutes, onChange }: BoundaryRowProps) {
