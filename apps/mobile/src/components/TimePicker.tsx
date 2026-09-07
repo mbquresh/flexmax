@@ -10,27 +10,41 @@ import {
 import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { Colors, spacing, radii, typography } from "../theme";
 import { useTheme } from "../providers/ThemeProvider";
-import { dateToMinutes, minutesToDate, minutesToTime } from "../lib/time";
+import {
+  dateToMinutes,
+  interpretEndPick,
+  minutesToDate,
+  minutesToTime,
+} from "../lib/time";
 
 interface Props {
   label: string;
   valueMinutes: number;
   onChange: (minutes: number) => void;
+  /** 12:00 AM means 1440 (end of day). Starts stay at 0. */
+  endOfDay?: boolean;
 }
 
-export function TimePicker({ label, valueMinutes, onChange }: Props) {
+export function TimePicker({
+  label,
+  valueMinutes,
+  onChange,
+  endOfDay = false,
+}: Props) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [showAndroid, setShowAndroid] = useState(false);
   const [iosOpen, setIosOpen] = useState(false);
 
   const handleChange = (_event: DateTimePickerEvent, selected?: Date) => {
-    if (Platform.OS === "android") {
-      setShowAndroid(false);
-      if (selected) onChange(dateToMinutes(selected));
-    } else if (selected) {
-      onChange(dateToMinutes(selected));
+    if (!selected) {
+      if (Platform.OS === "android") setShowAndroid(false);
+      return;
     }
+    const picked = dateToMinutes(selected);
+    const minutes = endOfDay ? interpretEndPick(picked, valueMinutes) : picked;
+    if (Platform.OS === "android") setShowAndroid(false);
+    onChange(minutes);
   };
 
   return (

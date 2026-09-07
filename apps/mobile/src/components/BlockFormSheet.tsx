@@ -433,6 +433,7 @@ export function BlockFormSheet({
                     };
                   })
                 }
+                endOfDay
               />
               <Text style={styles.fieldHelper}>
                 {selectedDay != null && initial

@@ -80,7 +80,7 @@ export function AdhocEditSheet({
               {isTimed ? (
                 <View style={styles.timeFields}>
                   <TimePicker label="Start" valueMinutes={startMinutes} onChange={onChangeStart} />
-                  <TimePicker label="End" valueMinutes={endMinutes} onChange={onChangeEnd} />
+                  <TimePicker label="End" valueMinutes={endMinutes} onChange={onChangeEnd} endOfDay />
                 </View>
               ) : null}
               <PressableScale

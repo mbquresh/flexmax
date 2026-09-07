@@ -1784,6 +1784,7 @@ function TodayScreenContent() {
                   label="End"
                   valueMinutes={addTaskEndMinutes}
                   onChange={setAddTaskEndMinutes}
+                  endOfDay
                 />
               </View>
             ) : (

@@ -166,7 +166,20 @@ export function clampMinute(value: number): number {
 // A fixed winter date. `new Date()` plus setHours hits a spring-forward
 // hole two days a year and V8 jumps the clock forward, so 2:30 becomes 3:30.
 export function minutesToDate(m: number): Date {
-  return new Date(2001, 0, 1, Math.floor(m / 60), m % 60, 0, 0);
+  // 1440 is midnight at the end of the day. Date only has 00:00, so show
+  // that as 12:00 AM on the same calendar day — hour 24 would roll to Jan 2
+  // and the spinner would fight the value.
+  const shown = m >= 1440 ? 0 : m;
+  return new Date(2001, 0, 1, Math.floor(shown / 60), shown % 60, 0, 0);
+}
+
+// DateTimePicker cannot represent 1440. 12:00 AM comes back as 0. For an
+// end time that means end-of-day, not start-of-day — and scrolling past
+// midnight into 12:05 AM is the same wrap, not a 5-minute block.
+export function interpretEndPick(picked: number, previous: number): number {
+  if (picked === 0) return 1440;
+  if (previous >= 12 * 60 && picked < 12 * 60) return 1440;
+  return picked;
 }
 
 export function dateToMinutes(d: Date): number {

@@ -213,14 +213,17 @@ function RecoveryScreenContent() {
     const currentDuration = rescheduleSlot
       ? rescheduleSlot.end_minutes - rescheduleSlot.start_minutes
       : blockDuration;
-    setRescheduleSlot({ start_minutes: start, end_minutes: start + currentDuration });
+    setRescheduleSlot({
+      start_minutes: start,
+      end_minutes: Math.min(1440, start + currentDuration),
+    });
   };
 
   const handleEndAdjust = (end: number) => {
     hapticSelect();
     if (!rescheduleSlot) return;
     const start = rescheduleSlot.start_minutes;
-    const clamped = Math.max(end, start + MIN_BLOCK_MINUTES);
+    const clamped = Math.min(1440, Math.max(end, start + MIN_BLOCK_MINUTES));
     setRescheduleSlot({ start_minutes: start, end_minutes: clamped });
   };
 
@@ -680,6 +683,7 @@ function RecoveryScreenContent() {
                   label="Ends"
                   valueMinutes={rescheduleSlot.end_minutes}
                   onChange={handleEndAdjust}
+                  endOfDay
                 />
               </>
             ) : null}
