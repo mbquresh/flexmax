@@ -30,6 +30,13 @@ function isInstanceFixed(instance: DailyInstance): boolean {
   return instance.is_fixed || !!instance.block?.is_fixed;
 }
 
+// The nightly notification replace()s onto this screen, so cold launch has
+// no stack to pop. From Today it is a push and back() is correct.
+function leaveTonight() {
+  if (router.canGoBack()) router.back();
+  else router.replace("/today");
+}
+
 function PlanTomorrowScreenContent() {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -223,7 +230,7 @@ function PlanTomorrowScreenContent() {
     });
 
     if (!changed.length) {
-      router.back();
+      leaveTonight();
       return;
     }
 
@@ -240,7 +247,7 @@ function PlanTomorrowScreenContent() {
       );
       const failed = results.find((r) => r.error);
       if (failed?.error) throw failed.error;
-      router.back();
+      leaveTonight();
     } catch (err) {
       handleError(err, "savePlanTomorrow", "Could not save tomorrow's plan");
     } finally {
@@ -273,7 +280,7 @@ function PlanTomorrowScreenContent() {
     >
       <View style={styles.header}>
         <View style={styles.headerTop}>
-          <TouchableOpacity onPress={() => router.back()} hitSlop={8}>
+          <TouchableOpacity onPress={leaveTonight} hitSlop={8}>
             <Feather name="x" size={iconSizes.md} color={colors.textMuted} />
           </TouchableOpacity>
           <View style={styles.headerText}>
@@ -282,7 +289,7 @@ function PlanTomorrowScreenContent() {
               {tomorrowWeekday} · {tomorrowDate}
             </Text>
           </View>
-          <PressableScale onPress={() => router.back()} hitSlop={8}>
+          <PressableScale onPress={leaveTonight} hitSlop={8}>
             <Text style={styles.skipBtn}>Skip</Text>
           </PressableScale>
         </View>

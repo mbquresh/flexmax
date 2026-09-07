@@ -1072,7 +1072,8 @@ interpretation. Belal was right.
 swaps the top route but leaves the entry beneath, so every round trip added a
 permanent stack layer. Use `router.back()`. EXCEPTION: the notification response
 handler in _layout.tsx must stay `replace` — it fires on cold launch where there
-is no stack to pop.
+is no stack to pop. Screens that can be that landing route (Tonight) must
+`replace("/today")` when `canGoBack()` is false, or the X is a dead control.
 
 **userInterfaceStyle: "automatic" (2026-08-09).** Required in app.config.ts or
 Expo defaults to "light" and pins the app natively, so useColorScheme() never
