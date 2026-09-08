@@ -7,6 +7,7 @@ import Animated, {
   withSequence,
   withTiming,
   withDelay,
+  cancelAnimation,
   Easing,
   SharedValue,
 } from "react-native-reanimated";
@@ -32,19 +33,40 @@ function startPulse(value: SharedValue<number>, index: number) {
   );
 }
 
-export function BrandLoader({ size = 64 }: { size?: number }) {
+export function BrandLoader({
+  size = 64,
+  animated = true,
+}: {
+  size?: number;
+  /** False = the still mark. Pulse only when the wait has actually started. */
+  animated?: boolean;
+}) {
   const { colors } = useTheme();
   const width = (size * MARK_W) / MARK_H;
 
-  const blue = useSharedValue(FLOOR);
-  const ink = useSharedValue(FLOOR);
-  const coral = useSharedValue(FLOOR);
+  const blue = useSharedValue(animated ? FLOOR : 1);
+  const ink = useSharedValue(animated ? FLOOR : 1);
+  const coral = useSharedValue(animated ? FLOOR : 1);
 
   useEffect(() => {
+    if (!animated) {
+      cancelAnimation(blue);
+      cancelAnimation(ink);
+      cancelAnimation(coral);
+      blue.value = 1;
+      ink.value = 1;
+      coral.value = 1;
+      return;
+    }
     startPulse(blue, 0);
     startPulse(ink, 1);
     startPulse(coral, 2);
-  }, [blue, ink, coral]);
+    return () => {
+      cancelAnimation(blue);
+      cancelAnimation(ink);
+      cancelAnimation(coral);
+    };
+  }, [animated, blue, ink, coral]);
 
   const blueStyle = useAnimatedStyle(() => ({ opacity: blue.value }));
   const inkStyle = useAnimatedStyle(() => ({ opacity: ink.value }));

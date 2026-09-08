@@ -6,7 +6,6 @@ import {
   Modal,
   Pressable,
   ScrollView,
-  ActivityIndicator,
   Animated as RNAnimated,
   KeyboardAvoidingView,
   Platform,
@@ -16,6 +15,7 @@ import { WEEKDAYS } from "./DayChips";
 import { Colors, spacing, radii, typography } from "../theme";
 import { useTheme } from "../providers/ThemeProvider";
 import { PressableScale } from "./PressableScale";
+import { BrandLoader } from "./BrandLoader";
 import { TimePicker } from "./TimePicker";
 
 const FALLBACK_WAKE = 6 * 60;
@@ -163,7 +163,7 @@ export function DayBoundariesSheet({
             disabled={saving}
           >
             {saving ? (
-              <ActivityIndicator color={colors.onPrimary} />
+              <BrandLoader size={20} />
             ) : (
               <Text style={styles.saveBtnText}>Save</Text>
             )}

@@ -7,6 +7,7 @@ vi.mock("./supabase", () => ({
 import { DailyInstance, ScheduleBlock } from "../types/database";
 import {
   findRescheduleSlot,
+  patchDayBoundary,
   placeShrunkBlock,
   planDisplacement,
   planRestore,
@@ -801,6 +802,25 @@ describe("resolveDayBoundaries", () => {
     expect(
       resolveDayBoundaries(1, defaults, { "1": { wake: null } })
     ).toEqual(defaults);
+  });
+});
+
+describe("patchDayBoundary", () => {
+  const defaults = { wake: 360, sleep: 1380 };
+
+  it("writes a day's field without touching the other", () => {
+    expect(patchDayBoundary({}, 1, "wake", 420, defaults)).toEqual({
+      "1": { wake: 420 },
+    });
+    expect(
+      patchDayBoundary({ "1": { wake: 420 } }, 1, "sleep", 1320, defaults)
+    ).toEqual({ "1": { wake: 420, sleep: 1320 } });
+  });
+
+  it("drops a field that matches the default and removes an empty day", () => {
+    expect(
+      patchDayBoundary({ "1": { wake: 420 } }, 1, "wake", 360, defaults)
+    ).toEqual({});
   });
 });
 

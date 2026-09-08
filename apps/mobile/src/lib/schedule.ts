@@ -179,6 +179,31 @@ export function resolveDayBoundaries(
   };
 }
 
+// Matching the default drops the field so a day with no remaining
+// overrides disappears, the same packing time_overrides does.
+export function patchDayBoundary(
+  overrides: DayBoundaryOverrides,
+  day: number,
+  field: "wake" | "sleep",
+  minutes: number | null,
+  defaults: { wake: number | null; sleep: number | null }
+): DayBoundaryOverrides {
+  const key = String(day);
+  const current = { ...(overrides[key] ?? {}) };
+  if (minutes == null || minutes === defaults[field]) {
+    delete current[field];
+  } else {
+    current[field] = minutes;
+  }
+  const next = { ...overrides };
+  if (current.wake == null && current.sleep == null) {
+    delete next[key];
+  } else {
+    next[key] = current;
+  }
+  return next;
+}
+
 // A sleep target at or before wake crosses midnight. Instances are stored
 // as minutes-since-midnight on a single date, so there is no representable
 // slot past 1440 — the last usable minute of the day IS midnight. Without

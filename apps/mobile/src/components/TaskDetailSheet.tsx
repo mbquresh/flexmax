@@ -7,7 +7,6 @@ import {
   Pressable,
   TouchableOpacity,
   TextInput,
-  ActivityIndicator,
   Animated as RNAnimated,
   KeyboardAvoidingView,
   Platform,
@@ -17,6 +16,7 @@ import { DailyInstance } from "../types/database";
 import { Colors, spacing, radii, typography, iconSizes } from "../theme";
 import { useTheme } from "../providers/ThemeProvider";
 import { PressableScale } from "./PressableScale";
+import { BrandLoader } from "./BrandLoader";
 
 interface TaskDetailSheetProps {
   instance: DailyInstance | null;
@@ -77,7 +77,7 @@ export function TaskDetailSheet({
             disabled={saving}
           >
             {saving ? (
-              <ActivityIndicator color={colors.onPrimary} />
+              <BrandLoader size={20} />
             ) : (
               <Text style={styles.taskSaveBtnText}>Save</Text>
             )}

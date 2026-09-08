@@ -7,7 +7,6 @@ import {
   Pressable,
   TextInput,
   ScrollView,
-  ActivityIndicator,
   Animated as RNAnimated,
   KeyboardAvoidingView,
   Platform,
@@ -17,6 +16,7 @@ import { BlockCategory, ScheduleBlock } from "../types/database";
 import { Colors, spacing, radii, typography, iconSizes } from "../theme";
 import { useTheme } from "../providers/ThemeProvider";
 import { PressableScale } from "./PressableScale";
+import { BrandLoader } from "./BrandLoader";
 import { DragHandle } from "./DragHandle";
 import { TimePicker } from "./TimePicker";
 import { CategoryChips } from "./CategoryChips";
@@ -473,7 +473,7 @@ export function BlockFormSheet({
               disabled={saving}
             >
               {saving ? (
-                <ActivityIndicator color={colors.onPrimary} />
+                <BrandLoader size={20} />
               ) : (
                 <Text style={styles.addBtnText}>
                   {initial ? "Save changes" : "Add block"}

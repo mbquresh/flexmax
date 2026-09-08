@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  ActivityIndicator,
 } from "react-native";
 import { router } from "expo-router";
 import { supabase } from "../src/lib/supabase";
@@ -14,6 +13,7 @@ import { useTheme } from "../src/providers/ThemeProvider";
 import { useStore } from "../src/store";
 import { RequireAuth } from "../src/components/RequireAuth";
 import { BrandMark } from "../src/components/BrandMark";
+import { BrandLoader } from "../src/components/BrandLoader";
 import { PressableScale } from "../src/components/PressableScale";
 import { WeekDemo } from "../src/components/WeekDemo";
 import { handleError } from "../src/lib/errors";
@@ -214,7 +214,7 @@ function OnboardingContent() {
                 disabled={saving}
               >
                 {saving ? (
-                  <ActivityIndicator color={colors.onPrimary} />
+                  <BrandLoader size={20} />
                 ) : (
                   <Text style={styles.actionBtnText}>Build my schedule</Text>
                 )}

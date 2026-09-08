@@ -856,7 +856,9 @@ makes it a one-line swap in theme.ts if ever revisited.
 - **Wake is now load-bearing.** It is how resolveDayEnd detects a midnight
   crossing. Per-day overrides live in DayBoundariesSheet; the header/footer
   split was kept deliberately so Wake and Sleep still frame the block list as
-  a timeline.
+  a timeline. A selected day shows and writes that day's resolved times,
+  same as block times — the All view is the default. Today's sleep footer
+  reads resolveDayBoundaries, not the scalar.
 - **miss_reason_tag is only captured in the evening sweep, and that is
   deliberate.** A user who swipes to declare a miss during the day is being
   intentional and writes reflection_why; a user resolving misses at 9pm has
@@ -1055,9 +1057,9 @@ New components:
 - `BrandMark` — the F mark as themed SVG, drawn from the same three brand
   colors as MenuButton. Geometry measured from assets/icon.png.
 - `BrandLoader` — the mark with opacity travelling through blue, ink, coral on a
-  660ms cycle, floored at 0.35 so the F stays legible. Used on the six
-  full-screen loads only; the eleven inline button spinners stay as
-  ActivityIndicator, since at 200-400ms a branded animation renders as a flicker.
+  660ms cycle, floored at 0.35 so the F stays legible. Full-screen loads
+  use size 56; inline button / pull-to-refresh use size 20. There is no
+  ActivityIndicator left in the tree.
   THE LETTERFORM MUST NEVER ROTATE. An asymmetric glyph spends most of a
   rotation upside down and reads as having fallen over.
 
@@ -1428,6 +1430,12 @@ then touched nothing — which is why it never fired in testing. Both values
 are now held in the store and passed by every call site. Any future
 notification type must be added to the store-and-pass-through path, not just
 to the managed cancel list.
+The inverse hole (fixed 2026-09-07): passing the snapshot blindly
+recreated the old clock. A swap cancels the managed set and rebuilds;
+preempt.startMinutes was the load-time start, so Cardio moved to 4:30
+still fired at 1:00. resolvePreempt rematerializes the fire time from
+the live instance (or drops the nudge if that row is gone, resolved,
+or already started). The day's pick stays the same block.
 
 **AuthProvider could hang the app forever with no error (fixed 2026-08-26).**
 supabase.auth.getSession() had no .catch() and no timeout, and was the only

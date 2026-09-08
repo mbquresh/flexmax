@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
@@ -375,7 +374,7 @@ function PlanTomorrowScreenContent() {
             disabled={saving}
           >
             {saving ? (
-              <ActivityIndicator color={colors.onPrimary} />
+              <BrandLoader size={20} />
             ) : (
               <Text style={styles.saveBtnText}>Save tomorrow's plan</Text>
             )}

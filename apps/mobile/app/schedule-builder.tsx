@@ -22,6 +22,8 @@ import {
   ensureActiveTemplate,
   DayBoundaryOverrides,
   WEEKDAYS,
+  resolveDayBoundaries,
+  patchDayBoundary,
 } from "../src/lib/schedule";
 import {
   earliestResolvedStart,
@@ -163,6 +165,18 @@ function ScheduleBuilderScreenContent() {
       .map((b) => ({ ...b, __resolved: resolveBlockTimes(b, selectedDay) }))
       .sort((a, b) => a.__resolved.start - b.__resolved.start);
   }, [activeBlocks, selectedDay]);
+
+  const defaultBounds = useMemo(
+    () => ({ wake: wakeTarget, sleep: sleepTarget }),
+    [wakeTarget, sleepTarget]
+  );
+  const visibleBounds = useMemo(
+    () =>
+      selectedDay == null
+        ? defaultBounds
+        : resolveDayBoundaries(selectedDay, defaultBounds, overrides),
+    [selectedDay, defaultBounds, overrides]
+  );
 
   const loadBlocks = async (quiet = false) => {
     if (!session?.user.id) {
@@ -504,10 +518,42 @@ function ScheduleBuilderScreenContent() {
     if (Platform.OS !== "web") Alert.alert("Error", message);
   };
 
+  const persistOverrides = async (
+    next: DayBoundaryOverrides,
+    closeSheet = false
+  ) => {
+    const prev = overrides;
+    setOverrides(next);
+    if (closeSheet) setOverridesSaving(true);
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ day_boundary_overrides: next })
+        .eq("id", session.user.id);
+      if (error) {
+        setOverrides(prev);
+        handleError(error, "saveDayOverrides", "Could not save");
+        return;
+      }
+      await refreshProfile();
+      if (closeSheet) setOverridesOpen(false);
+    } finally {
+      if (closeSheet) setOverridesSaving(false);
+    }
+  };
+
   const saveBoundary = async (
     field: "wake_target_minutes" | "sleep_target_minutes",
     minutes: number
   ) => {
+    const key = field === "wake_target_minutes" ? "wake" : "sleep";
+    if (selectedDay != null) {
+      await persistOverrides(
+        patchDayBoundary(overrides, selectedDay, key, minutes, defaultBounds)
+      );
+      return;
+    }
+
     const prevWake = wakeTarget;
     const prevSleep = sleepTarget;
 
@@ -537,24 +583,7 @@ function ScheduleBuilderScreenContent() {
   };
 
   const saveDayOverrides = async (next: DayBoundaryOverrides) => {
-    const prev = overrides;
-    setOverrides(next);
-    setOverridesSaving(true);
-    try {
-      const { error } = await supabase
-        .from("profiles")
-        .update({ day_boundary_overrides: next })
-        .eq("id", session.user.id);
-      if (error) {
-        setOverrides(prev);
-        handleError(error, "saveDayOverrides", "Could not save");
-        return;
-      }
-      await refreshProfile();
-      setOverridesOpen(false);
-    } finally {
-      setOverridesSaving(false);
-    }
+    await persistOverrides(next, true);
   };
 
   const handleFormSave = async (data: BlockFormData) => {
@@ -790,10 +819,16 @@ function ScheduleBuilderScreenContent() {
             <View style={styles.boundarySection}>
               <Text style={[styles.boundaryLabel, styles.wakeBoundaryLabel]}>Day starts</Text>
               <BoundaryRow
+                key={`wake-${selectedDay ?? "all"}`}
                 label="Wake"
-                minutes={wakeTarget}
+                minutes={visibleBounds.wake}
                 onChange={(m) => saveBoundary("wake_target_minutes", m)}
               />
+              {selectedDay != null ? (
+                <Text style={styles.overrideLinkText}>
+                  Changing {weekdayLong(selectedDay)} only
+                </Text>
+              ) : null}
               <PressableScale
                 style={styles.overrideLink}
                 onPress={() => {
@@ -832,10 +867,16 @@ function ScheduleBuilderScreenContent() {
             <View style={styles.boundarySection}>
               <Text style={[styles.boundaryLabel, styles.sleepBoundaryLabel]}>Day ends</Text>
               <BoundaryRow
+                key={`sleep-${selectedDay ?? "all"}`}
                 label="Sleep"
-                minutes={sleepTarget}
+                minutes={visibleBounds.sleep}
                 onChange={(m) => saveBoundary("sleep_target_minutes", m)}
               />
+              {selectedDay != null ? (
+                <Text style={styles.overrideLinkText}>
+                  Changing {weekdayLong(selectedDay)} only
+                </Text>
+              ) : null}
               <PressableScale
                 style={styles.overrideLink}
                 onPress={() => {

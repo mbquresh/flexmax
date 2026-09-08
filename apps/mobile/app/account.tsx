@@ -10,7 +10,6 @@ import {
   Platform,
   Linking,
   Share,
-  ActivityIndicator,
 } from "react-native";
 import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
@@ -20,6 +19,7 @@ import { useAuth } from "../src/providers/AuthProvider";
 import { useTheme, ThemeMode } from "../src/providers/ThemeProvider";
 import { RequireAuth } from "../src/components/RequireAuth";
 import { BrandMark } from "../src/components/BrandMark";
+import { BrandLoader } from "../src/components/BrandLoader";
 import { PressableScale } from "../src/components/PressableScale";
 import { Colors, spacing, radii, typography, iconSizes } from "../src/theme";
 import { getInitials } from "../src/lib/format";
@@ -391,7 +391,7 @@ function AccountScreenContent() {
           ) : (
             <PressableScale style={styles.settingRow} onPress={handleEnable} disabled={busy}>
               <Text style={styles.settingLabel}>Create a calendar link</Text>
-              {busy ? <ActivityIndicator size="small" color={colors.textMuted} /> : (
+              {busy ? <BrandLoader size={20} /> : (
                 <Feather name="plus" size={iconSizes.sm} color={colors.primary} />
               )}
             </PressableScale>

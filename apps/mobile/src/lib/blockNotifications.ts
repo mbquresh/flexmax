@@ -1,7 +1,7 @@
 import * as Notifications from "expo-notifications";
 import { DailyInstance, BehavioralInsight } from "../types/database";
 import { minutesToTime as formatTime } from "./time";
-import { preemptBody, PreemptCandidate } from "./preempt";
+import { preemptBody, resolvePreempt, PreemptCandidate } from "./preempt";
 
 export interface ScheduledCutoff {
   instanceId: string;
@@ -57,8 +57,13 @@ const MANAGED_TYPES = [
 
 // Scheduled cancel does not clear a banner that already fired. Completing
 // a block after "How'd it go?" has landed left the stale prompt sitting
-// in Notification Center. Dismiss anything whose instance is no longer open.
-async function dismissResolvedBanners(instances: DailyInstance[]): Promise<void> {
+// in Notification Center. Dismiss anything whose instance is no longer
+// open, and a preempt that fired at a start the instance no longer has.
+async function dismissResolvedBanners(
+  instances: DailyInstance[],
+  resolvedPreempt: PreemptCandidate | null,
+  nowMinutes: number
+): Promise<void> {
   const openIds = new Set(
     instances
       .filter((i) => i.status === "pending" || i.status === "active")
@@ -71,12 +76,15 @@ async function dismissResolvedBanners(instances: DailyInstance[]): Promise<void>
         .filter((n) => {
           const type = n.request.content.data?.type as string | undefined;
           const id = n.request.content.data?.instanceId as string | undefined;
-          return (
-            !!type &&
-            MANAGED_TYPES.includes(type) &&
-            !!id &&
-            !openIds.has(id)
-          );
+          if (!type || !MANAGED_TYPES.includes(type) || !id) return false;
+          if (type === "block_preempt") {
+            if (!resolvedPreempt || id !== resolvedPreempt.instanceId) {
+              return true;
+            }
+            // Still going to fire later — this banner went off at the old slot.
+            return resolvedPreempt.startMinutes > nowMinutes + 1;
+          }
+          return !openIds.has(id);
         })
         .map((n) => Notifications.dismissNotificationAsync(n.request.identifier))
     );
@@ -103,13 +111,15 @@ export async function scheduleTodayBlockNotifications(
   insights: BehavioralInsight[] = [],
   preempt: PreemptCandidate | null = null
 ): Promise<ScheduledCutoff[]> {
-  // Cancel existing ones first to avoid duplicates on refresh
-  await cancelTodayBlockNotifications();
-  await dismissResolvedBanners(instances);
-
-  const scheduledCutoffs: ScheduledCutoff[] = [];
   const now = new Date();
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const livePreempt = resolvePreempt(preempt, instances, nowMinutes);
+
+  // Cancel existing ones first to avoid duplicates on refresh
+  await cancelTodayBlockNotifications();
+  await dismissResolvedBanners(instances, livePreempt, nowMinutes);
+
+  const scheduledCutoffs: ScheduledCutoff[] = [];
   const [year, month, day] = date.split("-").map(Number);
 
   // Only schedule blocks that haven't ended yet.
@@ -219,25 +229,25 @@ export async function scheduleTodayBlockNotifications(
     }
   }
 
-  if (preempt) {
+  if (livePreempt) {
     const startDate = new Date(
       year,
       month - 1,
       day,
-      Math.floor(preempt.startMinutes / 60),
-      preempt.startMinutes % 60,
+      Math.floor(livePreempt.startMinutes / 60),
+      livePreempt.startMinutes % 60,
       0
     );
 
     if (startDate > now) {
       await Notifications.scheduleNotificationAsync({
         content: {
-          title: `${preempt.blockName} starts now`,
-          body: preemptBody(preempt),
+          title: `${livePreempt.blockName} starts now`,
+          body: preemptBody(livePreempt),
           sound: true,
           data: {
             type: "block_preempt",
-            instanceId: preempt.instanceId,
+            instanceId: livePreempt.instanceId,
             screen: "today",
           },
         },

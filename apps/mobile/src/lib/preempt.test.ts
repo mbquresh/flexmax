@@ -3,6 +3,7 @@ import { DailyInstance, ScheduleBlock } from "../types/database";
 import {
   pickPreemptTarget,
   preemptBody,
+  resolvePreempt,
   PreemptHistoryRow,
 } from "./preempt";
 
@@ -267,6 +268,56 @@ describe("pickPreemptTarget", () => {
     ]);
     const picked = pickPreemptTarget([futureGym], hist, 600);
     expect(picked).toMatchObject({ landed: 3, total: 7 });
+  });
+});
+
+describe("resolvePreempt", () => {
+  const snapshot = {
+    instanceId: "gym-today",
+    blockId: "block-1",
+    blockName: "Gym",
+    startMinutes: 780,
+    landed: 2,
+    total: 7,
+  };
+
+  it("moves the fire time to the instance's current start", () => {
+    const moved = instance({
+      id: "gym-today",
+      start_minutes: 16 * 60 + 30,
+      end_minutes: 18 * 60,
+    });
+    expect(resolvePreempt(snapshot, [moved], 12 * 60)).toMatchObject({
+      instanceId: "gym-today",
+      startMinutes: 16 * 60 + 30,
+    });
+  });
+
+  it("drops the nudge when the instance is gone or no longer pending", () => {
+    expect(resolvePreempt(snapshot, [], 12 * 60)).toBeNull();
+    expect(
+      resolvePreempt(
+        snapshot,
+        [
+          instance({
+            id: "gym-today",
+            start_minutes: 16 * 60 + 30,
+            end_minutes: 18 * 60,
+            status: "completed",
+          }),
+        ],
+        12 * 60
+      )
+    ).toBeNull();
+  });
+
+  it("drops the nudge when the new start is already behind us", () => {
+    const moved = instance({
+      id: "gym-today",
+      start_minutes: 10 * 60,
+      end_minutes: 11 * 60,
+    });
+    expect(resolvePreempt(snapshot, [moved], 12 * 60)).toBeNull();
   });
 });
 

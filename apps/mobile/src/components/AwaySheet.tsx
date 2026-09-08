@@ -7,7 +7,6 @@ import {
   Pressable,
   TextInput,
   ScrollView,
-  ActivityIndicator,
   Animated as RNAnimated,
   KeyboardAvoidingView,
   Platform,
@@ -17,6 +16,7 @@ import { AwayPeriod } from "../types/database";
 import { Colors, spacing, radii, typography } from "../theme";
 import { useTheme } from "../providers/ThemeProvider";
 import { PressableScale } from "./PressableScale";
+import { BrandLoader } from "./BrandLoader";
 import { formatAwayRange, isCurrent } from "../lib/away";
 import { formatEndDate } from "../lib/recurrence";
 import { getLocalDateString } from "../lib/time";
@@ -190,7 +190,7 @@ export function AwaySheet({
                 disabled={saving}
               >
                 {saving ? (
-                  <ActivityIndicator color={colors.onPrimary} />
+                  <BrandLoader size={20} />
                 ) : (
                   <Text style={styles.addBtnText}>Add</Text>
                 )}

@@ -7,7 +7,6 @@ import {
   Pressable,
   TouchableOpacity,
   TextInput,
-  ActivityIndicator,
   Animated as RNAnimated,
   KeyboardAvoidingView,
   Platform,
@@ -17,6 +16,7 @@ import { Colors, spacing, radii, typography } from "../theme";
 import { useTheme } from "../providers/ThemeProvider";
 import { TimePicker } from "./TimePicker";
 import { PressableScale } from "./PressableScale";
+import { BrandLoader } from "./BrandLoader";
 
 interface AdhocEditSheetProps {
   task: AdhocTask | null;
@@ -89,7 +89,7 @@ export function AdhocEditSheet({
                 disabled={saving || !name.trim()}
               >
                 {saving ? (
-                  <ActivityIndicator color={colors.onPrimary} />
+                  <BrandLoader size={20} />
                 ) : (
                   <Text style={styles.saveBtnText}>Save</Text>
                 )}

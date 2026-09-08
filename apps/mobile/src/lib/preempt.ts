@@ -69,6 +69,26 @@ export function pickPreemptTarget(
   return candidates[0];
 }
 
+// The day's pick is chosen once at load and passed through every resync
+// so a swap cannot drop it. Times move; the fire clock must follow the
+// instance, not that snapshot. Cardio picked at 1:00, then swapped to
+// 4:30, still firing at 1:00 is the bug this closes.
+export function resolvePreempt(
+  preempt: PreemptCandidate | null,
+  instances: DailyInstance[],
+  nowMinutes: number
+): PreemptCandidate | null {
+  if (!preempt) return null;
+  const inst = instances.find((i) => i.id === preempt.instanceId);
+  if (!inst || inst.status !== "pending") return null;
+  if (inst.start_minutes <= nowMinutes) return null;
+  return {
+    ...preempt,
+    startMinutes: inst.start_minutes,
+    blockName: inst.block?.name ?? preempt.blockName,
+  };
+}
+
 export function preemptBody(c: PreemptCandidate): string {
   // States what LANDED, not what failed. Same fact, and this arrives while
   // the user is deciding whether to start. Never address the user directly

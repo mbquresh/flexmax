@@ -236,6 +236,18 @@ function TodayScreenContent() {
   const scrollHandler = useAnimatedScrollHandler((e) => {
     scrollY.value = e.contentOffset.y;
   });
+  // Native UIRefreshControl sits at the top of the scroll view — under
+  // the status bar / Dynamic Island — and progressViewOffset is a no-op
+  // on iOS New Arch. The pull still works; we draw the spinner ourselves
+  // in the gap that opens below the notch.
+  const refreshingSv = useSharedValue(false);
+  useEffect(() => {
+    refreshingSv.value = refreshing;
+  }, [refreshing, refreshingSv]);
+  const refreshHudStyle = useAnimatedStyle(() => {
+    const pulled = Math.min(1, Math.max(0, -scrollY.value / 56));
+    return { opacity: refreshingSv.value ? 1 : pulled };
+  });
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
@@ -600,8 +612,11 @@ function TodayScreenContent() {
     if (isPastDay) return;
     const { todayInsights, todayPreempt } = useStore.getState();
     // The full set is cancelled and rebuilt on every call, so anything not
-    // passed here is silently dropped. Both values are derived once at load
-    // and held in the store precisely so a resync can restore them.
+    // passed here is silently dropped. Insights and the day's preempt pick
+    // are derived at load and held so a resync can restore them. The
+    // scheduler rematerializes the preempt clock from current instance
+    // times — the snapshot's startMinutes is load-time and goes stale
+    // on a swap.
     scheduleTodayBlockNotifications(
       updatedInstances,
       getLocalDateString(),
@@ -1308,11 +1323,11 @@ function TodayScreenContent() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor={colors.textMuted}
+            tintColor="transparent"
+            colors={["transparent"]}
           />
         }
       >
-        <View style={styles.topBleed} />
         <View
           style={[
             styles.dayColumn,
@@ -1513,9 +1528,9 @@ function TodayScreenContent() {
             </View>
           ) : null}
 
-          {profile?.sleep_target_minutes != null ? (
+          {todayBounds.sleep != null ? (
             <Text style={styles.sleepFooter}>
-              Sleep · target {minutesToTime(profile.sleep_target_minutes)}
+              Sleep · target {minutesToTime(todayBounds.sleep)}
             </Text>
           ) : null}
         </View>
@@ -1527,6 +1542,16 @@ function TodayScreenContent() {
         pointerEvents="none"
         style={[styles.upperRealm, { height: insets.top }]}
       />
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          styles.refreshHud,
+          { top: Math.max(insets.top, 12) + 6 },
+          refreshHudStyle,
+        ]}
+      >
+        <BrandLoader size={20} animated={refreshing} />
+      </Animated.View>
 
       {toastMessage ? (
         <Animated.View style={[styles.toast, toastAnimatedStyle]} pointerEvents="none">
@@ -1844,11 +1869,6 @@ const makeStyles = (c: Colors) =>
       alignItems: "center",
       justifyContent: "center",
     },
-    topBleed: {
-      height: 400,
-      marginTop: -400,
-      backgroundColor: c.surface,
-    },
     bottomBleed: {
       height: 400,
       marginBottom: -400,
@@ -1863,6 +1883,12 @@ const makeStyles = (c: Colors) =>
       left: 0,
       right: 0,
       backgroundColor: c.surface,
+    },
+    refreshHud: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      alignItems: "center",
     },
     topHousing: {
       backgroundColor: c.surface,
@@ -1917,7 +1943,7 @@ const makeStyles = (c: Colors) =>
     pastBannerAction: { color: c.primary, ...typography.smallBold },
     date: { ...typography.small, ...numeric, color: c.textMuted, marginTop: spacing.xs },
     list: { padding: spacing.lg, paddingBottom: 100 },
-    scroll: { flex: 1, backgroundColor: c.background },
+    scroll: { flex: 1, backgroundColor: c.surface },
     scrollContent: { flexGrow: 1 },
     empty: { color: c.textFaint, textAlign: "center", marginTop: 40, ...typography.body },
     addAdhocPill: {

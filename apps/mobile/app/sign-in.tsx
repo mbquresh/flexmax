@@ -7,7 +7,6 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
   ScrollView,
 } from "react-native";
 import { router } from "expo-router";
@@ -15,6 +14,7 @@ import { useAuth } from "../src/providers/AuthProvider";
 import { useTheme } from "../src/providers/ThemeProvider";
 import { handleError, getErrorMessage } from "../src/lib/errors";
 import { BrandMark } from "../src/components/BrandMark";
+import { BrandLoader } from "../src/components/BrandLoader";
 import { PressableScale } from "../src/components/PressableScale";
 import { Colors, spacing, radii, typography } from "../src/theme";
 
@@ -135,7 +135,7 @@ export default function SignInScreen() {
           disabled={loading}
         >
           {loading ? (
-            <ActivityIndicator color={colors.onPrimary} />
+            <BrandLoader size={20} />
           ) : (
             <Text style={styles.buttonText}>
               {mode === "sign-in" ? "Sign in" : "Sign up"}

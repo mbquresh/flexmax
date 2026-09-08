@@ -6,7 +6,6 @@ import {
   Modal,
   Pressable,
   TextInput,
-  ActivityIndicator,
   Animated as RNAnimated,
   Easing,
   KeyboardAvoidingView,
@@ -15,6 +14,7 @@ import {
 import { Colors, spacing, radii, typography, numeric } from "../theme";
 import { useTheme } from "../providers/ThemeProvider";
 import { PressableScale } from "./PressableScale";
+import { BrandLoader } from "./BrandLoader";
 import { hapticSelect } from "../lib/haptics";
 
 const SHEET_OFFSET = 400;
@@ -128,7 +128,7 @@ export function DisputeSheet({
               disabled={!canSubmit}
             >
               {saving ? (
-                <ActivityIndicator color={colors.onPrimary} />
+                <BrandLoader size={20} />
               ) : (
                 <Text style={styles.submitText}>Correct this</Text>
               )}

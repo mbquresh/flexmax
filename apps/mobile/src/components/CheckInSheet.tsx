@@ -5,7 +5,6 @@ import {
   StyleSheet,
   Modal,
   Pressable,
-  ActivityIndicator,
   Animated as RNAnimated,
   Platform,
   TextInput,
@@ -17,6 +16,7 @@ import { minutesToTime } from "../lib/time";
 import { Colors, spacing, radii, typography, numeric } from "../theme";
 import { useTheme } from "../providers/ThemeProvider";
 import { PressableScale } from "./PressableScale";
+import { BrandLoader } from "./BrandLoader";
 
 export const QUALITY_REASON_PRESETS = [
   "Interrupted",
@@ -207,7 +207,9 @@ export function CheckInSheet({
             )}
 
             {saving ? (
-              <ActivityIndicator color={colors.primary} style={styles.sheetSaving} />
+              <View style={styles.sheetSaving}>
+                <BrandLoader size={20} />
+              </View>
             ) : null}
           </RNAnimated.View>
         </Pressable>
