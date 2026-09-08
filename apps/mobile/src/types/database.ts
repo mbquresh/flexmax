@@ -35,6 +35,20 @@ export interface AdhocTask {
   created_at: string;
 }
 
+// Keyed on (user_id, block_id, date), never instance_id. Instances are
+// generated lazily; a task moved to a date that has not been opened yet
+// has no instance row to point at.
+export interface BlockTask {
+  id: string;
+  user_id: string;
+  block_id: string;
+  date: string;
+  name: string;
+  done: boolean;
+  position: number;
+  created_at: string;
+}
+
 export interface Profile {
   id: string;
   name: string;
@@ -228,6 +242,17 @@ export interface Database {
           name: string;
         };
         Update: Partial<AdhocTask>;
+        Relationships: [];
+      };
+      block_tasks: {
+        Row: BlockTask & Record<string, unknown>;
+        Insert: Partial<BlockTask> & {
+          user_id: string;
+          block_id: string;
+          date: string;
+          name: string;
+        };
+        Update: Partial<BlockTask>;
         Relationships: [];
       };
       push_tokens: {
