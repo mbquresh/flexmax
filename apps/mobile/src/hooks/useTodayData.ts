@@ -107,30 +107,6 @@ export function useTodayData(userId: string | undefined) {
     }
   }, [syncTodayTasks]);
 
-  const applyBlockTask = useCallback((task: BlockTask) => {
-    setBlockTasks((prev) => {
-      const without = prev.filter((t) => t.id !== task.id);
-      const next =
-        task.date !== viewDateRef.current
-          ? without
-          : [...without, task].sort((a, b) =>
-              a.position !== b.position
-                ? a.position - b.position
-                : a.created_at.localeCompare(b.created_at)
-            );
-      syncTodayTasks(next);
-      return next;
-    });
-  }, [syncTodayTasks]);
-
-  const dropBlockTask = useCallback((taskId: string) => {
-    setBlockTasks((prev) => {
-      const next = prev.filter((t) => t.id !== taskId);
-      syncTodayTasks(next);
-      return next;
-    });
-  }, [syncTodayTasks]);
-
   const loadToday = useCallback(
     async (dateOverride?: string, options?: { silent?: boolean }) => {
       if (!userId) return;
@@ -441,7 +417,5 @@ export function useTodayData(userId: string | undefined) {
     insights,
     tasksByBlockId,
     toggleBlockTaskDone,
-    applyBlockTask,
-    dropBlockTask,
   };
 }
