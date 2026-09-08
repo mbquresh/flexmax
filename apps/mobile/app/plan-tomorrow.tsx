@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
+  Pressable,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
@@ -22,8 +23,15 @@ import { BrandLoader } from "../src/components/BrandLoader";
 import { LoadError } from "../src/components/LoadError";
 import { PressableScale } from "../src/components/PressableScale";
 import { CloseTodayRow } from "../src/components/CloseTodayRow";
-import { DailyInstance } from "../src/types/database";
+import { DailyInstance, BlockTask } from "../src/types/database";
 import { Colors, spacing, radii, typography, iconSizes } from "../src/theme";
+import {
+  listBlockTasks,
+  groupBlockTasks,
+  createBlockTask,
+  setBlockTaskDone,
+} from "../src/lib/blockTasks";
+import { hapticSelect } from "../src/lib/haptics";
 
 function isInstanceFixed(instance: DailyInstance): boolean {
   return instance.is_fixed || !!instance.block?.is_fixed;
@@ -50,12 +58,11 @@ function PlanTomorrowScreenContent() {
   const [instances, setInstances] = useState<DailyInstance[]>([]);
   const [closeTodayInstances, setCloseTodayInstances] = useState<DailyInstance[]>([]);
   const [awaitingPresetIds, setAwaitingPresetIds] = useState<Set<string>>(new Set());
-  const [drafts, setDrafts] = useState<Record<string, string>>({});
-  const [loadedDetails, setLoadedDetails] = useState<Record<string, string>>({});
+  const [blockTasks, setBlockTasks] = useState<BlockTask[]>([]);
+  const [addDrafts, setAddDrafts] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
   const [loadOffline, setLoadOffline] = useState(false);
-  const [saving, setSaving] = useState(false);
 
   const loadPlan = useCallback(async () => {
     if (!session?.user.id) return;
@@ -89,15 +96,16 @@ function PlanTomorrowScreenContent() {
       if (closeTodayResult.error) throw closeTodayResult.error;
 
       const rows = tomorrowResult.data ?? [];
-      const details: Record<string, string> = {};
-      for (const inst of rows) {
-        details[inst.id] = inst.task_detail ?? "";
-      }
+      const { data: tasks, error: tasksError } = await listBlockTasks(
+        session.user.id,
+        tomorrowDate
+      );
+      if (tasksError) handleError(tasksError, "listBlockTasks");
 
       setInstances(rows);
       setCloseTodayInstances(closeTodayResult.data ?? []);
-      setLoadedDetails(details);
-      setDrafts({ ...details });
+      setBlockTasks(tasks ?? []);
+      setAddDrafts({});
     } catch (err) {
       setLoadFailed(true);
       setLoadOffline(isConnectivityError(err));
@@ -111,9 +119,10 @@ function PlanTomorrowScreenContent() {
     loadPlan();
   }, [loadPlan]);
 
-  const updateDraft = (instanceId: string, text: string) => {
-    setDrafts((prev) => ({ ...prev, [instanceId]: text }));
-  };
+  const tasksByBlockId = useMemo(
+    () => groupBlockTasks(blockTasks),
+    [blockTasks]
+  );
 
   const closeTodayLeft = closeTodayInstances.filter(
     (i) => i.status === "pending" || i.status === "active"
@@ -221,37 +230,47 @@ function PlanTomorrowScreenContent() {
     });
   };
 
-  const handleSave = async () => {
-    const changed = instances.filter((inst) => {
-      const current = (drafts[inst.id] ?? "").trim();
-      const original = (loadedDetails[inst.id] ?? "").trim();
-      return current !== original;
-    });
-
-    if (!changed.length) {
-      leaveTonight();
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const results = await Promise.all(
-        changed.map((inst) => {
-          const trimmed = (drafts[inst.id] ?? "").trim();
-          return supabase
-            .from("daily_schedule_instances")
-            .update({ task_detail: trimmed || null })
-            .eq("id", inst.id);
-        })
+  const handleToggleTask = async (task: BlockTask, done: boolean) => {
+    hapticSelect();
+    setBlockTasks((prev) =>
+      prev.map((t) => (t.id === task.id ? { ...t, done } : t))
+    );
+    const { error } = await setBlockTaskDone(task.id, done);
+    if (error) {
+      setBlockTasks((prev) =>
+        prev.map((t) => (t.id === task.id ? { ...t, done: !done } : t))
       );
-      const failed = results.find((r) => r.error);
-      if (failed?.error) throw failed.error;
-      leaveTonight();
-    } catch (err) {
-      handleError(err, "savePlanTomorrow", "Could not save tomorrow's plan");
-    } finally {
-      setSaving(false);
     }
+  };
+
+  const handleAddTask = async (blockId: string, name?: string) => {
+    if (!session?.user.id) return;
+    const trimmed = (name ?? addDrafts[blockId] ?? "").trim();
+    if (!trimmed) return;
+    setAddDrafts((prev) => ({ ...prev, [blockId]: "" }));
+    const { data, error } = await createBlockTask(
+      session.user.id,
+      blockId,
+      tomorrowDate,
+      trimmed
+    );
+    if (error) {
+      setAddDrafts((prev) => ({ ...prev, [blockId]: trimmed }));
+      return false;
+    }
+    if (data) setBlockTasks((prev) => [...prev, data]);
+    return true;
+  };
+
+  const handleDone = async () => {
+    const pending = Object.entries(addDrafts)
+      .map(([blockId, text]) => [blockId, text.trim()] as const)
+      .filter(([, text]) => text.length > 0);
+    for (const [blockId, name] of pending) {
+      const ok = await handleAddTask(blockId, name);
+      if (ok === false) return;
+    }
+    leaveTonight();
   };
 
   if (!session) return null;
@@ -350,14 +369,52 @@ function PlanTomorrowScreenContent() {
                   {minutesToTime(instance.start_minutes)} –{" "}
                   {minutesToTime(instance.end_minutes)}
                 </Text>
+                {(tasksByBlockId[instance.block_id] ?? []).map((task) => (
+                  <View key={task.id} style={styles.taskRow}>
+                    <Pressable
+                      onPress={() => handleToggleTask(task, !task.done)}
+                      hitSlop={8}
+                      style={styles.taskCheckHit}
+                    >
+                      <View
+                        style={[
+                          styles.taskCheck,
+                          task.done && styles.taskCheckDone,
+                        ]}
+                      >
+                        {task.done ? (
+                          <Feather
+                            name="check"
+                            size={10}
+                            color={colors.background}
+                          />
+                        ) : null}
+                      </View>
+                    </Pressable>
+                    <Text
+                      style={[
+                        styles.taskName,
+                        task.done && styles.taskNameDone,
+                      ]}
+                    >
+                      {task.name}
+                    </Text>
+                  </View>
+                ))}
                 <TextInput
                   style={styles.taskInput}
-                  value={drafts[instance.id] ?? ""}
-                  onChangeText={(text) => updateDraft(instance.id, text)}
-                  placeholder="What will you actually do?"
+                  value={addDrafts[instance.block_id] ?? ""}
+                  onChangeText={(text) =>
+                    setAddDrafts((prev) => ({
+                      ...prev,
+                      [instance.block_id]: text,
+                    }))
+                  }
+                  placeholder="Add a task"
                   placeholderTextColor={colors.textPlaceholder}
-                  multiline
-                  textAlignVertical="top"
+                  returnKeyType="done"
+                  blurOnSubmit
+                  onSubmitEditing={() => handleAddTask(instance.block_id)}
                 />
               </View>
             );
@@ -368,16 +425,8 @@ function PlanTomorrowScreenContent() {
 
       {instances.length > 0 ? (
         <View style={styles.footer}>
-          <PressableScale
-            style={styles.saveBtn}
-            onPress={handleSave}
-            disabled={saving}
-          >
-            {saving ? (
-              <BrandLoader size={20} />
-            ) : (
-              <Text style={styles.saveBtnText}>Save tomorrow's plan</Text>
-            )}
+          <PressableScale style={styles.saveBtn} onPress={handleDone}>
+            <Text style={styles.saveBtnText}>Done</Text>
           </PressableScale>
         </View>
       ) : null}
@@ -448,6 +497,36 @@ const makeStyles = (c: Colors) =>
     },
     blockName: { color: c.text, fontSize: 16, fontWeight: "600" },
     blockTime: { color: c.textMuted, fontSize: 13 },
+    taskRow: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: spacing.sm,
+    },
+    taskCheckHit: {
+      paddingTop: 2,
+    },
+    taskCheck: {
+      width: 16,
+      height: 16,
+      borderRadius: 4,
+      borderWidth: 1.5,
+      borderColor: c.textMuted,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    taskCheckDone: {
+      backgroundColor: c.primary,
+      borderColor: c.primary,
+    },
+    taskName: {
+      color: c.textSecondary,
+      ...typography.small,
+      flex: 1,
+    },
+    taskNameDone: {
+      color: c.textFaint,
+      textDecorationLine: "line-through",
+    },
     taskInput: {
       backgroundColor: c.surfaceNested,
       borderWidth: 0.5,
@@ -457,7 +536,6 @@ const makeStyles = (c: Colors) =>
       paddingVertical: spacing.md,
       color: c.text,
       fontSize: 15,
-      minHeight: 72,
     },
     empty: {
       alignItems: "center",
