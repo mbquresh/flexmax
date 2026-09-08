@@ -7,10 +7,12 @@ import {
   describeRecurrence,
   formatEndDate,
   overrideDays,
+  upcomingRunDates,
   packedTimeOverrides,
   hasDistinctOverride,
   earliestResolvedStart,
   resolveBlockTimes,
+  runsOn,
   setOverride,
   shiftOverrides,
 } from "./recurrence";
@@ -201,5 +203,37 @@ describe("describeRecurrence", () => {
     expect(describeRecurrence([1, 2, 3, 4, 5], 1, "2026-09-04")).toBe(
       `Every week on weekdays · until ${formatEndDate("2026-09-04")}`
     );
+  });
+});
+
+describe("runsOn", () => {
+  const mwf = { days_of_week: [1, 3, 5], interval_weeks: 1 };
+
+  it("accepts a weekday the block lists and refuses the others", () => {
+    expect(runsOn(mwf, "2026-09-07")).toBe(true); // Monday
+    expect(runsOn(mwf, "2026-09-08")).toBe(false); // Tuesday
+  });
+
+  it("respects ends_on", () => {
+    expect(runsOn({ ...mwf, ends_on: "2026-09-07" }, "2026-09-09")).toBe(false);
+  });
+
+  it("counts interval_weeks from the anchor", () => {
+    const biweekly = {
+      days_of_week: [1],
+      interval_weeks: 2,
+      anchor_date: "2026-09-07",
+    };
+    expect(runsOn(biweekly, "2026-09-07")).toBe(true);
+    expect(runsOn(biweekly, "2026-09-14")).toBe(false);
+    expect(runsOn(biweekly, "2026-09-21")).toBe(true);
+  });
+});
+
+describe("upcomingRunDates", () => {
+  it("skips days the block does not run", () => {
+    expect(
+      upcomingRunDates({ days_of_week: [1, 3, 5] }, "2026-09-08", 3)
+    ).toEqual(["2026-09-09", "2026-09-11", "2026-09-14"]);
   });
 });

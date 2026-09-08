@@ -1,6 +1,7 @@
 // Same list DayChips re-exports. Import here rather than from the component
 // so this module stays testable without pulling React Native.
 import { WEEKDAYS } from "./schedule";
+import { getLocalDateString, parseLocalDate } from "./time";
 
 const WEEKDAY_SET = [1, 2, 3, 4, 5];
 const WEEKEND_SET = [0, 6];
@@ -129,4 +130,57 @@ export function describeRecurrence(
     intervalWeeks === 1 ? "Every week" : `Every ${intervalWeeks} weeks`;
   const base = `${cadence} on ${describeDays(days)}`;
   return endsOn ? `${base} · until ${formatEndDate(endsOn)}` : base;
+}
+
+export type RecurrenceBlock = {
+  days_of_week?: number[] | null;
+  starts_on?: string | null;
+  ends_on?: string | null;
+  interval_weeks?: number | null;
+  anchor_date?: string | null;
+  created_at?: string | null;
+  is_active?: boolean;
+};
+
+function utcDayNumber(iso: string): number {
+  const [y, m, d] = iso.split("-").map(Number);
+  return Date.UTC(y, m - 1, d) / 86_400_000;
+}
+
+// Matches generate_* : weekday, start/end, and interval_weeks against
+// anchor_date (then starts_on, then created_at). Away periods and
+// block_exceptions are not consulted — those have no move UI, and a
+// task on an excepted date is still a valid row.
+export function runsOn(block: RecurrenceBlock, dateStr: string): boolean {
+  if (block.is_active === false) return false;
+  const dow = parseLocalDate(dateStr).getDay();
+  if (!(block.days_of_week ?? []).map(Number).includes(dow)) return false;
+  if (block.starts_on && dateStr < block.starts_on) return false;
+  if (block.ends_on && dateStr > block.ends_on) return false;
+  const interval = block.interval_weeks ?? 1;
+  if (interval <= 1) return true;
+  const anchor =
+    block.anchor_date ??
+    block.starts_on ??
+    block.created_at?.slice(0, 10) ??
+    null;
+  if (!anchor) return true;
+  const weeks = Math.floor((utcDayNumber(dateStr) - utcDayNumber(anchor)) / 7);
+  return ((weeks % interval) + interval) % interval === 0;
+}
+
+export function upcomingRunDates(
+  block: RecurrenceBlock,
+  fromDate: string,
+  count: number
+): string[] {
+  const out: string[] = [];
+  const start = parseLocalDate(fromDate);
+  for (let i = 0; i < 120 && out.length < count; i++) {
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
+    const iso = getLocalDateString(d);
+    if (runsOn(block, iso)) out.push(iso);
+  }
+  return out;
 }

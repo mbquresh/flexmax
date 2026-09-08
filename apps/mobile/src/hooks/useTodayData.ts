@@ -80,6 +80,22 @@ export function useTodayData(userId: string | undefined) {
     }
   }, []);
 
+  const applyBlockTask = useCallback((task: BlockTask) => {
+    setBlockTasks((prev) => {
+      const without = prev.filter((t) => t.id !== task.id);
+      if (task.date !== viewDateRef.current) return without;
+      return [...without, task].sort((a, b) =>
+        a.position !== b.position
+          ? a.position - b.position
+          : a.created_at.localeCompare(b.created_at)
+      );
+    });
+  }, []);
+
+  const dropBlockTask = useCallback((taskId: string) => {
+    setBlockTasks((prev) => prev.filter((t) => t.id !== taskId));
+  }, []);
+
   const loadToday = useCallback(
     async (dateOverride?: string, options?: { silent?: boolean }) => {
       if (!userId) return;
@@ -388,5 +404,7 @@ export function useTodayData(userId: string | undefined) {
     insights,
     tasksByBlockId,
     toggleBlockTaskDone,
+    applyBlockTask,
+    dropBlockTask,
   };
 }

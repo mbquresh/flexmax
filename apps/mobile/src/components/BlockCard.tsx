@@ -45,7 +45,7 @@ interface BlockCardProps {
   onMarkMissed: (instance: DailyInstance) => void;
   onUndo: (instance: DailyInstance) => void;
   onRestore?: (instance: DailyInstance) => void;
-  onTaskDetail: (instance: DailyInstance) => void;
+  onOpenTasks: (instance: DailyInstance, task: BlockTask | null) => void;
   onToggleTask?: (task: BlockTask, done: boolean) => void;
   tasks?: BlockTask[];
   onSwap: (dragged: DailyInstance, target: DailyInstance) => void;
@@ -74,7 +74,7 @@ export function BlockCard({
   onMarkMissed,
   onUndo,
   onRestore,
-  onTaskDetail,
+  onOpenTasks,
   onToggleTask,
   tasks = [],
   onSwap,
@@ -551,7 +551,7 @@ export function BlockCard({
                 {removed ? ` · ${removalReason}` : ""}
               </Text>
               {tasks.length === 0 ? (
-                <TouchableOpacity onPress={() => onTaskDetail(instance)} hitSlop={8}>
+                <TouchableOpacity onPress={() => onOpenTasks(instance, null)} hitSlop={8}>
                   <View style={styles.taskAddRow}>
                     <Text style={styles.taskAdd}>Add task</Text>
                     <Feather name="arrow-right" size={iconSizes.xs} color={colors.primary} />
@@ -592,7 +592,7 @@ export function BlockCard({
                         </Pressable>
                         <TouchableOpacity
                           style={{ flex: 1 }}
-                          onPress={() => onTaskDetail(instance)}
+                          onPress={() => onOpenTasks(instance, task)}
                         >
                           <Text
                             style={[
