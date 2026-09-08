@@ -17,6 +17,18 @@ async function nextPosition(blockId: string, date: string): Promise<number> {
   return (data?.position ?? -1) + 1;
 }
 
+export function groupBlockTasks(
+  tasks: BlockTask[]
+): Record<string, BlockTask[]> {
+  const map: Record<string, BlockTask[]> = {};
+  for (const t of tasks) {
+    const list = map[t.block_id];
+    if (list) list.push(t);
+    else map[t.block_id] = [t];
+  }
+  return map;
+}
+
 export async function listBlockTasks(
   userId: string,
   date: string

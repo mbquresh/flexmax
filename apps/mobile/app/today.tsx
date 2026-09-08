@@ -162,6 +162,8 @@ function TodayScreenContent() {
     removeAdhocTask,
     restoreAdhocTask,
     insights,
+    tasksByBlockId,
+    toggleBlockTaskDone,
   } = useTodayData(session?.user.id);
   const { setTodayInstances, updateInstance } = useStore();
   const todayStr = getLocalDateString();
@@ -1432,6 +1434,8 @@ function TodayScreenContent() {
                   onMarkMissed={handleMarkMissed}
                   onUndo={showUndoActions}
                   onTaskDetail={openTaskDetail}
+                  tasks={item.instance.block_id ? tasksByBlockId[item.instance.block_id] : undefined}
+                  onToggleTask={(task, done) => toggleBlockTaskDone(task.id, done)}
                   onSwap={handleSwap}
                   onRemoveRequest={setRemoveInstance}
                   onLayout={handleCardLayout}
@@ -1491,6 +1495,8 @@ function TodayScreenContent() {
                   onMarkMissed={handleMarkMissed}
                   onUndo={showUndoActions}
                   onTaskDetail={openTaskDetail}
+                  tasks={instance.block_id ? tasksByBlockId[instance.block_id] : undefined}
+                  onToggleTask={(task, done) => toggleBlockTaskDone(task.id, done)}
                   onSwap={handleSwap}
                   onRemoveRequest={setRemoveInstance}
                   onLayout={handleCardLayout}
@@ -1518,6 +1524,8 @@ function TodayScreenContent() {
                   onUndo={showUndoActions}
                   onRestore={handleRestore}
                   onTaskDetail={openTaskDetail}
+                  tasks={instance.block_id ? tasksByBlockId[instance.block_id] : undefined}
+                  onToggleTask={(task, done) => toggleBlockTaskDone(task.id, done)}
                   onSwap={handleSwap}
                   onRemoveRequest={setRemoveInstance}
                   onLayout={handleCardLayout}

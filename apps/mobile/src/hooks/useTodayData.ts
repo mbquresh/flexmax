@@ -8,8 +8,9 @@ import { pickPreemptTarget, PreemptCandidate } from "../lib/preempt";
 import { fetchTodayStats, TodayStats } from "../lib/stats";
 import { getLocalDateString } from "../lib/time";
 import { handleError, isConnectivityError } from "../lib/errors";
-import { AdhocTask, BehavioralInsight } from "../types/database";
+import { AdhocTask, BehavioralInsight, BlockTask } from "../types/database";
 import { useStore } from "../store";
+import { listBlockTasks, groupBlockTasks, setBlockTaskDone } from "../lib/blockTasks";
 
 export function useTodayData(userId: string | undefined) {
   const { todayInstances, setTodayInstances, setTodayPreempt, setTodayInsights } = useStore();
@@ -20,6 +21,7 @@ export function useTodayData(userId: string | undefined) {
   const [displayDate, setDisplayDate] = useState(getLocalDateString());
   const [stats, setStats] = useState<TodayStats | null>(null);
   const [adhocTasks, setAdhocTasks] = useState<AdhocTask[]>([]);
+  const [blockTasks, setBlockTasks] = useState<BlockTask[]>([]);
   const [insights, setInsights] = useState<BehavioralInsight[]>([]);
   // The date on screen, which is not necessarily today. Kept apart from
   // realTodayRef so a foreground event can tell "the clock rolled over"
@@ -59,6 +61,23 @@ export function useTodayData(userId: string | undefined) {
         return aStart - bStart;
       })
     );
+  }, []);
+
+  const tasksByBlockId = useMemo(
+    () => groupBlockTasks(blockTasks),
+    [blockTasks]
+  );
+
+  const toggleBlockTaskDone = useCallback(async (taskId: string, done: boolean) => {
+    setBlockTasks((prev) =>
+      prev.map((t) => (t.id === taskId ? { ...t, done } : t))
+    );
+    const { error } = await setBlockTaskDone(taskId, done);
+    if (error) {
+      setBlockTasks((prev) =>
+        prev.map((t) => (t.id === taskId ? { ...t, done: !done } : t))
+      );
+    }
   }, []);
 
   const loadToday = useCallback(
@@ -132,6 +151,11 @@ export function useTodayData(userId: string | undefined) {
         .eq("date", targetDate)
         .neq("status", "removed")
         .order("start_minutes", { nullsFirst: false });
+
+      const { data: tasks, error: tasksError } = await listBlockTasks(
+        userId,
+        targetDate
+      );
 
       const { data: insightsData, error: insightsError } = await supabase
         .from("behavioral_insights")
@@ -221,6 +245,12 @@ export function useTodayData(userId: string | undefined) {
       } else {
         if (isStale()) return;
         setAdhocTasks(adhoc ?? []);
+      }
+
+      if (tasksError) {
+        handleError(tasksError, "loadToday blockTasks");
+      } else if (!isStale()) {
+        setBlockTasks(tasks ?? []);
       }
 
       if (insightsError) {
@@ -356,5 +386,7 @@ export function useTodayData(userId: string | undefined) {
     removeAdhocTask,
     restoreAdhocTask,
     insights,
+    tasksByBlockId,
+    toggleBlockTaskDone,
   };
 }

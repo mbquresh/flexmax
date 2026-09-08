@@ -20,7 +20,7 @@ import Animated, {
   type AnimatedRef,
   type SharedValue,
 } from "react-native-reanimated";
-import { DailyInstance } from "../types/database";
+import { DailyInstance, BlockTask } from "../types/database";
 import { minutesToTime } from "../lib/time";
 import { hapticPickUp, hapticDetent, hapticSelect } from "../lib/haptics";
 import { DragHandle } from "./DragHandle";
@@ -46,6 +46,8 @@ interface BlockCardProps {
   onUndo: (instance: DailyInstance) => void;
   onRestore?: (instance: DailyInstance) => void;
   onTaskDetail: (instance: DailyInstance) => void;
+  onToggleTask?: (task: BlockTask, done: boolean) => void;
+  tasks?: BlockTask[];
   onSwap: (dragged: DailyInstance, target: DailyInstance) => void;
   onRemoveRequest: (instance: DailyInstance) => void;
   onLayout: (id: string, y: number, height: number) => void;
@@ -73,6 +75,8 @@ export function BlockCard({
   onUndo,
   onRestore,
   onTaskDetail,
+  onToggleTask,
+  tasks = [],
   onSwap,
   onRemoveRequest,
   onLayout,
@@ -546,34 +550,79 @@ export function BlockCard({
                 {minutesToTime(instance.start_minutes)} – {minutesToTime(instance.end_minutes)}
                 {removed ? ` · ${removalReason}` : ""}
               </Text>
-              <TouchableOpacity onPress={() => onTaskDetail(instance)} hitSlop={8}>
-                {instance.task_detail ? (
-                  <View style={{ flex: 1 }}>
-                    <Text
-                      style={styles.task}
-                      numberOfLines={expanded ? undefined : 2}
-                      onLayout={(e) => {
-                        if (!expanded) setCollapsedH(e.nativeEvent.layout.height);
-                      }}
-                    >
-                      {instance.task_detail}
-                    </Text>
-                    <Text
-                      style={[styles.task, styles.measureFull]}
-                      onLayout={(e) => setFullH(e.nativeEvent.layout.height)}
-                      pointerEvents="none"
-                    >
-                      {instance.task_detail}
-                    </Text>
-                  </View>
-                ) : (
+              {tasks.length === 0 ? (
+                <TouchableOpacity onPress={() => onTaskDetail(instance)} hitSlop={8}>
                   <View style={styles.taskAddRow}>
                     <Text style={styles.taskAdd}>Add task</Text>
                     <Feather name="arrow-right" size={iconSizes.xs} color={colors.primary} />
                   </View>
-                )}
-              </TouchableOpacity>
-              {instance.task_detail && isLong ? (
+                </TouchableOpacity>
+              ) : (
+                <View style={{ flex: 1 }}>
+                  <View
+                    style={!expanded ? styles.taskListCollapsed : undefined}
+                    onLayout={(e) => {
+                      if (!expanded) setCollapsedH(e.nativeEvent.layout.height);
+                    }}
+                  >
+                    {tasks.map((task) => (
+                      <View key={task.id} style={styles.taskRow}>
+                        <Pressable
+                          onPress={() => {
+                            hapticSelect();
+                            onToggleTask?.(task, !task.done);
+                          }}
+                          hitSlop={8}
+                          style={styles.taskCheckHit}
+                        >
+                          <View
+                            style={[
+                              styles.taskCheck,
+                              task.done && styles.taskCheckDone,
+                            ]}
+                          >
+                            {task.done ? (
+                              <Feather
+                                name="check"
+                                size={10}
+                                color={colors.background}
+                              />
+                            ) : null}
+                          </View>
+                        </Pressable>
+                        <TouchableOpacity
+                          style={{ flex: 1 }}
+                          onPress={() => onTaskDetail(instance)}
+                        >
+                          <Text
+                            style={[
+                              styles.taskName,
+                              task.done && styles.taskNameDone,
+                            ]}
+                          >
+                            {task.name}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+                  <View
+                    style={styles.measureFull}
+                    onLayout={(e) => setFullH(e.nativeEvent.layout.height)}
+                    pointerEvents="none"
+                  >
+                    {tasks.map((task) => (
+                      <View key={task.id} style={styles.taskRow}>
+                        <View style={styles.taskCheckHit}>
+                          <View style={styles.taskCheck} />
+                        </View>
+                        <Text style={styles.taskName}>{task.name}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
+              {tasks.length > 0 && isLong ? (
                 <TouchableOpacity
                   onPress={() => {
                     hapticSelect();
@@ -721,7 +770,41 @@ const makeStyles = (c: Colors) =>
     blockNameRow: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
     blockName: { color: c.text, ...typography.bodyBold },
     meta: { color: c.textMuted, ...typography.small, ...numeric, marginTop: spacing.xs },
-    task: { color: c.textSecondary, ...typography.small, marginTop: spacing.sm },
+    taskListCollapsed: {
+      maxHeight: 54,
+      overflow: "hidden",
+    },
+    taskRow: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: spacing.sm,
+      marginTop: spacing.sm,
+    },
+    taskCheckHit: {
+      paddingTop: 2,
+    },
+    taskCheck: {
+      width: 16,
+      height: 16,
+      borderRadius: 4,
+      borderWidth: 1.5,
+      borderColor: c.textMuted,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    taskCheckDone: {
+      backgroundColor: c.primary,
+      borderColor: c.primary,
+    },
+    taskName: {
+      color: c.textSecondary,
+      ...typography.small,
+      flex: 1,
+    },
+    taskNameDone: {
+      color: c.textFaint,
+      textDecorationLine: "line-through",
+    },
     taskAddRow: {
       flexDirection: "row",
       alignItems: "center",
