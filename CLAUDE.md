@@ -277,6 +277,7 @@ Cursor = implementation engine.
 | 045 | backfill_marker.sql | backfilled_at + a BEFORE UPDATE trigger. Past-day editing makes every now()-stamping timing column (acknowledged_at, rated_at, reflected_at) unreliable: a block from last Tuesday answered today reports five days of recovery time. A trigger not a client write, because a marker protecting a metric must not depend on every future call site remembering it. Compares against the user's own timezone, since yesterday is the common backfill and a UTC comparison would read it as same-day for half the world. Only an outcome write marks the row — a swap or task_detail edit is housekeeping. Once marked, always marked: the day cannot come back |
 | 046 | block_time_overrides.sql | Sparse per-weekday time_overrides jsonb on schedule_blocks, keyed 0-6, NOT NULL DEFAULT '{}'. Both generate_* resolve the target dow and fall back to start_minutes/end_minutes. A client write of null is a 23502 — send `{}`. Nothing backfilled |
 | 047 | insight_corrections.sql | behavioral_insights.disputed_at + insight_corrections + dispute_insight RPC. Argue on Theory of You. Corrections survive weekly replace; the line hides immediately. Paste before opening /you. |
+| 048 | block_tasks.sql | Structured tasks keyed on (user_id, block_id, date), not instance_id. Backfill from task_detail once; done = instance status = completed (identity only while there is one task per block). |
 
 030 exists to answer the supporting reopen signal: of users who had a bad week, what
 share opened the app the following week. Capture is fire-and-forget from
@@ -331,9 +332,10 @@ Bounds check (0–1440) before RPC call.
   swipe on the card body. Territorial, not composed. Race appears
   nowhere in the tree — do not "restore" it.
 - Fixed blocks: .enabled(false) on both gestures
-- **Do not add long-press on block cards** — it collides with drag and breaks
-  scroll. StreakStrip long-press to open a past day is the exception; that
-  square is not a card that also drags.
+- **Do not add long-press on block cards, task rows, or anything inside
+  cardBody** — it collides with drag, swipe, and scroll. Task interactions
+  are tap-to-sheet. StreakStrip long-press to open a past day is the
+  exception; that square is not a card that also drags.
 
 
 
@@ -348,6 +350,20 @@ Optimistic UI only applies AFTER successful RPC return.
 All times stored as minutes-since-midnight integers.
 getLocalDateString() for all date operations — never toISOString() (timezone bug).
 AppState listener handles date rollover at midnight.
+
+### Block tasks
+
+Keyed on `(user_id, block_id, date)`, never `instance_id`. Instances are
+generated lazily, so a task moved to next Tuesday has no instance row to
+point at. The block is permanent; the date selects the occurrence. Swap,
+reschedule, shrink, and restore do not change `block_id` or `date`, so
+tasks survive those for free.
+
+Tasks are informational. `done` must not feed `daily_schedule_instances.status`,
+the streak, recovery, or `get_behavior_evidence`. A completed block with
+unchecked tasks is a completed block. A missed block with every task checked
+is currently possible and permitted — if that confuses users, the fix is a
+UI hint at check-in, not a data rule.
 
 ### AI calls — edge functions only
 
@@ -375,7 +391,11 @@ not UTC-5 at 21:00.
 
 Local scheduling only (Expo Push API can't schedule future delivery).
 scheduleTodayBlockNotifications() runs on loadToday AND after every swap/reschedule.
-Cancel-all-then-reschedule pattern (idempotent).
+Cancel-all-then-reschedule pattern (idempotent). Optional arguments that are
+omitted are deleted, not preserved — pass insights, preempt, and the day's
+`block_tasks` on every call. The cutoff nudge fires when the block has at
+least one unfinished task and duration ≥ 30 minutes; the title is the first
+open task name.
 
 ---
 
@@ -466,7 +486,7 @@ marker at all.
 | Accountability streak (80% threshold)         | stats.ts; two-tone square encoding                    |
 | Close-today sweep merged into evening ritual  | plan-tomorrow.tsx + CloseTodayRow; Done/Missed only, preset miss reasons |
 | Preset miss reasons                           | 019 miss_reason_tag; structural labels only, never stored as reflection prose |
-| Cutoff nudges + telemetry                     | blockNotifications.ts; fires at midpoint or end-30, gated on task_detail; 016 nudge_events |
+| Cutoff nudges + telemetry                     | blockNotifications.ts; fires at midpoint or end-30, gated on an unfinished block_task; 016 nudge_events |
 | Notification action buttons                   | "Wrapping up" / "Need 15 more"; 018 nudge_response    |
 | nudge_line on insights                        | 017; notification-sized restatement, written in the same weekly AI call |
 | Day boundaries (sleep/wake)                   | 020 day_log. Sleep/wake capture REMOVED FROM THE UI 2026-08-24 — the table and history remain, but nothing prompts for it. Rationale: day_log is read by no version of get_behavior_evidence, so it was pure capture with zero consumption; worse, DayBoundaryCard shared a render slot with the morning InsightCard and took precedence, suppressing the engine's only daily output on every morning it fired. Wake/sleep TARGETS on profiles are unaffected and remain load-bearing for findRescheduleSlot. Wake/sleep rows on the schedule builder (BoundaryRow) are unaffected |
@@ -506,6 +526,7 @@ marker at all.
 | Shorten-template remedy | src/lib/remedy.ts + recovery. Same 4-of-7 floor as preempt/quality-drift. Offers half duration (not below 40 minutes to start, floor MIN_BLOCK_MINUTES). Copy states this changes the repeating block from tomorrow on, not today's miss. User confirms. Writes schedule_blocks.end_minutes so tomorrow generates shorter. Undo on the same screen writes the original length back. Headline is the option, not the miss count. Fixed blocks excluded. A later restore-after-quality-recovers offer is not built |
 | Day selector and per-day times | schedule-builder.tsx + DayStrip + 046. The builder was a flat list of rules ABOUT the week, so the user reconstructed their week mentally; and a block held one time, so different times on different days forced a second block — which the engine already merged, since get_behavior_evidence groups by name. Tapping a day filters to that day, sorted by resolved time, and the time pickers then edit that day only. Defaults to All, not today: this screen is visited to set up a week, and starting on one day hides six sevenths of it. Adding a block while a day is selected defaults to that day. Archiving from a day view that still runs elsewhere asks whether to drop the day or the block. All-view time changes shift overrides by the same delta. Calendar-feed splits a block with overrides into disjoint BYDAY VEVENTs |
 | Theory of You | app/you.tsx + DisputeSheet + 047. Menu and title are "Theory of You". Twelve-week two-tone chart, 30-day accounted/landed as one caption, then the current insight set as tappable sentences (strengths first). Tap a line: "That's not right" → one note → the line leaves immediately. dispute_insight writes insight_corrections (survives supersede) and stamps disputed_at. Morning InsightCard and recovery omit disputed rows. weekly-insight reads the last 20 corrections and must not restate a rejected belief. No second AI call on the tap. No Done button — the X is enough. |
+| Structured block tasks | 048 + src/lib/blockTasks.ts + BlockTaskSheet. Replaces free-text task_detail with rows keyed on (user_id, block_id, date). Informational only — done never writes block status. Move offers only dates the source block runs (`runsOn`). Plan Tomorrow writes immediately. Cutoff nudge titles the first unfinished task. |
 
 
 
@@ -547,7 +568,7 @@ Shorten is the one shipped option: lower the bar on the template. The original s
 The other half of "progressively overload." After a shorten lands, a run of `crushed` (or the quality-drift window flipping clean) should offer to put the original duration back. Same-screen Undo is not this — Undo reverses a tap you just made; restore is a later, earned offer. Needs the original duration stored beyond session state (`remedy.fromMinutes` dies when recovery closes). Do not auto-lengthen. Do not offer restore on a block that was never shortened by this path. A probation window ("try 30m for two weeks") is a second state machine; skip it until the simple restore has been used.
 
 **3. Per-block quality standards.**
-User-written bullets on the template: what "done" means for this block, shown at check-in so the rating is against their own bar. Sacred if displayed at the moment of rating; a leak if it becomes a form to fill at 11pm. No per-bullet scoring — that is a habit tracker. `task_detail` already holds today's intention; this is the standing definition, not the day's task. Defer until Gate 1 on `reflection_why` (and now optional completion notes) has a real-tester read. If fill is already thin, do not add another field.
+User-written bullets on the template: what "done" means for this block, shown at check-in so the rating is against their own bar. Sacred if displayed at the moment of rating; a leak if it becomes a form to fill at 11pm. No per-bullet scoring — that is a habit tracker. `block_tasks` holds the day's list; this is the standing definition, not the day's task. Defer until Gate 1 on `reflection_why` (and now optional completion notes) has a real-tester read. If fill is already thin, do not add another field.
 
 **4. Do not replace `weekly-insight` with a bigger card.**
 The complaint was right: restating "you miss Workout" is a slap, and the morning note is not the product. The fix is more *writes* (shorten shipped; earlier/later and restore above), not a smarter paragraph. Keep the weekly call as a small stored belief after `engaged_days >= 5`. If a line cannot attach to a confirmed structural option, it stays nudge-sized. Impressive means a change the user could not have computed in two seconds and can take. Text-only impressiveness rots into the same repetition.
@@ -1091,10 +1112,10 @@ MOOT 2026-08-24: chip capture was deleted rather than decided. No new canned
 answers. Legacy chip labels are filtered out of lastIntention.
 
 **All modals slide, none fade** — the rule for new sheets. Tree has drifted:
-CheckInSheet, BlockFormSheet, AwaySheet, DayBoundariesSheet, and
-TaskDetailSheet ship `animationType="fade"`. TimePicker uses `"slide"`.
-DisputeSheet, AppMenu, AdhocEditSheet, and the Today undo/toast modals still
-use `"none"` plus a driven scrim. New sheets follow the original recipe:
+CheckInSheet, BlockFormSheet, AwaySheet, and DayBoundariesSheet ship
+`animationType="fade"`. TimePicker uses `"slide"`. DisputeSheet, AppMenu,
+AdhocEditSheet, BlockTaskSheet, and the Today undo/toast modals use `"none"`
+plus a driven scrim. New sheets follow the original recipe:
 `animationType="none"`, scrim opacity and sheet translateY together, ~220ms
 open / ~180ms close, sheet stays fully opaque.
 
@@ -1165,6 +1186,11 @@ usable and does the user's intent survive. Not: is the debugger clean.
 ---
 
 ## Known issues
+
+**`task_detail` is deprecated.** Backfilled into `block_tasks` (048). The
+client no longer writes it. The column stays for rollback and will be dropped
+in a later migration once a release has shipped clean. Do not resume writing
+it, and do not drop it in the same change that stopped writing it.
 
 **Offline write queue — attempted and reverted (2026-08-09).**
 A write queue with an AsyncStorage-backed retry buffer was built, documented,
