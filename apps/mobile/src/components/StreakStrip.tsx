@@ -202,7 +202,7 @@ export function StreakStrip({
         </Text>
         <View style={styles.streakHeaderRight}>
           <Text style={styles.streakSub}>
-            {rate}%{isCurrentWeek ? " this week" : ""}
+            {rate}% completion{isCurrentWeek ? " this week" : ""}
           </Text>
           <PressableScale
             onPress={() => step(-1)}
