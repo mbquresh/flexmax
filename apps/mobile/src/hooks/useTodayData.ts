@@ -13,7 +13,13 @@ import { useStore } from "../store";
 import { listBlockTasks, groupBlockTasks, setBlockTaskDone } from "../lib/blockTasks";
 
 export function useTodayData(userId: string | undefined) {
-  const { todayInstances, setTodayInstances, setTodayPreempt, setTodayInsights } = useStore();
+  const {
+    todayInstances,
+    setTodayInstances,
+    setTodayPreempt,
+    setTodayInsights,
+    setTodayBlockTasks,
+  } = useStore();
   const [loading, setLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
   const [loadOffline, setLoadOffline] = useState(false);
@@ -68,33 +74,62 @@ export function useTodayData(userId: string | undefined) {
     [blockTasks]
   );
 
+  const syncTodayTasks = useCallback(
+    (next: BlockTask[]) => {
+      if (viewDateRef.current !== getLocalDateString()) return;
+      setTodayBlockTasks(next);
+      const { todayInsights, todayPreempt, todayInstances } =
+        useStore.getState();
+      scheduleTodayBlockNotifications(
+        todayInstances,
+        viewDateRef.current,
+        todayInsights,
+        todayPreempt,
+        next
+      ).catch((err) => handleError(err, "resyncNotifications"));
+    },
+    [setTodayBlockTasks]
+  );
+
   const toggleBlockTaskDone = useCallback(async (taskId: string, done: boolean) => {
-    setBlockTasks((prev) =>
-      prev.map((t) => (t.id === taskId ? { ...t, done } : t))
-    );
+    let snapshot: BlockTask[] = [];
+    let next: BlockTask[] = [];
+    setBlockTasks((prev) => {
+      snapshot = prev;
+      next = prev.map((t) => (t.id === taskId ? { ...t, done } : t));
+      return next;
+    });
+    syncTodayTasks(next);
     const { error } = await setBlockTaskDone(taskId, done);
     if (error) {
-      setBlockTasks((prev) =>
-        prev.map((t) => (t.id === taskId ? { ...t, done: !done } : t))
-      );
+      setBlockTasks(snapshot);
+      syncTodayTasks(snapshot);
     }
-  }, []);
+  }, [syncTodayTasks]);
 
   const applyBlockTask = useCallback((task: BlockTask) => {
     setBlockTasks((prev) => {
       const without = prev.filter((t) => t.id !== task.id);
-      if (task.date !== viewDateRef.current) return without;
-      return [...without, task].sort((a, b) =>
-        a.position !== b.position
-          ? a.position - b.position
-          : a.created_at.localeCompare(b.created_at)
-      );
+      const next =
+        task.date !== viewDateRef.current
+          ? without
+          : [...without, task].sort((a, b) =>
+              a.position !== b.position
+                ? a.position - b.position
+                : a.created_at.localeCompare(b.created_at)
+            );
+      syncTodayTasks(next);
+      return next;
     });
-  }, []);
+  }, [syncTodayTasks]);
 
   const dropBlockTask = useCallback((taskId: string) => {
-    setBlockTasks((prev) => prev.filter((t) => t.id !== taskId));
-  }, []);
+    setBlockTasks((prev) => {
+      const next = prev.filter((t) => t.id !== taskId);
+      syncTodayTasks(next);
+      return next;
+    });
+  }, [syncTodayTasks]);
 
   const loadToday = useCallback(
     async (dateOverride?: string, options?: { silent?: boolean }) => {
@@ -232,7 +267,8 @@ export function useTodayData(userId: string | undefined) {
               data,
               targetDate,
               insightsData ?? [],
-              preempt
+              preempt,
+              tasks ?? []
             );
             if (cutoffs.length > 0) {
               const { error: nudgeError } = await supabase
@@ -267,6 +303,7 @@ export function useTodayData(userId: string | undefined) {
         handleError(tasksError, "loadToday blockTasks");
       } else if (!isStale()) {
         setBlockTasks(tasks ?? []);
+        if (isToday) setTodayBlockTasks(tasks ?? []);
       }
 
       if (insightsError) {
@@ -308,7 +345,7 @@ export function useTodayData(userId: string | undefined) {
         if (!options?.silent && !isStale()) setLoading(false);
       }
     },
-    [userId, setTodayInstances, setTodayPreempt, setTodayInsights]
+    [userId, setTodayInstances, setTodayPreempt, setTodayInsights, setTodayBlockTasks]
   );
 
   const isFirstFocus = useRef(true);

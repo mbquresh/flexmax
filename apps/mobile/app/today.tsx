@@ -654,18 +654,19 @@ function TodayScreenContent() {
     // managed set before rebuilding from its arguments — so running it with
     // last Tuesday's blocks would delete today's.
     if (isPastDay) return;
-    const { todayInsights, todayPreempt } = useStore.getState();
+    const { todayInsights, todayPreempt, todayBlockTasks } = useStore.getState();
     // The full set is cancelled and rebuilt on every call, so anything not
-    // passed here is silently dropped. Insights and the day's preempt pick
-    // are derived at load and held so a resync can restore them. The
-    // scheduler rematerializes the preempt clock from current instance
-    // times — the snapshot's startMinutes is load-time and goes stale
-    // on a swap.
+    // passed here is silently dropped. Insights, the day's preempt pick,
+    // and today's tasks are derived at load and held so a resync can
+    // restore them. The scheduler rematerializes the preempt clock from
+    // current instance times — the snapshot's startMinutes is load-time
+    // and goes stale on a swap.
     scheduleTodayBlockNotifications(
       updatedInstances,
       getLocalDateString(),
       todayInsights,
-      todayPreempt
+      todayPreempt,
+      todayBlockTasks
     ).catch((err) => handleError(err, "resyncNotifications"));
   };
 

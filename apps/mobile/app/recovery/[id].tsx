@@ -475,12 +475,13 @@ function RecoveryScreenContent() {
       .sort((a, b) => a.start_minutes - b.start_minutes);
 
     setTodayInstances(updatedInstances);
-    const { todayInsights, todayPreempt } = useStore.getState();
+    const { todayInsights, todayPreempt, todayBlockTasks } = useStore.getState();
     scheduleTodayBlockNotifications(
       updatedInstances,
       getLocalDateString(),
       todayInsights,
-      todayPreempt
+      todayPreempt,
+      todayBlockTasks
     ).catch((err) => handleError(err, "recoveryResync"));
   };
 
@@ -594,12 +595,13 @@ function RecoveryScreenContent() {
         .sort((a, b) => a.start_minutes - b.start_minutes);
 
       setTodayInstances(updatedInstances);
-      const { todayInsights, todayPreempt } = useStore.getState();
+      const { todayInsights, todayPreempt, todayBlockTasks } = useStore.getState();
       scheduleTodayBlockNotifications(
         updatedInstances,
         getLocalDateString(),
         todayInsights,
-        todayPreempt
+        todayPreempt,
+        todayBlockTasks
       ).catch((err) => handleError(err, "recoveryResync"));
 
       router.back();

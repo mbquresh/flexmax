@@ -1,7 +1,9 @@
 import * as Notifications from "expo-notifications";
-import { DailyInstance, BehavioralInsight } from "../types/database";
+import { DailyInstance, BehavioralInsight, BlockTask } from "../types/database";
 import { minutesToTime as formatTime } from "./time";
 import { preemptBody, resolvePreempt, PreemptCandidate } from "./preempt";
+import { groupBlockTasks } from "./blockTasks";
+import { cutoffTitle } from "./cutoffTitle";
 
 export interface ScheduledCutoff {
   instanceId: string;
@@ -109,7 +111,8 @@ export async function scheduleTodayBlockNotifications(
   instances: DailyInstance[],
   date: string,
   insights: BehavioralInsight[] = [],
-  preempt: PreemptCandidate | null = null
+  preempt: PreemptCandidate | null = null,
+  tasks: BlockTask[] = []
 ): Promise<ScheduledCutoff[]> {
   const now = new Date();
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
@@ -121,6 +124,7 @@ export async function scheduleTodayBlockNotifications(
 
   const scheduledCutoffs: ScheduledCutoff[] = [];
   const [year, month, day] = date.split("-").map(Number);
+  const tasksByBlockId = groupBlockTasks(tasks);
 
   // Only schedule blocks that haven't ended yet.
   // A wind_down block's goal is ending screen time, so a phone notification at
@@ -163,7 +167,8 @@ export async function scheduleTodayBlockNotifications(
     // Cutoff nudge: 10 min before end, only when the user stated an intention
     // and the block is long enough that a 10-min warning is meaningful.
     const duration = inst.end_minutes - inst.start_minutes;
-    const hasIntent = !!inst.task_detail && inst.task_detail.trim().length > 0;
+    const title = cutoffTitle(tasksByBlockId[inst.block_id] ?? []);
+    const hasIntent = title != null;
     const isOpen = inst.status === "pending" || inst.status === "active";
 
     if (hasIntent && isOpen && duration >= 30) {
@@ -208,7 +213,7 @@ export async function scheduleTodayBlockNotifications(
 
         await Notifications.scheduleNotificationAsync({
           content: {
-            title: inst.task_detail!.trim().slice(0, 60),
+            title,
             body,
             sound: false,
             categoryIdentifier: CUTOFF_CATEGORY,
