@@ -11,7 +11,6 @@ import {
   KeyboardAvoidingView,
   Animated as RNAnimated,
   Easing,
-  Keyboard,
   Platform,
   ActionSheetIOS,
   RefreshControl,
@@ -28,12 +27,6 @@ import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "../src/lib/supabase";
 import {
-  createBlockTask,
-  renameBlockTask,
-  moveBlockTask,
-  deleteBlockTask,
-} from "../src/lib/blockTasks";
-import {
   getTodayLabel,
   occupiesTime,
   planRestore,
@@ -48,7 +41,6 @@ import {
   AdhocTask,
   DailyInstance,
   BlockTask,
-  ScheduleBlock,
 } from "../src/types/database";
 import {
   minutesToTime,
@@ -64,7 +56,6 @@ import { BrandLoader } from "../src/components/BrandLoader";
 import { LoadError } from "../src/components/LoadError";
 import { StreakStrip } from "../src/components/StreakStrip";
 import { CheckInSheet } from "../src/components/CheckInSheet";
-import { BlockTaskSheet } from "../src/components/BlockTaskSheet";
 import { BlockCard } from "../src/components/BlockCard";
 import { InsightCard } from "../src/components/InsightCard";
 import { AdhocTimedCard } from "../src/components/AdhocTimedCard";
@@ -172,8 +163,6 @@ function TodayScreenContent() {
     insights,
     tasksByBlockId,
     toggleBlockTaskDone,
-    applyBlockTask,
-    dropBlockTask,
   } = useTodayData(session?.user.id);
   const { setTodayInstances, updateInstance } = useStore();
   const todayStr = getLocalDateString();
@@ -204,12 +193,6 @@ function TodayScreenContent() {
     blockName: string;
   } | null>(null);
   const [undoInstance, setUndoInstance] = useState<DailyInstance | null>(null);
-  const [taskSheet, setTaskSheet] = useState<{
-    instance: DailyInstance;
-    taskId: string | null;
-  } | null>(null);
-  const [taskName, setTaskName] = useState("");
-  const [taskSheetBlocks, setTaskSheetBlocks] = useState<ScheduleBlock[]>([]);
   const [removeInstance, setRemoveInstance] = useState<DailyInstance | null>(null);
   const [removeReason, setRemoveReason] = useState("");
   const [addTaskOpen, setAddTaskOpen] = useState(false);
@@ -226,8 +209,6 @@ function TodayScreenContent() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const checkInSlideAnim = useRef(new RNAnimated.Value(400)).current;
-  const taskSlideAnim = useRef(new RNAnimated.Value(BOTTOM_SHEET_OFFSET)).current;
-  const taskScrimAnim = useRef(new RNAnimated.Value(0)).current;
   const undoSlideAnim = useRef(new RNAnimated.Value(BOTTOM_SHEET_OFFSET)).current;
   const undoScrimAnim = useRef(new RNAnimated.Value(0)).current;
   const removeSlideAnim = useRef(new RNAnimated.Value(BOTTOM_SHEET_OFFSET)).current;
@@ -498,27 +479,6 @@ function TodayScreenContent() {
   }, [checkInInstance, checkInSlideAnim]);
 
   useEffect(() => {
-    if (!taskSheet) return;
-    openBottomSheet(taskSlideAnim, taskScrimAnim, bottomSheetScrimOpacity);
-    if (!taskSheet.taskId || !session?.user.id) return;
-    supabase
-      .from("schedule_blocks")
-      .select("*")
-      .eq("user_id", session.user.id)
-      .eq("is_active", true)
-      .then(({ data, error }) => {
-        if (error) handleError(error, "loadTaskSheetBlocks");
-        else setTaskSheetBlocks(data ?? []);
-      });
-  }, [
-    taskSheet,
-    taskSlideAnim,
-    taskScrimAnim,
-    bottomSheetScrimOpacity,
-    session?.user.id,
-  ]);
-
-  useEffect(() => {
     if (undoInstance) {
       openBottomSheet(undoSlideAnim, undoScrimAnim, bottomSheetScrimOpacity);
     }
@@ -577,25 +537,6 @@ function TodayScreenContent() {
       onClosed?.();
     });
   }, [editAdhocSlideAnim, editAdhocScrimAnim]);
-
-  const closeTaskSheet = useCallback(
-    (onClosed?: () => void) => {
-      Keyboard.dismiss();
-      closeBottomSheet(taskSlideAnim, taskScrimAnim, () => {
-        setTaskSheet(null);
-        setTaskName("");
-        setTaskSheetBlocks([]);
-        onClosed?.();
-      });
-    },
-    [taskSlideAnim, taskScrimAnim]
-  );
-
-  const sheetTask = useMemo(() => {
-    if (!taskSheet?.taskId) return null;
-    const list = tasksByBlockId[taskSheet.instance.block_id] ?? [];
-    return list.find((t) => t.id === taskSheet.taskId) ?? null;
-  }, [taskSheet, tasksByBlockId]);
 
   const confirmReset = () => {
     if (Platform.OS === "web") {
@@ -939,11 +880,10 @@ function TodayScreenContent() {
     });
   };
 
-  const openBlockTasks = (item: DailyInstance, task: BlockTask | null) => {
+  const openBlockTasks = (item: DailyInstance, _task: BlockTask | null) => {
     if (!requireEditable()) return;
     hapticSelect();
-    setTaskName(task?.name ?? "");
-    setTaskSheet({ instance: item, taskId: task?.id ?? null });
+    router.push(`/block-tasks/${item.id}`);
   };
 
   const requireEditable = () => {
@@ -1297,74 +1237,6 @@ function TodayScreenContent() {
     setInsightDismissed(true);
   };
 
-  const handleCreateBlockTask = async () => {
-    if (!taskSheet || !session?.user.id) return;
-    const trimmed = taskName.trim();
-    if (!trimmed) return;
-    setSaving(true);
-    try {
-      const { data, error } = await createBlockTask(
-        session.user.id,
-        taskSheet.instance.block_id,
-        taskSheet.instance.date,
-        trimmed
-      );
-      if (error) return;
-      if (data) applyBlockTask(data);
-      closeTaskSheet();
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleRenameBlockTask = async () => {
-    if (!sheetTask) return;
-    const trimmed = taskName.trim();
-    if (!trimmed) return;
-    setSaving(true);
-    try {
-      const { data, error } = await renameBlockTask(sheetTask.id, trimmed);
-      if (error) return;
-      if (data) applyBlockTask(data);
-      closeTaskSheet();
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleToggleSheetTask = async () => {
-    if (!sheetTask) return;
-    await toggleBlockTaskDone(sheetTask.id, !sheetTask.done);
-  };
-
-  const handleDeleteBlockTask = async () => {
-    if (!sheetTask) return;
-    setSaving(true);
-    try {
-      const { error } = await deleteBlockTask(sheetTask.id);
-      if (error) return;
-      dropBlockTask(sheetTask.id);
-      closeTaskSheet();
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleMoveBlockTask = async (blockId: string, date: string) => {
-    if (!sheetTask) return;
-    setSaving(true);
-    const snapshot = sheetTask;
-    try {
-      const { data, error } = await moveBlockTask(snapshot.id, blockId, date);
-      if (error) return;
-      if (data) applyBlockTask(data);
-      else dropBlockTask(snapshot.id);
-      closeTaskSheet();
-    } finally {
-      setSaving(false);
-    }
-  };
-
   if (loading) {
     return (
       <View style={styles.centered}>
@@ -1707,25 +1579,6 @@ function TodayScreenContent() {
         onQualityReason={handleQualityReason}
         onQualitySkip={closeQualityPrompt}
         onQualitySomethingElse={handleQualitySomethingElse}
-      />
-
-      <BlockTaskSheet
-        visible={!!taskSheet}
-        instance={taskSheet?.instance ?? null}
-        task={sheetTask}
-        isAdd={!taskSheet?.taskId}
-        blocks={taskSheetBlocks}
-        slideAnim={taskSlideAnim}
-        scrimAnim={taskScrimAnim}
-        saving={saving}
-        name={taskName}
-        onChangeName={setTaskName}
-        onCreate={handleCreateBlockTask}
-        onRename={handleRenameBlockTask}
-        onToggleDone={handleToggleSheetTask}
-        onDelete={handleDeleteBlockTask}
-        onMove={handleMoveBlockTask}
-        onClose={() => closeTaskSheet()}
       />
 
       <Modal

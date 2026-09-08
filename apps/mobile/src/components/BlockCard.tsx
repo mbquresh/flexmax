@@ -92,9 +92,8 @@ export function BlockCard({
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [expanded, setExpanded] = useState(false);
-  const [collapsedH, setCollapsedH] = useState(0);
-  const [fullH, setFullH] = useState(0);
-  const isLong = collapsedH > 0 && fullH > collapsedH + 1;
+  const isLong = tasks.length > 2;
+  const visibleTasks = expanded || !isLong ? tasks : tasks.slice(0, 2);
 
   const translateY = useSharedValue(0);
   const translateX = useSharedValue(0);
@@ -149,6 +148,10 @@ export function BlockCard({
       easing: Easing.out(Easing.cubic),
     });
   }, [showsStatus]);
+
+  useEffect(() => {
+    setExpanded(false);
+  }, [instance.id]);
 
   const findSwapTarget = useCallback(
     (draggedId: string, dragTranslationY: number): DailyInstance | null => {
@@ -550,78 +553,56 @@ export function BlockCard({
                 {minutesToTime(instance.start_minutes)} – {minutesToTime(instance.end_minutes)}
                 {removed ? ` · ${removalReason}` : ""}
               </Text>
-              {tasks.length === 0 ? (
-                <TouchableOpacity onPress={() => onOpenTasks(instance, null)} hitSlop={8}>
-                  <View style={styles.taskAddRow}>
-                    <Text style={styles.taskAdd}>Add task</Text>
-                    <Feather name="arrow-right" size={iconSizes.xs} color={colors.primary} />
-                  </View>
-                </TouchableOpacity>
-              ) : (
-                <View style={{ flex: 1 }}>
-                  <View
-                    style={!expanded ? styles.taskListCollapsed : undefined}
-                    onLayout={(e) => {
-                      if (!expanded) setCollapsedH(e.nativeEvent.layout.height);
-                    }}
-                  >
-                    {tasks.map((task) => (
-                      <View key={task.id} style={styles.taskRow}>
-                        <Pressable
-                          onPress={() => {
-                            hapticSelect();
-                            onToggleTask?.(task, !task.done);
-                          }}
-                          hitSlop={8}
-                          style={styles.taskCheckHit}
-                        >
-                          <View
-                            style={[
-                              styles.taskCheck,
-                              task.done && styles.taskCheckDone,
-                            ]}
-                          >
-                            {task.done ? (
-                              <Feather
-                                name="check"
-                                size={10}
-                                color={colors.background}
-                              />
-                            ) : null}
-                          </View>
-                        </Pressable>
-                        <TouchableOpacity
-                          style={{ flex: 1 }}
-                          onPress={() => onOpenTasks(instance, task)}
-                        >
-                          <Text
-                            style={[
-                              styles.taskName,
-                              task.done && styles.taskNameDone,
-                            ]}
-                          >
-                            {task.name}
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-                  </View>
-                  <View
-                    style={styles.measureFull}
-                    onLayout={(e) => setFullH(e.nativeEvent.layout.height)}
-                    pointerEvents="none"
-                  >
-                    {tasks.map((task) => (
-                      <View key={task.id} style={styles.taskRow}>
-                        <View style={styles.taskCheckHit}>
-                          <View style={styles.taskCheck} />
-                        </View>
-                        <Text style={styles.taskName}>{task.name}</Text>
-                      </View>
-                    ))}
-                  </View>
+              <TouchableOpacity onPress={() => onOpenTasks(instance, null)} hitSlop={8}>
+                <View style={styles.taskAddRow}>
+                  <Text style={styles.taskAdd}>Add task</Text>
+                  <Feather name="arrow-right" size={iconSizes.xs} color={colors.primary} />
                 </View>
-              )}
+              </TouchableOpacity>
+              {tasks.length > 0 ? (
+                <View>
+                  {visibleTasks.map((task) => (
+                    <View key={task.id} style={styles.taskRow}>
+                      <Pressable
+                        onPress={() => {
+                          hapticSelect();
+                          onToggleTask?.(task, !task.done);
+                        }}
+                        hitSlop={8}
+                        style={styles.taskCheckHit}
+                      >
+                        <View
+                          style={[
+                            styles.taskCheck,
+                            task.done && styles.taskCheckDone,
+                          ]}
+                        >
+                          {task.done ? (
+                            <Feather
+                              name="check"
+                              size={10}
+                              color={colors.background}
+                            />
+                          ) : null}
+                        </View>
+                      </Pressable>
+                      <TouchableOpacity
+                        style={{ flex: 1 }}
+                        onPress={() => onOpenTasks(instance, task)}
+                      >
+                        <Text
+                          style={[
+                            styles.taskName,
+                            task.done && styles.taskNameDone,
+                          ]}
+                        >
+                          {task.name}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
               {tasks.length > 0 && isLong ? (
                 <TouchableOpacity
                   onPress={() => {
@@ -770,10 +751,6 @@ const makeStyles = (c: Colors) =>
     blockNameRow: { flexDirection: "row", alignItems: "center", gap: spacing.xs },
     blockName: { color: c.text, ...typography.bodyBold },
     meta: { color: c.textMuted, ...typography.small, ...numeric, marginTop: spacing.xs },
-    taskListCollapsed: {
-      maxHeight: 54,
-      overflow: "hidden",
-    },
     taskRow: {
       flexDirection: "row",
       alignItems: "flex-start",
@@ -816,13 +793,6 @@ const makeStyles = (c: Colors) =>
       color: c.primary,
       ...typography.small,
       marginTop: spacing.xs,
-    },
-    measureFull: {
-      position: "absolute",
-      left: 0,
-      right: 0,
-      opacity: 0,
-      zIndex: -1,
     },
     actionCircle: {
       width: 32,

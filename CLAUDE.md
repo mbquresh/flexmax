@@ -334,8 +334,8 @@ Bounds check (0–1440) before RPC call.
 - Fixed blocks: .enabled(false) on both gestures
 - **Do not add long-press on block cards, task rows, or anything inside
   cardBody** — it collides with drag, swipe, and scroll. Task interactions
-  are tap-to-sheet. StreakStrip long-press to open a past day is the
-  exception; that square is not a card that also drags.
+  are tap-to-page (`/block-tasks/[id]`). StreakStrip long-press to open a past
+  day is the exception; that square is not a card that also drags.
 
 
 
@@ -526,7 +526,7 @@ marker at all.
 | Shorten-template remedy | src/lib/remedy.ts + recovery. Same 4-of-7 floor as preempt/quality-drift. Offers half duration (not below 40 minutes to start, floor MIN_BLOCK_MINUTES). Copy states this changes the repeating block from tomorrow on, not today's miss. User confirms. Writes schedule_blocks.end_minutes so tomorrow generates shorter. Undo on the same screen writes the original length back. Headline is the option, not the miss count. Fixed blocks excluded. A later restore-after-quality-recovers offer is not built |
 | Day selector and per-day times | schedule-builder.tsx + DayStrip + 046. The builder was a flat list of rules ABOUT the week, so the user reconstructed their week mentally; and a block held one time, so different times on different days forced a second block — which the engine already merged, since get_behavior_evidence groups by name. Tapping a day filters to that day, sorted by resolved time, and the time pickers then edit that day only. Defaults to All, not today: this screen is visited to set up a week, and starting on one day hides six sevenths of it. Adding a block while a day is selected defaults to that day. Archiving from a day view that still runs elsewhere asks whether to drop the day or the block. All-view time changes shift overrides by the same delta. Calendar-feed splits a block with overrides into disjoint BYDAY VEVENTs |
 | Theory of You | app/you.tsx + DisputeSheet + 047. Menu and title are "Theory of You". Twelve-week two-tone chart, 30-day accounted/landed as one caption, then the current insight set as tappable sentences (strengths first). Tap a line: "That's not right" → one note → the line leaves immediately. dispute_insight writes insight_corrections (survives supersede) and stamps disputed_at. Morning InsightCard and recovery omit disputed rows. weekly-insight reads the last 20 corrections and must not restate a rejected belief. No second AI call on the tap. No Done button — the X is enough. |
-| Structured block tasks | 048 + src/lib/blockTasks.ts + BlockTaskSheet. Replaces free-text task_detail with rows keyed on (user_id, block_id, date). Informational only — done never writes block status. Move offers only dates the source block runs (`runsOn`). Plan Tomorrow writes immediately. Cutoff nudge titles the first unfinished task. |
+| Structured block tasks | 048 + src/lib/blockTasks.ts + app/block-tasks/[id].tsx. Replaces free-text task_detail with rows keyed on (user_id, block_id, date). Informational only — done never writes block status. Move offers only dates the source block runs (`runsOn`). Plan Tomorrow writes immediately. Cutoff nudge titles the first unfinished task. |
 
 
 
@@ -1114,7 +1114,7 @@ answers. Legacy chip labels are filtered out of lastIntention.
 **All modals slide, none fade** — the rule for new sheets. Tree has drifted:
 CheckInSheet, BlockFormSheet, AwaySheet, and DayBoundariesSheet ship
 `animationType="fade"`. TimePicker uses `"slide"`. DisputeSheet, AppMenu,
-AdhocEditSheet, BlockTaskSheet, and the Today undo/toast modals use `"none"`
+AdhocEditSheet, and the Today undo/toast modals use `"none"`
 plus a driven scrim. New sheets follow the original recipe:
 `animationType="none"`, scrim opacity and sheet translateY together, ~220ms
 open / ~180ms close, sheet stays fully opaque.
