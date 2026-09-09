@@ -137,6 +137,13 @@ function isInstanceFixed(instance: DailyInstance): boolean {
   return instance.is_fixed || !!instance.block?.is_fixed;
 }
 
+function checkInTaskHint(tasks: BlockTask[] | undefined): string | null {
+  const open = (tasks ?? []).filter((t) => !t.done);
+  if (!open.length) return null;
+  if (open.length === 1) return `${open[0].name} is still open`;
+  return `${open.length} tasks still open`;
+}
+
 function TodayScreenContent() {
   const { colors, scheme } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -1579,6 +1586,11 @@ function TodayScreenContent() {
         onQualityReason={handleQualityReason}
         onQualitySkip={closeQualityPrompt}
         onQualitySomethingElse={handleQualitySomethingElse}
+        openTaskHint={
+          checkInInstance?.block_id
+            ? checkInTaskHint(tasksByBlockId[checkInInstance.block_id])
+            : null
+        }
       />
 
       <Modal

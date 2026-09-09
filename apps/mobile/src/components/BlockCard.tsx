@@ -553,12 +553,14 @@ export function BlockCard({
                 {minutesToTime(instance.start_minutes)} – {minutesToTime(instance.end_minutes)}
                 {removed ? ` · ${removalReason}` : ""}
               </Text>
-              <TouchableOpacity onPress={() => onOpenTasks(instance, null)} hitSlop={8}>
-                <View style={styles.taskAddRow}>
-                  <Text style={styles.taskAdd}>Add task</Text>
-                  <Feather name="arrow-right" size={iconSizes.xs} color={colors.primary} />
-                </View>
-              </TouchableOpacity>
+              {removed ? null : (
+                <TouchableOpacity onPress={() => onOpenTasks(instance, null)} hitSlop={8}>
+                  <View style={styles.taskAddRow}>
+                    <Text style={styles.taskAdd}>Add task</Text>
+                    <Feather name="arrow-right" size={iconSizes.xs} color={colors.primary} />
+                  </View>
+                </TouchableOpacity>
+              )}
               {tasks.length > 0 ? (
                 <View>
                   {visibleTasks.map((task) => (
@@ -588,7 +590,11 @@ export function BlockCard({
                       </Pressable>
                       <TouchableOpacity
                         style={{ flex: 1 }}
-                        onPress={() => onOpenTasks(instance, task)}
+                        onPress={() => {
+                          if (removed) return;
+                          onOpenTasks(instance, task);
+                        }}
+                        disabled={removed}
                       >
                         <Text
                           style={[

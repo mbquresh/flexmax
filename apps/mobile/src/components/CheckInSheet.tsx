@@ -68,6 +68,7 @@ interface CheckInSheetProps {
   onQualityReason?: (tag: string) => void;
   onQualitySkip?: () => void;
   onQualitySomethingElse?: () => void;
+  openTaskHint?: string | null;
 }
 
 export function CheckInSheet({
@@ -82,6 +83,7 @@ export function CheckInSheet({
   onQualityReason,
   onQualitySkip,
   onQualitySomethingElse,
+  openTaskHint,
 }: CheckInSheetProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -149,9 +151,17 @@ export function CheckInSheet({
               {instance?.block?.name ?? "Block"} — how'd it go?
             </Text>
             {instance ? (
-              <Text style={styles.sheetTime}>
+              <Text
+                style={[
+                  styles.sheetTime,
+                  openTaskHint ? styles.sheetTimeTight : null,
+                ]}
+              >
                 {minutesToTime(instance.start_minutes)} – {minutesToTime(instance.end_minutes)}
               </Text>
+            ) : null}
+            {openTaskHint ? (
+              <Text style={styles.openHint}>{openTaskHint}</Text>
             ) : null}
 
             <TextInput
@@ -295,6 +305,12 @@ const makeStyles = (c: Colors) =>
       color: c.textSecondary,
     },
     sheetTime: { color: c.textMuted, ...typography.small, ...numeric, marginBottom: spacing.xl, marginTop: 6 },
+    sheetTimeTight: { marginBottom: spacing.xs },
+    openHint: {
+      color: c.textMuted,
+      ...typography.small,
+      marginBottom: spacing.xl,
+    },
     ratingRow: { flexDirection: "row", gap: spacing.sm },
     ratingBtn: {
       flex: 1,

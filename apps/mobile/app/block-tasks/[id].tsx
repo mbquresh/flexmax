@@ -21,16 +21,17 @@ import {
   deleteBlockTask,
   listBlockTasks,
   moveBlockTask,
+  renameBlockTask,
   setBlockTaskDone,
 } from "../../src/lib/blockTasks";
 import { addDays, isWithinEditWindow } from "../../src/lib/stats";
-import { formatDayLabel, getLocalDateString, minutesToTime } from "../../src/lib/time";
+import { getLocalDateString, minutesToTime } from "../../src/lib/time";
 import { runsOn, upcomingRunDates } from "../../src/lib/recurrence";
-import { hapticSelect } from "../../src/lib/haptics";
 import { PressableScale } from "../../src/components/PressableScale";
 import { BrandLoader } from "../../src/components/BrandLoader";
 import { RequireAuth } from "../../src/components/RequireAuth";
 import { BlockTaskRow } from "../../src/components/BlockTaskRow";
+import { TaskMovePicker } from "../../src/components/TaskMovePicker";
 
 function leave() {
   if (router.canGoBack()) router.back();
@@ -69,11 +70,15 @@ function BlockTasksScreenContent() {
 
   const sourceBlock =
     instance?.block ?? blocks.find((b) => b.id === instance?.block_id);
-  const fromDate = instance?.date ? addDays(instance.date, 1) : "";
   const dateOptions = useMemo(() => {
-    if (!sourceBlock || !fromDate) return [];
-    return upcomingRunDates(sourceBlock, fromDate, 8);
-  }, [sourceBlock, fromDate]);
+    if (!sourceBlock || !instance?.date) return [];
+    const later = upcomingRunDates(
+      sourceBlock,
+      addDays(instance.date, 1),
+      8
+    );
+    return [instance.date, ...later.filter((d) => d !== instance.date)];
+  }, [sourceBlock, instance?.date]);
   const firstDate = dateOptions[0] ?? null;
 
   const destBlocks = useMemo(() => {
@@ -148,7 +153,6 @@ function BlockTasksScreenContent() {
   }, [instanceId, session?.user.id]);
 
   const pickDate = (d: string) => {
-    hapticSelect();
     setMoveDate(d);
     const dest = blocks.filter((b) => b.is_active && runsOn(b, d));
     setMoveBlockId((current) => {
@@ -196,6 +200,23 @@ function BlockTasksScreenContent() {
     }
   };
 
+  const handleRename = async (row: BlockTask, name: string) => {
+    if (!canEdit) return;
+    setTasks((prev) =>
+      prev.map((t) => (t.id === row.id ? { ...t, name } : t))
+    );
+    const { data, error } = await renameBlockTask(row.id, name);
+    if (error) {
+      setTasks((prev) =>
+        prev.map((t) => (t.id === row.id ? { ...t, name: row.name } : t))
+      );
+      return;
+    }
+    if (data) {
+      setTasks((prev) => prev.map((t) => (t.id === data.id ? data : t)));
+    }
+  };
+
   const handleDelete = async (row: BlockTask) => {
     if (!canEdit) return;
     setTasks((prev) => prev.filter((t) => t.id !== row.id));
@@ -216,7 +237,7 @@ function BlockTasksScreenContent() {
       return;
     }
     setMovingId(row.id);
-    setMoveDate(firstDate);
+    setMoveDate(instance?.date ?? firstDate);
     setMoveBlockId(instance?.block_id ?? row.block_id);
   };
 
@@ -276,7 +297,6 @@ function BlockTasksScreenContent() {
           blurOnSubmit={false}
           onSubmitEditing={handleAdd}
           editable={canEdit}
-          autoFocus
         />
         <PressableScale
           style={[
@@ -300,76 +320,22 @@ function BlockTasksScreenContent() {
               onToggle={handleToggle}
               onDelete={handleDelete}
               onReschedule={handleReschedule}
+              onRename={handleRename}
             />
             {movingId === row.id ? (
-              dateOptions.length > 0 ? (
-                <View style={styles.moveBox}>
-                  <Text style={styles.moveLabel}>Move to</Text>
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.chipRow}
-                  >
-                    {dateOptions.map((d) => (
-                      <PressableScale
-                        key={d}
-                        style={[styles.chip, moveDate === d && styles.chipOn]}
-                        onPress={() => pickDate(d)}
-                      >
-                        <Text
-                          style={[
-                            styles.chipText,
-                            moveDate === d && styles.chipTextOn,
-                          ]}
-                        >
-                          {formatDayLabel(d)}
-                        </Text>
-                      </PressableScale>
-                    ))}
-                  </ScrollView>
-                  {destBlocks.map((b) => (
-                    <PressableScale
-                      key={b.id}
-                      style={[
-                        styles.blockPick,
-                        moveBlockId === b.id && styles.chipOn,
-                      ]}
-                      onPress={() => {
-                        hapticSelect();
-                        setMoveBlockId(b.id);
-                      }}
-                    >
-                      <Text
-                        style={[
-                          styles.chipText,
-                          moveBlockId === b.id && styles.chipTextOn,
-                        ]}
-                      >
-                        {b.name}
-                        {b.id === instance.block_id ? " (same)" : ""}
-                      </Text>
-                    </PressableScale>
-                  ))}
-                  <PressableScale
-                    style={[
-                      styles.primaryBtn,
-                      (!canMove || !canEdit) && styles.btnDisabled,
-                    ]}
-                    onPress={handleMove}
-                    disabled={saving || !canMove || !canEdit}
-                  >
-                    {saving ? (
-                      <BrandLoader size={20} />
-                    ) : (
-                      <Text style={styles.primaryBtnText}>Move task</Text>
-                    )}
-                  </PressableScale>
-                </View>
-              ) : (
-                <Text style={styles.moveHint}>
-                  This block does not run again soon enough to move the task.
-                </Text>
-              )
+              <TaskMovePicker
+                dateOptions={dateOptions}
+                destBlocks={destBlocks}
+                moveDate={moveDate}
+                moveBlockId={moveBlockId}
+                homeBlockId={row.block_id}
+                canMove={canMove}
+                canEdit={canEdit}
+                saving={saving}
+                onPickDate={pickDate}
+                onPickBlock={setMoveBlockId}
+                onMove={handleMove}
+              />
             ) : null}
           </View>
         ))}
@@ -445,30 +411,4 @@ const makeStyles = (c: Colors) =>
     },
     btnDisabled: { opacity: 0.5 },
     taskBlock: { gap: spacing.sm },
-    moveBox: { gap: spacing.sm },
-    moveLabel: {
-      color: c.textMuted,
-      ...typography.caption,
-      textTransform: "uppercase",
-    },
-    moveHint: {
-      color: c.textMuted,
-      ...typography.small,
-    },
-    chipRow: { gap: spacing.sm },
-    chip: {
-      backgroundColor: c.surfaceNested,
-      borderRadius: radii.pill,
-      paddingHorizontal: spacing.md,
-      paddingVertical: spacing.sm,
-    },
-    chipOn: { backgroundColor: c.primaryTint },
-    chipText: { color: c.text, ...typography.small },
-    chipTextOn: { color: c.primary, ...typography.smallBold },
-    blockPick: {
-      backgroundColor: c.surfaceNested,
-      borderRadius: radii.md,
-      paddingHorizontal: spacing.md,
-      paddingVertical: spacing.md,
-    },
   });

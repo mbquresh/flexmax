@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Pressable,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
@@ -23,15 +22,21 @@ import { BrandLoader } from "../src/components/BrandLoader";
 import { LoadError } from "../src/components/LoadError";
 import { PressableScale } from "../src/components/PressableScale";
 import { CloseTodayRow } from "../src/components/CloseTodayRow";
-import { DailyInstance, BlockTask } from "../src/types/database";
+import { BlockTaskRow } from "../src/components/BlockTaskRow";
+import { TaskMovePicker } from "../src/components/TaskMovePicker";
+import { DailyInstance, BlockTask, ScheduleBlock } from "../src/types/database";
 import { Colors, spacing, radii, typography, iconSizes } from "../src/theme";
 import {
   listBlockTasks,
   groupBlockTasks,
   createBlockTask,
   setBlockTaskDone,
+  deleteBlockTask,
+  moveBlockTask,
+  renameBlockTask,
 } from "../src/lib/blockTasks";
-import { hapticSelect } from "../src/lib/haptics";
+import { addDays } from "../src/lib/stats";
+import { runsOn, upcomingRunDates } from "../src/lib/recurrence";
 
 function isInstanceFixed(instance: DailyInstance): boolean {
   return instance.is_fixed || !!instance.block?.is_fixed;
@@ -59,7 +64,12 @@ function PlanTomorrowScreenContent() {
   const [closeTodayInstances, setCloseTodayInstances] = useState<DailyInstance[]>([]);
   const [awaitingPresetIds, setAwaitingPresetIds] = useState<Set<string>>(new Set());
   const [blockTasks, setBlockTasks] = useState<BlockTask[]>([]);
+  const [blocks, setBlocks] = useState<ScheduleBlock[]>([]);
   const [addDrafts, setAddDrafts] = useState<Record<string, string>>({});
+  const [movingId, setMovingId] = useState<string | null>(null);
+  const [moveDate, setMoveDate] = useState<string | null>(null);
+  const [moveBlockId, setMoveBlockId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
   const [loadOffline, setLoadOffline] = useState(false);
@@ -74,7 +84,7 @@ function PlanTomorrowScreenContent() {
 
       const todayDate = getLocalDateString();
 
-      const [tomorrowResult, closeTodayResult] = await Promise.all([
+      const [tomorrowResult, closeTodayResult, blocksResult] = await Promise.all([
         supabase
           .from("daily_schedule_instances")
           .select("*, block:schedule_blocks(*)")
@@ -90,10 +100,16 @@ function PlanTomorrowScreenContent() {
           .in("status", ["pending", "active"])
           .neq("block.category", "wind_down")
           .order("start_minutes"),
+        supabase
+          .from("schedule_blocks")
+          .select("*")
+          .eq("user_id", session.user.id)
+          .eq("is_active", true),
       ]);
 
       if (tomorrowResult.error) throw tomorrowResult.error;
       if (closeTodayResult.error) throw closeTodayResult.error;
+      if (blocksResult.error) handleError(blocksResult.error, "loadPlanBlocks");
 
       const rows = tomorrowResult.data ?? [];
       const { data: tasks, error: tasksError } = await listBlockTasks(
@@ -104,6 +120,7 @@ function PlanTomorrowScreenContent() {
 
       setInstances(rows);
       setCloseTodayInstances(closeTodayResult.data ?? []);
+      setBlocks(blocksResult.data ?? []);
       setBlockTasks(tasks ?? []);
       setAddDrafts({});
     } catch (err) {
@@ -123,6 +140,54 @@ function PlanTomorrowScreenContent() {
     () => groupBlockTasks(blockTasks),
     [blockTasks]
   );
+
+  const movingTask = useMemo(
+    () => (movingId ? blockTasks.find((t) => t.id === movingId) ?? null : null),
+    [movingId, blockTasks]
+  );
+  const sourceBlock =
+    (movingTask
+      ? blocks.find((b) => b.id === movingTask.block_id)
+      : null) ??
+    (movingTask
+      ? (instances.find((i) => i.block_id === movingTask.block_id)?.block as
+          | ScheduleBlock
+          | undefined)
+      : null);
+  const dateOptions = useMemo(() => {
+    if (!sourceBlock) return [];
+    const later = upcomingRunDates(sourceBlock, addDays(tomorrowDate, 1), 8);
+    return [tomorrowDate, ...later.filter((d) => d !== tomorrowDate)];
+  }, [sourceBlock, tomorrowDate]);
+  const destBlocks = useMemo(() => {
+    if (!moveDate) return [];
+    const list = blocks.filter((b) => b.is_active && runsOn(b, moveDate));
+    if (list.length > 0) return list;
+    if (sourceBlock && runsOn(sourceBlock, moveDate)) {
+      return [sourceBlock as ScheduleBlock];
+    }
+    return [];
+  }, [blocks, moveDate, sourceBlock]);
+  const canMove =
+    !!movingTask &&
+    !!moveDate &&
+    !!moveBlockId &&
+    (moveDate !== movingTask.date || moveBlockId !== movingTask.block_id);
+
+  const pickDate = (d: string) => {
+    setMoveDate(d);
+    const dest = blocks.filter((b) => b.is_active && runsOn(b, d));
+    setMoveBlockId((current) => {
+      if (current && dest.some((b) => b.id === current)) return current;
+      if (
+        movingTask?.block_id &&
+        dest.some((b) => b.id === movingTask.block_id)
+      ) {
+        return movingTask.block_id;
+      }
+      return dest[0]?.id ?? null;
+    });
+  };
 
   const closeTodayLeft = closeTodayInstances.filter(
     (i) => i.status === "pending" || i.status === "active"
@@ -231,7 +296,6 @@ function PlanTomorrowScreenContent() {
   };
 
   const handleToggleTask = async (task: BlockTask, done: boolean) => {
-    hapticSelect();
     setBlockTasks((prev) =>
       prev.map((t) => (t.id === task.id ? { ...t, done } : t))
     );
@@ -260,6 +324,69 @@ function PlanTomorrowScreenContent() {
     }
     if (data) setBlockTasks((prev) => [...prev, data]);
     return true;
+  };
+
+  const handleRenameTask = async (row: BlockTask, name: string) => {
+    setBlockTasks((prev) =>
+      prev.map((t) => (t.id === row.id ? { ...t, name } : t))
+    );
+    const { data, error } = await renameBlockTask(row.id, name);
+    if (error) {
+      setBlockTasks((prev) =>
+        prev.map((t) => (t.id === row.id ? { ...t, name: row.name } : t))
+      );
+      return;
+    }
+    if (data) {
+      setBlockTasks((prev) => prev.map((t) => (t.id === data.id ? data : t)));
+    }
+  };
+
+  const handleDeleteTask = async (row: BlockTask) => {
+    setBlockTasks((prev) => prev.filter((t) => t.id !== row.id));
+    if (movingId === row.id) setMovingId(null);
+    const { error } = await deleteBlockTask(row.id);
+    if (error) {
+      setBlockTasks((prev) => {
+        if (prev.some((t) => t.id === row.id)) return prev;
+        return [...prev, row];
+      });
+    }
+  };
+
+  const handleRescheduleTask = (row: BlockTask) => {
+    if (movingId === row.id) {
+      setMovingId(null);
+      return;
+    }
+    setMovingId(row.id);
+    setMoveDate(tomorrowDate);
+    setMoveBlockId(row.block_id);
+  };
+
+  const handleMoveTask = async () => {
+    if (!movingTask || !canMove || !moveDate || !moveBlockId) return;
+    setSaving(true);
+    try {
+      const { error } = await moveBlockTask(
+        movingTask.id,
+        moveBlockId,
+        moveDate
+      );
+      if (error) return;
+      setBlockTasks((prev) =>
+        prev
+          .map((t) =>
+            t.id === movingTask.id
+              ? { ...t, block_id: moveBlockId, date: moveDate }
+              : t
+          )
+          .filter((t) => t.date === tomorrowDate)
+      );
+      setMovingId(null);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDone = async () => {
@@ -370,35 +497,31 @@ function PlanTomorrowScreenContent() {
                   {minutesToTime(instance.end_minutes)}
                 </Text>
                 {(tasksByBlockId[instance.block_id] ?? []).map((task) => (
-                  <View key={task.id} style={styles.taskRow}>
-                    <Pressable
-                      onPress={() => handleToggleTask(task, !task.done)}
-                      hitSlop={8}
-                      style={styles.taskCheckHit}
-                    >
-                      <View
-                        style={[
-                          styles.taskCheck,
-                          task.done && styles.taskCheckDone,
-                        ]}
-                      >
-                        {task.done ? (
-                          <Feather
-                            name="check"
-                            size={10}
-                            color={colors.background}
-                          />
-                        ) : null}
-                      </View>
-                    </Pressable>
-                    <Text
-                      style={[
-                        styles.taskName,
-                        task.done && styles.taskNameDone,
-                      ]}
-                    >
-                      {task.name}
-                    </Text>
+                  <View key={task.id}>
+                    <BlockTaskRow
+                      task={task}
+                      canEdit
+                      fill={fixed ? colors.surfaceDim : colors.surface}
+                      onToggle={(row) => handleToggleTask(row, !row.done)}
+                      onDelete={handleDeleteTask}
+                      onReschedule={handleRescheduleTask}
+                      onRename={handleRenameTask}
+                    />
+                    {movingId === task.id ? (
+                      <TaskMovePicker
+                        dateOptions={dateOptions}
+                        destBlocks={destBlocks}
+                        moveDate={moveDate}
+                        moveBlockId={moveBlockId}
+                        homeBlockId={task.block_id}
+                        canMove={canMove}
+                        canEdit
+                        saving={saving}
+                        onPickDate={pickDate}
+                        onPickBlock={setMoveBlockId}
+                        onMove={handleMoveTask}
+                      />
+                    ) : null}
                   </View>
                 ))}
                 <TextInput
@@ -497,36 +620,6 @@ const makeStyles = (c: Colors) =>
     },
     blockName: { color: c.text, fontSize: 16, fontWeight: "600" },
     blockTime: { color: c.textMuted, fontSize: 13 },
-    taskRow: {
-      flexDirection: "row",
-      alignItems: "flex-start",
-      gap: spacing.sm,
-    },
-    taskCheckHit: {
-      paddingTop: 2,
-    },
-    taskCheck: {
-      width: 16,
-      height: 16,
-      borderRadius: 4,
-      borderWidth: 1.5,
-      borderColor: c.textMuted,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    taskCheckDone: {
-      backgroundColor: c.primary,
-      borderColor: c.primary,
-    },
-    taskName: {
-      color: c.textSecondary,
-      ...typography.small,
-      flex: 1,
-    },
-    taskNameDone: {
-      color: c.textFaint,
-      textDecorationLine: "line-through",
-    },
     taskInput: {
       backgroundColor: c.surfaceNested,
       borderWidth: 0.5,

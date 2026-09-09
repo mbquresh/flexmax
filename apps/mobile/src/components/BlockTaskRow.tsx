@@ -1,5 +1,5 @@
-import React, { useMemo } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Pressable } from "react-native";
+import React, { useEffect, useMemo, useState } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, Pressable, TextInput } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
@@ -22,23 +22,35 @@ const ACTION_BUTTON_WIDTH = 80;
 interface BlockTaskRowProps {
   task: BlockTask;
   canEdit: boolean;
+  fill?: string;
   onToggle: (task: BlockTask) => void;
   onDelete: (task: BlockTask) => void;
   onReschedule: (task: BlockTask) => void;
+  onRename: (task: BlockTask, name: string) => void;
 }
 
 export function BlockTaskRow({
   task,
   canEdit,
+  fill,
   onToggle,
   onDelete,
   onReschedule,
+  onRename,
 }: BlockTaskRowProps) {
   const { colors } = useTheme();
-  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const rowFill = fill ?? colors.background;
+  const styles = useMemo(() => makeStyles(colors, rowFill), [colors, rowFill]);
   const revealWidth = ACTION_BUTTON_WIDTH * 2;
   const translateX = useSharedValue(0);
   const isOpen = useSharedValue(0);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(task.name);
+
+  useEffect(() => {
+    setEditing(false);
+    setDraft(task.name);
+  }, [task.id, task.name]);
 
   const closeSwipe = () => {
     isOpen.value = 0;
@@ -57,8 +69,18 @@ export function BlockTaskRow({
     onDelete(task);
   };
 
+  const commitRename = () => {
+    const trimmed = draft.trim();
+    setEditing(false);
+    if (!trimmed || trimmed === task.name) {
+      setDraft(task.name);
+      return;
+    }
+    onRename(task, trimmed);
+  };
+
   const swipeGesture = Gesture.Pan()
-    .enabled(canEdit)
+    .enabled(canEdit && !editing)
     .activeOffsetX([-15, 15])
     .failOffsetY([-8, 8])
     .maxPointers(1)
@@ -160,7 +182,7 @@ export function BlockTaskRow({
                 onToggle(task);
               }}
               hitSlop={8}
-              disabled={!canEdit}
+              disabled={!canEdit || editing}
               style={styles.taskCheckHit}
             >
               <View style={[styles.taskCheck, task.done && styles.taskCheckDone]}>
@@ -169,9 +191,34 @@ export function BlockTaskRow({
                 ) : null}
               </View>
             </Pressable>
-            <Text style={[styles.taskName, task.done && styles.taskNameDone]}>
-              {task.name}
-            </Text>
+            {editing ? (
+              <TextInput
+                style={styles.renameInput}
+                value={draft}
+                onChangeText={setDraft}
+                onSubmitEditing={commitRename}
+                onBlur={commitRename}
+                autoFocus
+                returnKeyType="done"
+                blurOnSubmit
+              />
+            ) : (
+              <Pressable
+                style={styles.taskNameHit}
+                onPress={() => {
+                  if (!canEdit) return;
+                  closeSwipe();
+                  hapticSelect();
+                  setDraft(task.name);
+                  setEditing(true);
+                }}
+                disabled={!canEdit}
+              >
+                <Text style={[styles.taskName, task.done && styles.taskNameDone]}>
+                  {task.name}
+                </Text>
+              </Pressable>
+            )}
           </View>
         </Animated.View>
       </GestureDetector>
@@ -179,7 +226,7 @@ export function BlockTaskRow({
   );
 }
 
-const makeStyles = (c: Colors) =>
+const makeStyles = (c: Colors, fill: string) =>
   StyleSheet.create({
     wrapper: {
       position: "relative",
@@ -215,7 +262,7 @@ const makeStyles = (c: Colors) =>
       backgroundColor: c.danger,
     },
     slidingRow: {
-      backgroundColor: c.background,
+      backgroundColor: fill,
       borderRadius: radii.md,
     },
     row: {
@@ -223,7 +270,7 @@ const makeStyles = (c: Colors) =>
       alignItems: "flex-start",
       gap: spacing.sm,
       paddingVertical: spacing.sm,
-      backgroundColor: c.background,
+      backgroundColor: fill,
     },
     taskCheckHit: { paddingTop: 2 },
     taskCheck: {
@@ -239,6 +286,7 @@ const makeStyles = (c: Colors) =>
       backgroundColor: c.primary,
       borderColor: c.primary,
     },
+    taskNameHit: { flex: 1 },
     taskName: {
       color: c.text,
       ...typography.body,
@@ -247,5 +295,12 @@ const makeStyles = (c: Colors) =>
     taskNameDone: {
       color: c.textFaint,
       textDecorationLine: "line-through",
+    },
+    renameInput: {
+      flex: 1,
+      color: c.text,
+      ...typography.body,
+      padding: 0,
+      margin: 0,
     },
   });
