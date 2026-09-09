@@ -71,9 +71,11 @@ Roughly half the differentiation lives in each. Consequences:
    buying a working execution-salvaging tool immediately, with the insight layer
    arriving on top of it later. The showcase now has a today-versus-week-two
    split under "Where it actually stands" and the price lock names the
-   rebuilding half. Remaining copy bugs — struck fake former prices, "roughly
-   half," WeekDemo first-person provenance, Theory of You listed as unbuilt,
-   disqualification still in the FAQ — sit in the Not built table.
+   rebuilding half. Struck former prices and "roughly half" are gone from the
+   showcase. Remaining copy bugs — WeekDemo first-person provenance, Theory of
+   You listed as unbuilt, disqualification still in the FAQ, tasks missing
+   from the day-one list, "I've been the only user" dying on first install,
+   no thirty-day outcome sentence — sit in the Not built table.
 2. **Two metrics, not one.** Gate 1 (reflection fill rate) measures whether
    Stream 2 is self-sustaining. Stream 1 needs its own: *on days the plan
    breaks, does the user still complete the next meaningful action and return
@@ -277,7 +279,7 @@ Cursor = implementation engine.
 | 045 | backfill_marker.sql | backfilled_at + a BEFORE UPDATE trigger. Past-day editing makes every now()-stamping timing column (acknowledged_at, rated_at, reflected_at) unreliable: a block from last Tuesday answered today reports five days of recovery time. A trigger not a client write, because a marker protecting a metric must not depend on every future call site remembering it. Compares against the user's own timezone, since yesterday is the common backfill and a UTC comparison would read it as same-day for half the world. Only an outcome write marks the row — a swap or task_detail edit is housekeeping. Once marked, always marked: the day cannot come back |
 | 046 | block_time_overrides.sql | Sparse per-weekday time_overrides jsonb on schedule_blocks, keyed 0-6, NOT NULL DEFAULT '{}'. Both generate_* resolve the target dow and fall back to start_minutes/end_minutes. A client write of null is a 23502 — send `{}`. Nothing backfilled |
 | 047 | insight_corrections.sql | behavioral_insights.disputed_at + insight_corrections + dispute_insight RPC. Argue on Theory of You. Corrections survive weekly replace; the line hides immediately. Paste before opening /you. |
-| 048 | block_tasks.sql | Structured tasks keyed on (user_id, block_id, date), not instance_id. Backfill from task_detail once; done = instance status = completed (identity only while there is one task per block). |
+| 048 | block_tasks.sql | Structured tasks keyed on (user_id, block_id, date), not instance_id. Backfill from task_detail once. The backfill used done = instance status = completed as a one-shot identity while there was one task per block; that is not a live rule — done is informational. |
 
 030 exists to answer the supporting reopen signal: of users who had a bad week, what
 share opened the app the following week. Capture is fire-and-forget from
@@ -333,9 +335,12 @@ Bounds check (0–1440) before RPC call.
   nowhere in the tree — do not "restore" it.
 - Fixed blocks: .enabled(false) on both gestures
 - **Do not add long-press on block cards, task rows, or anything inside
-  cardBody** — it collides with drag, swipe, and scroll. Task interactions
-  are tap-to-page (`/block-tasks/[id]`). StreakStrip long-press to open a past
-  day is the exception; that square is not a card that also drags.
+  cardBody** — it collides with drag, swipe, and scroll. On Today, task
+  interactions are tap-to-page (`/block-tasks/[id]`); the checkbox toggles
+  in place. Swipe-to-reschedule / swipe-to-delete lives on that page
+  (`BlockTaskRow`, same offsets as AdhocAnytimeRow), not on the card body.
+  StreakStrip long-press to open a past day is the exception; that square
+  is not a card that also drags.
 
 
 
@@ -365,6 +370,17 @@ unchecked tasks is a completed block. A missed block with every task checked
 is currently possible and permitted — if that confuses users, the fix is a
 UI hint at check-in, not a data rule.
 
+UI: Today shows at most two tasks inline. Add task and a task name both
+push `/block-tasks/[id]`. That page is add + list. Swipe a row to
+reschedule (inline date chips and block picker, `runsOn` only) or delete.
+No nested `?taskId=` route, no sheet — `BlockTaskSheet` is gone.
+
+`toggleBlockTaskDone` captures the next array, then calls `syncTodayTasks`
+after the updater. Never schedule notifications from inside a `setState`
+updater — React may invoke it twice. `applyBlockTask` / `dropBlockTask`
+did that and were deleted; the silent focus reload already refreshes the
+list when returning from the page.
+
 ### AI calls — edge functions only
 
 Claude API key never on client.
@@ -393,9 +409,10 @@ Local scheduling only (Expo Push API can't schedule future delivery).
 scheduleTodayBlockNotifications() runs on loadToday AND after every swap/reschedule.
 Cancel-all-then-reschedule pattern (idempotent). Optional arguments that are
 omitted are deleted, not preserved — pass insights, preempt, and the day's
-`block_tasks` on every call. The cutoff nudge fires when the block has at
-least one unfinished task and duration ≥ 30 minutes; the title is the first
-open task name.
+`block_tasks` on every call (`todayBlockTasks` in the store). The cutoff
+nudge fires when the block has at least one unfinished task and duration
+≥ 30 minutes; the title is `cutoffTitle` — first open task name, with a
+remaining-count suffix when more than one is open.
 
 ---
 
@@ -526,7 +543,7 @@ marker at all.
 | Shorten-template remedy | src/lib/remedy.ts + recovery. Same 4-of-7 floor as preempt/quality-drift. Offers half duration (not below 40 minutes to start, floor MIN_BLOCK_MINUTES). Copy states this changes the repeating block from tomorrow on, not today's miss. User confirms. Writes schedule_blocks.end_minutes so tomorrow generates shorter. Undo on the same screen writes the original length back. Headline is the option, not the miss count. Fixed blocks excluded. A later restore-after-quality-recovers offer is not built |
 | Day selector and per-day times | schedule-builder.tsx + DayStrip + 046. The builder was a flat list of rules ABOUT the week, so the user reconstructed their week mentally; and a block held one time, so different times on different days forced a second block — which the engine already merged, since get_behavior_evidence groups by name. Tapping a day filters to that day, sorted by resolved time, and the time pickers then edit that day only. Defaults to All, not today: this screen is visited to set up a week, and starting on one day hides six sevenths of it. Adding a block while a day is selected defaults to that day. Archiving from a day view that still runs elsewhere asks whether to drop the day or the block. All-view time changes shift overrides by the same delta. Calendar-feed splits a block with overrides into disjoint BYDAY VEVENTs |
 | Theory of You | app/you.tsx + DisputeSheet + 047. Menu and title are "Theory of You". Twelve-week two-tone chart, 30-day accounted/landed as one caption, then the current insight set as tappable sentences (strengths first). Tap a line: "That's not right" → one note → the line leaves immediately. dispute_insight writes insight_corrections (survives supersede) and stamps disputed_at. Morning InsightCard and recovery omit disputed rows. weekly-insight reads the last 20 corrections and must not restate a rejected belief. No second AI call on the tap. No Done button — the X is enough. |
-| Structured block tasks | 048 + src/lib/blockTasks.ts + app/block-tasks/[id].tsx. Replaces free-text task_detail with rows keyed on (user_id, block_id, date). Informational only — done never writes block status. Move offers only dates the source block runs (`runsOn`). Plan Tomorrow writes immediately. Cutoff nudge titles the first unfinished task. |
+| Structured block tasks | 048 + src/lib/blockTasks.ts + app/block-tasks/[id].tsx + BlockTaskRow. Replaces free-text task_detail with rows keyed on (user_id, block_id, date). Informational only — done never writes block status. Today shows two inline with checkbox; add/name tap opens the page. Swipe reveals reschedule (inline, `runsOn` only) and delete. No sheet, no nested edit route. Plan Tomorrow writes immediately. Cutoff title is `cutoffTitle`. Store field `todayBlockTasks` must be passed on every notification rebuild. |
 
 
 
@@ -548,12 +565,14 @@ marker at all.
 | Device activity detection (Screen Time) | Policy-verified design: user self-selects distraction apps via FamilyActivityPicker → OPAQUE TOKENS, so FlexMax structurally cannot know which apps were chosen. Each focus block registers a DeviceActivitySchedule with a threshold event (e.g. 5 cumulative minutes); eventDidReachThreshold fires a local notification reusing the existing **Notification action buttons** (018 nudge_response) infrastructure. The extension records to an App Group store; the app syncs a minimal derived record only — drift occurred, duration bucket, response, block outcome. Never raw usage. NOTE: DeviceActivityReport data is render-only and not readable programmatically, so the threshold event IS the data model — and it happens to be exactly the intervention→response→outcome shape. CONSTRAINTS: entitlement is per bundle ID, main app AND every extension; unrequested extension IDs fail signing at distribution. Requires native Swift extensions — config plugin (react-native-device-activity) or prebuild. Approval takes days to weeks. See UNBLOCKED ACTION above. |
 | Night routine block is hard to answer           | Wind-down is excluded from the evening sweep (hasn't happened yet) and from bedtime notifications (by design). Drifts to unaccounted unless answered from Today. DayBoundaryCard is gone — it suppressed InsightCard. Do not bring it back as the fix. |
 | User instructions page                          | The streak rises on a day where everything was missed. The label qualifier was removed for width, so there is no in-app explanation. Owed |
-| Showcase copy: strike fake former prices | `docs/index.html` still shows struck-through `$14.99` and `$99` as "at launch." Nothing has ever sold at those prices — no App Store listing, paywall unbuilt — so they are a future intention presented as a former price. Remove them. |
-| Showcase copy: cohort cap, not "half" | Replace "roughly half what it will be" with the published 100–200 founding cap and a visible remaining count. $7.99 → $14.99 is a 47% gap; later rungs do not sustain that copy. Unverifiable scarcity reads as a marketing device. |
+| Showcase copy: cohort cap, not "half" | FAQ no longer says "roughly half." Remaining work is the published 100–200 founding cap and a visible remaining count. $7.99 → $14.99 is a 47% gap; later rungs do not sustain a half claim. Unverifiable scarcity reads as a marketing device. |
 | Showcase copy: WeekDemo provenance | Framing now says "One month of my own schedule." `DEMO_DAYS` is still hand-authored (`WeekDemo.tsx`). First-person does not make it the founder's month. Fix the copy or substitute the real month. |
-| Showcase + listing: disqualify up front | Move "Who is this genuinely not for?" up `docs/index.html`. Mirror it in the App Store listing. Highest-leverage paragraph on the page; it is the mitigation for no-trial bad-review risk. |
+| Showcase + listing: disqualify up front | Move "Who is this genuinely not for?" up `docs/index.html`. Mirror it in the App Store listing. Highest-leverage paragraph on the page; it is the mitigation for no-trial bad-review risk. Still FAQ-only. |
 | Showcase: Theory listed as unbuilt | `docs/index.html` "Not built yet" still lists "A written profile of how you work, that you can argue with." Argue shipped. Standing `theory_lines` has not — do not delete the row, rewrite it. |
-| Showcase: FAQ still says "roughly half" | The today-versus-week-two split now exists next to the price and under "Where it actually stands." FAQ item 2 still repeats the rebuild line under the trial question and still says "roughly half what it will be." |
+| Showcase: tasks missing from day-one list | "Working the hour you install it" does not mention structured block tasks. They shipped this week. |
+| Showcase: "only user" copy | "I've been the only user of this for months" becomes false the day the first tester installs. Decide the replacement before that happens. |
+| Showcase: no thirty-day outcome | The page shows the founder's result but never says what a reader should expect. The honest version — after a week an explanation instead of a scoreboard, after a month the schedule is less wrong about you — is defensible and currently unsaid. |
+| Showcase: verify the 40% gym figure | Load-bearing factual claim on the engine section. Quoted WeekDemo figures verify against `DEMO_DAYS`; confirm they still match live founder data before testers read the page. |
 | `docs/offline-mode.md` price pointer | Lines ~34–35 still say "$14.99/mo with no trial." Re-point once the ladder is live. Annual at each rung: $69.99 / ~$129 / ~$169. |
 
 
@@ -946,10 +965,12 @@ makes it a one-line swap in theme.ts if ever revisited.
   start to 10:00 lands Saturday at 24:00 and the override is omitted, so
   Saturday reverts to the usual time with no notice. Refusing the base
   change would be worse. Narrow, and the same midnight bound as above.
-- **Safe-area insets are not universal.** schedule-builder, Today, Theory of
-  You, recovery, and quality-note handle them. account, onboarding, and
-  plan-tomorrow use a hardcoded `paddingTop: 60`. sign-in has neither. Anything
-  pinned near a screen edge on those screens may sit under the home indicator.
+- **Safe-area insets are not universal.** Today, Theory of You, recovery,
+  and quality-note handle them. schedule-builder uses insets on the bottom
+  bar and list, but its header is still `paddingTop: 60`. account,
+  onboarding, and plan-tomorrow use a hardcoded `paddingTop: 60`. sign-in
+  has neither. Anything pinned near a screen edge on those screens may sit
+  under the home indicator.
 - **RRULE INTERVAL and our generation math can disagree.**
   generate_daily_instances computes weeks as (target - anchor) / 7,
   anchor-relative. RRULE counts INTERVAL from DTSTART's week boundary per
@@ -2183,10 +2204,13 @@ replacement describes the engine — architecture, integrity rules, real
 generated output, honest build status — and contains no UI replica, so it has
 no drift surface. A print-formatted PDF of the same content is published
 alongside it at docs/flexmax-behavioral-engine.pdf for handouts. Founding
-pricing and founding-member framing are now on the page. Remaining copy
-fixes (struck-through reference prices, "half" urgency, WeekDemo provenance,
-disqualification placement, Stream 1 next to the price) sit in the Not built
-table. Screen recordings of the shipped WeekDemo belong on this page.
+pricing and founding-member framing are now on the page. Struck-through
+reference prices and "half" urgency are gone; public prices are forward
+tense. A positioning section ("Most of your day answers to nobody") sits
+after the founder letter. Remaining copy fixes (WeekDemo provenance,
+disqualification placement, Theory listed as unbuilt, tasks missing from
+the day-one list, "only user" copy, no thirty-day outcome) sit in the Not
+built table. Screen recordings of the shipped WeekDemo belong on this page.
 
 ### Rejected: generating an "insight" from onboarding answers
 
