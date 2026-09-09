@@ -86,7 +86,7 @@ export interface PsychologyProfile {
 
 export interface BehavioralInsight {
   id: string;
-  kind: "causal" | "pattern" | "strength";
+  kind: "causal" | "pattern" | "strength" | "structural";
   belief: string;
   suggestion: string | null;
   related_blocks: string[];

@@ -58,17 +58,42 @@ ABSOLUTE RULES
    Say "this block has been landing at half strength", never "you have not
    been focused". The rating describes what happened in the block, not who
    the user is.
-9. cannibalization is CORROBORATING evidence only. Never raise it as a
-   standalone insight. Cite it only when the user's own reflections
-   independently describe the same trade, and then as agreement between two
-   sources — not as a discovery. The lift figures currently rest on very few
-   events, and a pair with a high lift but no supporting reflection is more
-   likely a scheduling artifact than a real trade.
+9. block_coupling describes how one block's outcome relates to a later
+   block's outcome on the same day. Read the sign:
 
-   Specifically: a "sacrificed" block whose failures are mostly 'unaccounted'
-   rather than 'missed' may indicate the user stopped logging that evening, not
-   that the block was given up. Weight pairs where the sacrificed block is
-   confirmed 'missed' far more heavily than ones where it was never checked in.
+   relation = 'keystone': the earlier block FAILING predicts the later one
+     failing. pct_when_lost is much higher than pct_when_won. Frame as
+     structural dependency — the later block relies on the earlier one
+     holding. This is the most valuable finding available to you and you
+     may raise it as a standalone insight when it qualifies below.
+
+   relation = 'cannibalization': the earlier block COMPLETING predicts the
+     later one failing. The earlier block takes the later one's time.
+     Rarer. Same qualification rules.
+
+   You may lead with a coupling finding ONLY when all of:
+     - persistence is 'confirmed'
+     - abs(day_baseline_shift) is less than half of abs(lift)
+     - later_unaccounted_days is under half of the failures involved
+
+   If persistence is 'single_window', you may state it but must say the
+   window is short and it has not yet been seen to repeat.
+   If persistence is 'contradicted', do not raise it at all.
+   If day_baseline_shift approaches lift, the whole day moved, not this
+   pair — describe it as a day-level pattern or omit it.
+
+   Never say "causes". Say "predicts", "goes with", "has gone with".
+   Always cite both arms with their counts: "X of Y days" for each side.
+   Use n_won / n_lost and pct_when_won / pct_when_lost from the payload;
+   do not compute a new figure.
+
+   keystones names earlier blocks with two or more coupling relations,
+   including rows that do not meet the lead-with bar. Treat it as a label
+   on the pairs, not a second computation. Raise a "the day hangs on X"
+   sentence only when at least one of X's pairs meets the lead-with bar.
+   Do not raise a keystones name whose pairs are all contradicted or
+   whole-day collapse. kind for a qualifying keystone or weekday finding
+   is "structural".
 10. CHECK block_recency BEFORE describing any pattern as current. It carries
     completed_7d / failed_7d against completed_prior / failed_prior for every
     block. If a block's failures sit in failed_prior and are absent from
@@ -97,12 +122,21 @@ ABSOLUTE RULES
     Address the note or drop the claim. Do not argue with the user in the
     belief text. Do not quote the correction as a confession or as evidence
     they were wrong.
+14. day_of_week is fail rate by weekday over the 30-day base. Report a
+    weekday pattern only when the spread between the best and worst day
+    exceeds 15 points and each of those two days has at least 8 relevant
+    instances. Describe the day, never the person. Cite each day's
+    fail_pct and relevant from the payload; do not invent a third number
+    for the gap. kind is "structural".
 
 WHAT TO LOOK FOR, in priority order
 - Direction of travel: block_recency divergence between the last 7 days and
   prior. A block that has clearly improved or clearly deteriorated is the
   highest-value thing you can report, because it is the one thing a 30-day
   average actively conceals.
+- Structural dependency: a qualifying keystone in block_coupling (rule 9),
+  or a weekday spread that clears rule 14. These are discoveries — they do
+  not need a matching reflection. kind "structural".
 - Causal chains ACROSS days or blocks (one thing displacing another).
 - Quality drift: recent_poor vs recent_rated shows whether the sessions that
   DO happen are getting worse. Raise it when recent_poor is a majority of
@@ -141,7 +175,7 @@ Return ONLY a JSON array of 2-3 objects, no markdown, no preamble:
 
 [
   {
-    "kind": "causal" | "pattern" | "strength",
+    "kind": "causal" | "pattern" | "strength" | "structural",
     "belief": "one sentence, max 200 characters",
     "evidence": "the specific numbers and quotes behind it, max 250 characters",
     "suggestion": "one small structural change, max 150 characters, or null",
@@ -177,7 +211,7 @@ type InsightPayload = {
   nudge_line: string | null;
 };
 
-const KINDS = new Set(["causal", "pattern", "strength"]);
+const KINDS = new Set(["causal", "pattern", "strength", "structural"]);
 
 function sanitizeInsights(raw: unknown): InsightPayload[] | null {
   if (!Array.isArray(raw)) return null;
