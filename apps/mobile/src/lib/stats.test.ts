@@ -29,7 +29,7 @@ describe("computeStreakData", () => {
   const today = "2026-08-18"; // Tuesday
   const monday = "2026-08-17";
 
-  it("counts a day at exactly 80% accounted toward the streak", () => {
+  it("does not count a day with one unanswered block toward the streak", () => {
     const rows = rowsForDay("2026-08-17", [
       "completed",
       "completed",
@@ -38,14 +38,12 @@ describe("computeStreakData", () => {
       "missed",
       "missed",
       "missed",
-      "missed",
-      "pending",
       "pending",
     ]);
-    expect(8 / 10).toBe(STREAK_THRESHOLD);
+    expect(STREAK_THRESHOLD).toBe(1);
 
     const { streak } = computeStreakData(rows, today, monday);
-    expect(streak).toBe(1);
+    expect(streak).toBe(0);
   });
 
   it("counts a fully missed but fully accounted day toward the streak", () => {
@@ -55,14 +53,14 @@ describe("computeStreakData", () => {
     expect(streak).toBe(1);
   });
 
-  it("breaks the streak when unaccounted drops a day below threshold", () => {
+  it("breaks the streak when one block is unaccounted", () => {
     const rows = [
       ...rowsForDay("2026-08-17", ["completed", "completed", "completed", "completed", "missed"]),
       ...rowsForDay("2026-08-16", [
         "completed",
         "completed",
         "completed",
-        "unaccounted",
+        "completed",
         "unaccounted",
       ]),
     ];
@@ -136,7 +134,7 @@ describe("computeStreakData", () => {
     expect(weekDayMissedRatio[0]).toBe(1);
   });
 
-  it("does not count a day at 79% accounted toward the streak", () => {
+  it("does not count a day that is one block short of fully accounted", () => {
     const belowThresholdToday = "2026-08-17";
     const weekMonday = "2026-08-11";
     const rows = [
@@ -148,13 +146,13 @@ describe("computeStreakData", () => {
         "completed",
         "completed",
         "completed",
-        "pending",
-        "pending",
+        "completed",
+        "completed",
         "pending",
       ]),
       ...rowsForDay("2026-08-16", ["completed", "completed", "completed", "completed", "completed"]),
     ];
-    expect(7 / 10).toBeLessThan(STREAK_THRESHOLD);
+    expect(9 / 10).toBeLessThan(STREAK_THRESHOLD);
 
     const { streak, todayCountedInStreak } = computeStreakData(
       rows,

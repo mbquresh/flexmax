@@ -193,10 +193,9 @@ export async function fetchEarliestInstanceDate(
 const ACCOUNTED = ["completed", "missed", "skipped"];
 const EXCLUDED = ["removed", "rescheduled"];
 
-// A day counts toward the streak at 80%+ accounted. With ~8 blocks that is
-// 7 of 8 — one forgotten block should not erase a day that was otherwise
-// closed out honestly, but a real collapse still breaks the streak.
-export const STREAK_THRESHOLD = 0.8;
+// A day counts toward the streak only when every relevant block is
+// accounted for. One unanswered row is silence, not a closed day.
+export const STREAK_THRESHOLD = 1;
 
 /** Closed weeks on the history chart, plus the week that contains today. */
 export const HISTORY_WEEKS = 12;

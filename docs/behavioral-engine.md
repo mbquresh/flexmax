@@ -86,7 +86,7 @@ completion record means optimizing for the exact fragility the product exists to
 solve.
 
 So the protected number is **accounting, not completion**. A day counts toward
-the streak when at least 80% of its blocks have a real, user-set status. Marking
+the streak when every relevant block has a real, user-set status. Marking
 something missed keeps the streak alive; only silence (`unaccounted`) breaks it.
 
 The schema already made this distinction for other reasons: `missed` means the

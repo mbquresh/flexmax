@@ -514,7 +514,7 @@ marker at all.
 | Behavioral learning v1                        | 015 + weekly-insight + InsightCard                    |
 | Deterministic recovery copy (AI call REMOVED) | src/lib/recoveryCopy.ts                               |
 | Seven-beat preset onboarding | SUPERSEDED by the 5-step WeekDemo flow below. Recognition screens, answer playback, and four of five self-report questions are gone. |
-| Accountability streak (80% threshold)         | stats.ts; two-tone square encoding                    |
+| Accountability streak (100% accounted)        | stats.ts; two-tone square encoding                    |
 | Close-today sweep merged into evening ritual  | plan-tomorrow.tsx + CloseTodayRow; Done/Missed only, preset miss reasons |
 | Preset miss reasons                           | 019 miss_reason_tag; structural labels only, never stored as reflection prose |
 | Cutoff nudges + telemetry                     | blockNotifications.ts; fires at midpoint or end-30, gated on an unfinished block_task; 016 nudge_events |
@@ -642,7 +642,8 @@ unaccounted — they show up to admit failure. That is the behavior worth
 protecting. Weights shows 6 missed and 15 unaccounted — silent abandonment is
 the real drift, not the miss.
 
-SHIPPED. The streak is accounting-based at an 80% daily threshold. The square
+SHIPPED. The streak is accounting-based: every relevant block that day must
+have a real status. The square
 encoding went through three iterations — accounting-ratio fill (rewarded
 missing), fill plus outline (no payoff for closing out), and finally a stacked
 two-tone fill: teal for completed, neutral for missed, empty for unanswered.
@@ -2046,8 +2047,8 @@ migrations table.
 
 **The shipped thresholds are invented too.** Deferring Bayesian machinery on the
 grounds that the calibration is n=1 was correct — but the same logic applies to
-the thresholds that *did* ship. Three check-ins, 25% of instances, 80%
-accounting, the ≥4-miss pattern floor: all chosen from one month of one person's
+the thresholds that *did* ship. Three check-ins, 25% of instances, the ≥4-miss
+pattern floor: all chosen from one month of one person's
 data. They are cheaper guesses, not settled constants. Treat every one as an
 instrumented parameter to be re-fit from the first TestFlight cohort, and expect
 at least one of them to be wrong.
