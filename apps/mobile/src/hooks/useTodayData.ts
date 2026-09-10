@@ -226,32 +226,16 @@ export function useTodayData(userId: string | undefined) {
               const now = new Date();
               const nowMinutes = now.getHours() * 60 + now.getMinutes();
 
-              const [{ data: hist }, { data: coupling, error: couplingError }] =
-                await Promise.all([
-                  supabase
-                    .from("daily_schedule_instances")
-                    .select("block_id, date, status")
-                    .in("block_id", blockIds)
-                    .lt("date", targetDate)
-                    .in("status", ["completed", "missed", "unaccounted"])
-                    .order("date", { ascending: false })
-                    .limit(400),
-                  supabase
-                    .from("block_coupling")
-                    .select(
-                      "trigger_block_id, later_block_id, relation, persistence, lift, pct_when_won, pct_when_lost, n_lost"
-                    )
-                    .eq("user_id", userId),
-                ]);
+              const { data: hist } = await supabase
+                .from("daily_schedule_instances")
+                .select("block_id, date, status")
+                .in("block_id", blockIds)
+                .lt("date", targetDate)
+                .in("status", ["completed", "missed", "unaccounted"])
+                .order("date", { ascending: false })
+                .limit(400);
 
-              if (couplingError) handleError(couplingError, "loadToday coupling");
-
-              preempt = pickPreemptTarget(
-                data,
-                hist ?? [],
-                nowMinutes,
-                coupling ?? []
-              );
+              preempt = pickPreemptTarget(data, hist ?? [], nowMinutes);
             }
           } catch (err) {
             // A failed history lookup must never block the day from loading.

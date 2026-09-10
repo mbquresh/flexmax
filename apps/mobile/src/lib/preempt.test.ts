@@ -5,7 +5,6 @@ import {
   preemptBody,
   preemptTitle,
   resolvePreempt,
-  CouplingRow,
   PreemptHistoryRow,
 } from "./preempt";
 
@@ -313,36 +312,6 @@ describe("resolvePreempt", () => {
     ).toBeNull();
   });
 
-  it("keeps coupled copy when rematerializing the fire time", () => {
-    const snapshot = {
-      instanceId: "aft-today",
-      blockId: "afternoon",
-      blockName: "Deep work afternoon",
-      startMinutes: 900,
-      landed: 5,
-      total: 15,
-      coupled: {
-        triggerName: "Deep work morning",
-        laterName: "Deep work afternoon",
-        nLost: 15,
-        laterFailed: 10,
-        pctWhenLost: 67,
-        lift: -58,
-      },
-    };
-    const moved = instance({
-      id: "aft-today",
-      block_id: "afternoon",
-      start_minutes: 16 * 60,
-      end_minutes: 18 * 60,
-      block: block({ id: "afternoon", name: "Deep work afternoon" }),
-    });
-    expect(resolvePreempt(snapshot, [moved], 12 * 60)).toMatchObject({
-      startMinutes: 16 * 60,
-      coupled: { triggerName: "Deep work morning", laterName: "Deep work afternoon" },
-    });
-  });
-
   it("drops the nudge when the new start is already behind us", () => {
     const moved = instance({
       id: "gym-today",
@@ -366,51 +335,10 @@ describe("preemptBody", () => {
     expect(body).toBe("3 of the last 7 landed.");
     expect(body.toLowerCase()).not.toContain("you");
   });
-
-  it("states the conditional with counts when the pick is coupled", () => {
-    const body = preemptBody({
-      instanceId: "aft-today",
-      blockId: "afternoon",
-      blockName: "Deep work afternoon",
-      startMinutes: 15 * 60,
-      landed: 5,
-      total: 15,
-      coupled: {
-        triggerName: "Deep work morning",
-        laterName: "Deep work afternoon",
-        nLost: 15,
-        laterFailed: 10,
-        pctWhenLost: 67,
-        lift: -58,
-      },
-    });
-    expect(body).toBe(
-      "Deep work morning didn't happen today. On the last 15 days that happened, Deep work afternoon didn't either — 10 of them. It starts at 3:00 PM."
-    );
-    expect(body.toLowerCase()).not.toContain("cause");
-  });
 });
 
 describe("preemptTitle", () => {
-  it("names the later block when coupled, otherwise the start-now line", () => {
-    expect(
-      preemptTitle({
-        instanceId: "aft-today",
-        blockId: "afternoon",
-        blockName: "Deep work afternoon",
-        startMinutes: 900,
-        landed: 5,
-        total: 15,
-        coupled: {
-          triggerName: "Deep work morning",
-          laterName: "Deep work afternoon",
-          nLost: 15,
-          laterFailed: 10,
-          pctWhenLost: 67,
-          lift: -58,
-        },
-      })
-    ).toBe("Your Deep work afternoon is at risk.");
+  it("uses the start-now line", () => {
     expect(
       preemptTitle({
         instanceId: "gym-today",
@@ -421,141 +349,5 @@ describe("preemptTitle", () => {
         total: 7,
       })
     ).toBe("Gym starts now");
-  });
-});
-
-function pair(overrides: Partial<CouplingRow> = {}): CouplingRow {
-  return {
-    trigger_block_id: "morning",
-    later_block_id: "afternoon",
-    relation: "keystone",
-    persistence: "confirmed",
-    lift: -58,
-    pct_when_won: 9,
-    pct_when_lost: 67,
-    n_lost: 15,
-    ...overrides,
-  };
-}
-
-describe("pickPreemptTarget coupling", () => {
-  const morning = instance({
-    id: "morn-today",
-    block_id: "morning",
-    start_minutes: 480,
-    end_minutes: 720,
-    status: "missed",
-    block: block({ id: "morning", name: "Deep work morning" }),
-  });
-  const afternoon = instance({
-    id: "aft-today",
-    block_id: "afternoon",
-    start_minutes: 900,
-    end_minutes: 1080,
-    status: "pending",
-    block: block({ id: "afternoon", name: "Deep work afternoon" }),
-  });
-
-  it("picks the later block when a confirmed keystone trigger has already ended", () => {
-    const picked = pickPreemptTarget(
-      [morning, afternoon],
-      [],
-      800,
-      [pair()]
-    );
-    expect(picked).toMatchObject({
-      instanceId: "aft-today",
-      blockId: "afternoon",
-      coupled: {
-        triggerName: "Deep work morning",
-        laterName: "Deep work afternoon",
-        nLost: 15,
-        laterFailed: 10,
-      },
-    });
-  });
-
-  it("treats an unaccounted trigger the same as a missed one", () => {
-    const silent = { ...morning, status: "unaccounted" as const };
-    expect(
-      pickPreemptTarget([silent, afternoon], [], 800, [pair()])?.instanceId
-    ).toBe("aft-today");
-  });
-
-  it("ignores contradicted, single_window, and cannibalization rows", () => {
-    expect(
-      pickPreemptTarget(
-        [morning, afternoon],
-        [],
-        800,
-        [pair({ persistence: "contradicted" })]
-      )
-    ).toBeNull();
-    expect(
-      pickPreemptTarget(
-        [morning, afternoon],
-        [],
-        800,
-        [pair({ persistence: "single_window" })]
-      )
-    ).toBeNull();
-    expect(
-      pickPreemptTarget(
-        [morning, afternoon],
-        [],
-        800,
-        [pair({ relation: "cannibalization", lift: 40 })]
-      )
-    ).toBeNull();
-  });
-
-  it("skips when the trigger has not ended yet or the later block already started", () => {
-    expect(
-      pickPreemptTarget([morning, afternoon], [], 600, [pair()])
-    ).toBeNull();
-    expect(
-      pickPreemptTarget([morning, afternoon], [], 960, [pair()])
-    ).toBeNull();
-  });
-
-  it("falls through to frequency when no coupled later block is still pending", () => {
-    const hist = history("block-1", [
-      "missed",
-      "missed",
-      "missed",
-      "missed",
-      "completed",
-      "completed",
-      "completed",
-    ]);
-    const picked = pickPreemptTarget(
-      [morning, futureGym],
-      hist,
-      800,
-      [pair()]
-    );
-    expect(picked?.instanceId).toBe("gym-today");
-    expect(picked?.landed).toBe(3);
-    expect(picked?.coupled).toBeUndefined();
-  });
-
-  it("prefers a coupled keystone over a worse frequency record", () => {
-    const hist = history("block-1", [
-      "missed",
-      "missed",
-      "missed",
-      "missed",
-      "missed",
-      "missed",
-      "missed",
-    ]);
-    const picked = pickPreemptTarget(
-      [morning, afternoon, futureGym],
-      hist,
-      800,
-      [pair()]
-    );
-    expect(picked?.instanceId).toBe("aft-today");
-    expect(picked?.coupled).toBeDefined();
   });
 });

@@ -247,8 +247,7 @@ export async function scheduleTodayBlockNotifications(
       if (userId) {
         trackOnce(
           preemptFiredKey(userId, date, livePreempt.instanceId),
-          "preempt_fired",
-          { coupled: !!livePreempt.coupled }
+          "preempt_fired"
         );
       }
       await Notifications.scheduleNotificationAsync({
@@ -259,7 +258,6 @@ export async function scheduleTodayBlockNotifications(
           data: {
             type: "block_preempt",
             instanceId: livePreempt.instanceId,
-            coupled: !!livePreempt.coupled,
             screen: "today",
           },
         },

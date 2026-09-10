@@ -457,11 +457,9 @@ nudge fires when the block has at least one unfinished task and duration
 ≥ 30 minutes; the title is `cutoffTitle` — first open task name, with a
 remaining-count suffix when more than one is open.
 
-The pre-block nudge is still one per day. `pickPreemptTarget` tries a
-confirmed keystone first: a today instance that is missed or unaccounted
-whose end has passed, coupled to a later instance that is still pending
-and not yet started. Copy states the conditional and the counts. If none
-match, the existing 4-of-7 frequency pick runs unchanged.
+The pre-block nudge is still one per day. `pickPreemptTarget` is the
+frequency pick only: 4 of the last 7 failed, worst record first, earliest
+start breaking ties, full 7-occurrence window. Copy states what LANDED.
 
 ---
 
@@ -576,7 +574,7 @@ marker at all.
 | Schedule builder refactor | schedule-builder.tsx split into ScheduleBlockCard, BlockFormSheet, CategoryChips, DayChips. Editing moved out of the FlatList row into a bottom sheet — inline expansion jumped row height ~400px, put a TextInput and a nested horizontal ScrollView inside a FlatList row, and recreated renderBlock on every keystroke. Add and edit were two copy-pasted forms behind twelve duplicated state hooks; now one BlockFormSheet with a single draft object. Behaviour-neutral: validation strings, save payloads, sort order and quick-add all unchanged. Sheet copies TaskDetailSheet's Modal structure exactly — KeyboardAvoidingView as the direct child carrying the overlay style, dismiss Pressable as a sibling not a wrapper |
 | Block archiving | schedule_blocks.is_active (037). A block can retire without destroying its record. Card actions are now Edit / Archive; permanent delete moved into the edit sheet, because delete cascades to every daily_schedule_instances row and the one-tap action should be the reversible one. Archiving marks today's PENDING instance 'removed' so the block leaves Today immediately; completed and missed instances survive and keep feeding the evidence pack until they age out of the 30-day window |
 | Shared miss reason presets | src/lib/missReasons.ts. Extracted from CloseTodayRow so any future surface writes identical strings — miss_reasons in get_behavior_evidence groups by exact value, so drift would split one reason into two rows |
-| Pre-block nudge | src/lib/preempt.ts + blockNotifications.ts. AT MOST ONE PER DAY. First pass: a confirmed keystone whose trigger has already failed today (missed or unaccounted, end passed) and whose later block is still pending and not yet started. Copy states the conditional with counts, never "causes". If none, the original frequency pick: 4 of the last 7 failed, worst record first, earliest start breaking ties, full 7-occurrence window. Frequency copy still states what LANDED. Coupling does not add a second channel. |
+| Pre-block nudge | src/lib/preempt.ts + blockNotifications.ts. AT MOST ONE PER DAY. Frequency pick only: 4 of the last 7 failed, worst record first, earliest start breaking ties, full 7-occurrence window. Copy states what LANDED. The coupled first pass was built and removed — see Known issues. |
 | Accounted for section | today.tsx. Completed and missed blocks move to a section at the bottom of Today, greyed, undo intact. The top list becomes exactly what is left, which is what makes a late-day reschedule legible — a morning block can be moved into an afternoon whose blocks are already resolved, and the open time reads as open. Missed blocks go here too: an answered block is not unfinished business, and the accounted-for streak already counts it as engagement. Cards here do not register onLayout and cannot be dragged or swiped, so cardPositions only ever holds open cards — this SHRINKS the drag surface. A pruning effect clears stale entries when a card leaves the open list, without which findSwapTarget could match a phantom position |
 | End time on reschedule | recovery/[id].tsx. The "Ends" picker was gated behind slotIsFallback, so duration could only be changed when the app failed to find a slot. Always available now |
 | Drag auto-scroll | today.tsx + BlockCard.tsx. Dragging near the top or bottom edge scrolls the list, so a swap target off-screen is reachable. Speed ramps with depth into a 90px edge zone. Driven by useFrameCallback rather than the gesture's onUpdate, because onUpdate only fires when the finger MOVES — holding still at the edge would stop the scroll exactly when the user is waiting for a target to appear |
@@ -597,7 +595,7 @@ marker at all.
 | Day selector and per-day times | schedule-builder.tsx + DayStrip + 046. The builder was a flat list of rules ABOUT the week, so the user reconstructed their week mentally; and a block held one time, so different times on different days forced a second block — which the engine already merged, since get_behavior_evidence groups by name. Tapping a day filters to that day, sorted by resolved time, and the time pickers then edit that day only. Defaults to All, not today: this screen is visited to set up a week, and starting on one day hides six sevenths of it. Adding a block while a day is selected defaults to that day. Archiving from a day view that still runs elsewhere asks whether to drop the day or the block. All-view time changes shift overrides by the same delta. Calendar-feed splits a block with overrides into disjoint BYDAY VEVENTs |
 | Theory of You | app/you.tsx + DisputeSheet + 047. Menu and title are "Theory of You". Twelve-week two-tone chart, 30-day accounted/landed as one caption, then the current insight set as tappable sentences (strengths first). Tap a line: "That's not right" → one note → the line leaves immediately. dispute_insight writes insight_corrections (survives supersede) and stamps disputed_at. Morning InsightCard and recovery omit disputed rows. weekly-insight reads the last 20 corrections and must not restate a rejected belief. No second AI call on the tap. No Done button — the X is enough. `kind` may be `structural` (052); InsightCard still hides only `strength`. |
 | Structured block tasks | 048 + src/lib/blockTasks.ts + app/block-tasks/[id].tsx + BlockTaskRow. Replaces free-text task_detail with rows keyed on (user_id, block_id, date). Informational only — done never writes block status. Today shows two inline with checkbox; add/name tap opens the page. Swipe reveals reschedule (inline, `runsOn` only) and delete. No sheet, no nested edit route. Plan Tomorrow writes immediately. Cutoff title is `cutoffTitle`. Store field `todayBlockTasks` must be passed on every notification rebuild. |
-| Block coupling (mirror → discovery) | 049–053 + weekly-insight + preempt.ts. 026 kept `lift >= 25` (earlier completing, later failing) and dropped every real founder pair — they were keystones, lift −31 to −57. Rule 9 then forbade raising a surviving pair unless the user had already written it. 050 keeps both signs, ships `day_baseline_shift` instead of excluding mixed days, and requires persistence across the prior 30 days. Narrator may lead with a pair only when persistence is `confirmed`, abs(day_baseline_shift) is under half of abs(lift), and later_unaccounted_days is under half the failures involved. Never "causes". `kind: structural` for keystones and weekday spreads (052). Founder first generate: morning → afternoon, keystone, lift −58, baseline −17, confirmed; Cardio → Weights contradicted; afternoon → dinner confirmed but baseline −39 (whole-day collapse, omitted). `keystones` named morning and afternoon; only morning had a qualifying pair — treat `keystones` as a label, not a second computation. `day_of_week` on the 30-day base: Tue 19 / Sun 52. 053 emits the arm counts so "1 of 11" / "10 of 15" are in the pack. weekly-insight writes `block_coupling` after generate. Preempt first pass uses confirmed keystones; one nudge per day. |
+| Block coupling (mirror → discovery) | 049–053 + weekly-insight + preempt.ts. 026 kept `lift >= 25` (earlier completing, later failing) and dropped every real founder pair — they were keystones, lift −31 to −57. Rule 9 then forbade raising a surviving pair unless the user had already written it. 050 keeps both signs, ships `day_baseline_shift` instead of excluding mixed days, and requires persistence across the prior 30 days. Narrator may lead with a pair only when persistence is `confirmed`, abs(day_baseline_shift) is under half of abs(lift), and later_unaccounted_days is under half the failures involved. Never "causes". `kind: structural` for keystones and weekday spreads (052). Founder first generate: morning → afternoon, keystone, lift −58, baseline −17, confirmed; Cardio → Weights contradicted; afternoon → dinner confirmed but baseline −39 (whole-day collapse, omitted). `keystones` named morning and afternoon; only morning had a qualifying pair — treat `keystones` as a label, not a second computation. `day_of_week` on the 30-day base: Tue 19 / Sun 52. 053 emits the arm counts so "1 of 11" / "10 of 15" are in the pack. weekly-insight writes `block_coupling` after generate. The coupled preempt was removed; the finding reaches the user through Theory of You. |
 
 
 
@@ -980,10 +978,17 @@ makes it a one-line swap in theme.ts if ever revisited.
   carries=2 because dinner (confirmed, whole-day collapse) and weights
   (contradicted) both cleared the SQL bar. The narrator must still apply
   the lead-with qualification. Do not treat a keystones name as a finding.
-- **Coupled preempt does not apply day_baseline_shift.** A confirmed
-  keystone whose baseline approaches lift (afternoon → dinner) can still
-  fire. Deliberate for now: the live filter is persistence + relation +
-  today's statuses. Revisit if that pair fires and reads as day-collapse.
+- **Coupled preempt — built, then removed.** A lock-screen push cannot carry
+  evidence or a dispute affordance, and it read `block_coupling` directly,
+  bypassing the narrator's qualification gate. A real-time causal claim fails
+  loudly where a weekly one fails quietly. The coupling pipeline is intact and
+  the finding reaches the user through Theory of You. Do not rebuild the
+  notification without: cohort-validated coupling, copy that fits a lock screen,
+  the qualification test applied at the read, and analytics on open rate.
+- **`block_coupling` stores unqualified rows.** Persistence, day-baseline
+  and unaccounted tests are applied by the consumer (weekly-insight rule 9),
+  not the table. Any future reader must apply them. Do not treat a persisted
+  pair as a finding.
 - **The pre-block nudge is not tone-aware.** accountability_tone (firm /
   gentle / data-driven) shapes the weekly insight but not notifications. A
   data-driven user probably wants the raw ratio and a gentle user probably does

@@ -19,7 +19,7 @@ function handleNotificationResponse(response: Notifications.NotificationResponse
   if (openType) {
     track("notification_opened", { type: openType });
     if (openType === "preempt") {
-      track("preempt_opened", { coupled: data?.coupled === true });
+      track("preempt_opened");
     }
   }
 
