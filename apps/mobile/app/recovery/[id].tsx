@@ -30,6 +30,7 @@ import { useAuth } from "../../src/providers/AuthProvider";
 import { useStore } from "../../src/store";
 import { supabase } from "../../src/lib/supabase";
 import { handleError } from "../../src/lib/errors";
+import { track, trackReflection } from "../../src/lib/analytics";
 import { scheduleTodayBlockNotifications } from "../../src/lib/blockNotifications";
 import { TimePicker } from "../../src/components/TimePicker";
 import { DurationSlider } from "../../src/components/DurationSlider";
@@ -49,7 +50,7 @@ const LEGACY_IMPROVE_CHIPS = [
 ] as const;
 
 function RecoveryScreenContent() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, source } = useLocalSearchParams<{ id: string; source?: string }>();
   const instance = useStore((s) => s.todayInstances.find((i) => i.id === id));
   const allInstances = useStore((s) => s.todayInstances);
   const { setTodayInstances, updateInstance } = useStore();
@@ -87,6 +88,12 @@ function RecoveryScreenContent() {
       router.back();
     }
   }, [instance]);
+
+  useEffect(() => {
+    track("recovery_opened", {
+      source: source === "notification" ? "notification" : "swipe",
+    });
+  }, []);
 
   useEffect(() => {
     if (!instance) return;
@@ -329,6 +336,8 @@ function RecoveryScreenContent() {
     setSaving(true);
     try {
       await commitMissed(instanceId);
+      track("recovery_action", { action: "skip" });
+      track("block_missed_marked", { had_reflection: false });
       router.back();
     } catch (err) {
       handleError(err, "handleSkipRecovery", "Could not mark missed");
@@ -343,6 +352,11 @@ function RecoveryScreenContent() {
     setSaving(true);
     try {
       await commitMissed(instance.id, reflectionPatch());
+      track("recovery_action", { action: "save" });
+      track("block_missed_marked", {
+        had_reflection: reflectionWhy.trim().length > 0,
+      });
+      trackReflection(reflectionWhy);
       router.back();
     } catch (err) {
       handleError(err, "handleSaveRecovery", "Could not save reflection");
@@ -512,6 +526,8 @@ function RecoveryScreenContent() {
         targetEnd: shrinkPlacement.end,
         targetExtra: compressed,
       });
+      track("recovery_action", { action: "shrink" });
+      trackReflection(reflectionWhy);
       router.back();
     } catch (err) {
       handleError(err, "handleShrinkAndMove", "Couldn't shorten the block");
@@ -542,6 +558,8 @@ function RecoveryScreenContent() {
           targetStart: plan.newStart,
           targetEnd: plan.newEnd,
         });
+        track("recovery_action", { action: "push" });
+        trackReflection(reflectionWhy);
         router.back();
         return;
       }
@@ -604,6 +622,8 @@ function RecoveryScreenContent() {
         todayBlockTasks
       ).catch((err) => handleError(err, "recoveryResync"));
 
+      track("recovery_action", { action: "reschedule" });
+      trackReflection(reflectionWhy);
       router.back();
     } catch (err) {
       handleError(err, "handleReschedule", "Couldn't reschedule the block");

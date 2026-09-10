@@ -16,6 +16,7 @@ import { useAuth } from "../../src/providers/AuthProvider";
 import { useStore } from "../../src/store";
 import { supabase } from "../../src/lib/supabase";
 import { handleError } from "../../src/lib/errors";
+import { track } from "../../src/lib/analytics";
 import {
   createBlockTask,
   deleteBlockTask,
@@ -181,7 +182,10 @@ function BlockTasksScreenContent() {
         setAddDraft(trimmed);
         return;
       }
-      if (data) setTasks((prev) => [...prev, data]);
+      if (data) {
+        setTasks((prev) => [...prev, data]);
+        track("task_added", { surface: "today" });
+      }
     } finally {
       setSaving(false);
     }

@@ -9,7 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { generateDailyInstances, supabase } from "../src/lib/supabase";
 import { WEEKDAYS } from "../src/lib/schedule";
@@ -36,6 +36,7 @@ import {
   renameBlockTask,
 } from "../src/lib/blockTasks";
 import { addDays } from "../src/lib/stats";
+import { track } from "../src/lib/analytics";
 import { runsOn, upcomingRunDates } from "../src/lib/recurrence";
 
 function isInstanceFixed(instance: DailyInstance): boolean {
@@ -53,6 +54,7 @@ function PlanTomorrowScreenContent() {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { session } = useAuth();
+  const { source } = useLocalSearchParams<{ source?: string }>();
   const tomorrowDate = useMemo(() => getTomorrowLocalDateString(), []);
   const tomorrowWeekday = useMemo(() => {
     const t = new Date();
@@ -135,6 +137,12 @@ function PlanTomorrowScreenContent() {
   useEffect(() => {
     loadPlan();
   }, [loadPlan]);
+
+  useEffect(() => {
+    track("plan_tomorrow_opened", {
+      source: source === "notification" ? "notification" : "menu",
+    });
+  }, []);
 
   const tasksByBlockId = useMemo(
     () => groupBlockTasks(blockTasks),
@@ -261,7 +269,9 @@ function PlanTomorrowScreenContent() {
       setCloseTodayInstances(previous);
       setAwaitingPresetIds((prev) => new Set(prev).add(instanceId));
       handleError(error, "closeTodayPreset", "Couldn't save that");
+      return;
     }
+    track("block_missed_marked", { had_reflection: false });
   };
 
   const handlePresetSkip = async (instanceId: string) => {
@@ -281,7 +291,9 @@ function PlanTomorrowScreenContent() {
       setCloseTodayInstances(previous);
       setAwaitingPresetIds((prev) => new Set(prev).add(instanceId));
       handleError(error, "closeTodaySkipReason", "Couldn't save that");
+      return;
     }
+    track("block_missed_marked", { had_reflection: false });
   };
 
   const handleUndoMissed = (instanceId: string) => {
@@ -322,7 +334,10 @@ function PlanTomorrowScreenContent() {
       setAddDrafts((prev) => ({ ...prev, [blockId]: trimmed }));
       return false;
     }
-    if (data) setBlockTasks((prev) => [...prev, data]);
+    if (data) {
+      setBlockTasks((prev) => [...prev, data]);
+      track("task_added", { surface: "plan_tomorrow" });
+    }
     return true;
   };
 
@@ -471,7 +486,7 @@ function PlanTomorrowScreenContent() {
             <Text style={styles.emptyText}>No blocks scheduled for tomorrow.</Text>
             <PressableScale
               style={styles.emptyBtn}
-              onPress={() => router.replace("/schedule-builder")}
+              onPress={() => router.replace("/schedule-builder?source=menu")}
             >
               <Text style={styles.emptyBtnText}>Edit schedule</Text>
             </PressableScale>

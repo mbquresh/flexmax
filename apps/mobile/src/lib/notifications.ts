@@ -1,6 +1,7 @@
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 import { supabase } from "./supabase";
+import { normalizePermissionStatus, track } from "./analytics";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -20,6 +21,10 @@ export async function registerPushToken(userId: string): Promise<string | null> 
     const { status } = await Notifications.requestPermissionsAsync();
     finalStatus = status;
   }
+
+  track("notification_permission", {
+    status: normalizePermissionStatus(finalStatus),
+  });
 
   if (finalStatus !== "granted") {
     return null;

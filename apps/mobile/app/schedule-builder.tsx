@@ -10,7 +10,7 @@ import {
   Keyboard,
   RefreshControl,
 } from "react-native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { generateDailyInstances, supabase } from "../src/lib/supabase";
 import {
@@ -56,6 +56,7 @@ import {
   deleteAwayPeriod,
   formatAwayRange,
 } from "../src/lib/away";
+import { firstSavedKey, track, trackOnce } from "../src/lib/analytics";
 
 function weekdayLong(day: number): string {
   return WEEKDAYS[day]
@@ -124,7 +125,20 @@ function ScheduleBuilderScreenContent() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const { session, refreshProfile } = useAuth();
+  const { source } = useLocalSearchParams<{ source?: string }>();
   const { blocks, setBlocks } = useStore();
+
+  const emitBlockAdded = (preset: string, isCustom: boolean) => {
+    const userId = session?.user.id;
+    const blockCount =
+      blocks.filter((b) => b.is_active !== false).length + 1;
+    track("block_added", { preset, is_custom: isCustom });
+    if (userId && blockCount >= 1) {
+      trackOnce(firstSavedKey(userId), "schedule_first_saved", {
+        block_count: blockCount,
+      });
+    }
+  };
   const [loading, setLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
   const [loadOffline, setLoadOffline] = useState(false);
@@ -244,6 +258,12 @@ function ScheduleBuilderScreenContent() {
   useEffect(() => {
     loadBlocks();
   }, [session?.user.id]);
+
+  useEffect(() => {
+    track("schedule_builder_opened", {
+      source: source === "onboarding" ? "onboarding" : "menu",
+    });
+  }, []);
 
   const handleDeleteBlock = useCallback(
     async (blockId: string) => {
@@ -683,6 +703,7 @@ function ScheduleBuilderScreenContent() {
         setBlocks(
           [...blocks, created].sort((a, b) => a.start_minutes - b.start_minutes)
         );
+        emitBlockAdded("custom", true);
         await syncTodayInstance(created).catch((err) =>
           handleError(err, "syncTodayInstance")
         );
@@ -736,6 +757,7 @@ function ScheduleBuilderScreenContent() {
         isFixed: false,
       });
       setBlocks([...blocks, created].sort((a, b) => a.start_minutes - b.start_minutes));
+      emitBlockAdded(preset.key, false);
       await syncTodayInstance(created).catch((err) =>
         handleError(err, "syncTodayInstance")
       );

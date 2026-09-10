@@ -7,6 +7,13 @@ import { handleError, isConnectivityError } from "../lib/errors";
 import { getLocalDateString } from "../lib/time";
 import { useStore } from "../store";
 import { Profile, PsychologyProfile } from "../types/database";
+import {
+  identifyUser,
+  normalizePermissionStatus,
+  resetAnalytics,
+  track,
+} from "../lib/analytics";
+import * as Notifications from "expo-notifications";
 
 let lastOpenRecordedAt = 0;
 const OPEN_DEBOUNCE_MS = 60_000;
@@ -63,6 +70,36 @@ async function syncDeviceTimezone(
     handleError(err, "syncDeviceTimezone");
     return currentTimezone;
   }
+}
+
+function identifySession(userId: string, createdAt: string | undefined) {
+  void (async () => {
+    try {
+      const created = createdAt ? Date.parse(createdAt) : Date.now();
+      const days = Number.isFinite(created)
+        ? Math.max(0, Math.floor((Date.now() - created) / 86_400_000))
+        : 0;
+      const [blocks, insights] = await Promise.all([
+        supabase
+          .from("schedule_blocks")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", userId)
+          .eq("is_active", true),
+        supabase
+          .from("behavioral_insights")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", userId)
+          .eq("superseded", false),
+      ]);
+      identifyUser(userId, {
+        days_since_signup: days,
+        block_count: blocks.count ?? 0,
+        has_insights: (insights.count ?? 0) > 0,
+      });
+    } catch {
+      identifyUser(userId);
+    }
+  })();
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -151,6 +188,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     registerPushToken(userId).catch(console.error);
     recordAppOpen();
+    identifySession(userId, profileData.created_at);
+    Notifications.getPermissionsAsync()
+      .then(({ status }) => {
+        track("notification_permission", {
+          status: normalizePermissionStatus(status),
+        });
+      })
+      .catch(() => {});
   };
 
   const recordAppOpen = () => {
@@ -217,6 +262,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setProfileError(false);
         setProfileOffline(false);
         reset();
+        resetAnalytics();
         setLoading(false);
       }
     });
@@ -249,6 +295,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (session?.user.id) {
       await unregisterPushToken(session.user.id).catch(console.error);
     }
+    resetAnalytics();
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
   };

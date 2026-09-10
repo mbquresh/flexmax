@@ -1,10 +1,11 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { BehavioralInsight } from "../types/database";
 import { Colors, spacing, radii, iconSizes, typography } from "../theme";
 import { useTheme } from "../providers/ThemeProvider";
 import { PressableScale } from "./PressableScale";
+import { track } from "../lib/analytics";
 
 interface Props {
   insight: BehavioralInsight;
@@ -14,6 +15,10 @@ interface Props {
 export function InsightCard({ insight, onDismiss }: Props) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+
+  useEffect(() => {
+    track("insight_viewed", { kind: insight.kind, rank: insight.rank });
+  }, [insight.id, insight.kind, insight.rank]);
 
   return (
     <PressableScale

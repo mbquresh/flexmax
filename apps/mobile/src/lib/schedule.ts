@@ -140,24 +140,28 @@ export async function setBlockArchived(blockId: string, archived: boolean) {
 
 export const BLOCK_PRESETS = [
   {
+    key: "morning_routine",
     name: "Morning routine",
     category: "morning_routine" as BlockCategory,
     startMinutes: 6 * 60,
     endMinutes: 7 * 60,
   },
   {
+    key: "deep_work",
     name: "Deep work",
     category: "deep_work" as BlockCategory,
     startMinutes: 9 * 60,
     endMinutes: 12 * 60,
   },
   {
+    key: "workout",
     name: "Workout",
     category: "health" as BlockCategory,
     startMinutes: 18 * 60,
     endMinutes: 19 * 60,
   },
   {
+    key: "wind_down",
     name: "Wind down",
     category: "wind_down" as BlockCategory,
     startMinutes: 21 * 60 + 30,

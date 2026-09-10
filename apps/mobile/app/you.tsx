@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { supabase } from "../src/lib/supabase";
 import { getLocalDateString } from "../src/lib/time";
 import { handleError, isConnectivityError } from "../src/lib/errors";
+import { track } from "../src/lib/analytics";
 import { hapticSelect } from "../src/lib/haptics";
 import { useAuth } from "../src/providers/AuthProvider";
 import { RequireAuth } from "../src/components/RequireAuth";
@@ -122,6 +123,7 @@ function YouScreenContent() {
         p_note: note,
       });
       if (error) throw error;
+      track("insight_disputed", { kind: target.kind });
     } catch (err) {
       setInsights((prev) =>
         prev.map((row) =>

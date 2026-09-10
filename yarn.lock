@@ -1364,6 +1364,18 @@
   resolved "https://registry.yarnpkg.com/@oxc-project/types/-/types-0.144.0.tgz#7dfbfbfbbb9c24d4abeb6f9856a1eca02aff6468"
   integrity sha512-nuhZIOLuI6TFQ32I/WnUx+SCPY7SdSKwgnFHydAuoS1+Z4BRcaP+RRJmGzl9lw+0OFF7UmaESf7KQRXaNLHypg==
 
+"@posthog/core@^1.53.0":
+  version "1.53.0"
+  resolved "https://registry.yarnpkg.com/@posthog/core/-/core-1.53.0.tgz#dffd844fc1eac252c360309e5e15a5cc1c17ede5"
+  integrity sha512-qlEavIUVIdTUJIsJoMLO+mPxB9OfUiTMPwaIRkO+r8iabEQGeatu+MDCiDWYIvHaSQsWQhBvZfojYRmqoom7KQ==
+  dependencies:
+    "@posthog/types" "^1.411.0"
+
+"@posthog/types@^1.411.0":
+  version "1.411.0"
+  resolved "https://registry.yarnpkg.com/@posthog/types/-/types-1.411.0.tgz#395653a4f756ce3a57a2f6ab3b950cfa2a8c0382"
+  integrity sha512-QGdIzlcdCHKYvu3aANP2yjM80ly5Y5BRCygFrLMzavJ9WqiLtsPJQG1fRnpMAelK3j07DjmVwgTSlFY1FBCpzw==
+
 "@radix-ui/primitive@1.1.4":
   version "1.1.4"
   resolved "https://registry.npmjs.org/@radix-ui/primitive/-/primitive-1.1.4.tgz"
@@ -3228,10 +3240,22 @@ expo-dev-menu@7.0.19:
   dependencies:
     expo-dev-menu-interface "2.0.0"
 
+expo-device@~8.0.10:
+  version "8.0.10"
+  resolved "https://registry.yarnpkg.com/expo-device/-/expo-device-8.0.10.tgz#88be854d6de5568392ed814b44dad0e19d1d50f8"
+  integrity sha512-jd5BxjaF7382JkDMaC+P04aXXknB2UhWaVx5WiQKA05ugm/8GH5uaz9P9ckWdMKZGQVVEOC8MHaUADoT26KmFA==
+  dependencies:
+    ua-parser-js "^0.7.33"
+
 expo-file-system@~19.0.23:
   version "19.0.23"
   resolved "https://registry.npmjs.org/expo-file-system/-/expo-file-system-19.0.23.tgz"
   integrity sha512-MeGkid9OeNILfT/qonaXHp4f2c15xaB28U/bcN7pqZej0Kx0+6+V7e9ZIXpPHm07zVatxA+QkMTPQEGfmvVOxA==
+
+expo-file-system@~19.0.24:
+  version "19.0.24"
+  resolved "https://registry.yarnpkg.com/expo-file-system/-/expo-file-system-19.0.24.tgz#71e6872e1b7a41890f8631842e9f1e631846b5ae"
+  integrity sha512-hZs0Ng+coNjx7YJ8MPwfJpoU1SRul6OZ9LZycFzozUeoR+denbyr944YrMP9NVn+Zf1tdC7p0K0zgah3ZySOYg==
 
 expo-font@~14.0.12:
   version "14.0.12"
@@ -3262,6 +3286,13 @@ expo-linking@~8.0.12:
   dependencies:
     expo-constants "~18.0.13"
     invariant "^2.2.4"
+
+expo-localization@~17.0.9:
+  version "17.0.9"
+  resolved "https://registry.yarnpkg.com/expo-localization/-/expo-localization-17.0.9.tgz#92b2827a4b68e42c0cd0ad1d3f1abf0ebe50a4a0"
+  integrity sha512-k5eYHr7iLMob3M8cHH6bgDrDRmqnZG8xKGLhpx8ST+LsFXmSgYpJ/t0VwWm0gz64C/K669XhObdG3D6QwCGqhw==
+  dependencies:
+    rtl-detect "^1.0.2"
 
 expo-manifests@~1.0.11:
   version "1.0.11"
@@ -5178,6 +5209,14 @@ postcss@~8.4.32:
     picocolors "^1.1.1"
     source-map-js "^1.2.1"
 
+posthog-react-native@^4.68.9:
+  version "4.68.9"
+  resolved "https://registry.yarnpkg.com/posthog-react-native/-/posthog-react-native-4.68.9.tgz#a0429300cd6c85c185336c8e6d49e896292db868"
+  integrity sha512-FV/o2YvpJNhL/EMiULX/grSlsEtXo1TKy7V021jh5J4vHnaavOLrEu9VWADD+jbN+0FNRTn1DUbWKyRYg7qMfg==
+  dependencies:
+    "@posthog/core" "^1.53.0"
+    "@posthog/types" "^1.411.0"
+
 pretty-bytes@^5.6.0:
   version "5.6.0"
   resolved "https://registry.npmjs.org/pretty-bytes/-/pretty-bytes-5.6.0.tgz"
@@ -5613,6 +5652,11 @@ rolldown@~1.2.1:
     "@rolldown/binding-openharmony-arm64" "1.2.4"
     "@rolldown/binding-win32-arm64-msvc" "1.2.4"
     "@rolldown/binding-win32-x64-msvc" "1.2.4"
+
+rtl-detect@^1.0.2:
+  version "1.1.2"
+  resolved "https://registry.yarnpkg.com/rtl-detect/-/rtl-detect-1.1.2.tgz#ca7f0330af5c6bb626c15675c642ba85ad6273c6"
+  integrity sha512-PGMBq03+TTG/p/cRB7HCLKJ1MgDIi07+QU1faSjiYRfmY5UsAttV9Hs08jDAHVwcOwmVLcSJkpwyfXszVjWfIQ==
 
 safe-buffer@5.2.1:
   version "5.2.1"
@@ -6090,6 +6134,11 @@ typescript@~5.9.2:
   version "5.9.3"
   resolved "https://registry.npmjs.org/typescript/-/typescript-5.9.3.tgz"
   integrity sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==
+
+ua-parser-js@^0.7.33:
+  version "0.7.41"
+  resolved "https://registry.yarnpkg.com/ua-parser-js/-/ua-parser-js-0.7.41.tgz#9f6dee58c389e8afababa62a4a2dc22edb69a452"
+  integrity sha512-O3oYyCMPYgNNHuO7Jjk3uacJWZF8loBgwrfd/5LE/HyZ3lUIOdniQ7DNXJcIgZbwioZxk0fLfI4EVnetdiX5jg==
 
 ua-parser-js@^1.0.35:
   version "1.0.41"

@@ -399,6 +399,44 @@ weekly-insight hardcodes the Anthropic client. There is no provider
 abstraction and no fallback — if the API is down, insights do not
 regenerate and the previous set remains active until they do.
 
+### Product analytics
+
+PostHog via `src/lib/analytics.ts` only. Screens never import the SDK.
+Distinct id is the Supabase `user.id`. `identifyUser` on session resolve;
+`resetAnalytics` on sign-out. Super properties at identify: `days_since_signup`,
+`block_count`, `has_insights`. Nothing else.
+
+**No PII in event properties, ever.** No block names, task text, reflection
+text, or email. Block names are user-authored and often personal. Send a
+preset key, a category the user picked, or `block_id` — never `name`. Do not
+derive a category from a name. `reflection_written` sends `length_bucket`
+only (`short` <40, `medium` <120, `long`).
+
+Every `track` is fire-and-forget. Never `await` it on a write path. Failures
+are silent and cannot block a render or a save. If the SDK is missing the
+module falls back to PostHog's HTTP capture, then drops.
+
+**No A/B testing yet.** A cohort of ten cannot detect a 3-point retention
+change. Build the funnel. Do not add experiment infrastructure.
+
+Leave room for `paywall_viewed` / `paywall_dismissed` / `purchase_started` /
+`purchase_completed` when the wall ships after onboarding step 3. Do not add
+them until there is something to fire.
+
+Taxonomy (client only — do not track in SQL):
+
+| Stage | Events |
+|---|---|
+| Onboarding | `onboarding_screen_viewed` (`step` 0–4), `onboarding_completed` |
+| Activation | `schedule_builder_opened`, `block_added`, `schedule_first_saved`, `day_first_viewed`, `checkin_completed` |
+| Core loop | `block_missed_marked`, `recovery_opened`, `recovery_action`, `reflection_written`, `plan_tomorrow_opened`, `task_added` |
+| Notifications | `notification_permission` (request + every cold start), `notification_opened`, `preempt_fired`, `preempt_opened` |
+| Engine | `insight_viewed`, `insight_disputed` |
+
+`notification_permission` on every cold start is the revocation detector.
+Five to six sounded prompts a day; if people kill permission the whole loop
+dies and no other metric will show it.
+
 ### Nightly notifications
 
 Hourly cron → nightly-notify → `users_to_notify_now(21)`. Sends only to
@@ -515,6 +553,7 @@ marker at all.
 | Deterministic recovery copy (AI call REMOVED) | src/lib/recoveryCopy.ts                               |
 | Seven-beat preset onboarding | SUPERSEDED by the 5-step WeekDemo flow below. Recognition screens, answer playback, and four of five self-report questions are gone. |
 | Accountability streak (100% accounted)        | stats.ts; two-tone square encoding                    |
+| Product analytics (PostHog, dark)             | src/lib/analytics.ts; funnel only; no PII; no A/B     |
 | Close-today sweep merged into evening ritual  | plan-tomorrow.tsx + CloseTodayRow; Done/Missed only, preset miss reasons |
 | Preset miss reasons                           | 019 miss_reason_tag; structural labels only, never stored as reflection prose |
 | Cutoff nudges + telemetry                     | blockNotifications.ts; fires at midpoint or end-30, gated on an unfinished block_task; 016 nudge_events |

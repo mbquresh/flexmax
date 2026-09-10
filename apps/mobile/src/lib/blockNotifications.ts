@@ -5,6 +5,7 @@ import { preemptBody, preemptTitle, resolvePreempt, PreemptCandidate } from "./p
 import { groupBlockTasks } from "./blockTasks";
 import { cutoffNudgeLine } from "./cutoffNudge";
 import { cutoffTitle } from "./cutoffTitle";
+import { preemptFiredKey, trackOnce } from "./analytics";
 
 export interface ScheduledCutoff {
   instanceId: string;
@@ -242,6 +243,14 @@ export async function scheduleTodayBlockNotifications(
     );
 
     if (startDate > now) {
+      const userId = instances[0]?.user_id;
+      if (userId) {
+        trackOnce(
+          preemptFiredKey(userId, date, livePreempt.instanceId),
+          "preempt_fired",
+          { coupled: !!livePreempt.coupled }
+        );
+      }
       await Notifications.scheduleNotificationAsync({
         content: {
           title: preemptTitle(livePreempt),
@@ -250,6 +259,7 @@ export async function scheduleTodayBlockNotifications(
           data: {
             type: "block_preempt",
             instanceId: livePreempt.instanceId,
+            coupled: !!livePreempt.coupled,
             screen: "today",
           },
         },

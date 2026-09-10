@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import { BrandLoader } from "../src/components/BrandLoader";
 import { PressableScale } from "../src/components/PressableScale";
 import { WeekDemo } from "../src/components/WeekDemo";
 import { handleError } from "../src/lib/errors";
+import { track } from "../src/lib/analytics";
 import { Colors, spacing, radii, typography } from "../src/theme";
 
 type Option = { label: string; value: string | string[] };
@@ -64,6 +65,15 @@ function OnboardingContent() {
   const [filterUsed, setFilterUsed] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  const goTo = (next: number) => {
+    setStep(next);
+    track("onboarding_screen_viewed", { step: next });
+  };
+
+  useEffect(() => {
+    track("onboarding_screen_viewed", { step: 0 });
+  }, []);
+
   const handleStart = async () => {
     if (!userId || !tone || saving) {
       return;
@@ -87,7 +97,8 @@ function OnboardingContent() {
       if (error) throw error;
       if (data) setPsychologyProfile(data);
       await refreshProfile();
-      router.replace("/schedule-builder");
+      track("onboarding_completed");
+      router.replace("/schedule-builder?source=onboarding");
     } catch (err) {
       handleError(err, "finishOnboarding", "Couldn't finish setting up your schedule");
     } finally {
@@ -103,7 +114,7 @@ function OnboardingContent() {
         {step > 0 ? (
           <TouchableOpacity
             style={styles.back}
-            onPress={() => setStep(step - 1)}
+            onPress={() => goTo(step - 1)}
             hitSlop={8}
             accessibilityLabel="Back"
           >
@@ -133,7 +144,7 @@ function OnboardingContent() {
               doesn't happen is spread across the week, and you only ever live
               one day at a time.
             </Text>
-            <PressableScale style={styles.actionBtn} onPress={() => setStep(1)}>
+            <PressableScale style={styles.actionBtn} onPress={() => goTo(1)}>
               <Text style={styles.actionBtnText}>Go on</Text>
             </PressableScale>
           </>
@@ -148,7 +159,7 @@ function OnboardingContent() {
             </Text>
             <WeekDemo onFiltered={() => setFilterUsed(true)} />
             {filterUsed ? (
-              <PressableScale style={styles.actionBtn} onPress={() => setStep(2)}>
+              <PressableScale style={styles.actionBtn} onPress={() => goTo(2)}>
                 <Text style={styles.actionBtnText}>So what happened?</Text>
               </PressableScale>
             ) : null}
@@ -172,7 +183,7 @@ function OnboardingContent() {
               blocks upstream. You'd have to notice a Tuesday morning to
               explain a Thursday evening.
             </Text>
-            <PressableScale style={styles.actionBtn} onPress={() => setStep(3)}>
+            <PressableScale style={styles.actionBtn} onPress={() => goTo(3)}>
               <Text style={styles.actionBtnText}>How does it find that?</Text>
             </PressableScale>
           </>
@@ -188,7 +199,7 @@ function OnboardingContent() {
               reading — quiet at first, on purpose. You just live your schedule
               and close out your evenings.
             </Text>
-            <PressableScale style={styles.actionBtn} onPress={() => setStep(4)}>
+            <PressableScale style={styles.actionBtn} onPress={() => goTo(4)}>
               <Text style={styles.actionBtnText}>Got it</Text>
             </PressableScale>
           </>

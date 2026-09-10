@@ -10,10 +10,18 @@ import {
   registerNotificationCategories,
   scheduleFollowUpNudge,
 } from "../src/lib/blockNotifications";
+import { notificationTypeFromData, track } from "../src/lib/analytics";
 
 function handleNotificationResponse(response: Notifications.NotificationResponse) {
   const action = response.actionIdentifier;
   const data = response.notification.request.content.data;
+  const openType = notificationTypeFromData(data?.type);
+  if (openType) {
+    track("notification_opened", { type: openType });
+    if (openType === "preempt") {
+      track("preempt_opened", { coupled: data?.coupled === true });
+    }
+  }
 
   if (data?.type === "block_cutoff" && data?.instanceId) {
     const instanceId = String(data.instanceId);
@@ -46,7 +54,7 @@ function handleNotificationResponse(response: Notifications.NotificationResponse
   }
 
   if (data?.type === "nightly_fill") {
-    router.replace("/plan-tomorrow");
+    router.replace("/plan-tomorrow?source=notification");
   } else if (
     data?.type === "block_complete" ||
     data?.type === "block_preempt" ||

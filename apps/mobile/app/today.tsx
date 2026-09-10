@@ -34,6 +34,7 @@ import {
   MIN_BLOCK_MINUTES,
 } from "../src/lib/schedule";
 import { handleError } from "../src/lib/errors";
+import { track, trackCheckin, trackReflection } from "../src/lib/analytics";
 import { useAuth } from "../src/providers/AuthProvider";
 import { useStore } from "../src/store";
 import {
@@ -1084,7 +1085,7 @@ function TodayScreenContent() {
       return;
     }
     hapticMissed();
-    router.push(`/recovery/${instance.id}`);
+    router.push(`/recovery/${instance.id}?source=swipe`);
   };
 
   // Fires at most once per block per week. The cooldown is written when the
@@ -1144,6 +1145,9 @@ function TodayScreenContent() {
         .eq("id", checkInInstance.id);
 
       if (error) throw error;
+
+      if (session?.user.id) trackCheckin(session.user.id, rating);
+      trackReflection(note);
 
       const payload = {
         status: "completed" as const,
@@ -1221,6 +1225,8 @@ function TodayScreenContent() {
         .eq("id", instanceId);
 
       if (error) throw error;
+
+      track("block_missed_marked", { had_reflection: false });
 
       const payload = {
         status: "missed" as const,
@@ -1531,7 +1537,7 @@ function TodayScreenContent() {
             icon: "calendar",
             onPress: () => {
               setMenuOpen(false);
-              router.push("/plan-tomorrow");
+              router.push("/plan-tomorrow?source=menu");
             },
           },
           {
@@ -1547,7 +1553,7 @@ function TodayScreenContent() {
             icon: "sliders",
             onPress: () => {
               setMenuOpen(false);
-              router.push("/schedule-builder");
+              router.push("/schedule-builder?source=menu");
             },
           },
           // Reset acts on the real today, not the day on screen. Offering

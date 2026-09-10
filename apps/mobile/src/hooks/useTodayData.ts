@@ -11,6 +11,7 @@ import { handleError, isConnectivityError } from "../lib/errors";
 import { AdhocTask, BehavioralInsight, BlockTask } from "../types/database";
 import { useStore } from "../store";
 import { listBlockTasks, groupBlockTasks, setBlockTaskDone } from "../lib/blockTasks";
+import { firstDayKey, trackOnce } from "../lib/analytics";
 
 export function useTodayData(userId: string | undefined) {
   const {
@@ -202,6 +203,9 @@ export function useTodayData(userId: string | undefined) {
       } else {
         if (isStale()) return;
         setTodayInstances(data ?? []);
+        if (isToday && (data?.length ?? 0) > 0) {
+          trackOnce(firstDayKey(userId), "day_first_viewed");
+        }
         setTodayInsights(insightsData ?? []);
         // Everything below acts on the CURRENT day: the pre-block nudge is
         // relative to now, and scheduleTodayBlockNotifications cancels the
