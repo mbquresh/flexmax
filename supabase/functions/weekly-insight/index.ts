@@ -213,9 +213,10 @@ Return ONLY a JSON array of 2-3 objects, no markdown, no preamble:
 - Lowercase start is fine — it is appended after "Ends at 8:30. "
 - No imperatives. Do not tell the user to stop, wrap up, or hurry. State the
   cost; the decision is theirs.
-- Set it to null for "strength" insights and for any insight with no clear
-  downstream cost. Null is correct and common — a nudge without a why is still
-  a useful nudge.
+- Set it to null for "strength" insights, for "structural" insights, and
+  for any insight with no clear overrun cost. A keystone (earlier failing
+  predicts later failing) is not an overrun cost. Null is correct and
+  common — a nudge without a why is still a useful nudge.
 
 At least one object MUST have kind "strength" and must be genuine — supported by
 real evidence, not consolation. related_blocks must use block names exactly as
@@ -250,9 +251,11 @@ function sanitizeInsights(raw: unknown): InsightPayload[] | null {
         ? o.suggestion.slice(0, 150)
         : null;
     const nudge_line =
-      typeof o.nudge_line === "string" && o.nudge_line.length > 0
-        ? o.nudge_line.slice(0, 80)
-        : null;
+      o.kind === "structural"
+        ? null
+        : typeof o.nudge_line === "string" && o.nudge_line.length > 0
+          ? o.nudge_line.slice(0, 80)
+          : null;
 
     out.push({
       kind: o.kind,

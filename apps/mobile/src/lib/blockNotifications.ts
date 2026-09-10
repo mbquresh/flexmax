@@ -3,6 +3,7 @@ import { DailyInstance, BehavioralInsight, BlockTask } from "../types/database";
 import { minutesToTime as formatTime } from "./time";
 import { preemptBody, preemptTitle, resolvePreempt, PreemptCandidate } from "./preempt";
 import { groupBlockTasks } from "./blockTasks";
+import { cutoffNudgeLine } from "./cutoffNudge";
 import { cutoffTitle } from "./cutoffTitle";
 
 export interface ScheduledCutoff {
@@ -192,21 +193,17 @@ export async function scheduleTodayBlockNotifications(
           .filter((i) => i.start_minutes >= inst.end_minutes && i.id !== inst.id)
           .sort((a, b) => a.start_minutes - b.start_minutes)[0];
 
-        // Prefer an insight about the NEXT block — that is what running over costs.
-        // Fall back to one about the current block. Strengths are excluded; a
-        // strength in a cutoff warning reads as sarcasm.
-        const usable = insights.filter(
-          (i) => i.kind !== "strength" && !!i.nudge_line
-        );
-        const relevant =
-          (next?.block?.name &&
-            usable.find((i) => i.related_blocks.includes(next.block!.name))) ||
-          usable.find((i) => i.related_blocks.includes(inst.block!.name)) ||
-          null;
-
+        // Cost of THIS block running over. An insight that only names the
+        // next block (a morning→afternoon keystone on a Cardio cutoff) is
+        // a different relationship and reads as noise.
         const endLabel = formatTime(inst.end_minutes);
-        const body = relevant?.nudge_line
-          ? `Ends at ${endLabel}. ${relevant.nudge_line}`
+        const nudgeLine = cutoffNudgeLine(
+          insights,
+          inst.block.name,
+          next?.block?.name
+        );
+        const body = nudgeLine
+          ? `Ends at ${endLabel}. ${nudgeLine}`
           : next?.block?.name
           ? `Ends at ${endLabel}. ${next.block.name} is next.`
           : `Ends at ${endLabel}.`;
