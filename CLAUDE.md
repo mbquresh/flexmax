@@ -280,6 +280,11 @@ Cursor = implementation engine.
 | 046 | block_time_overrides.sql | Sparse per-weekday time_overrides jsonb on schedule_blocks, keyed 0-6, NOT NULL DEFAULT '{}'. Both generate_* resolve the target dow and fall back to start_minutes/end_minutes. A client write of null is a 23502 — send `{}`. Nothing backfilled |
 | 047 | insight_corrections.sql | behavioral_insights.disputed_at + insight_corrections + dispute_insight RPC. Argue on Theory of You. Corrections survive weekly replace; the line hides immediately. Paste before opening /you. |
 | 048 | block_tasks.sql | Structured tasks keyed on (user_id, block_id, date), not instance_id. Backfill from task_detail once. The backfill used done = instance status = completed as a one-shot identity while there was one task per block; that is not a live rule — done is informational. |
+| 049 | evidence_baseline.sql | DOCUMENTATION SNAPSHOT — do not run. `pg_get_functiondef` of live `get_behavior_evidence` on 2026-09-09, before coupling. 033/038/039/041 had rewritten the body in place, so no file held it. |
+| 050 | block_coupling.sql | Replaces `cannibalization` with `block_coupling` (both signs), plus `keystones`, `day_of_week`, 60-day `couple_base`, `coupling_note`. 30-day `base` / `tracked` / `engaged` untouched. Thresholds: days ≥ 10, n_won/n_lost ≥ 6, abs(lift) ≥ 30. Persistence across the prior 30 days is the multiple-comparisons guard. Do not lower them. |
+| 051 | block_coupling_table.sql | Persisted qualifying pairs. weekly-insight upserts after a successful generate; users read own rows; service_role writes. |
+| 052 | insight_kind_structural.sql | `behavioral_insights.kind` accepts `structural` alongside causal / pattern / strength. |
+| 053 | coupling_arm_counts.sql | In-place: emits `n_won_later_failed` / `n_lost_later_failed` so the narrator can cite "X of Y" without multiplying a rounded percent. |
 
 030 exists to answer the supporting reopen signal: of users who had a bad week, what
 share opened the app the following week. Capture is fire-and-forget from
@@ -414,6 +419,12 @@ nudge fires when the block has at least one unfinished task and duration
 ≥ 30 minutes; the title is `cutoffTitle` — first open task name, with a
 remaining-count suffix when more than one is open.
 
+The pre-block nudge is still one per day. `pickPreemptTarget` tries a
+confirmed keystone first: a today instance that is missed or unaccounted
+whose end has passed, coupled to a later instance that is still pending
+and not yet started. Copy states the conditional and the counts. If none
+match, the existing 4-of-7 frequency pick runs unchanged.
+
 ---
 
 
@@ -447,14 +458,17 @@ Captured → read by the engine:
 - nudge_events.response (018) → nudge_outcomes in the pack (026)
 - miss_reason_tag (019), quality_reason_tag (029)
 - insight_corrections (047) — weekly-insight must not restate a rejected belief
+- block_coupling (050 / 053) — ordered within-day pairs, both signs; keystones; day_of_week
 
 Pipeline:
   get_behavior_evidence(user_id)  [SQL, 013 — does ALL arithmetic]
     → weekly-insight edge function [1 AI call per user per week]
-    → behavioral_insights table [015 — stored beliefs, superseded weekly]
+    → behavioral_insights table [015 — stored beliefs, superseded weekly;
+      kind may be causal / pattern / strength / structural]
+    → block_coupling table [051 — upsert after a successful generate, own try/catch]
     → injected FREE at read time into: recovery sheet, morning InsightCard,
       Theory of You (`/you`). Disputed rows are omitted from the first two
-      and hidden on `/you`.
+      and hidden on `/you`. Confirmed keystones also feed the day's preempt.
 
 Still captured but NOT yet read:
 
@@ -523,7 +537,7 @@ marker at all.
 | Schedule builder refactor | schedule-builder.tsx split into ScheduleBlockCard, BlockFormSheet, CategoryChips, DayChips. Editing moved out of the FlatList row into a bottom sheet — inline expansion jumped row height ~400px, put a TextInput and a nested horizontal ScrollView inside a FlatList row, and recreated renderBlock on every keystroke. Add and edit were two copy-pasted forms behind twelve duplicated state hooks; now one BlockFormSheet with a single draft object. Behaviour-neutral: validation strings, save payloads, sort order and quick-add all unchanged. Sheet copies TaskDetailSheet's Modal structure exactly — KeyboardAvoidingView as the direct child carrying the overlay style, dismiss Pressable as a sibling not a wrapper |
 | Block archiving | schedule_blocks.is_active (037). A block can retire without destroying its record. Card actions are now Edit / Archive; permanent delete moved into the edit sheet, because delete cascades to every daily_schedule_instances row and the one-tap action should be the reversible one. Archiving marks today's PENDING instance 'removed' so the block leaves Today immediately; completed and missed instances survive and keep feeding the evidence pack until they age out of the 30-day window |
 | Shared miss reason presets | src/lib/missReasons.ts. Extracted from CloseTodayRow so any future surface writes identical strings — miss_reasons in get_behavior_evidence groups by exact value, so drift would split one reason into two rows |
-| Pre-block nudge | src/lib/preempt.ts + blockNotifications.ts. Fires at start time for a block where 4 of its last 7 rated occurrences failed — the same threshold as the quality degradation prompt, so no new constant. AT MOST ONE PER DAY, worst record first, earliest start breaking ties: a qualifying block already gets start, cutoff and end notifications, and without the cap a bad week would nudge every block. Requires a full 7-occurrence window, so it never fires on thin data. Copy states what LANDED rather than what failed — same fact, but it arrives while the user is deciding whether to start, and naming a failure streak at that moment invites avoidance |
+| Pre-block nudge | src/lib/preempt.ts + blockNotifications.ts. AT MOST ONE PER DAY. First pass: a confirmed keystone whose trigger has already failed today (missed or unaccounted, end passed) and whose later block is still pending and not yet started. Copy states the conditional with counts, never "causes". If none, the original frequency pick: 4 of the last 7 failed, worst record first, earliest start breaking ties, full 7-occurrence window. Frequency copy still states what LANDED. Coupling does not add a second channel. |
 | Accounted for section | today.tsx. Completed and missed blocks move to a section at the bottom of Today, greyed, undo intact. The top list becomes exactly what is left, which is what makes a late-day reschedule legible — a morning block can be moved into an afternoon whose blocks are already resolved, and the open time reads as open. Missed blocks go here too: an answered block is not unfinished business, and the accounted-for streak already counts it as engagement. Cards here do not register onLayout and cannot be dragged or swiped, so cardPositions only ever holds open cards — this SHRINKS the drag surface. A pruning effect clears stale entries when a card leaves the open list, without which findSwapTarget could match a phantom position |
 | End time on reschedule | recovery/[id].tsx. The "Ends" picker was gated behind slotIsFallback, so duration could only be changed when the app failed to find a slot. Always available now |
 | Drag auto-scroll | today.tsx + BlockCard.tsx. Dragging near the top or bottom edge scrolls the list, so a swap target off-screen is reachable. Speed ramps with depth into a 90px edge zone. Driven by useFrameCallback rather than the gesture's onUpdate, because onUpdate only fires when the finger MOVES — holding still at the edge would stop the scroll exactly when the user is waiting for a target to appear |
@@ -533,17 +547,18 @@ marker at all.
 | Time away | away_periods (042) + AwaySheet. A date range where no instances generate at all. Not skipped placeholder rows — tracked requires 25% of a block's instances resolved, so a week of unanswered rows would push blocks below the floor and drop them from the engine, which is the exact misreading this prevents. A range covering today also marks today's pending instances 'removed', since generation only prevents future ones. The accounted-for streak needed no change: computeStreakData requires relevant > 0, so an empty day neither breaks nor extends it |
 | Calendar export (feed) | supabase/functions/calendar-feed, deployed --no-verify-jwt. ICS subscription feed of the TEMPLATE, not daily instances: Google refreshes subscribed feeds every 12-24 hours with no faster setting, so publishing instances would show a Google user yesterday's arrangement all day — confidently wrong and uncorrectable from the app. The calendar holds the plan, the app holds the day. Floating DTSTART (no Z, no TZID) so a 9am block reads as 9am wherever the device is, which also avoids emitting a VTIMEZONE clients disagree about. Recurrence maps directly from 040: interval_weeks to INTERVAL, ends_on to UNTIL, block_exceptions and away_periods to EXDATE. Archived blocks omitted |
 | Calendar export UI | account.tsx + src/lib/calendarFeed.ts. Create, share, rotate and revoke the feed link. Token is generated lazily, so a user who never exports has no live endpoint. Sharing uses React Native's Share rather than a clipboard dependency — the iOS share sheet already offers Copy plus AirDrop, which is how a URL actually gets from phone to laptop. Two caveats shown inline: the link is unauthenticated and shows block names and times, and the feed publishes the TEMPLATE so same-day swaps do not appear. The second surprised the person who built it, which is why it is stated rather than assumed; shares a webcal:// link so tapping opens Calendar's subscribe flow directly, with a separate https:// share for Google, which takes a typed URL and rejects webcal. The UI recommends subscribing on a Mac: macOS saves the subscription to iCloud and syncs everywhere, while iPhone defaults to the local On My iPhone account and syncs nowhere, so a user who subscribes on both gets the schedule twice on their phone. The client chooses the account at subscribe time and no ICS property overrides it. |
-| Onboarding rebuilt around an interactive demo | onboarding.tsx + WeekDemo. `STEP_COUNT = 5`: step 0 cold open, 1–2 demonstration and reveal, 3 contract, 4 accountability tone — the only question left, and last. No recognition screens, no answer playback. A 30-day × 8-block grid (240 outcomes) looks like noise until the user applies the filter themselves; non-matching days dim and "So what happened?" is gated behind `onFiltered`. Stronger than the originally specified fix (a real generated insight, labelled as another user's) because it demonstrates by participation rather than display. Quoted figures verify exactly against `DEMO_DAYS`: 10 days where morning deep work landed carry 9 gym failures (90%), the other 20 carry 3 (15%), 12 of 30 overall (40%). An exception on each side is deliberate — a perfect split reads as fabricated. The reveal states co-occurrence, never causation. No AI call, no network, no claim about the user. THE CONDITION MUST STAY AN OUTCOME THE ENGINE ACTUALLY READS (`MORNING_INDEX` comment): the demo keys on completion of an earlier block, the only cross-block relationship `get_behavior_evidence` computes. Overrun is unavailable — `actual_end_minutes` is captured but read by nothing, and the pack forbids claiming a block "ran until" a time. The contract (step 3) says FlexMax "looks for patterns that repeat", not that it "checks every pair of blocks against every condition" — cannibalization tests one condition on tracked pairs, mixed days only, time-ordered, behind 8-day and 25-point-lift floors |
+| Onboarding rebuilt around an interactive demo | onboarding.tsx + WeekDemo. `STEP_COUNT = 5`: step 0 cold open, 1–2 demonstration and reveal, 3 contract, 4 accountability tone — the only question left, and last. No recognition screens, no answer playback. A 30-day × 8-block grid (240 outcomes) looks like noise until the user applies the filter themselves; non-matching days dim and "So what happened?" is gated behind `onFiltered`. Stronger than the originally specified fix (a real generated insight, labelled as another user's) because it demonstrates by participation rather than display. Quoted figures verify exactly against `DEMO_DAYS`: 10 days where morning deep work landed carry 9 gym failures (90%), the other 20 carry 3 (15%), 12 of 30 overall (40%). An exception on each side is deliberate — a perfect split reads as fabricated. The reveal states co-occurrence, never causation. No AI call, no network, no claim about the user. THE CONDITION MUST STAY AN OUTCOME THE ENGINE ACTUALLY READS (`MORNING_INDEX` comment): the demo keys on completion of an earlier block. The live pack now computes both signs (050); the demo is the cannibalization sign. The founder account's strongest live pair is the other sign — earlier failing, later failing (keystone). Overrun is unavailable — `actual_end_minutes` is captured but read by nothing, and the pack forbids claiming a block "ran until" a time. The contract (step 3) says FlexMax "looks for patterns that repeat", not that it "checks every pair of blocks against every condition" — coupling tests ordered pairs behind 10-day / 6-and-6-arm / 30-point floors and a two-window persistence guard |
 | Removed pile | today.tsx + planRestore. Removal was terminal — a block dropped to make room vanished with no way back. Now a third section under Accounted for, restorable. Restore routes through planRestore so it can never write the overlap 4a exists to prevent, and where the original slot is only partly free it offers to shorten the block rather than refusing. Only user and displacement removals appear: archive and away are system state, and restoring one would return a block whose template is archived or a block on a day the person is away. Muted X, never coral — a removed block is a decision, not a failure. Two supporting changes the pile does not work without: useTodayData stopped filtering 'removed' out of the day's instances (every consumer downstream — streak, completion rate, notification eligibility, occupiesTime — already filters status explicitly, so nothing else moved), and the swipe-to-remove handler now maps the row to 'removed' in local state instead of dropping it from the array, which had made restore unreachable until the next reload. MIN_BLOCK_MINUTES moved from the recovery route into schedule.ts and is imported by both, since a route file is the wrong home for a constant two screens share; restore searches the whole remaining day rather than only the original window: original slot at full length first, then any full-length slot via findRescheduleSlot, then the largest gap shortened. Full length beats original position — 90 minutes at 10pm is worth more than 45 at 1pm. Sleep is a hard bound at every tier via resolveDayEnd, and a relocate or shrink is always confirmed, never silent |
 | Shorten and move | recovery/[id].tsx + planShrinkToFit / placeShrunkBlock in schedule.ts + DurationSlider. A single-collider sacrifice now carries a fallback beneath it: shorten the collider instead of removing it, minute resolution, defaulting to 50%. The COLLIDER shrinks, not the block being rescheduled — the missed block already lost its slot once, and compressing it too would mean the recovery costs the thing being recovered. Single target only: a slider per block across two or three colliders is a negotiation, which is the freeze this flow exists to avoid. maxMinutes is derived from the same gap set placeShrunkBlock's fallback pass searches, so every value the slider can produce is guaranteed placeable — a slider that can select an impossible duration is worse than no slider. Placement runs two passes, preferring a slot at or after the collider's own original start, because a plain earliest-fit search drops a shortened Cardio into a free hour AHEAD of the block it just made room for; the earlier gap is still taken when it is the only space left, and the sentence above the button always states the resulting time, so the fallback is never silent. original_start/end_minutes on the target records the pre-compression length; reschedule_count is deliberately NOT bumped there, matching push — the user rescheduled the missed block, not this one. Built on reanimated + gesture-handler rather than a slider dependency, per the interval stepper precedent. The thumb is positioned from the value prop, not from a gesture-driven shared value: there is nothing to animate, and a spring between finger and readout reads as lag. Horizontal intent only (activeOffsetX / failOffsetY) or the pan eats every scroll that starts on the track. Haptics are a detent at each rail, once per arrival — per-minute feedback is a buzz train, which reads as an alert. Push and shrink commit through one commitPairedMove helper, since both are "set two rows' times in one transaction, then provenance", and planRestore's gap walk was extracted to a shared freeGaps for the same reason: the occupiesTime postmortem is what happens when one rule keeps three copies |
-| Past-day access | StreakStrip + useTodayData + 045. Long-press a square to open that day; horizontal pan on the strip pages weeks back to the first instance. View is unbounded; only yesterday can be filled in. A late check-in the next morning is accountability. Rewriting a week-old miss is covering for it. Generation, notification rebuild, pre-block nudge, and weekly-insight invoke are all gated to today (insight invoke also at most once per local date): generating a past date would fabricate history, and scheduleTodayBlockNotifications cancels the managed set before rebuilding, so a past-day load would wipe today's notifications. Unaccounted rows appear in the open list on a past day (the sweep has already rewritten them); drag, swipe, swap, restore, and the recovery route are off — times are fixed, only the outcome can change, and the miss is taken in CheckInSheet rather than a reschedule flow that searches from now. Focus reload uses the viewed date, not today, or returning from a check-in would yank the user out of the day they are filling. AppState only reloads on a real date rollover. The backfill trigger (045) marks outcome writes after the row's own local date; paste it in the SQL Editor before shipping the client, because a marker protecting a metric must exist before the first backfill lands |
+| Past-day access | StreakStrip + useTodayData + 045. Long-press a square to open that day; horizontal pan on the strip pages weeks back to the first instance. View is unbounded; only yesterday can be filled in. A late check-in the next morning is accountability. Rewriting a week-old miss is covering for it. Generation, notification rebuild, pre-block nudge, and weekly-insight invoke are all gated to today (insight invoke at most once per local date, plus one empty-set retry per session so a superseded set can regenerate the same night): generating a past date would fabricate history, and scheduleTodayBlockNotifications cancels the managed set before rebuilding, so a past-day load would wipe today's notifications. Unaccounted rows appear in the open list on a past day (the sweep has already rewritten them); drag, swipe, swap, restore, and the recovery route are off — times are fixed, only the outcome can change, and the miss is taken in CheckInSheet rather than a reschedule flow that searches from now. Focus reload uses the viewed date, not today, or returning from a check-in would yank the user out of the day they are filling. AppState only reloads on a real date rollover. The backfill trigger (045) marks outcome writes after the row's own local date; paste it in the SQL Editor before shipping the client, because a marker protecting a metric must exist before the first backfill lands |
 | Same-slot reschedule skipped | findRescheduleSlot. The missed row is excluded from occupancy, so its own window was a free gap and "Reschedule to this slot" could offer the time the block already occupied. That window is skipped; the search continues after it, and returns null (picker fallback) when nothing else fits |
 | Stale check-in banners dismissed | scheduleTodayBlockNotifications. Cancel only hits the scheduled set. A "How'd it go?" that had already fired stayed in Notification Center after the block was completed. Presented banners whose instance is no longer pending/active are dismissed on every rebuild |
 | Completion notes on check-in | CheckInSheet optional free text, written to reflection_improve. No chips — those are why capture was removed. Typed notes feed the existing "Last time you wrote" path |
 | Shorten-template remedy | src/lib/remedy.ts + recovery. Same 4-of-7 floor as preempt/quality-drift. Offers half duration (not below 40 minutes to start, floor MIN_BLOCK_MINUTES). Copy states this changes the repeating block from tomorrow on, not today's miss. User confirms. Writes schedule_blocks.end_minutes so tomorrow generates shorter. Undo on the same screen writes the original length back. Headline is the option, not the miss count. Fixed blocks excluded. A later restore-after-quality-recovers offer is not built |
 | Day selector and per-day times | schedule-builder.tsx + DayStrip + 046. The builder was a flat list of rules ABOUT the week, so the user reconstructed their week mentally; and a block held one time, so different times on different days forced a second block — which the engine already merged, since get_behavior_evidence groups by name. Tapping a day filters to that day, sorted by resolved time, and the time pickers then edit that day only. Defaults to All, not today: this screen is visited to set up a week, and starting on one day hides six sevenths of it. Adding a block while a day is selected defaults to that day. Archiving from a day view that still runs elsewhere asks whether to drop the day or the block. All-view time changes shift overrides by the same delta. Calendar-feed splits a block with overrides into disjoint BYDAY VEVENTs |
-| Theory of You | app/you.tsx + DisputeSheet + 047. Menu and title are "Theory of You". Twelve-week two-tone chart, 30-day accounted/landed as one caption, then the current insight set as tappable sentences (strengths first). Tap a line: "That's not right" → one note → the line leaves immediately. dispute_insight writes insight_corrections (survives supersede) and stamps disputed_at. Morning InsightCard and recovery omit disputed rows. weekly-insight reads the last 20 corrections and must not restate a rejected belief. No second AI call on the tap. No Done button — the X is enough. |
+| Theory of You | app/you.tsx + DisputeSheet + 047. Menu and title are "Theory of You". Twelve-week two-tone chart, 30-day accounted/landed as one caption, then the current insight set as tappable sentences (strengths first). Tap a line: "That's not right" → one note → the line leaves immediately. dispute_insight writes insight_corrections (survives supersede) and stamps disputed_at. Morning InsightCard and recovery omit disputed rows. weekly-insight reads the last 20 corrections and must not restate a rejected belief. No second AI call on the tap. No Done button — the X is enough. `kind` may be `structural` (052); InsightCard still hides only `strength`. |
 | Structured block tasks | 048 + src/lib/blockTasks.ts + app/block-tasks/[id].tsx + BlockTaskRow. Replaces free-text task_detail with rows keyed on (user_id, block_id, date). Informational only — done never writes block status. Today shows two inline with checkbox; add/name tap opens the page. Swipe reveals reschedule (inline, `runsOn` only) and delete. No sheet, no nested edit route. Plan Tomorrow writes immediately. Cutoff title is `cutoffTitle`. Store field `todayBlockTasks` must be passed on every notification rebuild. |
+| Block coupling (mirror → discovery) | 049–053 + weekly-insight + preempt.ts. 026 kept `lift >= 25` (earlier completing, later failing) and dropped every real founder pair — they were keystones, lift −31 to −57. Rule 9 then forbade raising a surviving pair unless the user had already written it. 050 keeps both signs, ships `day_baseline_shift` instead of excluding mixed days, and requires persistence across the prior 30 days. Narrator may lead with a pair only when persistence is `confirmed`, abs(day_baseline_shift) is under half of abs(lift), and later_unaccounted_days is under half the failures involved. Never "causes". `kind: structural` for keystones and weekday spreads (052). Founder first generate: morning → afternoon, keystone, lift −58, baseline −17, confirmed; Cardio → Weights contradicted; afternoon → dinner confirmed but baseline −39 (whole-day collapse, omitted). `keystones` named morning and afternoon; only morning had a qualifying pair — treat `keystones` as a label, not a second computation. `day_of_week` on the 30-day base: Tue 19 / Sun 52. 053 emits the arm counts so "1 of 11" / "10 of 15" are in the pack. weekly-insight writes `block_coupling` after generate. Preempt first pass uses confirmed keystones; one nudge per day. |
 
 
 
@@ -911,12 +926,24 @@ makes it a one-line swap in theme.ts if ever revisited.
   files, and were only caught by chance. The table in this document is the only
   record of what is deployed. Any manually applied SQL must be committed in the
   same session it is run.
-- **No migration file holds the current get_behavior_evidence definition.**
-  033 and 038 both rewrite the deployed function in place via
-  pg_get_functiondef rather than redefining it, so the live body exists only in
-  the database. That was the right call — it prevents ~300 unrelated lines
-  drifting — but it means reconstructing the function from files alone is no
-  longer possible. Dump it with pg_get_functiondef before any future edit.
+- **Reconstructing get_behavior_evidence from files.** 049 is a snapshot of
+  the pre-coupling body (do not run it). 050 is a full replace. 053 rewrote
+  050 in place. Live = 050 + 053. Dump with pg_get_functiondef before the
+  next edit; do not reconstruct from 026–041.
+- **Narrator belief lines still sum recency.** After 053 the evidence field
+  cites completed_7d / failed_7d / completed_prior / failed_prior separately.
+  The belief still invents "13 of 21" and "5 of 7". Do not add those
+  denominators to the pack to bless the sum — the four fields are the fact.
+  A later prompt pass can say the belief may only reuse numbers already in
+  its own evidence. Do not regen to chase this on n=1.
+- **keystones counts unfiltered coupling rows.** Afternoon appeared with
+  carries=2 because dinner (confirmed, whole-day collapse) and weights
+  (contradicted) both cleared the SQL bar. The narrator must still apply
+  the lead-with qualification. Do not treat a keystones name as a finding.
+- **Coupled preempt does not apply day_baseline_shift.** A confirmed
+  keystone whose baseline approaches lift (afternoon → dinner) can still
+  fire. Deliberate for now: the live filter is persistence + relation +
+  today's statuses. Revisit if that pair fires and reads as day-collapse.
 - **The pre-block nudge is not tone-aware.** accountability_tone (firm /
   gentle / data-driven) shapes the weekly insight but not notifications. A
   data-driven user probably wants the raw ratio and a gentle user probably does
@@ -938,7 +965,7 @@ makes it a one-line swap in theme.ts if ever revisited.
   completion.
 - **No maturity gate on tracked.** 039 reports block age but does not act on
   it — a block with three days of history still enters block_stats,
-  quality_drift and cannibalization, held back only by a caveat. A hard floor
+  quality_drift and block_coupling, held back only by a caveat. A hard floor
   in the tracked CTE would be stronger, but would also silence a genuinely
   failing new block, so the facts are reported and the narrator is instructed
   rather than gated. Revisit if the caveat proves insufficient.
@@ -1006,9 +1033,10 @@ makes it a one-line swap in theme.ts if ever revisited.
 - **calendar-feed must be redeployed** after a time_overrides split: one
   VEVENT per distinct window, disjoint BYDAY. The function source is updated;
   the deployed copy is not until `supabase functions deploy calendar-feed --no-verify-jwt`.
-- **weekly-insight must be redeployed** after 047. The function now reads
-  `insight_corrections` and the prompt forbids restating a rejected belief.
-  Until deploy, argue hides the line but the next generation can say it again.
+- **weekly-insight must be redeployed** after any change to the prompt,
+  `KINDS`, or the coupling upsert. 047 (corrections) and the 050–053
+  narrator rules are in the deployed copy as of 2026-09-09. A stale deploy
+  writes `causal`/`pattern`/`strength` only and will not persist pairs.
 
 ---
 
@@ -1235,13 +1263,21 @@ the acceptance criterion, not a nice-to-have.
 Comparing days the trigger FAILED found whole-day collapse, not trade-offs —
 on a collapse day every pair co-fails. Adding a mixed-day restriction
 surfaced time-of-day clustering instead, including an impossible pair where a
-7am block appeared to cause a 6am failure. The working version inverts the
+7am block appeared to cause a 6am failure. The working version inverted the
 trigger: cannibalization is one block SUCCEEDING while a later block fails,
 because the aggressor wins and takes the other's time. Requires mixed days and
-strict time ordering. Currently produces a directionally correct result
-(Morning Deep work is the sole trigger, matching reflections and swap_drift)
-on very thin evidence — a 2-event difference. Treated as corroborating
-evidence only.
+strict time ordering. Treated as corroborating evidence only — and then
+rule 9 forbade raising it unless the user had already written the trade.
+
+**Both gates were closed on the real signal (2026-09-09).** 026 kept
+`lift >= 25`. Founder 70-day pairs were all negative (morning → afternoon
+−57, Cardio → Weights −31). That is a keystone: earlier failing predicts
+later failing. The mixed-day restriction was the wrong fix for whole-day
+collapse; 050 ships `day_baseline_shift` beside the pair instead. Persistence
+across two 30-day windows is the multiple-comparisons guard (up to 72 ordered
+pairs with both signs live). Rule 9 now allows a standalone insight on a
+qualifying pair. Do not put the `>= 25` one-sign filter back. Do not require
+a matching reflection. Do not say "causes".
 
 **Evidence restated 2026-08-24 (027).** The cited swap counts — Cardio 29,
 Weights 11, Morning Deep Work 3 — were produced by a metric counting edit
@@ -1554,32 +1590,12 @@ Things that corrupt the ledger or lose data permanently.
    intervention → response → outcome. The moat data is already accumulating
    and read by nothing. **Preset miss reasons** (019 miss_reason_tag) is in
    the same state. ~25 lines of SQL, no new schema, no AI cost.
-6. ~~Cross-block cannibalization detection.~~ **SHIPPED (026).** The evidence pack computes every
-   block in isolation — block_stats is per-block and day_shape is an
-   unstructured string of names. Nothing computes whether block B's failure is
-   CONDITIONAL on block A's, so the narrator cannot state the pattern even
-   though it is present in the data.
-
-   Real example from single-user data: reflections state it five times ("I let
-   my deep work spill into this", "I extended my deep work too much and ate into
-   this", "Heavy deep work day"), and swap_drift corroborates independently —
-   Cardio moved 29 times, Weights 11, Morning Deep Work 3. Everything
-   reorganizes around the block that never moves. Two independent sources agree
-   and the engine still cannot say it.
-
-   Implementation: for block pairs with sufficient shared days, compute B's
-   failure rate on days A failed versus B's baseline failure rate. Surface pairs
-   where the conditional rate materially exceeds baseline. ~30 lines of SQL, no
-   new schema, no AI cost.
-
-   This is the highest-value unread signal remaining, and it corresponds
-   directly to the cannibalization pattern in the Who FlexMax is for section.
-
-   > **Signal-integrity note (027).** swap_drift originally counted edit ROWS,
-   > so swaps, swap-backs and multi-step repositioning all inflated it. 027
-   > counts net displacement per instance instead. The corroboration this item
-   > cites was restated as a result — see "Evidence restated 2026-08-24 (027)"
-   > under Known issues.
+6. ~~Cross-block cannibalization detection.~~ **SHIPPED (026), both signs opened (050).**
+   026 computed the pair and then kept only `lift >= 25`. On this account
+   every real pair was a keystone and was dropped. See the 2026-09-09
+   restatement under Known issues. The leftover that is still unread is the
+   intervention loop — which nudge, at which lead, actually moves this user.
+   That stays out of scope until there is volume.
 7. **Intention-reliability metric.** Planned vs. completed minutes over time —
    are the user's plans becoming more accurate. Pure SQL.
 8. **DeviceActivity drift-event table.** Schema only, no extension, so the shape
@@ -1925,6 +1941,9 @@ an incomplete rebuild; the routine was doing real work on its own.
    the block. Anchoring infrastructure blocks trades cannibalization for
    rigidity, and rigidity produces the freeze. Naming respects the user's
    agency; locking does not.
+   The opposite relationship is also live (050): an earlier block holding
+   predicts a later one holding. Name that as dependency, not as proof the
+   user should lock the morning. Same rule — surface, do not enforce.
 
 ### Internal archetype (not for external use)
 

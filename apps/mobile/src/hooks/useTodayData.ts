@@ -40,6 +40,10 @@ export function useTodayData(userId: string | undefined) {
   // Same-session guard so overlapping loadToday calls cannot both miss the
   // AsyncStorage read and double-invoke.
   const insightInvokedDateRef = useRef<string | null>(null);
+  // A superseded or failed set leaves Today with nothing. The date lock
+  // would then refuse a second call until tomorrow. One empty-set retry
+  // per session lets a regenerate happen tonight without a debugger.
+  const emptyInsightTriedRef = useRef(false);
 
   const timedAdhoc = useMemo(
     () => adhocTasks.filter((t) => t.start_minutes != null),
@@ -310,21 +314,37 @@ export function useTodayData(userId: string | undefined) {
       // client ignores the body. Mark before the call so overlapping loads
       // cannot double-fire. History loads stay skipped: scrubbing weeks
       // must not spend the day's slot.
-      if (isToday && insightInvokedDateRef.current !== realToday) {
-        const key = `weekly_insight_invoked_${userId}`;
-        const last = await AsyncStorage.getItem(key).catch(() => null);
-        if (last !== realToday) {
-          insightInvokedDateRef.current = realToday;
-          AsyncStorage.setItem(key, realToday).catch(() => {});
-          supabase.functions
-            .invoke("weekly-insight")
-            .then(({ error }) => {
-              if (error) handleError(error, "weeklyInsightInvoke");
-            })
-            .catch((e) => handleError(e, "weeklyInsightInvoke"));
-        } else {
-          insightInvokedDateRef.current = realToday;
-        }
+      //
+      // Exception: no live rows (superseded, or a failed generate). The
+      // date lock would otherwise sit on a blank Theory of You until
+      // tomorrow. One empty-set invoke per session, then a silent reload
+      // so the new rows appear.
+      const invokeWeeklyInsight = (reloadAfter: boolean) => {
+        insightInvokedDateRef.current = realToday;
+        AsyncStorage.setItem(`weekly_insight_invoked_${userId}`, realToday).catch(
+          () => {}
+        );
+        supabase.functions
+          .invoke("weekly-insight")
+          .then(({ error }) => {
+            if (error) handleError(error, "weeklyInsightInvoke");
+            else if (reloadAfter && !isStale()) {
+              loadToday(viewDateRef.current, { silent: true });
+            }
+          })
+          .catch((e) => handleError(e, "weeklyInsightInvoke"));
+      };
+
+      const noLiveInsights = !insightsError && !(insightsData?.length);
+      if (isToday && noLiveInsights && !emptyInsightTriedRef.current) {
+        emptyInsightTriedRef.current = true;
+        invokeWeeklyInsight(true);
+      } else if (isToday && insightInvokedDateRef.current !== realToday) {
+        const last = await AsyncStorage.getItem(
+          `weekly_insight_invoked_${userId}`
+        ).catch(() => null);
+        if (last !== realToday) invokeWeeklyInsight(false);
+        else insightInvokedDateRef.current = realToday;
       }
       } catch (err) {
         handleError(err, "loadToday");
