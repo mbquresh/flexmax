@@ -1,7 +1,7 @@
 import * as Notifications from "expo-notifications";
 import { DailyInstance, BehavioralInsight, BlockTask } from "../types/database";
 import { minutesToTime as formatTime } from "./time";
-import { preemptBody, resolvePreempt, PreemptCandidate } from "./preempt";
+import { preemptBody, preemptTitle, resolvePreempt, PreemptCandidate } from "./preempt";
 import { groupBlockTasks } from "./blockTasks";
 import { cutoffTitle } from "./cutoffTitle";
 
@@ -247,7 +247,7 @@ export async function scheduleTodayBlockNotifications(
     if (startDate > now) {
       await Notifications.scheduleNotificationAsync({
         content: {
-          title: `${livePreempt.blockName} starts now`,
+          title: preemptTitle(livePreempt),
           body: preemptBody(livePreempt),
           sound: true,
           data: {

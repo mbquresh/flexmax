@@ -84,6 +84,21 @@ export interface PsychologyProfile {
   schedule_tips: string[] | null;
 }
 
+export interface BlockCoupling {
+  user_id: string;
+  trigger_block_id: string;
+  later_block_id: string;
+  relation: "keystone" | "cannibalization";
+  lift: number;
+  pct_when_won: number;
+  pct_when_lost: number;
+  days: number;
+  n_won: number;
+  n_lost: number;
+  persistence: string;
+  computed_at: string;
+}
+
 export interface BehavioralInsight {
   id: string;
   kind: "causal" | "pattern" | "strength" | "structural";
@@ -279,6 +294,24 @@ export interface Database {
           ends_on: string;
         };
         Update: Partial<AwayPeriod>;
+        Relationships: [];
+      };
+      block_coupling: {
+        Row: BlockCoupling & Record<string, unknown>;
+        Insert: Partial<BlockCoupling> & {
+          user_id: string;
+          trigger_block_id: string;
+          later_block_id: string;
+          relation: BlockCoupling["relation"];
+          lift: number;
+          pct_when_won: number;
+          pct_when_lost: number;
+          days: number;
+          n_won: number;
+          n_lost: number;
+          persistence: string;
+        };
+        Update: Partial<BlockCoupling>;
         Relationships: [];
       };
       behavioral_insights: {
