@@ -248,6 +248,112 @@ function sanitizeInsights(raw: unknown): InsightPayload[] | null {
   return out.length > 0 ? out : null;
 }
 
+const COUPLING_RELATIONS = new Set(["keystone", "cannibalization"]);
+
+function asInt(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return Math.trunc(value);
+  if (typeof value === "string" && /^-?\d+$/.test(value)) return Number(value);
+  return null;
+}
+
+function sanitizeCoupling(
+  userId: string,
+  evidence: unknown
+): Record<string, unknown>[] {
+  if (!evidence || typeof evidence !== "object") return [];
+  const raw = (evidence as { block_coupling?: unknown }).block_coupling;
+  if (!Array.isArray(raw)) return [];
+
+  const out: Record<string, unknown>[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const o = item as Record<string, unknown>;
+    const triggerId = typeof o.trigger_id === "string" ? o.trigger_id : null;
+    const laterId = typeof o.later_id === "string" ? o.later_id : null;
+    const relation = typeof o.relation === "string" ? o.relation : null;
+    const persistence = typeof o.persistence === "string" ? o.persistence : null;
+    const lift = asInt(o.lift);
+    const pctWhenWon = asInt(o.pct_when_won);
+    const pctWhenLost = asInt(o.pct_when_lost);
+    const days = asInt(o.days);
+    const nWon = asInt(o.n_won);
+    const nLost = asInt(o.n_lost);
+    if (
+      !triggerId ||
+      !laterId ||
+      !relation ||
+      !COUPLING_RELATIONS.has(relation) ||
+      !persistence ||
+      lift == null ||
+      pctWhenWon == null ||
+      pctWhenLost == null ||
+      days == null ||
+      nWon == null ||
+      nLost == null
+    ) {
+      continue;
+    }
+    out.push({
+      user_id: userId,
+      trigger_block_id: triggerId,
+      later_block_id: laterId,
+      relation,
+      lift,
+      pct_when_won: pctWhenWon,
+      pct_when_lost: pctWhenLost,
+      days,
+      n_won: nWon,
+      n_lost: nLost,
+      persistence,
+      computed_at: new Date().toISOString(),
+    });
+  }
+  return out;
+}
+
+async function persistBlockCoupling(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+  evidence: unknown
+): Promise<void> {
+  try {
+    const rows = sanitizeCoupling(userId, evidence);
+    if (rows.length > 0) {
+      const { error: upsertError } = await supabase
+        .from("block_coupling")
+        .upsert(rows, { onConflict: "user_id,trigger_block_id,later_block_id" });
+      if (upsertError) throw upsertError;
+    }
+
+    const { data: existing, error: readError } = await supabase
+      .from("block_coupling")
+      .select("trigger_block_id, later_block_id")
+      .eq("user_id", userId);
+    if (readError) throw readError;
+
+    const keep = new Set(
+      rows.map((r) => `${r.trigger_block_id}:${r.later_block_id}`)
+    );
+    const stale = (existing ?? []).filter(
+      (e) => !keep.has(`${e.trigger_block_id}:${e.later_block_id}`)
+    );
+    for (const row of stale) {
+      const { error: delError } = await supabase
+        .from("block_coupling")
+        .delete()
+        .eq("user_id", userId)
+        .eq("trigger_block_id", row.trigger_block_id)
+        .eq("later_block_id", row.later_block_id);
+      if (delError) throw delError;
+    }
+    console.log(
+      `[weekly-insight] coupling upserted user=${userId} rows=${rows.length} stale=${stale.length}`
+    );
+  } catch (err) {
+    console.error("[weekly-insight] coupling write failed", err);
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -391,6 +497,8 @@ ${JSON.stringify(corrections ?? [])}`,
     );
 
     if (replaceError) throw replaceError;
+
+    await persistBlockCoupling(supabase, user.id, evidence);
 
     console.log(`[weekly-insight] generated user=${user.id} count=${inserted?.length ?? 0}`);
     return new Response(JSON.stringify({ insights: inserted, cached: false }), {
