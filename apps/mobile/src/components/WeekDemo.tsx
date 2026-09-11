@@ -4,87 +4,42 @@ import { useTheme } from "../providers/ThemeProvider";
 import { PressableScale } from "./PressableScale";
 import { Colors, spacing, radii, typography } from "../theme";
 import { hapticSelect } from "../lib/haptics";
+// Cell counts live in weekDemoData.ts — founder's measured coupling pair.
+import {
+  DEMO_BLOCKS,
+  DEMO_DAYS,
+  DemoFilter,
+  dayVisible,
+  demoCounts,
+} from "../lib/weekDemoData";
 
-type DemoDay = { o: number[] };
-
-export const DEMO_BLOCKS = [
-  "Fajr",
-  "Morning deep work",
-  "Breakfast",
-  "Admin",
-  "Lunch",
-  "Afternoon deep work",
-  "Gym",
-  "Wind down",
-];
-
-// The condition is COMPLETION of an earlier block, because that is the only
-// cross-block relationship get_behavior_evidence actually computes: an
-// aggressor block winning and a later block failing. Overrun is not
-// available — actual_end_minutes is captured but read by nothing, and the
-// evidence pack explicitly forbids claiming a block "ran until" a time.
-const MORNING_INDEX = 1;
-
-const landed = (d: DemoDay) => d.o[MORNING_INDEX] === 1;
-
-// Hand-authored. Verified against row 7 (Gym): 10 days where morning deep
-// work landed carry 9 gym failures (90%), the other 20 carry 3 (15%), 12 of
-// 30 overall (40%). An exception on each side is deliberate — a perfect
-// 100/0 split reads as fabricated. Do not regenerate: the percentages quoted
-// in the reveal are computed from these exact cells.
-const DEMO_DAYS: DemoDay[] = [
-  { o: [1, 0, 1, 0, 1, 0, 1, 0] },
-  { o: [1, 0, 1, 1, 1, 1, 0, 0] },
-  { o: [1, 0, 1, 1, 1, 1, 1, 0] },
-  { o: [1, 1, 1, 1, 1, 0, 0, 0] },
-  { o: [1, 1, 0, 1, 1, 1, 0, 0] },
-  { o: [1, 1, 1, 0, 1, 1, 1, 1] },
-  { o: [1, 0, 1, 0, 1, 0, 1, 1] },
-  { o: [0, 1, 1, 1, 1, 1, 0, 0] },
-  { o: [1, 0, 0, 0, 1, 1, 1, 0] },
-  { o: [1, 1, 1, 1, 1, 0, 0, 1] },
-  { o: [1, 1, 1, 1, 1, 0, 0, 0] },
-  { o: [1, 1, 0, 0, 1, 0, 0, 1] },
-  { o: [1, 0, 0, 1, 0, 0, 1, 1] },
-  { o: [1, 0, 1, 1, 1, 0, 1, 0] },
-  { o: [1, 0, 1, 1, 1, 0, 1, 1] },
-  { o: [1, 0, 1, 0, 1, 0, 0, 0] },
-  { o: [1, 0, 1, 1, 1, 1, 1, 1] },
-  { o: [1, 0, 1, 1, 1, 0, 1, 1] },
-  { o: [1, 1, 0, 1, 0, 0, 0, 1] },
-  { o: [1, 0, 1, 0, 1, 0, 1, 1] },
-  { o: [1, 0, 1, 0, 1, 1, 1, 1] },
-  { o: [1, 0, 1, 1, 0, 0, 1, 0] },
-  { o: [1, 1, 1, 1, 0, 0, 0, 1] },
-  { o: [1, 0, 1, 0, 1, 1, 1, 1] },
-  { o: [1, 0, 0, 1, 1, 1, 1, 0] },
-  { o: [1, 0, 1, 1, 1, 1, 1, 0] },
-  { o: [1, 0, 1, 1, 1, 0, 0, 0] },
-  { o: [1, 1, 0, 1, 1, 1, 0, 0] },
-  { o: [1, 0, 1, 1, 1, 0, 1, 1] },
-  { o: [0, 0, 1, 1, 1, 1, 1, 1] },
+const FILTERS: { key: DemoFilter; label: string }[] = [
+  { key: "all", label: "All 26 days" },
+  { key: "landed", label: "Days the morning landed" },
+  { key: "failed", label: "Days it didn't" },
 ];
 
 export function WeekDemo({ onFiltered }: { onFiltered: () => void }) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const [filtered, setFiltered] = useState(false);
+  const [filter, setFilter] = useState<DemoFilter>("all");
   const dim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     Animated.timing(dim, {
-      toValue: filtered ? 0.12 : 1,
+      toValue: filter === "all" ? 1 : 0.12,
       duration: 250,
       useNativeDriver: true,
     }).start();
-  }, [filtered, dim]);
+  }, [filter, dim]);
 
-  const handleFilter = () => {
+  const handleFilter = (next: DemoFilter) => {
     hapticSelect();
-    const next = !filtered;
-    setFiltered(next);
-    if (next) onFiltered();
+    setFilter(next);
+    if (next !== "all") onFiltered();
   };
+
+  const counts = demoCounts(filter);
 
   return (
     <View>
@@ -107,7 +62,7 @@ export function WeekDemo({ onFiltered }: { onFiltered: () => void }) {
                 key={di}
                 style={[
                   styles.dayCol,
-                  { opacity: landed(day) ? 1 : dim },
+                  { opacity: dayVisible(day, filter) ? 1 : dim },
                 ]}
               >
                 {day.o.map((v, bi) => (
@@ -122,23 +77,33 @@ export function WeekDemo({ onFiltered }: { onFiltered: () => void }) {
         </ScrollView>
       </View>
 
-      {filtered ? <Text style={styles.count}>10 of 30 days.</Text> : null}
+      <Text style={styles.count}>
+        {counts.missed} of {counts.n} missed
+      </Text>
 
-      <PressableScale style={styles.filterBtn} onPress={handleFilter}>
-        <Text style={styles.filterBtnText}>
-          {filtered
-            ? "Show all 30 days"
-            : "Show only days morning deep work landed"}
-        </Text>
-      </PressableScale>
+      <View style={styles.seg}>
+        {FILTERS.map((f) => (
+          <PressableScale
+            key={f.key}
+            style={[styles.segBtn, filter === f.key && styles.segBtnOn]}
+            onPress={() => handleFilter(f.key)}
+          >
+            <Text
+              style={[styles.segBtnText, filter === f.key && styles.segBtnTextOn]}
+            >
+              {f.label}
+            </Text>
+          </PressableScale>
+        ))}
+      </View>
     </View>
   );
 }
 
-const CELL = 7;
+const CELL = 8;
 const GAP = 1;
 const ROW = 16;
-const LABEL_W = 92;
+const LABEL_W = 118;
 
 const makeStyles = (c: Colors) =>
   StyleSheet.create({
@@ -186,19 +151,28 @@ const makeStyles = (c: Colors) =>
       color: c.textMuted,
       marginTop: spacing.md,
     },
-    filterBtn: {
+    seg: {
       marginTop: spacing.lg,
+      gap: spacing.sm,
+    },
+    segBtn: {
       backgroundColor: c.surface,
       borderRadius: radii.lg,
-      paddingVertical: spacing.lg,
+      paddingVertical: spacing.md,
       paddingHorizontal: spacing.md,
       alignItems: "center",
       borderWidth: 0.5,
       borderColor: c.border,
     },
-    filterBtnText: {
-      color: c.text,
+    segBtnOn: {
+      borderColor: c.text,
+    },
+    segBtnText: {
+      color: c.textMuted,
       ...typography.bodyBold,
       textAlign: "center",
+    },
+    segBtnTextOn: {
+      color: c.text,
     },
   });

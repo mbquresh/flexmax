@@ -152,10 +152,10 @@ function OnboardingContent() {
 
         {step === 1 ? (
           <>
-            <Text style={styles.question}>One month of someone's schedule.</Text>
+            <Text style={styles.question}>Thirty days of my own schedule.</Text>
             <Text style={styles.body}>
-              Eight blocks, thirty days. Their gym sessions fail about 40% of
-              the time and they've been calling it a motivation problem.
+              My afternoon deep work was failing about 42% of the time and I'd
+              been calling it a focus problem for a year.
             </Text>
             <WeekDemo onFiltered={() => setFilterUsed(true)} />
             {filterUsed ? (
@@ -168,20 +168,13 @@ function OnboardingContent() {
 
         {step === 2 ? (
           <>
-            <Text style={styles.question}>90% versus 15%.</Text>
+            <Text style={styles.question}>10 of 15 versus 1 of 11.</Text>
             <Text style={styles.body}>
-              On the ten days their morning deep work actually landed, the gym
-              failed nine times. On the other twenty, it failed three.
-            </Text>
-            <Text style={styles.quote}>
-              These two move together. On the days the morning session happens,
-              the gym is what gets spent.
-            </Text>
-            <Text style={styles.body}>
-              Same block, same person, two completely different outcomes —
-              split by something that happened eight hours earlier and four
-              blocks upstream. You'd have to notice a Tuesday morning to
-              explain a Thursday evening.
+              It was never motivation. When the morning session went, the
+              afternoon one went with it — 10 of 15 times. When the morning
+              held, the afternoon failed once in 11 days. The signal sat four
+              hours earlier and one block upstream, and nobody spots that from
+              memory.
             </Text>
             <PressableScale style={styles.actionBtn} onPress={() => goTo(3)}>
               <Text style={styles.actionBtnText}>How does it find that?</Text>
@@ -194,7 +187,7 @@ function OnboardingContent() {
             <Text style={styles.contractTitle}>It reads your days, not your answers.</Text>
             <Text style={styles.contractBody}>
               Once a week, FlexMax looks for patterns that repeat across your
-              days and in your own notes. That example took a month of real
+              days and in your own notes. That finding took a month of real
               days. Yours will take about a week before it says anything worth
               reading — quiet at first, on purpose. You just live your schedule
               and close out your evenings.

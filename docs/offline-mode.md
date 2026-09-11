@@ -31,7 +31,7 @@ Three things genuinely cannot go local-first:
 ### Why this line and not "online only"
 
 The uninstall moment is not "I couldn't read my weekly recap on a plane." It
-is **"I did the thing and the app wouldn't let me record it."** At $14.99/mo
+is **"I did the thing and the app wouldn't let me record it."** At $20/mo
 with no trial, that is a churn event. Recording is the product; everything
 else can wait until signal returns.
 

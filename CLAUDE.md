@@ -72,10 +72,8 @@ Roughly half the differentiation lives in each. Consequences:
    arriving on top of it later. The showcase now has a today-versus-week-two
    split under "Where it actually stands" and the price lock names the
    rebuilding half. Struck former prices and "roughly half" are gone from the
-   showcase. Remaining copy bugs — WeekDemo first-person provenance, Theory of
-   You listed as unbuilt, disqualification still in the FAQ, tasks missing
-   from the day-one list, "I've been the only user" dying on first install,
-   no thirty-day outcome sentence — sit in the Not built table.
+   showcase. Remaining copy bugs — disqualification still in the FAQ, no
+   thirty-day outcome sentence — sit in the Not built table.
 2. **Two metrics, not one.** Gate 1 (reflection fill rate) measures whether
    Stream 2 is self-sustaining. Stream 1 needs its own: *on days the plan
    breaks, does the user still complete the next meaningful action and return
@@ -584,7 +582,7 @@ marker at all.
 | Time away | away_periods (042) + AwaySheet. A date range where no instances generate at all. Not skipped placeholder rows — tracked requires 25% of a block's instances resolved, so a week of unanswered rows would push blocks below the floor and drop them from the engine, which is the exact misreading this prevents. A range covering today also marks today's pending instances 'removed', since generation only prevents future ones. The accounted-for streak needed no change: computeStreakData requires relevant > 0, so an empty day neither breaks nor extends it |
 | Calendar export (feed) | supabase/functions/calendar-feed, deployed --no-verify-jwt. ICS subscription feed of the TEMPLATE, not daily instances: Google refreshes subscribed feeds every 12-24 hours with no faster setting, so publishing instances would show a Google user yesterday's arrangement all day — confidently wrong and uncorrectable from the app. The calendar holds the plan, the app holds the day. Floating DTSTART (no Z, no TZID) so a 9am block reads as 9am wherever the device is, which also avoids emitting a VTIMEZONE clients disagree about. Recurrence maps directly from 040: interval_weeks to INTERVAL, ends_on to UNTIL, block_exceptions and away_periods to EXDATE. Archived blocks omitted |
 | Calendar export UI | account.tsx + src/lib/calendarFeed.ts. Create, share, rotate and revoke the feed link. Token is generated lazily, so a user who never exports has no live endpoint. Sharing uses React Native's Share rather than a clipboard dependency — the iOS share sheet already offers Copy plus AirDrop, which is how a URL actually gets from phone to laptop. Two caveats shown inline: the link is unauthenticated and shows block names and times, and the feed publishes the TEMPLATE so same-day swaps do not appear. The second surprised the person who built it, which is why it is stated rather than assumed; shares a webcal:// link so tapping opens Calendar's subscribe flow directly, with a separate https:// share for Google, which takes a typed URL and rejects webcal. The UI recommends subscribing on a Mac: macOS saves the subscription to iCloud and syncs everywhere, while iPhone defaults to the local On My iPhone account and syncs nowhere, so a user who subscribes on both gets the schedule twice on their phone. The client chooses the account at subscribe time and no ICS property overrides it. |
-| Onboarding rebuilt around an interactive demo | onboarding.tsx + WeekDemo. `STEP_COUNT = 5`: step 0 cold open, 1–2 demonstration and reveal, 3 contract, 4 accountability tone — the only question left, and last. No recognition screens, no answer playback. A 30-day × 8-block grid (240 outcomes) looks like noise until the user applies the filter themselves; non-matching days dim and "So what happened?" is gated behind `onFiltered`. Stronger than the originally specified fix (a real generated insight, labelled as another user's) because it demonstrates by participation rather than display. Quoted figures verify exactly against `DEMO_DAYS`: 10 days where morning deep work landed carry 9 gym failures (90%), the other 20 carry 3 (15%), 12 of 30 overall (40%). An exception on each side is deliberate — a perfect split reads as fabricated. The reveal states co-occurrence, never causation. No AI call, no network, no claim about the user. THE CONDITION MUST STAY AN OUTCOME THE ENGINE ACTUALLY READS (`MORNING_INDEX` comment): the demo keys on completion of an earlier block. The live pack now computes both signs (050); the demo is the cannibalization sign. The founder account's strongest live pair is the other sign — earlier failing, later failing (keystone). Overrun is unavailable — `actual_end_minutes` is captured but read by nothing, and the pack forbids claiming a block "ran until" a time. The contract (step 3) says FlexMax "looks for patterns that repeat", not that it "checks every pair of blocks against every condition" — coupling tests ordered pairs behind 10-day / 6-and-6-arm / 30-point floors and a two-window persistence guard |
+| Onboarding rebuilt around an interactive demo | onboarding.tsx + WeekDemo. `STEP_COUNT = 5`: step 0 cold open, 1–2 demonstration and reveal, 3 contract, 4 accountability tone — the only question left, and last. No recognition screens, no answer playback. A 26-day × 2-block grid of the founder's measured `block_coupling` row (Deep work morning → Deep work afternoon, 30-day window). Non-matching days dim and "So what happened?" is gated behind `onFiltered`. Quoted figures verify exactly against `DEMO_DAYS` in `weekDemoData.ts`: 11 morning-landed days carry 1 afternoon miss, 15 morning-failed days carry 10, 11 of 26 overall (42%). The reveal states both arms and co-occurrence, never causation. No AI call, no network. THE CONDITION MUST STAY AN OUTCOME THE ENGINE ACTUALLY READS (`MORNING_INDEX` comment): the demo keys on completion of an earlier block. The live pack computes both signs (050); the demo is the keystone sign. Overrun is unavailable — `actual_end_minutes` is captured but read by nothing, and the pack forbids claiming a block "ran until" a time. The contract (step 3) says FlexMax "looks for patterns that repeat", not that it "checks every pair of blocks against every condition" — coupling tests ordered pairs behind 10-day / 6-and-6-arm / 30-point floors and a two-window persistence guard |
 | Removed pile | today.tsx + planRestore. Removal was terminal — a block dropped to make room vanished with no way back. Now a third section under Accounted for, restorable. Restore routes through planRestore so it can never write the overlap 4a exists to prevent, and where the original slot is only partly free it offers to shorten the block rather than refusing. Only user and displacement removals appear: archive and away are system state, and restoring one would return a block whose template is archived or a block on a day the person is away. Muted X, never coral — a removed block is a decision, not a failure. Two supporting changes the pile does not work without: useTodayData stopped filtering 'removed' out of the day's instances (every consumer downstream — streak, completion rate, notification eligibility, occupiesTime — already filters status explicitly, so nothing else moved), and the swipe-to-remove handler now maps the row to 'removed' in local state instead of dropping it from the array, which had made restore unreachable until the next reload. MIN_BLOCK_MINUTES moved from the recovery route into schedule.ts and is imported by both, since a route file is the wrong home for a constant two screens share; restore searches the whole remaining day rather than only the original window: original slot at full length first, then any full-length slot via findRescheduleSlot, then the largest gap shortened. Full length beats original position — 90 minutes at 10pm is worth more than 45 at 1pm. Sleep is a hard bound at every tier via resolveDayEnd, and a relocate or shrink is always confirmed, never silent |
 | Shorten and move | recovery/[id].tsx + planShrinkToFit / placeShrunkBlock in schedule.ts + DurationSlider. A single-collider sacrifice now carries a fallback beneath it: shorten the collider instead of removing it, minute resolution, defaulting to 50%. The COLLIDER shrinks, not the block being rescheduled — the missed block already lost its slot once, and compressing it too would mean the recovery costs the thing being recovered. Single target only: a slider per block across two or three colliders is a negotiation, which is the freeze this flow exists to avoid. maxMinutes is derived from the same gap set placeShrunkBlock's fallback pass searches, so every value the slider can produce is guaranteed placeable — a slider that can select an impossible duration is worse than no slider. Placement runs two passes, preferring a slot at or after the collider's own original start, because a plain earliest-fit search drops a shortened Cardio into a free hour AHEAD of the block it just made room for; the earlier gap is still taken when it is the only space left, and the sentence above the button always states the resulting time, so the fallback is never silent. original_start/end_minutes on the target records the pre-compression length; reschedule_count is deliberately NOT bumped there, matching push — the user rescheduled the missed block, not this one. Built on reanimated + gesture-handler rather than a slider dependency, per the interval stepper precedent. The thumb is positioned from the value prop, not from a gesture-driven shared value: there is nothing to animate, and a spring between finger and readout reads as lag. Horizontal intent only (activeOffsetX / failOffsetY) or the pan eats every scroll that starts on the track. Haptics are a detent at each rail, once per arrival — per-minute feedback is a buzz train, which reads as an alert. Push and shrink commit through one commitPairedMove helper, since both are "set two rows' times in one transaction, then provenance", and planRestore's gap walk was extracted to a shared freeGaps for the same reason: the occupiesTime postmortem is what happens when one rule keeps three copies |
 | Past-day access | StreakStrip + useTodayData + 045. Long-press a square to open that day; horizontal pan on the strip pages weeks back to the first instance. View is unbounded; only yesterday can be filled in. A late check-in the next morning is accountability. Rewriting a week-old miss is covering for it. Generation, notification rebuild, pre-block nudge, and weekly-insight invoke are all gated to today (insight invoke at most once per local date, plus one empty-set retry per session so a superseded set can regenerate the same night): generating a past date would fabricate history, and scheduleTodayBlockNotifications cancels the managed set before rebuilding, so a past-day load would wipe today's notifications. Unaccounted rows appear in the open list on a past day (the sweep has already rewritten them); drag, swipe, swap, restore, and the recovery route are off — times are fixed, only the outcome can change, and the miss is taken in CheckInSheet rather than a reschedule flow that searches from now. Focus reload uses the viewed date, not today, or returning from a check-in would yank the user out of the day they are filling. AppState only reloads on a real date rollover. The backfill trigger (045) marks outcome writes after the row's own local date; paste it in the SQL Editor before shipping the client, because a marker protecting a metric must exist before the first backfill lands |
@@ -611,21 +609,15 @@ marker at all.
 | Presence-aware nudges (block-start + mid-block) | The "smart notification suite". User requested this in their OWN reflections 3x: "harder cutoffs", "need enforcements", "maybe you can do something to help" |
 | Shareable weekly recap card                     | The weekly scorecard. Growth primitive                                                                                                                       |
 | Day-3 first observation                         | Still worth building — weekly-insight gates at engaged_days < 5 — but Stream 1 is the week-one value and does not require the engine to speak. No longer framed as plugging a gap. |
-| Paywall + RevenueCat                            | Unbuilt. No RevenueCat in either package.json; `handleStart` still `router.replace("/schedule-builder")`. Placement OPEN — recommend after step 3 of 5 (the contract), not after the tone question. Ladder, not a flat $14.99. See Pricing & paywall. |
+| Paywall + RevenueCat                            | Unbuilt. No RevenueCat in either package.json; `handleStart` still `router.replace("/schedule-builder")`. Placement OPEN — recommend after step 3 of 5 (the contract), not after the tone question. Founding $14.99/mo or $192/yr locked; public $20/mo. See Pricing & paywall. |
 | "Ask me about yourself" conversational surface  | Reads get_behavior_evidence with the narrator's tone rules                                                                                                   |
 | External TestFlight                             | Needs Beta App Review (~1 day) + a demo account or auto-rejection                                                                                            |
 | Device activity detection (Screen Time) | Policy-verified design: user self-selects distraction apps via FamilyActivityPicker → OPAQUE TOKENS, so FlexMax structurally cannot know which apps were chosen. Each focus block registers a DeviceActivitySchedule with a threshold event (e.g. 5 cumulative minutes); eventDidReachThreshold fires a local notification reusing the existing **Notification action buttons** (018 nudge_response) infrastructure. The extension records to an App Group store; the app syncs a minimal derived record only — drift occurred, duration bucket, response, block outcome. Never raw usage. NOTE: DeviceActivityReport data is render-only and not readable programmatically, so the threshold event IS the data model — and it happens to be exactly the intervention→response→outcome shape. CONSTRAINTS: entitlement is per bundle ID, main app AND every extension; unrequested extension IDs fail signing at distribution. Requires native Swift extensions — config plugin (react-native-device-activity) or prebuild. Approval takes days to weeks. See UNBLOCKED ACTION above. |
 | Night routine block is hard to answer           | Wind-down is excluded from the evening sweep (hasn't happened yet) and from bedtime notifications (by design). Drifts to unaccounted unless answered from Today. DayBoundaryCard is gone — it suppressed InsightCard. Do not bring it back as the fix. |
 | User instructions page                          | The streak rises on a day where everything was missed. The label qualifier was removed for width, so there is no in-app explanation. Owed |
-| Showcase copy: cohort cap, not "half" | FAQ no longer says "roughly half." Remaining work is the published 100–200 founding cap and a visible remaining count. $7.99 → $14.99 is a 47% gap; later rungs do not sustain a half claim. Unverifiable scarcity reads as a marketing device. |
-| Showcase copy: WeekDemo provenance | Framing now says "One month of my own schedule." `DEMO_DAYS` is still hand-authored (`WeekDemo.tsx`). First-person does not make it the founder's month. Fix the copy or substitute the real month. |
-| Showcase + listing: disqualify up front | Move "Who is this genuinely not for?" up `docs/index.html`. Mirror it in the App Store listing. Highest-leverage paragraph on the page; it is the mitigation for no-trial bad-review risk. Still FAQ-only. |
-| Showcase: Theory listed as unbuilt | `docs/index.html` "Not built yet" still lists "A written profile of how you work, that you can argue with." Argue shipped. Standing `theory_lines` has not — do not delete the row, rewrite it. |
-| Showcase: tasks missing from day-one list | "Working the hour you install it" does not mention structured block tasks. They shipped this week. |
-| Showcase: "only user" copy | "I've been the only user of this for months" becomes false the day the first tester installs. Decide the replacement before that happens. |
+| Showcase copy: cohort cap, not "half" | FAQ no longer says "roughly half." Remaining work is the published 100–200 founding cap and a visible remaining count. Unverifiable scarcity reads as a marketing device. |
+| Showcase + listing: disqualify up front | Move "Who is this genuinely not for?" up `docs/index.html`. Mirror it in the App Store listing. Highest-leverage paragraph on the page; it is the mitigation for no-trial bad-review risk. Still FAQ-only. Night-shift exclusion is now in that FAQ answer. |
 | Showcase: no thirty-day outcome | The page shows the founder's result but never says what a reader should expect. The honest version — after a week an explanation instead of a scoreboard, after a month the schedule is less wrong about you — is defensible and currently unsaid. |
-| Showcase: verify the 40% gym figure | Load-bearing factual claim on the engine section. Quoted WeekDemo figures verify against `DEMO_DAYS`; confirm they still match live founder data before testers read the page. |
-| `docs/offline-mode.md` price pointer | Lines ~34–35 still say "$14.99/mo with no trial." Re-point once the ladder is live. Annual at each rung: $69.99 / ~$129 / ~$169. |
 
 
 ### Future build — leftover from the 2026-09-03 remedy triage
@@ -645,7 +637,7 @@ User-written bullets on the template: what "done" means for this block, shown at
 The complaint was right: restating "you miss Workout" is a slap, and the morning note is not the product. The fix is more *writes* (shorten shipped; earlier/later and restore above), not a smarter paragraph. Keep the weekly call as a small stored belief after `engaged_days >= 5`. If a line cannot attach to a confirmed structural option, it stays nudge-sized. Impressive means a change the user could not have computed in two seconds and can take. Text-only impressiveness rots into the same repetition.
 
 **5. Mentor / founder story — listing and showcase only.**
-Mentor-without-an-audience, the $200/mo contrast, "I built this for myself," and "solve my problem first" are App Store / `docs/index.html` voice. Not in-app copy. The $200/mo contrast is load-bearing positioning at rung 2 and above, not optional flavor. n=1 still does not prove adoption; the story may say it worked for the person who built it. It may not treat founder fill rate as evidence. Bundle with the pricing / founding-member pass on the showcase page, not with the remedy loop.
+Mentor-without-an-audience, the $200/mo contrast, "I built this for myself," and "solve my problem first" are App Store / `docs/index.html` voice. Not in-app copy. The $200/mo contrast is load-bearing positioning at the public price, not optional flavor — at $20 the justification is capability, not undercutting Sunsama. n=1 still does not prove adoption; the story may say it worked for the person who built it. It may not treat founder fill rate as evidence. Bundle with the pricing / founding-member pass on the showcase page, not with the remedy loop.
 
 **6. Standing theory lines.** Argue shipped. The page still reprints the
 current `behavioral_insights` set, which is replaced weekly. Durable claims
@@ -2114,9 +2106,8 @@ within 30 seconds of the previous edit to the same instance — interaction
 signals are contaminated by the author testing the app, not merely thin.
 **App Store, showcase page, and in-app copy do not get this number until a
 non-founder tester produces it.** Pricing consequence in both directions: if
-it generalizes, rung 3 is underpriced and a single cohort will show it; if
-it does not, no rung on the ladder saves the product. Both readings argue
-for the ladder.
+it generalizes, $20 is underpriced and a single cohort will show it; if it
+does not, no price on the page saves the product.
 
 **Surface coverage is thin and that is a real cost.** No widgets, no Apple
 Watch, no calendar integration, no Android. These are not the differentiator and
@@ -2161,34 +2152,29 @@ can be answered without real testers.
 6. **Does the behavioral insight feel surprisingly accurate?** Stream 2's proof
    point — half the differentiation, not the whole. Validated on n=1 so far.
 
-If 1-6 hold, price is not the limiting factor — grow into later rungs with new
-users. If they do not, more features will not fix it.
+If 1-6 hold, price is not the limiting factor. If they do not, more features
+will not fix it.
 
 
 
-## Pricing & paywall (current decision — 2026-09-05)
+## Pricing & paywall (current decision — 2026-09-10)
 
-Three-rung ladder. No weekly plan. Annual always shown as monthly-equivalent,
-never as a lump sum. "Locked for life" must be explicit copy on the paywall
-and account screen, not implied. Before that copy ships, confirm the App Store
-Connect mechanics for preserving existing subscribers through a price increase
-— founding lock means carrying that SKU indefinitely.
+One founding lock, then a public price. No weekly plan. Annual always shown as
+monthly-equivalent, never as a lump sum. Yearly is 20% off the public monthly
+($20 → $16.00/mo, $192 billed yearly), deliberately — a larger gap signals an
+inflated monthly or a need for cash, and on a product whose pitch is
+commitment the monthly subscriber is the more committed one. "Locked for life"
+must be explicit copy on the paywall and account screen, not implied. Before
+that copy ships, confirm the App Store Connect mechanics for preserving
+existing subscribers through a price increase — founding lock means carrying
+that SKU indefinitely.
 
-**Rung 1 — founding.** $7.99/mo, $69.99/yr. Capped at 100–200 members, locked
-for life. The cap is published in the copy with a visible remaining count;
+**Founding.** $14.99/mo or $192/yr. Capped at 100–200 members, locked for
+life. The cap is published in the copy with a visible remaining count;
 unverifiable scarcity reads as a marketing device.
 
-**Rung 2 — production.** $14.99/mo, ~$129/yr. This is the durable price.
-Cohort two is not grandfathered — $14.99 is the current price, not a second
-permanent locked tier. Carrying two locked tiers plus a headline price means
-three SKUs and a blended revenue per user well under the headline. Grow into
-higher prices with new users, not by re-pricing old ones.
-
-**Rung 3 — $19.99/mo MAX, ~$169/yr.** Earned, not scheduled. Gate it on the
-beta gates, not on signup count: reflection fill rate clearing threshold on a
-real (non-founder) cohort, and the north-star metric holding on days the plan
-breaks. Signups prove the landing page works; only the gates prove the
-product does.
+**Public.** $20/mo. Cohort two is not grandfathered. Grow into the public
+price with new users, not by re-pricing founding ones.
 
 **No trial.** A trial recruits people who are browsing, and users without
 existing motivation will not succeed with this product and will tank early App
@@ -2246,20 +2232,23 @@ set by what occupies the same slot in their budget, not by how the product
 defines its category. When you are genuinely first there is no reference
 price, so users borrow one from whatever the product resembles. The category
 has to be taught before category-defining prices can be charged — which is an
-argument *for* the ladder, not for skipping to the top of it.
+argument for a founding lock under the public price, not for skipping to it.
 
 Comparable band as of September 2026 (re-check the date): Sunsama $22/mo
 month-to-month or $17/mo billed annually ($204/yr); Motion Pro AI individual
 $19/mo or ~$12.73/mo billed annually. Both have trials — Sunsama 14 days no
-card, Motion 7 days card required. At $19.99 FlexMax sits in that band with no
+card, Motion 7 days card required. At $20 FlexMax sits in that band with no
 trial, no widgets, no Watch, no Android, and one-way ICS export in place of
 calendar integration. This is the predicted review narrative and it is already
 consistent with the existing "surface coverage is thin" risk.
 
-The **$200/mo mentor contrast** is load-bearing positioning at rung 2 and
-above, not optional listing flavor. If the comparison class is a coach at
-$200/mo, $14.99 is trivially cheap; if it is a planner at $5, it is absurd.
-The landing page decides which comparison a stranger makes.
+The **$200/mo mentor contrast** is load-bearing positioning, not optional
+listing flavor. At $20 the product sits in the same tier as Sunsama rather
+than undercutting it, so the justification is capability — a mentor who sees
+the whole ledger and has no face to perform for — not a cheaper price. If
+the comparison class is a coach at $200/mo, $20 is the tool that does that
+job; if it is a planner at $5, it is absurd. The landing page decides which
+comparison a stranger makes.
 
 **docs/index.html — rebuilt 2026-08-11 as an engine overview.** The previous
 version was a hand-built replica of the app's UI and had drifted twice
@@ -2271,10 +2260,9 @@ alongside it at docs/flexmax-behavioral-engine.pdf for handouts. Founding
 pricing and founding-member framing are now on the page. Struck-through
 reference prices and "half" urgency are gone; public prices are forward
 tense. A positioning section ("Most of your day answers to nobody") sits
-after the founder letter. Remaining copy fixes (WeekDemo provenance,
-disqualification placement, Theory listed as unbuilt, tasks missing from
-the day-one list, "only user" copy, no thirty-day outcome) sit in the Not
-built table. Screen recordings of the shipped WeekDemo belong on this page.
+after the founder letter. Remaining copy fixes (disqualification placement,
+no thirty-day outcome) sit in the Not built table. Screen recordings of the
+shipped WeekDemo belong on this page.
 
 ### Rejected: generating an "insight" from onboarding answers
 
