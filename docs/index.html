@@ -60,7 +60,7 @@ p{margin-top:1.1em}
 
 /* ---------- HERO: type is the whole event ---------- */
 .hero{padding:92px 0 74px}
-.hero h1{max-width:13ch}
+.hero h1{max-width:22ch}
 .hero .sub{font-size:21px;line-height:1.5;color:var(--text-2);margin-top:30px;
   max-width:32ch}
 .hero .sub strong{font-weight:600;color:var(--text)}
@@ -288,13 +288,12 @@ footer{padding:44px 0 62px;border-top:1px solid var(--border)}
 
 <!-- ================= HOOK ================= -->
 <div class="wrap hero">
-  <h1>There was never a moment you decided to skip it.</h1>
-  <p class="sub">You didn't choose the hour that disappeared. There was no decision
-    to argue with. Just a Tuesday that became a Thursday, and a plan that quietly
-    <strong>stopped being true</strong>.</p>
-  <p class="sub" style="font-size:18px;margin-top:18px;color:var(--muted)">FlexMax
-    is built for the second half of that day — and for finding out why it keeps
-    happening.</p>
+  <h1>Your afternoon didn't fail. Your morning did.</h1>
+  <p class="sub">On the nineteen days my morning session held, my afternoon
+    session failed <strong>zero times</strong>. On the days it didn't — eight
+    of eleven, gone. I'd spent a year calling that a focus problem.
+    <strong>FlexMax</strong> is built for the second half of a broken day, and
+    for finding the thing you can't see from inside one of them.</p>
 
   <div class="day" id="day">
     <div class="slot"><time>7:00</time><span class="b kept">Morning reset</span></div>
@@ -311,7 +310,7 @@ footer{padding:44px 0 62px;border-top:1px solid var(--border)}
 <!-- ================= THE STAKES ================= -->
 <section>
   <div class="wrap">
-    <h2>The hours aren't what it costs you.</h2>
+    <h2>There was never a moment you decided to skip it.</h2>
     <p class="lede">Hours you can find again. What you don't get back is the
       evidence.</p>
     <p>Six months of real effort goes by and nothing keeps score of it. Then someone
@@ -432,12 +431,13 @@ footer{padding:44px 0 62px;border-top:1px solid var(--border)}
 <!-- ================= STREAM 2: THE PATTERN ================= -->
 <section>
   <div class="wrap">
-    <h2>Then, after about a week, it starts explaining you.</h2>
-    <p class="lede">Thirty days of my own schedule. My afternoon deep work was failing
-      about 42% of the time and I'd been calling it a focus problem for a year.</p>
+    <h2>It found the thing I'd been wrong about for a year — in twenty-six days.</h2>
+    <p class="lede">Twenty-six tracked days of my own schedule. My afternoon
+      deep work was failing about 42% of the time and I'd been calling it a
+      focus problem.</p>
 
     <div class="demo">
-      <p class="demo-q">Afternoon deep work, 30 days. Which days are you looking at?</p>
+      <p class="demo-q">Afternoon deep work, 26 tracked days. Which days are you looking at?</p>
       <div class="seg" role="group" aria-label="Filter days">
         <button data-view="all" aria-pressed="true">All 26 days</button>
         <button data-view="deep" aria-pressed="false">Days the morning landed</button>
@@ -460,17 +460,19 @@ footer{padding:44px 0 62px;border-top:1px solid var(--border)}
       <div class="finding" id="finding"></div>
     </div>
 
-    <p style="margin-top:30px">It was never motivation. When the morning session went,
-      the afternoon one went with it — 10 of 15 times. When the morning held, the
-      afternoon failed once in 11 days. The signal sat four hours earlier and one
-      block upstream, and nobody spots that from memory.</p>
-    <p>It also refuses to tell you things. Of the five patterns it found in my
-      month, it reported one. The other four either didn't repeat, or turned
-      out to be explained by the day going badly overall rather than by
-      anything specific. Every insight carries the counts it rests on, and a
-      button to tell it it's wrong.</p>
-    <p>That's the whole product. It reads across your days and finds the thing you
-      can't see from inside one of them.</p>
+    <p style="margin-top:30px">It was never focus. When the morning session went, the afternoon one went
+      with it — <b>10 of 15 times</b>. When the morning held, the afternoon failed
+      <b>once in 11 days</b>. The signal sat four hours earlier and one block
+      upstream. Nobody spots that from memory.</p>
+    <p>A hunch you can shrug off. A number you can't.</p>
+    <p><b>Five patterns. It reported one.</b> The other four either didn't repeat
+      across two separate months, or turned out to be explained by the day going
+      badly overall rather than by anything specific. Every app in this category
+      is built to find you more. This one is built to find you less, and be right.</p>
+    <p class="lede">This is a check engine light for your day. It doesn't
+      motivate you and it doesn't congratulate you. It tells you which system
+      is reporting a fault, with the counts attached, and a button to tell it
+      it's wrong.</p>
   </div>
 </section>
 
@@ -481,7 +483,7 @@ footer{padding:44px 0 62px;border-top:1px solid var(--border)}
   <div class="wrap wide">
     <h2>What everything else does when your day breaks.</h2>
     <p class="lede" style="max-width:44ch">It moves the block. That's the entire
-      response. Miss the gym forty times and you get session forty-one, identical to
+      response. Miss it forty times and you get attempt forty-one, identical to
       the first.</p>
     <div class="rows">
       <div class="row"><span class="row-h">Everyone else</span><span class="row-h">FlexMax</span></div>
@@ -492,8 +494,8 @@ footer{padding:44px 0 62px;border-top:1px solid var(--border)}
       </div>
       <div class="row">
         <span class="them">Rescheduling means dragging a block and hoping it fits.</span>
-        <span class="us">Drop it anywhere. If it collides, it names the block in
-          the way.</span>
+        <span class="us">Drop it anywhere. If it collides, it refuses and names
+          the block in the way — before it happens, not after.</span>
       </div>
       <div class="row">
         <span class="them">Four misses on a bad day means four red marks.</span>
@@ -512,8 +514,12 @@ footer{padding:44px 0 62px;border-top:1px solid var(--border)}
       </div>
       <div class="row">
         <span class="them">Getting better means trying harder.</span>
-        <span class="us">Getting better means the schedule gets less wrong about
-          you every week.</span>
+        <span class="us">Getting better means the schedule stops being wrong about
+          you.</span>
+      </div>
+      <div class="row">
+        <span class="them">Tells you what you missed.</span>
+        <span class="us">Tells you which block you actually lost it in.</span>
       </div>
     </div>
   </div>
@@ -610,28 +616,40 @@ footer{padding:44px 0 62px;border-top:1px solid var(--border)}
     <h2>Reasonable questions.</h2>
     <div style="margin-top:28px">
       <details>
+        <summary>What does using it actually look like?</summary>
+        <p>Tonight you fill in what each block is for. Tomorrow the blocks are
+          there. You check in after each one. When something breaks, you rebuild
+          the day in one screen. Before bed you account for whatever's left.</p>
+        <p>That's the whole loop. No configuration, no methodology to learn, no
+          dashboard to maintain.</p>
+      </details>
+      <details>
         <summary>I've quit five of these. Why is this different?</summary>
-        <p>The ones you quit were mirrors. They showed your plan back to you, which
-          is pleasant when you're doing well and brutal when you're not. None of them
-          could tell you <em>why</em> a block keeps dying, because none of them were
-          reading across your days. That's the entire thing this does.</p>
+        <p>The ones you quit were mirrors. They showed your plan back to you —
+          pleasant when you're doing well, brutal when you're not — and when the day
+          broke, they handed you a drag handle.</p>
+        <p>Two things are different here. When something goes, you get one screen,
+          three ways forward, and the cost of each named before you pick. That works
+          the hour you install it. And after about a week it starts reading across
+          your days for the thing you can't see from inside one of them.</p>
+        <p>The first is why I stopped quitting. The second is why it was worth not
+          quitting.</p>
       </details>
       <details>
         <summary>Why is there no free trial?</summary>
-        <p>Fair question, and here's the honest version: the rebuilding half works
-          the hour you install it, so you're not paying to wait. The pattern-finding
-          half does need about a week of real days before it says anything worth
-          reading. As for why there's no trial at all — a trial recruits people who
-          are browsing, and this doesn't work for people who are browsing. Paying
-          first is the first thing you do that proves you've decided, and it's why
-          founding access is priced where it is, and stays there.</p>
+        <p>The rebuilding half works the hour you install it, so you're not paying
+          to wait. The pattern-finding half needs about a week of real days before
+          it says anything worth reading.</p>
+        <p>As for no trial at all: a trial recruits people who are browsing, and
+          this doesn't work for people who are browsing.</p>
       </details>
       <details>
         <summary>What happens in a week where I do almost nothing?</summary>
-        <p>You come back, account for it, and the streak you're protecting stays
-          intact — because it counts days you were honest about, not days you were
-          perfect. Then you get a readable explanation of what happened instead of a
-          wall of red. This is the specific moment the app was designed around.</p>
+        <p>You come back and account for all of it — every block, including the ones
+          you'd rather not look at. Do that and the streak holds, because it counts
+          days you were honest about, not days you were perfect.</p>
+        <p>Leave one unanswered and the day doesn't count. Silence is the only thing
+          that breaks it.</p>
       </details>
       <details>
         <summary>What if it's wrong about me?</summary>
@@ -662,7 +680,7 @@ footer{padding:44px 0 62px;border-top:1px solid var(--border)}
 <section style="padding-top:14px">
   <div class="wrap">
     <h2>You already know what you should be doing.</h2>
-    <p class="lede">That was never the problem.</p>
+    <p class="lede">That was never the problem. This finds out what's taking it.</p>
     <p style="margin-top:26px"><a class="cta" href="#pricing">Get founding access — $14.99/mo</a></p>
     <p class="cta-note">$20 at public launch. Your price stays where you joined.</p>
   </div>
