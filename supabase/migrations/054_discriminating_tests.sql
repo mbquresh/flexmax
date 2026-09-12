@@ -4,9 +4,9 @@
 -- Rewritten from live get_behavior_evidence (050 + 053). Adds `qualified`
 -- (the narrator's rule-9 filter, in SQL) and points `keystones` at it so
 -- a trigger whose pairs were all rejected cannot appear as a keystone.
--- Anchor control and domain spread run only on qualified pairs.
--- block_coupling is unchanged and still emits the unfiltered set.
--- Do not lower coupling thresholds.
+-- Discriminating tests (anchor, domain, gap) run only on qualified pairs
+-- and emit surviving / ruled_out / untested in SQL. The narrator reports
+-- those lists; it never invents an explanation. Do not lower floors.
 
 CREATE OR REPLACE FUNCTION public.get_behavior_evidence(p_user_id uuid)
  RETURNS jsonb
@@ -281,6 +281,121 @@ begin
     from qualified q
     left join later_lifts ll on ll.trigger_id = q.trigger_id
     group by q.trigger_id
+  ),
+  -- Gap buckets use coupling's sample floors (any lift) for a trigger that
+  -- already has a qualified pair. Three pairs per populated bucket is
+  -- intentional; insufficient_data is the common and correct result.
+  gap_pairs as (
+    select a.trigger_id, a.later_id, a.later_name, a.lift,
+           avg(p.later_start - p.trigger_end) as avg_gap_minutes
+    from agg a
+    join pairs p
+      on p.trigger_id = a.trigger_id
+     and p.later_id = a.later_id
+     and p.recent
+    where a.recent
+      and a.days >= 10
+      and a.n_won >= 6
+      and a.n_lost >= 6
+      and a.trigger_id in (select trigger_id from qualified)
+    group by a.trigger_id, a.later_id, a.later_name, a.lift
+  ),
+  gap_bucketed as (
+    select trigger_id, lift, avg_gap_minutes,
+           case
+             when avg_gap_minutes < 90 then 'adjacent'
+             when avg_gap_minutes <= 240 then 'mid'
+             else 'distant'
+           end as bucket
+    from gap_pairs
+  ),
+  gap_bucket_stats as (
+    select trigger_id, bucket,
+           count(*) as pairs,
+           round(avg(lift))::int as avg_lift,
+           round(avg(avg_gap_minutes))::int as avg_gap_minutes
+    from gap_bucketed
+    group by trigger_id, bucket
+  ),
+  gap_sensitivity as (
+    select t.trigger_id,
+           coalesce(
+             (select jsonb_agg(jsonb_build_object(
+                       'bucket', s.bucket,
+                       'pairs', s.pairs,
+                       'avg_lift', s.avg_lift,
+                       'avg_gap_minutes', s.avg_gap_minutes
+                     ) order by case s.bucket
+                       when 'adjacent' then 1
+                       when 'mid' then 2
+                       else 3 end)
+              from gap_bucket_stats s
+              where s.trigger_id = t.trigger_id),
+             '[]'::jsonb
+           ) as gap_buckets,
+           case
+             when (select count(*) from gap_bucket_stats s
+                   where s.trigger_id = t.trigger_id) < 2
+               then 'insufficient_data'
+             when exists (
+               select 1 from gap_bucket_stats s
+               where s.trigger_id = t.trigger_id and s.pairs < 3
+             ) then 'insufficient_data'
+             when adj.avg_lift is not null
+              and dist.avg_lift is not null
+              and abs(adj.avg_lift) >= abs(dist.avg_lift) * 2
+              and (mid.avg_lift is null
+                   or (abs(adj.avg_lift) >= abs(mid.avg_lift)
+                       and abs(mid.avg_lift) >= abs(dist.avg_lift)))
+               then 'cascade_favoured'
+             when adj.avg_lift is not null
+              and dist.avg_lift is not null
+              and abs(dist.avg_lift) >= abs(adj.avg_lift) * 0.6
+               then 'carry_favoured'
+             else 'inconclusive'
+           end as verdict
+    from (select distinct trigger_id from qualified) t
+    left join gap_bucket_stats adj
+      on adj.trigger_id = t.trigger_id and adj.bucket = 'adjacent'
+    left join gap_bucket_stats mid
+      on mid.trigger_id = t.trigger_id and mid.bucket = 'mid'
+    left join gap_bucket_stats dist
+      on dist.trigger_id = t.trigger_id and dist.bucket = 'distant'
+  ),
+  -- surviving / ruled_out / untested are derived here. The narrator
+  -- reads the lists; it does not assign a hypothesis to a verdict.
+  hypothesis_rows as (
+    select q.trigger_id, q.later_id, q.trigger_name, q.later_name, q.lift,
+           ac.anchor_name, ac.anchor_days,
+           ac.pct_when_won_anchored, ac.pct_when_lost_anchored,
+           ac.lift_anchored, ac.verdict as anchor_verdict,
+           ds.same_category_pairs, ds.avg_lift_same_category,
+           ds.other_category_pairs, ds.avg_lift_other_category,
+           ds.flat_blocks, ds.verdict as domain_verdict,
+           gs.gap_buckets, gs.verdict as gap_verdict,
+           case
+             when gs.verdict = 'cascade_favoured' then 'ruled_out'
+             when ds.verdict = 'domain_specific'
+               or gs.verdict = 'carry_favoured' then 'surviving'
+             else 'untested'
+           end as carry_status,
+           case
+             when ac.verdict = 'upstream_ruled_out'
+               or ds.verdict = 'domain_specific' then 'ruled_out'
+             when ac.verdict = 'upstream_weakened'
+               or ds.verdict = 'global' then 'surviving'
+             else 'untested'
+           end as upstream_status,
+           case
+             when gs.verdict = 'carry_favoured' then 'ruled_out'
+             when gs.verdict = 'cascade_favoured' then 'surviving'
+             else 'untested'
+           end as cascade_status
+    from qualified q
+    left join anchor_control ac
+      on ac.trigger_id = q.trigger_id and ac.later_id = q.later_id
+    left join domain_spread ds on ds.trigger_id = q.trigger_id
+    left join gap_sensitivity gs on gs.trigger_id = q.trigger_id
   )
   select jsonb_build_object(
 
@@ -464,29 +579,57 @@ begin
 
     'hypothesis_tests', (
       select coalesce(jsonb_agg(jsonb_build_object(
-               'trigger_name', q.trigger_name,
-               'later_name', q.later_name,
+               'trigger_name', h.trigger_name,
+               'later_name', h.later_name,
                'anchor_control', jsonb_build_object(
-                 'anchor_name', ac.anchor_name,
-                 'anchor_days', ac.anchor_days,
-                 'pct_when_won_anchored', ac.pct_when_won_anchored,
-                 'pct_when_lost_anchored', ac.pct_when_lost_anchored,
-                 'lift_anchored', ac.lift_anchored,
-                 'verdict', ac.verdict
+                 'anchor_name', h.anchor_name,
+                 'anchor_days', h.anchor_days,
+                 'pct_when_won_anchored', h.pct_when_won_anchored,
+                 'pct_when_lost_anchored', h.pct_when_lost_anchored,
+                 'lift_anchored', h.lift_anchored,
+                 'verdict', h.anchor_verdict
                ),
                'domain_spread', jsonb_build_object(
-                 'same_category_pairs', ds.same_category_pairs,
-                 'avg_lift_same_category', ds.avg_lift_same_category,
-                 'other_category_pairs', ds.other_category_pairs,
-                 'avg_lift_other_category', ds.avg_lift_other_category,
-                 'flat_blocks', ds.flat_blocks,
-                 'verdict', ds.verdict
+                 'same_category_pairs', h.same_category_pairs,
+                 'avg_lift_same_category', h.avg_lift_same_category,
+                 'other_category_pairs', h.other_category_pairs,
+                 'avg_lift_other_category', h.avg_lift_other_category,
+                 'flat_blocks', h.flat_blocks,
+                 'verdict', h.domain_verdict
+               ),
+               'gap_sensitivity', jsonb_build_object(
+                 'gap_buckets', h.gap_buckets,
+                 'verdict', h.gap_verdict
+               ),
+               'surviving', (
+                 select coalesce(jsonb_agg(v.name order by v.ord), '[]'::jsonb)
+                 from (values
+                   (1, 'carry', h.carry_status),
+                   (2, 'upstream', h.upstream_status),
+                   (3, 'cascade', h.cascade_status)
+                 ) v(ord, name, status)
+                 where v.status = 'surviving'
+               ),
+               'ruled_out', (
+                 select coalesce(jsonb_agg(v.name order by v.ord), '[]'::jsonb)
+                 from (values
+                   (1, 'carry', h.carry_status),
+                   (2, 'upstream', h.upstream_status),
+                   (3, 'cascade', h.cascade_status)
+                 ) v(ord, name, status)
+                 where v.status = 'ruled_out'
+               ),
+               'untested', (
+                 select coalesce(jsonb_agg(v.name order by v.ord), '[]'::jsonb)
+                 from (values
+                   (1, 'carry', h.carry_status),
+                   (2, 'upstream', h.upstream_status),
+                   (3, 'cascade', h.cascade_status)
+                 ) v(ord, name, status)
+                 where v.status = 'untested'
                )
-             ) order by abs(q.lift) desc), '[]'::jsonb)
-      from qualified q
-      left join anchor_control ac
-        on ac.trigger_id = q.trigger_id and ac.later_id = q.later_id
-      left join domain_spread ds on ds.trigger_id = q.trigger_id
+             ) order by abs(h.lift) desc), '[]'::jsonb)
+      from hypothesis_rows h
     ),
 
     'day_of_week', (
@@ -558,6 +701,7 @@ begin
       'window_days', 30,
       'excludes_today', true,
       'coupling_note', 'lift is associational, never causal. day_baseline_shift approaching abs(lift) means whole-day collapse, not a pair-specific relationship. persistence = single_window means fewer than 60 days exist or the prior window lacked enough arms.',
+      'hypothesis_note', 'hypothesis_tests eliminate explanations; they do not establish causation. insufficient_data means untested, not ruled out. All results are observational. The three candidates are fixed: carry, upstream, cascade. Never invent a fourth, and never mention willpower depletion.',
       'caveats', jsonb_build_array(
         'start_minutes and end_minutes are SCHEDULED template times, not records of when anything happened. Never claim a block "ran until" a time.',
         'unaccounted = no user acknowledgement at all. Disengagement signal, weaker than a confirmed miss. Describe as "never checked in", never as "you failed this".',
@@ -574,7 +718,8 @@ begin
         'quality_reasons are TAPPED PRESETS recorded on a COMPLETED block that was degrading, not on a miss. Cite them as counts only; never quote them as something the user wrote, and never describe the block as missed.',
         'quality_drift recent_poor/recent_rated use a 7-instance window, matching the in-app prompt threshold. Do not describe it as "this week" — it is the last 7 rated sessions of that block, which may span more or less than a week.',
         'nudge_outcomes: a local notification fires whether or not the app is running, and iOS does not report delivery. "fired" means scheduled and elapsed, never confirmed seen.',
-        'swap_drift.times_moved counts DAYS A BLOCK ENDED UP IN A DIFFERENT SLOT than it was scheduled — not how many times the user touched it. Adjustments that return a block to its original time are excluded entirely. Never describe these figures as the user "fiddling with", "rearranging", or "constantly changing" their schedule; that is a characterisation the data does not support and this product does not make.'
+        'swap_drift.times_moved counts DAYS A BLOCK ENDED UP IN A DIFFERENT SLOT than it was scheduled — not how many times the user touched it. Adjustments that return a block to its original time are excluded entirely. Never describe these figures as the user "fiddling with", "rearranging", or "constantly changing" their schedule; that is a characterisation the data does not support and this product does not make.',
+        'hypothesis_tests eliminate candidate explanations for a qualified coupling pair; they do not name a cause. Report only what surviving / ruled_out / untested already state. insufficient_data is untested, never ruled out. Never write because, causes, or the reason is. Never mention willpower or ego depletion. Never invent a fourth hypothesis. Cite the numbers each elimination rests on.'
       )
     )
 
@@ -593,3 +738,18 @@ grant execute on function public.get_behavior_evidence(uuid) to service_role;
 --
 -- keystones must not list a trigger whose pairs fail persistence,
 -- day_baseline, or the unaccounted guard. block_coupling is unchanged.
+--
+-- select jsonb_pretty(
+--   (public.get_behavior_evidence('d8c23a37-229f-4204-bf45-1c58684d385d'))
+--     -> 'hypothesis_tests'
+-- );
+--
+-- Expected on that account, one pair (Deep work morning → Deep work afternoon):
+--   anchor_control.verdict = upstream_ruled_out (anchor Fajr / Quran;
+--     anchored lift larger than unanchored). If inconclusive, leave the
+--     0.5 multiplier alone and read the raw anchored lift.
+--   domain_spread.verdict = domain_specific; flat_blocks includes Dinner.
+--     If same_category_pairs < 2 the floor returns insufficient_data —
+--     do not lower it.
+--   gap_sensitivity.verdict is usually insufficient_data.
+--   surviving: [carry], ruled_out: [upstream], untested: [cascade].
