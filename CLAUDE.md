@@ -283,6 +283,7 @@ Cursor = implementation engine.
 | 051 | block_coupling_table.sql | Persisted qualifying pairs. weekly-insight upserts after a successful generate; users read own rows; service_role writes. |
 | 052 | insight_kind_structural.sql | `behavioral_insights.kind` accepts `structural` alongside causal / pattern / strength. |
 | 053 | coupling_arm_counts.sql | In-place: emits `n_won_later_failed` / `n_lost_later_failed` so the narrator can cite "X of Y" without multiplying a rounded percent. |
+| 054 | discriminating_tests.sql | `qualified` CTE (rule 9 in SQL); `keystones` reads it. `hypothesis_tests` runs anchor control, domain spread, and gap sensitivity on qualified pairs only and emits `surviving` / `ruled_out` / `untested` in SQL. Three candidates, fixed: carry, upstream, cascade. Never lower the floors. Paste before deploying weekly-insight. |
 
 030 exists to answer the supporting reopen signal: of users who had a bad week, what
 share opened the app the following week. Capture is fire-and-forget from
@@ -493,9 +494,11 @@ Captured → read by the engine:
 - miss_reason_tag (019), quality_reason_tag (029)
 - insight_corrections (047) — weekly-insight must not restate a rejected belief
 - block_coupling (050 / 053) — ordered within-day pairs, both signs; keystones; day_of_week
+- hypothesis_tests (054) — which of carry / upstream / cascade the data ruled out, for qualified pairs only
 
 Pipeline:
-  get_behavior_evidence(user_id)  [SQL, 013 — does ALL arithmetic]
+  get_behavior_evidence(user_id)  [SQL, 013 / 054 — does ALL arithmetic,
+    including hypothesis_tests; the narrator never invents an explanation]
     → weekly-insight edge function [1 AI call per user per week]
     → behavioral_insights table [015 — stored beliefs, superseded weekly;
       kind may be causal / pattern / strength / structural]
@@ -593,7 +596,8 @@ marker at all.
 | Day selector and per-day times | schedule-builder.tsx + DayStrip + 046. The builder was a flat list of rules ABOUT the week, so the user reconstructed their week mentally; and a block held one time, so different times on different days forced a second block — which the engine already merged, since get_behavior_evidence groups by name. Tapping a day filters to that day, sorted by resolved time, and the time pickers then edit that day only. Defaults to All, not today: this screen is visited to set up a week, and starting on one day hides six sevenths of it. Adding a block while a day is selected defaults to that day. Archiving from a day view that still runs elsewhere asks whether to drop the day or the block. All-view time changes shift overrides by the same delta. Calendar-feed splits a block with overrides into disjoint BYDAY VEVENTs |
 | Theory of You | app/you.tsx + DisputeSheet + 047. Menu and title are "Theory of You". Twelve-week two-tone chart, 30-day accounted/landed as one caption, then the current insight set as tappable sentences (strengths first). Tap a line: "That's not right" → one note → the line leaves immediately. dispute_insight writes insight_corrections (survives supersede) and stamps disputed_at. Morning InsightCard and recovery omit disputed rows. weekly-insight reads the last 20 corrections and must not restate a rejected belief. No second AI call on the tap. No Done button — the X is enough. `kind` may be `structural` (052); InsightCard still hides only `strength`. |
 | Structured block tasks | 048 + src/lib/blockTasks.ts + app/block-tasks/[id].tsx + BlockTaskRow. Replaces free-text task_detail with rows keyed on (user_id, block_id, date). Informational only — done never writes block status. Today shows two inline with checkbox; add/name tap opens the page. Swipe reveals reschedule (inline, `runsOn` only) and delete. No sheet, no nested edit route. Plan Tomorrow writes immediately. Cutoff title is `cutoffTitle`. Store field `todayBlockTasks` must be passed on every notification rebuild. |
-| Block coupling (mirror → discovery) | 049–053 + weekly-insight + preempt.ts. 026 kept `lift >= 25` (earlier completing, later failing) and dropped every real founder pair — they were keystones, lift −31 to −57. Rule 9 then forbade raising a surviving pair unless the user had already written it. 050 keeps both signs, ships `day_baseline_shift` instead of excluding mixed days, and requires persistence across the prior 30 days. Narrator may lead with a pair only when persistence is `confirmed`, abs(day_baseline_shift) is under half of abs(lift), and later_unaccounted_days is under half the failures involved. Never "causes". `kind: structural` for keystones and weekday spreads (052). Founder first generate: morning → afternoon, keystone, lift −58, baseline −17, confirmed; Cardio → Weights contradicted; afternoon → dinner confirmed but baseline −39 (whole-day collapse, omitted). `keystones` named morning and afternoon; only morning had a qualifying pair — treat `keystones` as a label, not a second computation. `day_of_week` on the 30-day base: Tue 19 / Sun 52. 053 emits the arm counts so "1 of 11" / "10 of 15" are in the pack. weekly-insight writes `block_coupling` after generate. The coupled preempt was removed; the finding reaches the user through Theory of You. |
+| Block coupling (mirror → discovery) | 049–053 + weekly-insight + preempt.ts. 026 kept `lift >= 25` (earlier completing, later failing) and dropped every real founder pair — they were keystones, lift −31 to −57. Rule 9 then forbade raising a surviving pair unless the user had already written it. 050 keeps both signs, ships `day_baseline_shift` instead of excluding mixed days, and requires persistence across the prior 30 days. Narrator may lead with a pair only when persistence is `confirmed`, abs(day_baseline_shift) is under half of abs(lift), and later_unaccounted_days is under half the failures involved. Never "causes". `kind: structural` for keystones and weekday spreads (052). Founder first generate: morning → afternoon, keystone, lift −58, baseline −17, confirmed; Cardio → Weights contradicted; afternoon → dinner confirmed but baseline −39 (whole-day collapse, omitted). 054 points `keystones` at `qualified`, so a trigger whose pairs were all rejected no longer appears. `day_of_week` on the 30-day base: Tue 19 / Sun 52. 053 emits the arm counts so "1 of 11" / "10 of 15" are in the pack. weekly-insight writes `block_coupling` after generate. The coupled preempt was removed; the finding reaches the user through Theory of You. |
+| Discriminating tests | 054 + weekly-insight rule 10. SQL runs three fixed tests (anchor control, domain spread, gap sensitivity) on qualified pairs and emits `surviving` / `ruled_out` / `untested` for carry / upstream / cascade. The narrator reports eliminations; it never invents a fourth explanation and never mentions willpower depletion. Gap will usually be `insufficient_data` — that is correct. Paste 054, then redeploy weekly-insight. |
 
 
 
@@ -958,18 +962,19 @@ makes it a one-line swap in theme.ts if ever revisited.
   same session it is run.
 - **Reconstructing get_behavior_evidence from files.** 049 is a snapshot of
   the pre-coupling body (do not run it). 050 is a full replace. 053 rewrote
-  050 in place. Live = 050 + 053. Dump with pg_get_functiondef before the
-  next edit; do not reconstruct from 026–041.
+  050 in place. 054 is a full replace of 050+053 plus `qualified` and
+  `hypothesis_tests`. Live = 054 once pasted. Dump with pg_get_functiondef
+  before the next edit; do not reconstruct from 026–041.
 - **Narrator belief lines still sum recency.** After 053 the evidence field
   cites completed_7d / failed_7d / completed_prior / failed_prior separately.
   The belief still invents "13 of 21" and "5 of 7". Do not add those
   denominators to the pack to bless the sum — the four fields are the fact.
   A later prompt pass can say the belief may only reuse numbers already in
   its own evidence. Do not regen to chase this on n=1.
-- **keystones counts unfiltered coupling rows.** Afternoon appeared with
-  carries=2 because dinner (confirmed, whole-day collapse) and weights
-  (contradicted) both cleared the SQL bar. The narrator must still apply
-  the lead-with qualification. Do not treat a keystones name as a finding.
+- **keystones counted unfiltered coupling rows.** FIXED in 054: `keystones`
+  reads `qualified` (confirmed + day-baseline + unaccounted guard). Afternoon
+  with only rejected pairs drops out. Do not treat a keystones name as a
+  finding — it still only means two or more *qualified* keystone relations.
 - **Coupled preempt — built, then removed.** A lock-screen push cannot carry
   evidence or a dispute affordance, and it read `block_coupling` directly,
   bypassing the narrator's qualification gate. A real-time causal claim fails
@@ -977,6 +982,11 @@ makes it a one-line swap in theme.ts if ever revisited.
   the finding reaches the user through Theory of You. Do not rebuild the
   notification without: cohort-validated coupling, copy that fits a lock screen,
   the qualification test applied at the read, and analytics on open rate.
+- **054 is written, not pasted.** Remote `get_behavior_evidence` is still
+  050+053 until the SQL Editor run. A deployed narrator with rule 10 and no
+  `hypothesis_tests` key must treat every hypothesis as untested and say
+  nothing about it. Paste 054, wait for the schema cache, then redeploy
+  weekly-insight.
 - **`block_coupling` stores unqualified rows.** Persistence, day-baseline
   and unaccounted tests are applied by the consumer (weekly-insight rule 9),
   not the table. Any future reader must apply them. Do not treat a persisted
@@ -1071,9 +1081,12 @@ makes it a one-line swap in theme.ts if ever revisited.
   VEVENT per distinct window, disjoint BYDAY. The function source is updated;
   the deployed copy is not until `supabase functions deploy calendar-feed --no-verify-jwt`.
 - **weekly-insight must be redeployed** after any change to the prompt,
-  `KINDS`, or the coupling upsert. 047 (corrections) and the 050–053
-  narrator rules are in the deployed copy as of 2026-09-09. A stale deploy
-  writes `causal`/`pattern`/`strength` only and will not persist pairs.
+  `KINDS`, or the coupling upsert. Paste 054 before deploying: a stale
+  function has no `hypothesis_tests`, and a stale prompt will invent
+  explanations the SQL did not run. 047 (corrections) and the 050–053
+  narrator rules were in the deployed copy as of 2026-09-09. A stale
+  deploy from before 052 writes `causal`/`pattern`/`strength` only and
+  will not persist pairs.
 
 ---
 

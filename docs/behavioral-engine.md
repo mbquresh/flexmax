@@ -8,9 +8,16 @@
 
 All arithmetic — counts, rates, trends, correlations — happens in Postgres,
 where it is exact and auditable. The LLM receives only finished numbers and the
-user's own verbatim words, and its single job is to name the causal story and
-cite the evidence. It never calculates, never invents a statistic, and never
-decides strategy.
+user's own verbatim words, and its single job is to name what the numbers
+support and cite the evidence. It never calculates, never invents a statistic,
+and never decides strategy.
+
+**SQL runs the discriminating tests. The narrator reports which hypotheses
+survived and which died. The narrator never generates an explanation that was
+not tested.** An LLM listing plausible causes is a horoscope. An engine that
+eliminates tested candidates is a diagnostic. The candidate set is fixed:
+`carry`, `upstream`, `cascade`. Never a fourth, and never ego depletion
+(see science.md §8).
 
 One AI call per user per week. Everything else is free injection of stored
 results.
@@ -186,6 +193,30 @@ them feel like a failure. Therefore the narrator MUST:
 - Be truthful about a bad week. The test case is an 11%-completion week: the
   insight must not hide it, and must not moralise about it. Name the mechanism.
 
+## Discriminating tests eliminate. They do not diagnose.
+
+`block_coupling` reports that two blocks move together. It says nothing
+about why. `hypothesis_tests` (054) runs three fixed tests against that
+pair and reports which explanations the data rules out.
+
+| Candidate | What it predicts | What kills it |
+|---|---|---|
+| **carry** | The trigger's outcome carries into similar later work, including across a gap | Gap lift dies with distance (`cascade_favoured`) |
+| **upstream** | Something earlier wrecked both; the trigger is the first casualty | The split holds or strengthens when an earlier anchor completed, or the effect is domain-specific and spares other blocks |
+| **cascade** | The trigger's disruption consumed the later block's time | Lift holds at a distance (`carry_favoured`) |
+
+Every test is SQL. The pack emits `surviving` / `ruled_out` / `untested` —
+the narrator reads those lists, it does not derive them. `insufficient_data`
+means untested, not ruled out, and it is the common result on gap
+sensitivity. That is correct. Do not lower the floor to mint a verdict.
+
+Copy uses *ruled out, weakened, not consistent with, survived, consistent
+with*. Never *because, causes, the reason is*. Never willpower or ego
+depletion.
+
+Tests run only on `qualified` pairs — the same gate the narrator already
+applied by rule. A pair coupling rejected never reaches this layer.
+
 ## What is deliberately deferred
 
 - **Timestamp-based causal inference.** `rated_at` / `reflected_at` (migration
@@ -193,11 +224,13 @@ them feel like a failure. Therefore the narrator MUST:
   cross-day causality. They only began collecting recently, so there is
   insufficient history to validate against. Revisit once several weeks of
   evenings exist.
-- **Bayesian confidence scoring / hypothesis engines / RL-scored intervention
-  libraries.** Evaluated and rejected for this stage: every threshold and prior
-  would be invented rather than calibrated, and per-user intervention
-  effectiveness needs an n a single user will never reach. At current scale,
-  `GROUP BY` finds the patterns that matter. Revisit when real multi-user data
+- **Bayesian confidence scoring / RL-scored intervention libraries.**
+  Evaluated and rejected for this stage: every threshold and prior would be
+  invented rather than calibrated, and per-user intervention effectiveness
+  needs an n a single user will never reach. The discriminating-test layer
+  (054) is the hypothesis work that *did* ship: three fixed candidates,
+  SQL verdicts, elimination only. It is not Bayesian and it does not invent
+  a fourth explanation. Revisit Bayesian scoring when real multi-user data
   can calibrate the parameters.
 
 ## Why onboarding stopped using AI
