@@ -4,6 +4,7 @@
 -- Rewritten from live get_behavior_evidence (050 + 053). Adds `qualified`
 -- (the narrator's rule-9 filter, in SQL) and points `keystones` at it so
 -- a trigger whose pairs were all rejected cannot appear as a keystone.
+-- Anchor control and domain spread run only on qualified pairs.
 -- block_coupling is unchanged and still emits the unfiltered set.
 -- Do not lower coupling thresholds.
 
@@ -55,7 +56,8 @@ begin
   -- set so a block that is not currently tracked cannot appear. Today stays
   -- excluded. unaccounted is kept distinct from missed at every later step.
   couple_base as (
-    select i.date, i.status, i.block_id, i.start_minutes, b.name
+    select i.date, i.status, i.block_id, i.start_minutes, i.end_minutes,
+           b.name, b.category
     from daily_schedule_instances i
     join schedule_blocks b on b.id = i.block_id
     join tracked t         on t.block_id = i.block_id
@@ -87,7 +89,11 @@ begin
               - (case when x.status in ('missed','unaccounted') then 1 else 0 end)
               - (case when y.status in ('missed','unaccounted') then 1 else 0 end)
            )::numeric / nullif(ds.day_total - 2, 0)    as day_rest_fail_rate,
-           (x.date >= v_today - 30)                    as recent
+           (x.date >= v_today - 30)                    as recent,
+           x.end_minutes                               as trigger_end,
+           y.start_minutes                             as later_start,
+           x.category                                  as trigger_category,
+           y.category                                  as later_category
     from couple_base x
     join couple_base y
       on y.date = x.date
@@ -148,6 +154,133 @@ begin
     where persistence = 'confirmed'
       and abs(day_baseline_shift) * 2 < abs(lift)
       and (n_won_later_failed + n_lost_later_failed) > later_unaccounted_days * 2
+  ),
+  -- Anchor: most reliable early block from the 30-day base. Highest
+  -- completion rate among blocks that start before the trigger and have
+  -- at least 15 tracked days. Picked per trigger, never hard-coded.
+  trigger_start as (
+    select q.trigger_id, min(cb.start_minutes) as start_minutes
+    from qualified q
+    join couple_base cb on cb.block_id = q.trigger_id
+    group by q.trigger_id
+  ),
+  early_block_rates as (
+    select b.block_id, b.name,
+           min(b.start_minutes) as start_minutes,
+           count(*) as days,
+           (count(*) filter (where b.status = 'completed'))::numeric
+             / nullif(count(*), 0) as completion_rate
+    from base b
+    group by b.block_id, b.name
+    having count(*) >= 15
+  ),
+  pair_anchor as (
+    select distinct on (q.trigger_id)
+           q.trigger_id,
+           e.block_id as anchor_id,
+           e.name as anchor_name,
+           e.days as anchor_days
+    from qualified q
+    join trigger_start ts on ts.trigger_id = q.trigger_id
+    join early_block_rates e
+      on e.block_id <> q.trigger_id
+     and e.start_minutes < ts.start_minutes
+    order by q.trigger_id, e.completion_rate desc, e.start_minutes, e.name
+  ),
+  anchored_days as (
+    select p.trigger_id, p.later_id,
+           p.trigger_won, p.later_failed,
+           pa.anchor_name, pa.anchor_days
+    from pairs p
+    join pair_anchor pa on pa.trigger_id = p.trigger_id
+    join couple_base ac
+      on ac.date = p.date
+     and ac.block_id = pa.anchor_id
+     and ac.status = 'completed'
+    where p.recent
+  ),
+  anchored_agg as (
+    select trigger_id, later_id,
+           max(anchor_name) as anchor_name,
+           max(anchor_days) as anchor_days,
+           count(*) filter (where trigger_won) as n_won,
+           count(*) filter (where not trigger_won) as n_lost,
+           round(100.0 * count(*) filter (where trigger_won and later_failed)
+                 / nullif(count(*) filter (where trigger_won), 0))::int
+             as pct_when_won_anchored,
+           round(100.0 * count(*) filter (where not trigger_won and later_failed)
+                 / nullif(count(*) filter (where not trigger_won), 0))::int
+             as pct_when_lost_anchored
+    from anchored_days
+    group by trigger_id, later_id
+  ),
+  anchor_control as (
+    select q.trigger_id, q.later_id,
+           aa.anchor_name,
+           aa.anchor_days,
+           aa.pct_when_won_anchored,
+           aa.pct_when_lost_anchored,
+           (aa.pct_when_won_anchored - aa.pct_when_lost_anchored) as lift_anchored,
+           case
+             when aa.later_id is null then 'insufficient_data'
+             when aa.n_won < 5 or aa.n_lost < 5 then 'insufficient_data'
+             when abs(aa.pct_when_won_anchored - aa.pct_when_lost_anchored)
+                  < abs(q.lift) * 0.5 then 'upstream_weakened'
+             when abs(aa.pct_when_won_anchored - aa.pct_when_lost_anchored)
+                  >= abs(q.lift) then 'upstream_ruled_out'
+             else 'inconclusive'
+           end as verdict
+    from qualified q
+    left join anchored_agg aa
+      on aa.trigger_id = q.trigger_id and aa.later_id = q.later_id
+  ),
+  -- Lift of this trigger against every later block in the recent window,
+  -- grouped by whether the later block shares the stored category.
+  -- Never infer a category from a name.
+  later_lifts as (
+    select a.trigger_id, a.later_id, a.later_name, a.lift,
+           tb.category as trigger_category,
+           lb.category as later_category
+    from agg a
+    join schedule_blocks tb on tb.id = a.trigger_id
+    join schedule_blocks lb on lb.id = a.later_id
+    where a.recent
+      and a.n_won > 0
+      and a.n_lost > 0
+  ),
+  domain_spread as (
+    select q.trigger_id,
+           count(*) filter (where ll.trigger_category = ll.later_category)
+             as same_category_pairs,
+           round(avg(ll.lift) filter (where ll.trigger_category = ll.later_category))::int
+             as avg_lift_same_category,
+           count(*) filter (where ll.trigger_category <> ll.later_category)
+             as other_category_pairs,
+           round(avg(ll.lift) filter (where ll.trigger_category <> ll.later_category))::int
+             as avg_lift_other_category,
+           coalesce(
+             (select jsonb_agg(x.later_name order by x.later_name)
+              from later_lifts x
+              where x.trigger_id = q.trigger_id and abs(x.lift) < 10),
+             '[]'::jsonb
+           ) as flat_blocks,
+           case
+             when count(*) filter (where ll.trigger_category = ll.later_category) < 2
+               or count(*) filter (where ll.trigger_category <> ll.later_category) < 2
+               then 'insufficient_data'
+             when abs(avg(ll.lift) filter (where ll.trigger_category = ll.later_category))
+                  >= abs(avg(ll.lift) filter (where ll.trigger_category <> ll.later_category)) * 2
+               then 'domain_specific'
+             when abs(avg(ll.lift) filter (where ll.trigger_category = ll.later_category))
+                  <= abs(avg(ll.lift) filter (where ll.trigger_category <> ll.later_category)) * 1.25
+              and abs(avg(ll.lift) filter (where ll.trigger_category <> ll.later_category))
+                  <= abs(avg(ll.lift) filter (where ll.trigger_category = ll.later_category)) * 1.25
+               then 'global'
+             else 'inconclusive'
+           end as verdict
+    from qualified q
+    left join later_lifts ll on ll.trigger_id = q.trigger_id
+    group by q.trigger_id
   )
   select jsonb_build_object(
 
@@ -327,6 +460,33 @@ begin
         group by trigger_name
         having count(*) filter (where relation = 'keystone') >= 2
       ) t
+    ),
+
+    'hypothesis_tests', (
+      select coalesce(jsonb_agg(jsonb_build_object(
+               'trigger_name', q.trigger_name,
+               'later_name', q.later_name,
+               'anchor_control', jsonb_build_object(
+                 'anchor_name', ac.anchor_name,
+                 'anchor_days', ac.anchor_days,
+                 'pct_when_won_anchored', ac.pct_when_won_anchored,
+                 'pct_when_lost_anchored', ac.pct_when_lost_anchored,
+                 'lift_anchored', ac.lift_anchored,
+                 'verdict', ac.verdict
+               ),
+               'domain_spread', jsonb_build_object(
+                 'same_category_pairs', ds.same_category_pairs,
+                 'avg_lift_same_category', ds.avg_lift_same_category,
+                 'other_category_pairs', ds.other_category_pairs,
+                 'avg_lift_other_category', ds.avg_lift_other_category,
+                 'flat_blocks', ds.flat_blocks,
+                 'verdict', ds.verdict
+               )
+             ) order by abs(q.lift) desc), '[]'::jsonb)
+      from qualified q
+      left join anchor_control ac
+        on ac.trigger_id = q.trigger_id and ac.later_id = q.later_id
+      left join domain_spread ds on ds.trigger_id = q.trigger_id
     ),
 
     'day_of_week', (
