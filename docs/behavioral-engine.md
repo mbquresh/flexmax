@@ -210,9 +210,10 @@ the narrator reads those lists, it does not derive them. `insufficient_data`
 means untested, not ruled out, and it is the common result on gap
 sensitivity. That is correct. Do not lower the floor to mint a verdict.
 
-Copy uses *ruled out, weakened, not consistent with, survived, consistent
-with*. Never *because, causes, the reason is*. Never willpower or ego
-depletion.
+User-facing copy is spoken English: the pair, then the one thing the
+data ruled out. Never test names, never lift, never "anchor control".
+Internal lists stay *ruled_out / surviving / untested*. Never *because,
+causes, the reason is*. Never willpower or ego depletion.
 
 Tests run only on `qualified` pairs — the same gate the narrator already
 applied by rule. A pair coupling rejected never reaches this layer.

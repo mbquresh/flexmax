@@ -22,7 +22,9 @@ import { WeekSeriesChart } from "../src/components/WeekSeriesChart";
 import { DisputeSheet } from "../src/components/DisputeSheet";
 import { PressableScale } from "../src/components/PressableScale";
 import { BehavioralInsight } from "../src/types/database";
-import { visibleTheoryLines } from "../src/lib/theory";
+import { THEORY_SECTION_COPY, groupTheoryLines, theoryAsOfDate } from "../src/lib/theory";
+import { insightTone } from "../src/lib/insightTone";
+import { CheckEngineIcon } from "../src/components/CheckEngineIcon";
 import {
   HISTORY_WEEKS,
   addDays,
@@ -37,7 +39,7 @@ import { useTheme } from "../src/providers/ThemeProvider";
 
 type TheoryInsight = Pick<
   BehavioralInsight,
-  "id" | "kind" | "belief" | "suggestion" | "rank"
+  "id" | "kind" | "belief" | "evidence" | "suggestion" | "rank" | "generated_at"
 > & { disputed_at: string | null };
 
 function YouScreenContent() {
@@ -63,7 +65,8 @@ function YouScreenContent() {
   const [disputing, setDisputing] = useState<TheoryInsight | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const lines = useMemo(() => visibleTheoryLines(insights), [insights]);
+  const sections = useMemo(() => groupTheoryLines(insights), [insights]);
+  const asOf = useMemo(() => theoryAsOfDate(insights), [insights]);
 
   const load = useCallback(async () => {
     if (!session?.user.id) return;
@@ -80,7 +83,7 @@ function YouScreenContent() {
           .lte("date", addDays(thisMonday, 6)),
         supabase
           .from("behavioral_insights")
-          .select("id, kind, belief, suggestion, rank, disputed_at")
+          .select("id, kind, belief, evidence, suggestion, rank, generated_at, disputed_at")
           .eq("superseded", false)
           .order("rank"),
       ]);
@@ -174,7 +177,10 @@ function YouScreenContent() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.title}>Theory of You</Text>
+        <View style={styles.heading}>
+          <Text style={styles.title}>Theory of You</Text>
+          {asOf ? <Text style={styles.asOf}>As of {asOf}</Text> : null}
+        </View>
 
         {hasChart ? (
           <View style={styles.chartBlock}>
@@ -191,36 +197,70 @@ function YouScreenContent() {
           <Text style={styles.empty}>Nothing to plot yet.</Text>
         )}
 
-        {lines.length > 0 ? (
+        {sections.length > 0 ? (
           <View style={styles.theory}>
-            <Text style={styles.theoryHint}>Tap to dispute</Text>
-            {lines.map((line) => (
-              <PressableScale
-                key={line.id}
-                variant="highlight"
-                baseColor={colors.background}
-                highlightColor={colors.surfaceNested}
-                style={styles.line}
-                accessibilityRole="button"
-                accessibilityLabel={`Correct: ${line.belief}`}
-                onPress={() => {
-                  hapticSelect();
-                  setDisputing(line);
-                }}
-              >
-                <View style={styles.lineBody}>
-                  <Text style={styles.belief}>{line.belief}</Text>
-                  {line.suggestion ? (
-                    <Text style={styles.suggestion}>{line.suggestion}</Text>
-                  ) : null}
+            <Text style={styles.theoryHint}>Tap a line to dispute it</Text>
+            {sections.map((section) => {
+              const tone = insightTone(section.kind, colors);
+              const copy = THEORY_SECTION_COPY[section.kind];
+              const isEngine = section.kind === "structural";
+              return (
+                <View key={section.kind} style={styles.section}>
+                  <View style={styles.sectionHead}>
+                    {isEngine ? (
+                      <CheckEngineIcon size={20} color={tone.ink} />
+                    ) : null}
+                    <View style={styles.sectionTitles}>
+                      <Text style={[styles.sectionTitle, { color: tone.ink }]}>
+                        {copy.title}
+                      </Text>
+                      <Text style={styles.sectionHint}>{copy.hint}</Text>
+                    </View>
+                  </View>
+                  {section.lines.map((line) => (
+                    <PressableScale
+                      key={line.id}
+                      variant="highlight"
+                      baseColor={tone.tint}
+                      highlightColor={colors.surfaceNested}
+                      style={[
+                        styles.card,
+                        isEngine && styles.engineCard,
+                        {
+                          borderLeftColor: tone.stripe,
+                        },
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${copy.title}. Correct: ${line.belief}`}
+                      onPress={() => {
+                        hapticSelect();
+                        setDisputing(line);
+                      }}
+                    >
+                      {isEngine ? (
+                        <View style={styles.engineMark} accessibilityElementsHidden>
+                          <CheckEngineIcon size={26} color={colors.menuBarCoral} />
+                        </View>
+                      ) : null}
+                      <View style={styles.lineBody}>
+                        <Text style={styles.belief}>{line.belief}</Text>
+                        {line.evidence ? (
+                          <Text style={styles.evidence}>{line.evidence}</Text>
+                        ) : null}
+                        {line.suggestion ? (
+                          <Text style={styles.suggestion}>{line.suggestion}</Text>
+                        ) : null}
+                      </View>
+                      <Feather
+                        name="edit-2"
+                        size={iconSizes.sm}
+                        color={colors.textFaint}
+                      />
+                    </PressableScale>
+                  ))}
                 </View>
-                <Feather
-                  name="edit-2"
-                  size={iconSizes.sm}
-                  color={colors.textFaint}
-                />
-              </PressableScale>
-            ))}
+              );
+            })}
           </View>
         ) : insights.every((row) => !row.disputed_at) ? (
           <Text style={styles.emptyTheory}>
@@ -270,10 +310,17 @@ const makeStyles = (c: Colors) =>
     scroll: {
       flexGrow: 1,
     },
+    heading: {
+      marginBottom: spacing.xxxl,
+      gap: spacing.sm,
+    },
     title: {
       color: c.text,
       ...typography.display,
-      marginBottom: spacing.xxxl,
+    },
+    asOf: {
+      color: c.textFaint,
+      ...typography.caption,
     },
     chartBlock: {
       marginBottom: spacing.xxxl,
@@ -290,21 +337,47 @@ const makeStyles = (c: Colors) =>
       marginBottom: spacing.xxxl,
     },
     theory: {
-      gap: spacing.xs,
+      gap: spacing.xxxl,
     },
     theoryHint: {
       color: c.textFaint,
       ...typography.caption,
-      marginBottom: spacing.sm,
     },
-    line: {
+    section: {
+      gap: spacing.md,
+    },
+    sectionHead: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: spacing.sm,
+    },
+    sectionTitles: {
+      flex: 1,
+      gap: 2,
+    },
+    sectionTitle: {
+      ...typography.label,
+      textTransform: "uppercase",
+    },
+    sectionHint: {
+      color: c.textFaint,
+      ...typography.caption,
+    },
+    card: {
       flexDirection: "row",
       alignItems: "flex-start",
       gap: spacing.md,
       paddingVertical: spacing.lg,
-      marginHorizontal: -spacing.sm,
-      paddingHorizontal: spacing.sm,
-      borderRadius: radii.md,
+      paddingHorizontal: spacing.lg,
+      borderRadius: radii.lg,
+      borderLeftWidth: 3,
+      ...c.shadowRest,
+    },
+    engineCard: {
+      paddingVertical: spacing.xl,
+    },
+    engineMark: {
+      marginTop: 2,
     },
     lineBody: {
       flex: 1,
@@ -315,6 +388,11 @@ const makeStyles = (c: Colors) =>
       fontWeight: "400",
       letterSpacing: -0.2,
       lineHeight: 24,
+    },
+    evidence: {
+      color: c.textMuted,
+      ...typography.smallRelaxed,
+      marginTop: spacing.sm,
     },
     suggestion: {
       color: c.textMuted,

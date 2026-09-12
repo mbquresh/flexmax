@@ -205,6 +205,10 @@ begin
            max(anchor_days) as anchor_days,
            count(*) filter (where trigger_won) as n_won,
            count(*) filter (where not trigger_won) as n_lost,
+           count(*) filter (where trigger_won and later_failed)
+             as n_won_later_failed,
+           count(*) filter (where not trigger_won and later_failed)
+             as n_lost_later_failed,
            round(100.0 * count(*) filter (where trigger_won and later_failed)
                  / nullif(count(*) filter (where trigger_won), 0))::int
              as pct_when_won_anchored,
@@ -218,6 +222,12 @@ begin
     select q.trigger_id, q.later_id,
            aa.anchor_name,
            aa.anchor_days,
+           -- Arm counts for the narrator. lift_anchored is qualification
+           -- only — user copy must cite these, never the lift.
+           aa.n_won as n_won_anchored,
+           aa.n_lost as n_lost_anchored,
+           aa.n_won_later_failed as n_won_later_failed_anchored,
+           aa.n_lost_later_failed as n_lost_later_failed_anchored,
            aa.pct_when_won_anchored,
            aa.pct_when_lost_anchored,
            (aa.pct_when_won_anchored - aa.pct_when_lost_anchored) as lift_anchored,
@@ -238,7 +248,8 @@ begin
   -- grouped by whether the later block shares the stored category.
   -- Never infer a category from a name.
   later_lifts as (
-    select a.trigger_id, a.later_id, a.later_name, a.lift,
+    select a.trigger_id, a.later_id, a.later_name,
+           (a.pct_when_won - a.pct_when_lost) as lift,
            tb.category as trigger_category,
            lb.category as later_category
     from agg a
@@ -286,7 +297,8 @@ begin
   -- already has a qualified pair. Three pairs per populated bucket is
   -- intentional; insufficient_data is the common and correct result.
   gap_pairs as (
-    select a.trigger_id, a.later_id, a.later_name, a.lift,
+    select a.trigger_id, a.later_id, a.later_name,
+           (a.pct_when_won - a.pct_when_lost) as lift,
            avg(p.later_start - p.trigger_end) as avg_gap_minutes
     from agg a
     join pairs p
@@ -298,7 +310,8 @@ begin
       and a.n_won >= 6
       and a.n_lost >= 6
       and a.trigger_id in (select trigger_id from qualified)
-    group by a.trigger_id, a.later_id, a.later_name, a.lift
+    group by a.trigger_id, a.later_id, a.later_name,
+             a.pct_when_won, a.pct_when_lost
   ),
   gap_bucketed as (
     select trigger_id, lift, avg_gap_minutes,
@@ -367,6 +380,8 @@ begin
   hypothesis_rows as (
     select q.trigger_id, q.later_id, q.trigger_name, q.later_name, q.lift,
            ac.anchor_name, ac.anchor_days,
+           ac.n_won_anchored, ac.n_lost_anchored,
+           ac.n_won_later_failed_anchored, ac.n_lost_later_failed_anchored,
            ac.pct_when_won_anchored, ac.pct_when_lost_anchored,
            ac.lift_anchored, ac.verdict as anchor_verdict,
            ds.same_category_pairs, ds.avg_lift_same_category,
@@ -584,6 +599,10 @@ begin
                'anchor_control', jsonb_build_object(
                  'anchor_name', h.anchor_name,
                  'anchor_days', h.anchor_days,
+                 'n_won_anchored', h.n_won_anchored,
+                 'n_lost_anchored', h.n_lost_anchored,
+                 'n_won_later_failed_anchored', h.n_won_later_failed_anchored,
+                 'n_lost_later_failed_anchored', h.n_lost_later_failed_anchored,
                  'pct_when_won_anchored', h.pct_when_won_anchored,
                  'pct_when_lost_anchored', h.pct_when_lost_anchored,
                  'lift_anchored', h.lift_anchored,

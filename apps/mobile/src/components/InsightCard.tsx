@@ -5,15 +5,20 @@ import { BehavioralInsight } from "../types/database";
 import { Colors, spacing, radii, iconSizes, typography } from "../theme";
 import { useTheme } from "../providers/ThemeProvider";
 import { PressableScale } from "./PressableScale";
+import { CheckEngineIcon } from "./CheckEngineIcon";
+import { insightTone } from "../lib/insightTone";
 import { track } from "../lib/analytics";
 
 interface Props {
   insight: BehavioralInsight;
   onDismiss: () => void;
+  onOpen: () => void;
 }
 
-export function InsightCard({ insight, onDismiss }: Props) {
+export function InsightCard({ insight, onDismiss, onOpen }: Props) {
   const { colors } = useTheme();
+  const tone = insightTone(insight.kind, colors);
+  const isEngine = insight.kind === "structural";
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   useEffect(() => {
@@ -23,9 +28,12 @@ export function InsightCard({ insight, onDismiss }: Props) {
   return (
     <PressableScale
       variant="highlight"
-      baseColor={colors.surface}
+      baseColor={isEngine ? tone.tint : colors.surface}
       highlightColor={colors.surfaceNested}
-      style={styles.card}
+      style={[styles.card, { borderLeftColor: tone.stripe }]}
+      accessibilityRole="button"
+      accessibilityLabel="Open Theory of You"
+      onPress={onOpen}
     >
       <TouchableOpacity
         style={styles.dismiss}
@@ -36,7 +44,16 @@ export function InsightCard({ insight, onDismiss }: Props) {
         <Feather name="x" size={iconSizes.lg} color={colors.textMuted} />
       </TouchableOpacity>
 
-      <Text style={styles.label}>What I'm seeing</Text>
+      {isEngine ? (
+        <View style={styles.engineLabel}>
+          <CheckEngineIcon size={20} color={tone.ink} />
+          <Text style={[styles.label, { color: tone.ink, marginBottom: 0 }]}>
+            Check engine
+          </Text>
+        </View>
+      ) : (
+        <Text style={[styles.label, { color: tone.ink }]}>What I&apos;m seeing</Text>
+      )}
       <Text style={styles.belief}>{insight.belief}</Text>
 
       {insight.suggestion ? (
@@ -57,8 +74,14 @@ const makeStyles = (c: Colors) =>
       padding: spacing.xxl,
       marginBottom: spacing.lg,
       borderLeftWidth: 3,
-      borderLeftColor: c.primary,
       ...c.shadowRest,
+    },
+    engineLabel: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+      marginBottom: spacing.sm,
+      paddingRight: spacing.xxl,
     },
     label: {
       color: c.textMuted,

@@ -1,8 +1,10 @@
 /**
  * Edge Function: weekly-insight
  *
- * One AI call per user per week: turns get_behavior_evidence() into stored
- * behavioral_insights. Cache hit returns existing rows with no AI spend.
+ * One AI call per user on Mon/Wed/Fri (user-local): turns
+ * get_behavior_evidence() into stored behavioral_insights. Cache hit
+ * returns existing rows with no AI spend. A set older than 7 days
+ * always regenerates.
  *
  * Deploy: supabase functions deploy weekly-insight
  */
@@ -10,7 +12,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders, getAuthenticatedUser } from "../_shared/auth.ts";
-import { checkRateLimit } from "../_shared/rateLimit.ts";
+import { insightCacheFresh } from "../_shared/insightCadence.ts";
 
 const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY")!;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -34,9 +36,12 @@ ABSOLUTE RULES
    Never add block_recency fields together. completed_7d + failed_7d is not
    in the payload, and neither is completed_prior + failed_prior. Cite each
    as it appears: "completed 5 and failed 2 in the last 7, against completed
-   8 and failed 13 prior."
+   8 and failed 13 prior." "9 of 22" from completed_prior 9 and
+   failed_prior 13 is the same illegal sum.
    Never turn a percent into a count. If you want "X of Y", both X and Y
-   must already be counts in the payload.
+   must already be counts in the payload. A field ending in _anchored that
+   is a percent (pct_when_won_anchored, pct_when_lost_anchored) is not a
+   count. Writing "58 of those days" from a 58 is inventing a number.
 2. OBEY data_quality.caveats in the payload. They are not advisory.
 3. Never state a count without its denominator. "missed 6" is an accusation;
    "missed 6 of the last 14" is information.
@@ -67,7 +72,8 @@ ABSOLUTE RULES
 8. Quality drift describes the BLOCK's trajectory, never the user's effort.
    Say "this block has been landing at half strength", never "you have not
    been focused". The rating describes what happened in the block, not who
-   the user is.
+   the user is. Never write recent_poor or recent_rated — say "3 of the
+   last 7 sessions that were rated", using only counts already in the pack.
 9. block_coupling describes how one block's outcome relates to a later
    block's outcome on the same day. Read the sign:
 
@@ -92,14 +98,12 @@ ABSOLUTE RULES
    If day_baseline_shift approaches lift, the whole day moved, not this
    pair — describe it as a day-level pattern or omit it.
 
-   Never say "causes". Say "predicts", "goes with", "has gone with".
-   Cite both arms as counts that already exist:
-   "n_won_later_failed of n_won days" when the earlier block completed,
-   "n_lost_later_failed of n_lost days" when it did not.
-   Do not write pct_when_won, pct_when_lost, or any percentage for a
-   coupling arm. Do not write lift, persistence, day_baseline_shift, or
-   any other payload key name in belief, evidence, or nudge_line. Those
-   fields are for qualification, not for the user.
+   Never say "causes". Say "goes with", "has gone with", "usually holds
+   with it". Cite both arms as spoken counts, never as field names:
+   "afternoon failed 0 of 10 days the morning held, 8 of 15 when it
+   didn't." Do not write a percentage for a coupling arm. Do not write
+   lift, persistence, day_baseline_shift, or any payload key in
+   belief, evidence, or nudge_line.
 
    keystones names earlier blocks with two or more coupling relations,
    including rows that do not meet the lead-with bar. Treat it as a label
@@ -108,35 +112,73 @@ ABSOLUTE RULES
    Do not raise a keystones name whose pairs are all contradicted or
    whole-day collapse. kind for a qualifying keystone or weekday finding
    is "structural".
-10. hypothesis_tests reports which candidate explanations the data rules
-    out for a confirmed coupling pair. The three candidates are fixed:
+10. hypothesis_tests says which explanations died for a confirmed pair.
+    Three candidates, fixed, for YOUR reasoning only — never write these
+    names, and never write the test names, in user-facing copy:
 
-    carry    — the earlier block's outcome carries into the later one
-    upstream — something before both wrecked them independently
-    cascade  — the earlier block's disruption consumed the later one's time
+    carry    — same kind of work, later goes with earlier
+    upstream — something before both took them independently
+    cascade  — the earlier miss ate the later block's time
 
-    You may ONLY discuss these three. Never introduce a fourth explanation,
-    and never mention willpower depletion — it failed replication.
+    Never invent a fourth. Never mention willpower.
 
-    Report eliminations, never causes. Permitted framing:
-      "Not a bad-day effect — the rest of the day only shifted 11 points."
-      "Not explained by a lost morning — the pattern is stronger on days
-       the earlier block held."
-      "Not everything — training barely moved."
-    Forbidden: "because", "causes", "the reason is", "this happens due to".
+    The user reads two short spoken sentences, not a lab note.
+    Forbidden in belief, evidence, and nudge_line: because, causes, the
+    reason is, this happens due to, anchor control, lift, points,
+    hypothesis, verdict, domain, persistence, qualified, keystone,
+    carry, upstream, cascade, insufficient_data, bad-day, bad-start,
+    bad day effect, any payload key.
 
-    If a test returns insufficient_data, say nothing about that hypothesis.
-    Never present untested as ruled out.
+    How to speak the lists (only when that name is in ruled_out or
+    surviving — never when it is untested or the test is
+    insufficient_data):
 
-    If exactly one hypothesis survives, you may name it as what the data is
-    consistent with — never as what is true. "Consistent with" and "what's
-    left" are the strongest phrasings available.
+    ruled_out contains upstream:
+      Something earlier in the day did not take both blocks on its
+      own. The split is still there on days [anchor_name] landed.
+      That is the only thing you may say about it.
 
-    Always cite the numbers each elimination rests on.
-    kind is "structural".
+      If n_won_later_failed_anchored and n_lost_later_failed_anchored
+      are in the payload, cite those counts in evidence — never the
+      percents, never lift_anchored.
+      If those count fields are missing, write no third number.
+      "The same split is there on days Fajr landed" is a complete
+      sentence.
 
-    A structural insight that carries these eliminations outranks one
-    that only states the pair.
+      Never write "bad-day effect". Never write "the rest of the
+      day barely shifted". Those belong to a different test
+      (domain_spread), and that test is usually untested.
+
+      Belief shape, copy this cadence:
+      "When [earlier] holds, [later] usually holds with it. That's
+      not a lost start to the day — the same split is there on days
+      [anchor_name] landed."
+      Put 0 of 10 / 8 of 15 in evidence, not in the belief.
+
+    ruled_out via domain_specific:
+      Name one block from flat_blocks that barely moved.
+      "Dinner didn't move with it." Only when domain_spread.verdict
+      is domain_specific. If it is insufficient_data, say nothing
+      about the rest of the day.
+
+    surviving has exactly one name:
+      Say the shape in English, never the name.
+      carry only → "it stays with this kind of work."
+      cascade only → "it tends to go when the two sit close in the day."
+      upstream only → "something earlier in the day still lines up
+      with both."
+
+    If nothing is in surviving, state the pair and the one
+    elimination. Do not invent what is left.
+
+    Belief: two sentences. No fractions in the belief — those live
+    in evidence. First sentence is the pair in speech. Second is
+    the one thing ruled out, if any.
+    Evidence: the two arm counts for the pair, then the anchored
+    counts only if they exist as counts. No percent. No lift.
+
+    kind is "structural". A pair with an elimination outranks a
+    pair alone.
 11. CHECK block_recency BEFORE describing any pattern as current. It carries
     completed_7d / failed_7d against completed_prior / failed_prior for every
     block. If a block's failures sit in failed_prior and are absent from
@@ -149,9 +191,17 @@ ABSOLUTE RULES
     thing in the payload. A block whose ratio has clearly moved — in either
     direction — outranks any flat 30-day total, because the user cannot see it
     themselves: a month of averages hides it, and living through it feels like
-    noise. When any block shows a clear divergence, at least one insight MUST be
-    about it. Improvement counts. A block that has turned around is a finding,
-    not a compliment, and naming it is not cheerleading.
+    noise.     When any block shows a clear divergence, emit a kind "pattern"
+    insight for it. Do not fold a turnaround into the strength.
+    Do not pick a single winner and rotate. Include every distinct
+    observation the pack supports, up to 3 pattern objects, each
+    about a different block (or a different pair). A week-shape on
+    the structural pair can be one of them. Cite completed_7d /
+    failed_7d against completed_prior / failed_prior as they appear.
+    Do not divide them. Do not write "worse", "tipped", or "the
+    ratio" unless the raw counts already make the direction obvious
+    without arithmetic — 1 and 3 against 11 and 10 is obvious;
+    3 and 4 against 9 and 13 is not.
 13. RESPECT block age. days_tracked and first_seen say how long a block has
     existed, not how it is going. For a block with few days_tracked relative to
     the 30-day window: you may state its record, but you may NOT diagnose it,
@@ -171,6 +221,15 @@ ABSOLUTE RULES
     instances. Describe the day, never the person. Cite each day's
     fail_pct and relevant from the payload; do not invent a third number
     for the gap. kind is "structural".
+16. reflections is the user's own writing, keyed by block and date.
+    When an insight names a block that appears in that list, the evidence
+    MUST say what they wrote — short, faithful, no extra interpretation.
+    "Reflections name groceries, visiting family, and recovery sleep"
+    is the shape. Prefer rows from the last 7 days when the insight is
+    about the last 7. Two or three reasons is enough; do not dump the
+    list. If that block has no reflections, invent none. Still never
+    echo self-blame vocabulary even when they wrote it — skip that row
+    and take the next.
 
 WHAT TO LOOK FOR, in priority order
 - Direction of travel: block_recency divergence between the last 7 days and
@@ -195,11 +254,17 @@ WHAT TO LOOK FOR, in priority order
   numbers are noise. miss_reasons are tapped presets — report them as counts
   ("low energy on 6 of 9 misses"), never as something the user wrote.
 - Patterns the user has stated themselves in reflections. Their own words are
-  the highest-signal data you have — quote them.
+  the highest-signal data you have. An insight about a block that has
+  reflections and does not name them is unfinished.
 - Genuine strengths, evidence-backed.
 
 TONE — these are product-critical
-- Name STRUCTURAL causes: a mechanism, a sequence, a missing boundary, a slot in
+- Write as if talking to the person, not documenting a study. If a
+  sentence would look at home in a Python comment or a paper abstract,
+  rewrite it.
+- One finding, then one supporting fact. Do not stack every number you
+  can find. Two fractions in evidence is enough; a third is a dump.
+- Name STRUCTURAL patterns: a sequence, a missing boundary, a slot in
   the wrong place. NEVER character causes.
 - Never echo the user's self-blaming vocabulary back at them. Reflections may
   contain words like "sloth", "bad day", "unconsciousness". Do not repeat them.
@@ -211,24 +276,32 @@ TONE — these are product-critical
   treat it as a choice the user stands by, not a problem to solve.
 - With small numbers, state the actual fraction ("4 of your last 5"), never a
   percentage.
-- suggestion is optional and usually null. A qualifying keystone does not
+- suggestion is optional and usually null. A qualifying pair does not
   need one. Never invent a time, a "fallback slot", or a schedule the
   payload does not contain. If you cannot name a change using only
   payload facts, set suggestion to null. Never "try harder" or "be consistent".
 - belief, evidence, and nudge_line are user-facing. Never write JSON keys,
-  SQL names, or operator values (persistence=confirmed, lift=-58,
-  block_coupling, day_baseline_shift, block_stats). Translate or omit.
+  SQL names, test names, or operator values (persistence=confirmed,
+  lift=-58, block_coupling, day_baseline_shift, anchor control).
+  Translate into ordinary speech or omit.
 - Be truthful about a bad stretch. Do not hide it, do not moralise about it.
-  Name the mechanism.
 
 OUTPUT
-Return ONLY a JSON array of 2-3 objects, no markdown, no preamble:
+Return ONLY a JSON array, no markdown, no preamble.
+If hypothesis_tests is a non-empty array, the first object MUST be
+kind "structural" about that pair. Omitting it is a failed response.
+Then one strength. Then 1 to 3 kind "pattern" objects — every
+distinct week-shape the pack supports, cap 3, different
+related_blocks. Do not rotate one observation. Do not stop at a
+single pattern when two or three are sitting in block_recency.
+Never write "effect" after a hyphen (lost-start effect, bad-day
+effect). Say "That's not a lost start to the day."
 
 [
   {
     "kind": "causal" | "pattern" | "strength" | "structural",
-    "belief": "one sentence, max 200 characters",
-    "evidence": "the specific numbers and quotes behind it, max 250 characters",
+    "belief": "two spoken sentences max, 400 characters. The finding, then the one thing ruled out.",
+    "evidence": "the arm counts, then one elimination count if any, max 480 characters",
     "suggestion": "one small structural change using only payload facts, max 150 characters, or null",
     "related_blocks": ["exact block names from the payload this concerns"],
     "nudge_line": "max 80 characters, or null"
@@ -247,12 +320,16 @@ Return ONLY a JSON array of 2-3 objects, no markdown, no preamble:
   cost; the decision is theirs.
 - Set it to null for "strength" insights, for "structural" insights, and
   for any insight with no clear overrun cost. A keystone (earlier failing
-  predicts later failing) is not an overrun cost. Null is correct and
-  common — a nudge without a why is still a useful nudge.
+  predicts later failing) is not an overrun cost. The nudge must be
+  about this insight's own related_blocks — a Cardio line does not
+  get a morning/afternoon sentence. Null is correct and common.
 
-At least one object MUST have kind "strength" and must be genuine — supported by
-real evidence, not consolation. related_blocks must use block names exactly as
-they appear in the payload; use an empty array if an insight is not block-specific.`;
+Exactly one object MUST have kind "strength" and must be genuine — supported by
+real evidence, not consolation. Between 1 and 3 MUST have kind "pattern",
+each a distinct observation. Exactly one MUST have kind "structural" when
+a qualifying pair exists. related_blocks must use block names exactly as
+they appear in the payload; use an empty array if an insight is not
+block-specific.`;
 
 type InsightPayload = {
   kind: string;
@@ -265,7 +342,13 @@ type InsightPayload = {
 
 const KINDS = new Set(["causal", "pattern", "strength", "structural"]);
 
-function sanitizeInsights(raw: unknown): InsightPayload[] | null {
+const LEAKED_INTERNALS =
+  /anchor control|hypothesis_tests|insufficient_data|domain_spread|gap_sensitivity|lift_anchored|day_baseline_shift|pct_when_|n_won_later|n_lost_later|block_recency|recent_rated|recent_poor|block_coupling|-?\d+\s*points\b|bad-day|bad-start|\b\d+\s+of those days\b/i;
+
+function sanitizeInsights(
+  raw: unknown,
+  opts: { requireStructural?: boolean } = {}
+): InsightPayload[] | null {
   if (!Array.isArray(raw)) return null;
 
   const out: InsightPayload[] = [];
@@ -282,24 +365,51 @@ function sanitizeInsights(raw: unknown): InsightPayload[] | null {
       typeof o.suggestion === "string" && o.suggestion.length > 0
         ? o.suggestion.slice(0, 150)
         : null;
-    const nudge_line =
-      o.kind === "structural"
+    const rawNudge =
+      o.kind === "structural" || o.kind === "strength"
         ? null
         : typeof o.nudge_line === "string" && o.nudge_line.length > 0
           ? o.nudge_line.slice(0, 80)
           : null;
+    const nudge_line =
+      rawNudge && /gone with|has gone with|misses have gone/i.test(rawNudge)
+        ? null
+        : rawNudge;
+
+    const belief = o.belief.slice(0, 400);
+    const evidence = o.evidence.slice(0, 480);
+    if (LEAKED_INTERNALS.test(belief) || LEAKED_INTERNALS.test(evidence)) {
+      continue;
+    }
 
     out.push({
       kind: o.kind,
-      belief: o.belief.slice(0, 200),
-      evidence: o.evidence.slice(0, 250),
+      belief,
+      evidence,
       suggestion,
       related_blocks: related,
       nudge_line,
     });
   }
 
-  return out.length > 0 ? out : null;
+  if (out.length === 0) return null;
+  if (
+    opts.requireStructural &&
+    !out.some((row) => row.kind === "structural")
+  ) {
+    return null;
+  }
+
+  const structural = out.filter((row) => row.kind === "structural");
+  const strengths = out.filter((row) => row.kind === "strength");
+  const patterns = out.filter((row) => row.kind === "pattern").slice(0, 3);
+  const rest = out.filter(
+    (row) =>
+      row.kind !== "structural" &&
+      row.kind !== "strength" &&
+      row.kind !== "pattern"
+  );
+  return [...structural, ...strengths, ...patterns, ...rest];
 }
 
 const COUPLING_RELATIONS = new Set(["keystone", "cannibalization"]);
@@ -425,40 +535,37 @@ serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    let localDate = new Date().toISOString().slice(0, 10);
+    try {
+      const body = await req.json();
+      if (
+        body &&
+        typeof body.local_date === "string" &&
+        /^\d{4}-\d{2}-\d{2}$/.test(body.local_date)
+      ) {
+        localDate = body.local_date;
+      }
+    } catch {
+      // Empty body — fall back to UTC date.
+    }
+
     const { data: existing, error: cacheError } = await supabase
       .from("behavioral_insights")
       .select("*")
       .eq("user_id", user.id)
       .eq("superseded", false)
-      .gt("generated_at", sevenDaysAgo)
       .order("rank");
 
     if (cacheError) throw cacheError;
 
-    if (existing?.length) {
-      console.log(`[weekly-insight] cache hit user=${user.id} count=${existing.length}`);
+    const latest = existing?.[0]?.generated_at as string | undefined;
+    if (existing?.length && latest && insightCacheFresh(latest, localDate)) {
+      console.log(
+        `[weekly-insight] cache hit user=${user.id} count=${existing.length} local=${localDate}`
+      );
       return new Response(JSON.stringify({ insights: existing, cached: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
-    }
-
-    const { allowed, limit } = await checkRateLimit(user.id, "weekly-insight");
-    if (!allowed) {
-      console.warn(`[weekly-insight] 429 rate limited user=${user.id}`);
-      return new Response(
-        JSON.stringify({
-          error: `Rate limit exceeded. Max ${limit} requests per hour.`,
-        }),
-        {
-          status: 429,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-            "Retry-After": "3600",
-          },
-        }
-      );
     }
 
     const { data: evidence, error: evidenceError } = await supabase.rpc(
@@ -491,49 +598,67 @@ serve(async (req) => {
 
     if (correctionsError) throw correctionsError;
 
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-6",
-        max_tokens: 1200,
-        system: SYSTEM_PROMPT,
-        messages: [
-          {
-            role: "user",
-            // firm | gentle | data-driven are the only values the system prompt is
-            // written for, and the only ones the profile page can set. The fallback
-            // must be one of them.
-            content: `Accountability tone preference: ${profile?.accountability_tone ?? "firm"}
+    const requireStructural = Array.isArray(
+      (evidence as { hypothesis_tests?: unknown }).hypothesis_tests
+    ) &&
+      ((evidence as { hypothesis_tests: unknown[] }).hypothesis_tests.length > 0);
+
+    const userContent = `Accountability tone preference: ${profile?.accountability_tone ?? "firm"}
 Evidence:
 ${JSON.stringify(evidence)}
 Corrections (beliefs the user rejected — do not restate):
-${JSON.stringify(corrections ?? [])}`,
-          },
-        ],
-      }),
-    });
+${JSON.stringify(corrections ?? [])}`;
 
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error?.message ?? "Claude API failed");
+    const messages: { role: string; content: string }[] = [
+      { role: "user", content: userContent },
+    ];
 
-    const raw = data.content?.[0]?.text ?? "[]";
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(raw.replace(/```json|```/g, "").trim());
-    } catch (parseErr) {
-      console.error("[weekly-insight] 500 parse failure", parseErr);
-      return new Response(JSON.stringify({ error: "Insight generation failed" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+    let insights: InsightPayload[] | null = null;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": ANTHROPIC_API_KEY,
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-6",
+          max_tokens: 2400,
+          system: SYSTEM_PROMPT,
+          messages,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error?.message ?? "Claude API failed");
+
+      const raw = data.content?.[0]?.text ?? "[]";
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(raw.replace(/```json|```/g, "").trim());
+      } catch (parseErr) {
+        console.error("[weekly-insight] 500 parse failure", parseErr);
+        return new Response(JSON.stringify({ error: "Insight generation failed" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      insights = sanitizeInsights(parsed, { requireStructural });
+      if (insights) break;
+
+      console.warn(
+        `[weekly-insight] attempt ${attempt + 1} missing required kinds, retrying`
+      );
+      messages.push({ role: "assistant", content: raw });
+      messages.push({
+        role: "user",
+        content:
+          "Your JSON omitted kind structural, or leaked a forbidden phrase and that line was dropped. hypothesis_tests has a qualifying pair. Return the set again: structural first (the pair, then the one thing ruled out — say \"That's not a lost start to the day\", never \"effect\"), then one strength, then 1 to 3 distinct pattern objects for every week-shape in block_recency, cap 3.",
       });
     }
 
-    const insights = sanitizeInsights(parsed);
     if (!insights) {
       console.error("[weekly-insight] 500 AI response failed schema check");
       return new Response(JSON.stringify({ error: "Insight generation failed" }), {

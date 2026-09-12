@@ -1366,7 +1366,14 @@ function TodayScreenContent() {
         <View style={styles.body}>
         {morningInsight && !insightDismissed && !isPastDay ? (
           <View style={styles.insightWrap}>
-            <InsightCard insight={morningInsight} onDismiss={handleDismissInsight} />
+            <InsightCard
+              insight={morningInsight}
+              onDismiss={handleDismissInsight}
+              onOpen={() => {
+                hapticSelect();
+                router.push("/you");
+              }}
+            />
           </View>
         ) : null}
 

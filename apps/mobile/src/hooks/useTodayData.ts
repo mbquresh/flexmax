@@ -296,12 +296,12 @@ export function useTodayData(userId: string | undefined) {
       }
 
       // Fire-and-forget, at most once per local date. The function returns
-      // cached insights without an AI call when a fresh set exists — but a
-      // new user misses that cache on every Today load, burns a rate-limit
-      // slot, and runs the full evidence RPC for insufficient_data. The
-      // client ignores the body. Mark before the call so overlapping loads
-      // cannot double-fire. History loads stay skipped: scrubbing weeks
-      // must not spend the day's slot.
+      // cached insights without an AI call except on Mon/Wed/Fri (and when
+      // the set is 7+ days old). A new user misses that cache on every
+      // Today load and runs the full evidence RPC for insufficient_data.
+      // Reload when the body says a new set was written.
+      // Mark before the call so overlapping loads cannot double-fire.
+      // History loads stay skipped: scrubbing weeks must not invoke.
       //
       // Exception: no live rows (superseded, or a failed generate). The
       // date lock would otherwise sit on a blank Theory of You until
@@ -313,10 +313,10 @@ export function useTodayData(userId: string | undefined) {
           () => {}
         );
         supabase.functions
-          .invoke("weekly-insight")
-          .then(({ error }) => {
+          .invoke("weekly-insight", { body: { local_date: realToday } })
+          .then(({ data, error }) => {
             if (error) handleError(error, "weeklyInsightInvoke");
-            else if (reloadAfter && !isStale()) {
+            else if ((reloadAfter || data?.cached === false) && !isStale()) {
               loadToday(viewDateRef.current, { silent: true });
             }
           })
