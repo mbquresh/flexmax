@@ -60,16 +60,17 @@ p{margin-top:1.1em}
 
 /* ---------- HERO: type is the whole event ---------- */
 .hero{padding:92px 0 74px}
-.hero h1{max-width:24ch}
+.hero h1{max-width:24ch;line-height:1.4;--rot-slot:1.4em}
+.rot-phrase{white-space:nowrap}
 .hero .sub{font-size:21px;line-height:1.5;color:var(--text-2);margin-top:30px;
   max-width:32ch}
 .hero .sub strong{font-weight:600;color:var(--text)}
 .rot{
   display:inline-block;
-  height:1.05em;
+  height:var(--rot-slot);
   overflow:hidden;
   vertical-align:bottom;
-  width:3.7em;
+  width:3.8em;
   transition:width .55s cubic-bezier(.4,0,.2,1);
   will-change:width;
 }
@@ -80,8 +81,8 @@ p{margin-top:1.1em}
 }
 .rot-track > span{
   display:block;
-  height:1.05em;
-  line-height:1.05em;
+  height:var(--rot-slot);
+  line-height:var(--rot-slot);
   white-space:nowrap;
 }
 @media (prefers-reduced-motion:reduce){
@@ -313,7 +314,7 @@ footer{padding:44px 0 62px;border-top:1px solid var(--border)}
 
 <!-- ================= HOOK ================= -->
 <div class="wrap hero">
-  <h1>There was never a moment you decided to skip&nbsp;<span class="rot" id="rot"
+  <h1>There was never a moment you decided to <span class="rot-phrase">skip&nbsp;<span class="rot" id="rot"
   ><span class="rot-track" id="rotTrack"
     ><span>the gym</span
     ><span aria-hidden="true">deep work</span
@@ -322,7 +323,7 @@ footer{padding:44px 0 62px;border-top:1px solid var(--border)}
     ><span aria-hidden="true">studying</span
     ><span aria-hidden="true">the reading</span
     ><span aria-hidden="true">the gym</span
-  ></span></span>.</h1>
+  ></span></span>.</span></h1>
   <p class="sub">On the nineteen days my morning session held, my afternoon
     session failed <strong>zero times</strong>. On the days it didn't — eight of
     eleven, gone. I'd spent a year calling that a focus problem.
@@ -1073,6 +1074,7 @@ footer{padding:44px 0 62px;border-top:1px solid var(--border)}
 
   var words = track.children;
   var i = 0;
+  var slot = getComputedStyle(rot).getPropertyValue('--rot-slot').trim() || '1.22em';
 
   function widthOf(n){
     var probe = words[n].cloneNode(true);
@@ -1083,14 +1085,14 @@ footer{padding:44px 0 62px;border-top:1px solid var(--border)}
     rot.parentNode.appendChild(probe);
     var w = probe.getBoundingClientRect().width;
     probe.parentNode.removeChild(probe);
-    return w;
+    return Math.ceil(w + parseFloat(getComputedStyle(rot).fontSize) * 0.08);
   }
 
   rot.style.width = widthOf(0) + 'px';
 
   setInterval(function(){
     i++;
-    track.style.transform = 'translateY(-' + (i * 1.05) + 'em)';
+    track.style.transform = 'translateY(-' + (i * parseFloat(slot)) + 'em)';
     rot.style.width = widthOf(i) + 'px';
 
     if(i === words.length - 1){
