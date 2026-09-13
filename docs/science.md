@@ -342,6 +342,18 @@ the honest answer to why the design has the shape it does, and because several
 decisions above (no audience, honesty over perfection, evidence over judgement)
 follow from it more directly than from any paper cited in this document.
 
+**The standard/amount structure.** The practice pairs an absolute requirement
+with a radically flexible quantity — the accounting is expected, the amount
+accomplished is accommodated almost without limit. That pairing is the answer
+to the open question in §4: self-compassion helps when paired with maintained
+standards, not instead of them. The streak implements exactly this. The
+standard is absolute — `STREAK_THRESHOLD = 1`, every block accounted for. The
+amount is unbounded — miss all of them and the day still holds.
+
+This is why a streak-preserving action that also erases the miss would break
+the product rather than improve it. It would remove the standard and keep only
+the accommodation, which is the failure mode the pairing exists to prevent.
+
 ---
 
 ## Quick reference: what not to change without re-reading this
