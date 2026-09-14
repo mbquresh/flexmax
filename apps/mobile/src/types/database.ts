@@ -88,6 +88,7 @@ export interface BehavioralInsight {
   id: string;
   kind: "causal" | "pattern" | "strength" | "structural";
   belief: string;
+  evidence: string;
   suggestion: string | null;
   related_blocks: string[];
   rank: number;
@@ -284,7 +285,6 @@ export interface Database {
       behavioral_insights: {
         Row: BehavioralInsight & {
           user_id: string;
-          evidence: string;
           superseded: boolean;
         } & Record<string, unknown>;
         Insert: Partial<BehavioralInsight> & {
@@ -296,7 +296,6 @@ export interface Database {
         };
         Update: Partial<BehavioralInsight> & {
           superseded?: boolean;
-          evidence?: string;
           disputed_at?: string | null;
         };
         Relationships: [];

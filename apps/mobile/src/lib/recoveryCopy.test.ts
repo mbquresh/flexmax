@@ -10,6 +10,7 @@ function insight(
   return {
     id: overrides.id ?? "1",
     belief: overrides.belief ?? "test",
+    evidence: overrides.evidence ?? "",
     suggestion: overrides.suggestion ?? null,
     related_blocks: overrides.related_blocks ?? ["Gym"],
     generated_at: overrides.generated_at ?? "2026-08-01T00:00:00Z",
