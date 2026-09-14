@@ -35,7 +35,7 @@ const makeRatingOptions = (c: Colors): {
 }[] => [
   {
     value: "crushed",
-    label: "Crushed it",
+    label: "Excellent",
     bg: c.ratingGoodBg,
     text: c.ratingGoodText,
     border: c.ratingGoodBorder,
@@ -49,7 +49,7 @@ const makeRatingOptions = (c: Colors): {
   },
   {
     value: "pulled_away",
-    label: "Lost focus",
+    label: "Poor",
     bg: c.ratingBadBg,
     text: c.ratingBadText,
     border: c.ratingBadBorder,

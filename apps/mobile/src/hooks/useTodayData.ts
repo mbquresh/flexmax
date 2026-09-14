@@ -296,7 +296,7 @@ export function useTodayData(userId: string | undefined) {
       }
 
       // Fire-and-forget, at most once per local date. The function returns
-      // cached insights without an AI call except on Mon/Wed/Fri (and when
+      // cached insights without an AI call except on Mon/Fri (and when
       // the set is 7+ days old). A new user misses that cache on every
       // Today load and runs the full evidence RPC for insufficient_data.
       // Reload when the body says a new set was written.

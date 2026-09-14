@@ -1,67 +1,81 @@
 import React, { useEffect, useMemo } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import { BehavioralInsight } from "../types/database";
 import { Colors, spacing, radii, iconSizes, typography } from "../theme";
 import { useTheme } from "../providers/ThemeProvider";
 import { PressableScale } from "./PressableScale";
-import { CheckEngineIcon } from "./CheckEngineIcon";
-import { insightTone } from "../lib/insightTone";
+import { TheoryKindMark } from "./TheoryKindMark";
+import {
+  THEORY_SECTION_COPY,
+  THEORY_SECTION_ORDER,
+  TheoryReportCounts,
+} from "../lib/theory";
 import { track } from "../lib/analytics";
 
 interface Props {
-  insight: BehavioralInsight;
+  counts: TheoryReportCounts;
+  synopsis: string;
   onDismiss: () => void;
   onOpen: () => void;
 }
 
-export function InsightCard({ insight, onDismiss, onOpen }: Props) {
+export function InsightCard({ counts, synopsis, onDismiss, onOpen }: Props) {
   const { colors } = useTheme();
-  const tone = insightTone(insight.kind, colors);
-  const isEngine = insight.kind === "structural";
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   useEffect(() => {
-    track("insight_viewed", { kind: insight.kind, rank: insight.rank });
-  }, [insight.id, insight.kind, insight.rank]);
+    track("insight_viewed", {
+      kind: "report",
+      rank: 1,
+      holding: counts.strength,
+      engine: counts.structural,
+      watching: counts.pattern,
+      slipping: counts.causal,
+    });
+  }, [
+    counts.strength,
+    counts.structural,
+    counts.pattern,
+    counts.causal,
+  ]);
+
+  const present = THEORY_SECTION_ORDER.filter((kind) => counts[kind] > 0);
+  const spoken = present
+    .map((kind) => THEORY_SECTION_COPY[kind].title)
+    .join(", ");
 
   return (
     <PressableScale
       variant="highlight"
-      baseColor={isEngine ? tone.tint : colors.surface}
+      baseColor={colors.surface}
       highlightColor={colors.surfaceNested}
-      style={[styles.card, { borderLeftColor: tone.stripe }]}
+      style={styles.card}
       accessibilityRole="button"
-      accessibilityLabel="Open Theory of You"
+      accessibilityLabel={`Report ready. ${spoken}. ${synopsis} Open Theory of You`}
       onPress={onOpen}
     >
       <TouchableOpacity
         style={styles.dismiss}
         onPress={onDismiss}
         hitSlop={8}
-        accessibilityLabel="Dismiss insight"
+        accessibilityLabel="Dismiss report"
       >
         <Feather name="x" size={iconSizes.lg} color={colors.textMuted} />
       </TouchableOpacity>
 
-      {isEngine ? (
-        <View style={styles.engineLabel}>
-          <CheckEngineIcon size={20} color={tone.ink} />
-          <Text style={[styles.label, { color: tone.ink, marginBottom: 0 }]}>
-            Check engine
-          </Text>
-        </View>
-      ) : (
-        <Text style={[styles.label, { color: tone.ink }]}>What I&apos;m seeing</Text>
-      )}
-      <Text style={styles.belief}>{insight.belief}</Text>
+      <View style={styles.heading}>
+        <Text style={styles.label}>Report ready</Text>
+        {present.map((kind) => (
+          <TheoryKindMark
+            key={kind}
+            kind={kind}
+            colors={colors}
+            size={kind === "structural" ? 14.4 : 12}
+          />
+        ))}
+      </View>
 
-      {insight.suggestion ? (
-        <>
-          <View style={styles.divider} />
-          <Text style={styles.suggestion}>{insight.suggestion}</Text>
-        </>
-      ) : null}
+      {synopsis ? <Text style={styles.synopsis}>{synopsis}</Text> : null}
     </PressableScale>
   );
 }
@@ -71,41 +85,32 @@ const makeStyles = (c: Colors) =>
     card: {
       backgroundColor: c.surface,
       borderRadius: radii.xl,
-      padding: spacing.xxl,
+      paddingVertical: spacing.xl,
+      paddingHorizontal: spacing.xxl,
       marginBottom: spacing.lg,
-      borderLeftWidth: 3,
       ...c.shadowRest,
     },
-    engineLabel: {
+    heading: {
       flexDirection: "row",
       alignItems: "center",
+      flexWrap: "wrap",
       gap: spacing.sm,
-      marginBottom: spacing.sm,
-      paddingRight: spacing.xxl,
+      marginBottom: spacing.md,
+      paddingRight: iconSizes.lg + spacing.md,
     },
     label: {
       color: c.textMuted,
       ...typography.label,
       textTransform: "uppercase",
-      marginBottom: spacing.sm,
-      paddingRight: spacing.xxl,
+      letterSpacing: 1.2,
     },
-    belief: {
+    synopsis: {
       color: c.text,
       ...typography.body,
     },
-    divider: {
-      height: 0.5,
-      backgroundColor: c.border,
-      marginVertical: spacing.lg,
-    },
-    suggestion: {
-      color: c.textSecondary,
-      ...typography.smallRelaxed,
-    },
     dismiss: {
       position: "absolute",
-      top: spacing.xxl,
+      top: spacing.xl,
       right: spacing.xxl,
     },
   });

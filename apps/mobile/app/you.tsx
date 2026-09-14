@@ -24,7 +24,7 @@ import { PressableScale } from "../src/components/PressableScale";
 import { BehavioralInsight } from "../src/types/database";
 import { THEORY_SECTION_COPY, groupTheoryLines, theoryAsOfDate } from "../src/lib/theory";
 import { insightTone } from "../src/lib/insightTone";
-import { CheckEngineIcon } from "../src/components/CheckEngineIcon";
+import { TheoryKindMark } from "../src/components/TheoryKindMark";
 import {
   HISTORY_WEEKS,
   addDays,
@@ -207,9 +207,13 @@ function YouScreenContent() {
               return (
                 <View key={section.kind} style={styles.section}>
                   <View style={styles.sectionHead}>
-                    {isEngine ? (
-                      <CheckEngineIcon size={20} color={tone.ink} />
-                    ) : null}
+                    <View style={styles.sectionMark}>
+                      <TheoryKindMark
+                        kind={section.kind}
+                        colors={colors}
+                        size={13}
+                      />
+                    </View>
                     <View style={styles.sectionTitles}>
                       <Text style={[styles.sectionTitle, { color: tone.ink }]}>
                         {copy.title}
@@ -237,11 +241,13 @@ function YouScreenContent() {
                         setDisputing(line);
                       }}
                     >
-                      {isEngine ? (
-                        <View style={styles.engineMark} accessibilityElementsHidden>
-                          <CheckEngineIcon size={26} color={colors.menuBarCoral} />
-                        </View>
-                      ) : null}
+                      <View style={styles.engineMark} accessibilityElementsHidden>
+                        <TheoryKindMark
+                          kind={section.kind}
+                          colors={colors}
+                          size={26}
+                        />
+                      </View>
                       <View style={styles.lineBody}>
                         <Text style={styles.belief}>{line.belief}</Text>
                         {line.evidence ? (
@@ -348,8 +354,13 @@ const makeStyles = (c: Colors) =>
     },
     sectionHead: {
       flexDirection: "row",
-      alignItems: "flex-start",
+      alignItems: "center",
       gap: spacing.sm,
+    },
+    sectionMark: {
+      alignItems: "center",
+      justifyContent: "center",
+      overflow: "visible",
     },
     sectionTitles: {
       flex: 1,

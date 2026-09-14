@@ -6,10 +6,10 @@ import {
 } from "./insightCadence";
 
 describe("isInsightSlotDay", () => {
-  it("is Monday, Wednesday, Friday only", () => {
+  it("is Monday and Friday only", () => {
     expect(isInsightSlotDay("2026-09-14")).toBe(true); // Mon
-    expect(isInsightSlotDay("2026-09-16")).toBe(true); // Wed
     expect(isInsightSlotDay("2026-09-18")).toBe(true); // Fri
+    expect(isInsightSlotDay("2026-09-16")).toBe(false); // Wed
     expect(isInsightSlotDay("2026-09-15")).toBe(false); // Tue
     expect(isInsightSlotDay("2026-09-19")).toBe(false); // Sat
     expect(isInsightSlotDay("2026-09-20")).toBe(false); // Sun
@@ -25,13 +25,19 @@ describe("insightCacheFresh", () => {
 
   it("refreshes on the next slot day", () => {
     expect(
-      insightCacheFresh("2026-09-14T16:00:00.000Z", "2026-09-16")
+      insightCacheFresh("2026-09-14T16:00:00.000Z", "2026-09-18")
     ).toBe(false);
   });
 
-  it("holds through Tuesday after a Monday write", () => {
+  it("holds through midweek after a Monday write", () => {
     expect(
       insightCacheFresh("2026-09-14T16:00:00.000Z", "2026-09-15")
+    ).toBe(true);
+    expect(
+      insightCacheFresh("2026-09-14T16:00:00.000Z", "2026-09-16")
+    ).toBe(true);
+    expect(
+      insightCacheFresh("2026-09-14T16:00:00.000Z", "2026-09-17")
     ).toBe(true);
   });
 

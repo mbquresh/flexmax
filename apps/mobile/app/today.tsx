@@ -59,6 +59,11 @@ import { StreakStrip } from "../src/components/StreakStrip";
 import { CheckInSheet } from "../src/components/CheckInSheet";
 import { BlockCard } from "../src/components/BlockCard";
 import { InsightCard } from "../src/components/InsightCard";
+import {
+  theoryReportCounts,
+  theoryReportSynopsis,
+  theoryReportTotal,
+} from "../src/lib/theory";
 import { AdhocTimedCard } from "../src/components/AdhocTimedCard";
 import { AdhocAnytimeRow } from "../src/components/AdhocAnytimeRow";
 import { AdhocEditSheet } from "../src/components/AdhocEditSheet";
@@ -268,17 +273,20 @@ function TodayScreenContent() {
     (a, b) => a.start_minutes - b.start_minutes
   );
 
-  const morningInsight = useMemo(
-    () =>
-      insights
-        .filter((i) => i.kind !== "strength")
-        .filter((i) => {
-          const age = Date.now() - new Date(i.generated_at).getTime();
-          return age < 8 * 24 * 60 * 60 * 1000;
-        })
-        .sort((a, b) => a.rank - b.rank)[0] ?? null,
-    [insights]
-  );
+  const morningReport = useMemo(() => {
+    const fresh = insights.filter((i) => {
+      if (i.disputed_at) return false;
+      const age = Date.now() - new Date(i.generated_at).getTime();
+      return age < 8 * 24 * 60 * 60 * 1000;
+    });
+    const counts = theoryReportCounts(fresh);
+    if (theoryReportTotal(counts) === 0) return null;
+    return {
+      counts,
+      synopsis: theoryReportSynopsis(fresh),
+      stamp: fresh.find((i) => i.generated_at)?.generated_at ?? fresh[0]?.id,
+    };
+  }, [insights]);
 
   // Ratios for the day on screen, which is not always today.
   const viewedCompletionRatio = useMemo(() => {
@@ -466,13 +474,13 @@ function TodayScreenContent() {
   }, []);
 
   useEffect(() => {
-    if (!morningInsight) return;
+    if (!morningReport) return;
     setInsightDismissed(true);
-    const dismissKey = `insight_seen_${morningInsight.id}`;
+    const dismissKey = `insight_report_${morningReport.stamp}`;
     AsyncStorage.getItem(dismissKey).then((val) => {
       setInsightDismissed(!!val);
     });
-  }, [morningInsight?.id]);
+  }, [morningReport?.stamp]);
 
   useEffect(() => {
     if (checkInInstance) {
@@ -1245,8 +1253,8 @@ function TodayScreenContent() {
   };
 
   const handleDismissInsight = async () => {
-    if (!morningInsight) return;
-    await AsyncStorage.setItem(`insight_seen_${morningInsight.id}`, "1");
+    if (!morningReport) return;
+    await AsyncStorage.setItem(`insight_report_${morningReport.stamp}`, "1");
     setInsightDismissed(true);
   };
 
@@ -1364,10 +1372,11 @@ function TodayScreenContent() {
             morning is not what the user came here for. Lives below the
             housing so a card is not nested inside the header band. */}
         <View style={styles.body}>
-        {morningInsight && !insightDismissed && !isPastDay ? (
+        {morningReport && !insightDismissed && !isPastDay ? (
           <View style={styles.insightWrap}>
             <InsightCard
-              insight={morningInsight}
+              counts={morningReport.counts}
+              synopsis={morningReport.synopsis}
               onDismiss={handleDismissInsight}
               onOpen={() => {
                 hapticSelect();

@@ -2,13 +2,13 @@
  * Insight refresh cadence. Keep in sync with
  * apps/mobile/src/lib/insightCadence.ts
  *
- * Slot days are Mon / Wed / Fri in the user's local calendar (the client
+ * Slot days are Mon / Fri in the user's local calendar (the client
  * sends YYYY-MM-DD). Other days keep the set. A reading older than 7
  * local days always regenerates, so someone who never opens on a slot
  * day still gets a new one.
  */
 
-const SLOT_DAYS = new Set([1, 3, 5]); // Mon, Wed, Fri — Date.getUTCDay()
+const SLOT_DAYS = new Set([1, 5]); // Mon, Fri — Date.getUTCDay()
 
 export function calendarWeekday(localDate: string): number {
   const [y, m, d] = localDate.split("-").map(Number);

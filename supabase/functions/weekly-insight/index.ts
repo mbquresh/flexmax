@@ -1,7 +1,7 @@
 /**
  * Edge Function: weekly-insight
  *
- * One AI call per user on Mon/Wed/Fri (user-local): turns
+ * One AI call per user on Mon/Fri (user-local): turns
  * get_behavior_evidence() into stored behavioral_insights. Cache hit
  * returns existing rows with no AI spend. A set older than 7 days
  * always regenerates.
@@ -72,8 +72,11 @@ ABSOLUTE RULES
 8. Quality drift describes the BLOCK's trajectory, never the user's effort.
    Say "this block has been landing at half strength", never "you have not
    been focused". The rating describes what happened in the block, not who
-   the user is. Never write recent_poor or recent_rated — say "3 of the
-   last 7 sessions that were rated", using only counts already in the pack.
+   the user is. Speak the check-in labels the user sees: Excellent,
+   Partly, Poor. Never write crushed, partial, or pulled_away — those are
+   storage keys, not speech. Never write recent_poor or recent_rated —
+   say "3 of the last 7 sessions that were rated", using only counts
+   already in the pack.
 9. block_coupling describes how one block's outcome relates to a later
    block's outcome on the same day. Read the sign:
 
@@ -196,8 +199,10 @@ ABSOLUTE RULES
     Do not pick a single winner and rotate. Include every distinct
     observation the pack supports, up to 3 pattern objects, each
     about a different block (or a different pair). A week-shape on
-    the structural pair can be one of them. Cite completed_7d /
-    failed_7d against completed_prior / failed_prior as they appear.
+    the structural pair can be one of them. Speak the four counts
+    in English: "completed 5 and missed 2 in the last 7, against
+    8 and 13 before that." Never write the key names
+    (completed_7d, failed_7d, completed_prior, failed_prior).
     Do not divide them. Do not write "worse", "tipped", or "the
     ratio" unless the raw counts already make the direction obvious
     without arithmetic — 1 and 3 against 11 and 10 is obvious;
@@ -220,7 +225,10 @@ ABSOLUTE RULES
     exceeds 15 points and each of those two days has at least 8 relevant
     instances. Describe the day, never the person. Cite each day's
     fail_pct and relevant from the payload; do not invent a third number
-    for the gap. kind is "structural".
+    for the gap. kind is "structural". This is a second check-engine
+    card only when it independently clears those floors AND a
+    qualifying pair already occupies the first. A near-miss weekday
+    is omit, not a third light.
 16. reflections is the user's own writing, keyed by block and date.
     When an insight names a block that appears in that list, the evidence
     MUST say what they wrote — short, faithful, no extra interpretation.
@@ -282,7 +290,9 @@ TONE — these are product-critical
   payload facts, set suggestion to null. Never "try harder" or "be consistent".
 - belief, evidence, and nudge_line are user-facing. Never write JSON keys,
   SQL names, test names, or operator values (persistence=confirmed,
-  lift=-58, block_coupling, day_baseline_shift, anchor control).
+  lift=-58, block_coupling, day_baseline_shift, anchor control,
+  completed_7d, failed_7d, completed_prior, failed_prior, crushed,
+  partial, pulled_away). Speak Excellent / Partly / Poor for ratings.
   Translate into ordinary speech or omit.
 - Be truthful about a bad stretch. Do not hide it, do not moralise about it.
 
@@ -290,12 +300,17 @@ OUTPUT
 Return ONLY a JSON array, no markdown, no preamble.
 If hypothesis_tests is a non-empty array, the first object MUST be
 kind "structural" about that pair. Omitting it is a failed response.
-Then one strength. Then 1 to 3 kind "pattern" objects — every
-distinct week-shape the pack supports, cap 3, different
-related_blocks. Do not rotate one observation. Do not stop at a
-single pattern when two or three are sitting in block_recency.
-Never write "effect" after a hyphen (lost-start effect, bad-day
-effect). Say "That's not a lost start to the day."
+A second kind "structural" is allowed only when a second finding
+sits at the same level — another qualifying pair in hypothesis_tests,
+or a weekday spread that independently clears rule 15. Cap 2.
+One check-engine card is the usual set. Do not invent a second
+to fill. A week-shape on the same pair is kind "pattern", not a
+second light. Then one strength. Then 1 to 3 kind "pattern"
+objects — every distinct week-shape the pack supports, cap 3,
+different related_blocks. Do not rotate one observation. Do not
+stop at a single pattern when two or three are sitting in
+block_recency. Never write "effect" after a hyphen (lost-start
+effect, bad-day effect). Say "That's not a lost start to the day."
 
 [
   {
@@ -326,10 +341,11 @@ effect). Say "That's not a lost start to the day."
 
 Exactly one object MUST have kind "strength" and must be genuine — supported by
 real evidence, not consolation. Between 1 and 3 MUST have kind "pattern",
-each a distinct observation. Exactly one MUST have kind "structural" when
-a qualifying pair exists. related_blocks must use block names exactly as
-they appear in the payload; use an empty array if an insight is not
-block-specific.`;
+each a distinct observation. One MUST have kind "structural" when a
+qualifying pair exists. A second structural only when a second finding
+clears the same floors — never to make the page look even. related_blocks
+must use block names exactly as they appear in the payload; use an empty
+array if an insight is not block-specific.`;
 
 type InsightPayload = {
   kind: string;
@@ -343,7 +359,7 @@ type InsightPayload = {
 const KINDS = new Set(["causal", "pattern", "strength", "structural"]);
 
 const LEAKED_INTERNALS =
-  /anchor control|hypothesis_tests|insufficient_data|domain_spread|gap_sensitivity|lift_anchored|day_baseline_shift|pct_when_|n_won_later|n_lost_later|block_recency|recent_rated|recent_poor|block_coupling|-?\d+\s*points\b|bad-day|bad-start|\b\d+\s+of those days\b/i;
+  /anchor control|hypothesis_tests|insufficient_data|domain_spread|gap_sensitivity|lift_anchored|day_baseline_shift|pct_when_|n_won_later|n_lost_later|block_recency|recent_rated|recent_poor|block_coupling|completed_7d|failed_7d|completed_prior|failed_prior|\bcrushed\b|pulled[_ ]away|\bpartial\b(?!\s+weeks)|-?\d+\s*points\b|bad-day|bad-start|\b\d+\s+of those days\b/i;
 
 function sanitizeInsights(
   raw: unknown,
@@ -400,7 +416,7 @@ function sanitizeInsights(
     return null;
   }
 
-  const structural = out.filter((row) => row.kind === "structural");
+  const structural = out.filter((row) => row.kind === "structural").slice(0, 2);
   const strengths = out.filter((row) => row.kind === "strength");
   const patterns = out.filter((row) => row.kind === "pattern").slice(0, 3);
   const rest = out.filter(
@@ -418,6 +434,47 @@ function asInt(value: unknown): number | null {
   if (typeof value === "number" && Number.isFinite(value)) return Math.trunc(value);
   if (typeof value === "string" && /^-?\d+$/.test(value)) return Number(value);
   return null;
+}
+
+/** Remap storage rating keys to the check-in labels before the narrator sees them. */
+function withSpokenRatings(evidence: unknown): unknown {
+  if (!evidence || typeof evidence !== "object") return evidence;
+  const copy = JSON.parse(JSON.stringify(evidence)) as Record<string, unknown>;
+
+  if (Array.isArray(copy.quality_drift)) {
+    copy.quality_drift = copy.quality_drift.map((row) => {
+      if (!row || typeof row !== "object") return row;
+      const o = row as Record<string, unknown>;
+      const {
+        crushed,
+        partial,
+        pulled_away,
+        ...rest
+      } = o;
+      return {
+        ...rest,
+        excellent: crushed ?? 0,
+        partly: partial ?? 0,
+        poor: pulled_away ?? 0,
+      };
+    });
+  }
+
+  const dq = copy.data_quality;
+  if (dq && typeof dq === "object") {
+    const caveats = (dq as { caveats?: unknown }).caveats;
+    if (Array.isArray(caveats)) {
+      (dq as { caveats: unknown[] }).caveats = caveats.map((c) => {
+        if (typeof c !== "string") return c;
+        return c.replace(
+          /Ratings are crushed \/ partial \/ pulled_away\./,
+          "Ratings are Excellent / Partly / Poor — the labels shown at check-in. Never write crushed, partial, or pulled_away."
+        );
+      });
+    }
+  }
+
+  return copy;
 }
 
 function sanitizeCoupling(
@@ -603,9 +660,11 @@ serve(async (req) => {
     ) &&
       ((evidence as { hypothesis_tests: unknown[] }).hypothesis_tests.length > 0);
 
+    const spokenEvidence = withSpokenRatings(evidence);
+
     const userContent = `Accountability tone preference: ${profile?.accountability_tone ?? "firm"}
 Evidence:
-${JSON.stringify(evidence)}
+${JSON.stringify(spokenEvidence)}
 Corrections (beliefs the user rejected — do not restate):
 ${JSON.stringify(corrections ?? [])}`;
 
@@ -655,7 +714,7 @@ ${JSON.stringify(corrections ?? [])}`;
       messages.push({
         role: "user",
         content:
-          "Your JSON omitted kind structural, or leaked a forbidden phrase and that line was dropped. hypothesis_tests has a qualifying pair. Return the set again: structural first (the pair, then the one thing ruled out — say \"That's not a lost start to the day\", never \"effect\"), then one strength, then 1 to 3 distinct pattern objects for every week-shape in block_recency, cap 3.",
+          "Your JSON omitted kind structural, or leaked a forbidden phrase and that line was dropped. hypothesis_tests has a qualifying pair. Return the set again: structural first (the pair, then the one thing ruled out — say \"That's not a lost start to the day\", never \"effect\"). A second structural only if another pair or a rule-15 weekday sits at the same level, cap 2. Then one strength, then 1 to 3 distinct pattern objects for every week-shape in block_recency, cap 3.",
       });
     }
 
