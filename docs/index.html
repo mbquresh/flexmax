@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<script>document.documentElement.classList.add("js")</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>FlexMax — there was never a moment you decided to skip it</title>
@@ -77,12 +76,10 @@ p{margin-top:1.1em}
   vertical-align:bottom;
   width:3.8em;
   transition:width .55s cubic-bezier(.4,0,.2,1);
-  will-change:width;
 }
 .rot-track{
   display:block;
   transition:transform .55s cubic-bezier(.4,0,.2,1);
-  will-change:transform;
 }
 .rot-track > span{
   display:block;
@@ -96,7 +93,7 @@ p{margin-top:1.1em}
   .rot-track > span:not(:first-child){display:none;}
 }
 
-/* the day that got away — one quiet reveal, not a widget */
+/* the day that got away — one quiet drain, not a widget */
 .day{margin-top:52px;border-left:1px solid var(--border);padding-left:20px;
   display:flex;flex-direction:column;gap:11px}
 .slot{display:flex;align-items:center;gap:14px}
@@ -302,24 +299,6 @@ p{margin-top:1.1em}
 .stat-arrow{opacity:.4;margin:0 2px;font-weight:400}
 .stat-double{white-space:nowrap}
 
-/* ---------- motion (expensive register) ---------- */
-.js .reveal{
-  opacity:0;
-  transform:translateY(18px);
-  transition:opacity .7s cubic-bezier(.16,1,.3,1),
-             transform .7s cubic-bezier(.16,1,.3,1);
-  will-change:opacity,transform;
-}
-.reveal.in{opacity:1;transform:none}
-@media (prefers-reduced-motion:reduce){
-  .js .reveal{opacity:1;transform:none;transition:none}
-}
-.evidence h2{position:sticky;top:72px;z-index:2;background:var(--bg);
-  padding-bottom:8px}
-@media (max-width:760px){
-  .evidence h2{position:static;background:transparent;padding-bottom:0}
-}
-
 /* ---------- proof band ---------- */
 .statband{padding:28px 0 8px}
 .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
@@ -411,22 +390,22 @@ footer{padding:44px 0 62px;border-top:1px solid var(--border)}
 
 <!-- ================= PROOF: STATS ================= -->
 <section class="statband">
-  <divclass="wrap wide reveal">
+  <div class="wrap wide">
     <div class="stats">
-      <div class="stat reveal" data-delay="0">
+      <div class="stat">
         <div class="stat-n tab"><span class="win">0</span><span class="stat-of"> of 11</span></div>
         <div class="stat-l">afternoon sessions failed on days my morning held</div>
       </div>
-      <div class="stat reveal" data-delay="80">
+      <div class="stat">
         <div class="stat-n tab"><span class="loss">8</span><span class="stat-of"> of 15</span></div>
         <div class="stat-l">failed on the days it didn't</div>
       </div>
-      <div class="stat reveal" data-delay="160">
+      <div class="stat">
         <div class="stat-n tab">1<span class="stat-of"> of 5</span></div>
         <div class="stat-l">patterns it found were good enough to report</div>
       </div>
-      <div class="stat reveal" data-delay="240">
-        <div class="stat-n tab stat-double"><span class="loss">40</span><span class="stat-arrow">→</span><span class="win" id="statArc">80%</span></div>
+      <div class="stat">
+        <div class="stat-n tab stat-double"><span class="loss">40</span><span class="stat-arrow">→</span><span class="win">80%</span></div>
         <div class="stat-l">my own completion rate <strong>doubled</strong> over twelve weeks</div>
       </div>
     </div>
@@ -441,7 +420,7 @@ footer{padding:44px 0 62px;border-top:1px solid var(--border)}
 
 <!-- ================= PROOF: TWELVE WEEKS ================= -->
 <section class="trend">
-  <divclass="wrap reveal">
+  <div class="wrap">
     <h2>11 weeks. 42% to 79%.</h2>
     <p class="lede">Nothing was added. The schedule got less wrong about me.</p>
     <svg class="chart" viewBox="0 0 640 140" width="100%" height="140" role="img" aria-label="Weekly completion from 42 percent to 79 percent over 11 weeks" xmlns="http://www.w3.org/2000/svg"><rect x="0.0" y="62.5" width="52.7" height="49.5" rx="3" fill="currentColor" opacity="0.85"><title>42%</title></rect><rect x="58.7" y="81.7" width="52.7" height="30.3" rx="3" fill="currentColor" opacity="0.85"><title>26%</title></rect><rect x="117.5" y="58.6" width="52.7" height="53.4" rx="3" fill="currentColor" opacity="0.85"><title>45%</title></rect><rect x="176.2" y="102.3" width="52.7" height="9.7" rx="3" fill="currentColor" opacity="0.85"><title>8%</title></rect><rect x="234.9" y="49.0" width="52.7" height="63.0" rx="3" fill="currentColor" opacity="0.85"><title>53%</title></rect><rect x="293.6" y="26.7" width="52.7" height="85.3" rx="3" fill="currentColor" opacity="0.85"><title>72%</title></rect><rect x="352.4" y="63.6" width="52.7" height="48.4" rx="3" fill="currentColor" opacity="0.85"><title>41%</title></rect><rect x="411.1" y="37.6" width="52.7" height="74.4" rx="3" fill="currentColor" opacity="0.85"><title>63%</title></rect><rect x="469.8" y="39.5" width="52.7" height="72.5" rx="3" fill="currentColor" opacity="0.85"><title>61%</title></rect><rect x="528.5" y="25.1" width="52.7" height="86.9" rx="3" fill="currentColor" opacity="0.85"><title>73%</title></rect><rect x="587.3" y="18.0" width="52.7" height="94.0" rx="3" fill="currentColor" opacity="0.85"><title>79%</title></rect><text x="0" y="134" font-size="13" fill="#6B655B" font-variant-numeric="tabular-nums">42%</text><text x="640" y="134" font-size="13" fill="#6B655B" text-anchor="end" font-variant-numeric="tabular-nums">79%</text></svg>
@@ -452,7 +431,7 @@ footer{padding:44px 0 62px;border-top:1px solid var(--border)}
 
 <!-- ================= THE STAKES ================= -->
 <section>
-  <divclass="wrap reveal">
+  <div class="wrap">
     <h2>Nothing is trying to stop you.</h2>
     <p class="lede">That's why it's working.</p>
     <p>Nobody cancels your gym session. Nobody moves your deadline. Nobody notices
@@ -467,7 +446,7 @@ footer{padding:44px 0 62px;border-top:1px solid var(--border)}
 
 <!-- ================= WHO ================= -->
 <section>
-  <divclass="wrap reveal">
+  <div class="wrap">
     <h2>Most of your day answers to nobody.</h2>
     <p>Some hours are claimed. A class. A shift. A meeting.</p>
     <p>The rest is yours. Which sounds like freedom until you count them.</p>
@@ -481,7 +460,7 @@ footer{padding:44px 0 62px;border-top:1px solid var(--border)}
 
 <!-- ================= STREAM 1: SALVAGE — the real mechanic ================= -->
 <section>
-  <divclass="wrap reveal">
+  <div class="wrap">
     <h2>It's 2:47. The day already broke.</h2>
     <p class="lede">Every other app was built for the ten minutes you spent planning.
       Motivated, optimistic, no idea what Tuesday had coming.</p>
@@ -525,8 +504,8 @@ footer{padding:44px 0 62px;border-top:1px solid var(--border)}
 <hr class="rule">
 
 <!-- ================= STREAM 2: THE PATTERN ================= -->
-<section class="evidence">
-  <divclass="wrap reveal">
+<section>
+  <div class="wrap">
     <h2>I thought I had a focus problem.</h2>
     <p class="lede">I didn't.</p>
     <p>My afternoon work only died on the days my morning session didn't happen.
@@ -587,7 +566,7 @@ footer{padding:44px 0 62px;border-top:1px solid var(--border)}
 
 <!-- ================= FOUNDER ================= -->
 <section>
-  <divclass="wrap reveal">
+  <div class="wrap">
     <h2>I built this because it happened to me.</h2>
     <div class="letter">
       <p>For a while I had real accountability — someone who asked what my plan was
@@ -631,7 +610,7 @@ footer{padding:44px 0 62px;border-top:1px solid var(--border)}
 
 <!-- ================= DIFFERENTIATION ================= -->
 <section>
-  <divclass="wrap wide reveal">
+  <div class="wrap wide">
     <h2>What everything else does when your day breaks.</h2>
     <p class="lede" style="max-width:44ch">They move the block. That's the whole
       response.</p>
@@ -680,7 +659,7 @@ footer{padding:44px 0 62px;border-top:1px solid var(--border)}
 
 <!-- ================= HONEST STATE ================= -->
 <section>
-  <divclass="wrap wide reveal">
+  <div class="wrap wide">
     <h2>Where it actually stands.</h2>
     <p class="lede" style="max-width:42ch">You pay before you use it, so you should
       know exactly what you're buying.</p>
@@ -729,7 +708,7 @@ footer{padding:44px 0 62px;border-top:1px solid var(--border)}
 
 <!-- ================= PRICING ================= -->
 <section id="pricing">
-  <divclass="wrap reveal">
+  <div class="wrap">
     <h2>One price. Every platform.</h2>
     <div class="price-wrap">
       <span class="badge">Beta and early users</span>
@@ -761,7 +740,7 @@ footer{padding:44px 0 62px;border-top:1px solid var(--border)}
 
 <!-- ================= FAQ ================= -->
 <section>
-  <divclass="wrap reveal">
+  <div class="wrap">
     <h2>Reasonable questions.</h2>
     <div style="margin-top:28px">
       <details>
@@ -804,7 +783,7 @@ footer{padding:44px 0 62px;border-top:1px solid var(--border)}
         <summary>What if it's wrong about me?</summary>
         <p>It will be sometimes, especially early. Every insight carries the counts
           it's based on, so you can check the reasoning instead of taking its word.
-          The numbers stay small and honest on purpose — "four of your last five",
+          The numbers stay small and honest on purpose —"four of your last five",
           never a dressed-up percentage.</p>
       </details>
       <details>
@@ -827,7 +806,7 @@ footer{padding:44px 0 62px;border-top:1px solid var(--border)}
 
 <!-- ================= CLOSE ================= -->
 <section style="padding-top:14px">
-  <divclass="wrap reveal">
+  <div class="wrap">
     <h2>You already know what you should be doing.</h2>
     <p class="lede">That was never the problem.</p>
     <p>Your schedule follows you from your phone to your desk.</p>
@@ -913,7 +892,7 @@ footer{padding:44px 0 62px;border-top:1px solid var(--border)}
       if(clash||o.id===a.id||o.id===b.id) return;
       if(hits(lS,lE,o)||hits(eS,eE,o)) clash=o;
     });
-    if(clash) return {ok:false, why:"Can't swap — would overlap "+clash.name,
+    if(clash) return {ok:false, why:"Can't swap — would overlap"+clash.name,
                       conflict:clash.name};
     return {ok:true, changes:[{id:L.id,s:lS,e:lE},{id:E.id,s:eS,e:eE}]};
   }
@@ -947,7 +926,7 @@ footer{padding:44px 0 62px;border-top:1px solid var(--border)}
     });
     if(found) return found;
     // Allow the unlocking move to involve one of the two, as long as it's a
-    // different partner — still a legitimate "shuffle then retry".
+    // different partner — still a legitimate"shuffle then retry".
     legal.forEach(function(p){
       if(found) return;
       var after=applyTo(state,p.r.changes);
@@ -1227,53 +1206,6 @@ footer{padding:44px 0 62px;border-top:1px solid var(--border)}
 })();
 </script>
 
-<script>
-(function(){
-  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  var io = new IntersectionObserver(function(entries){
-    entries.forEach(function(e){
-      if(!e.isIntersecting) return;
-      var el = e.target;
-      var delay = parseInt(el.dataset.delay || 0, 10);
-      setTimeout(function(){ el.classList.add('in'); }, delay);
-      io.unobserve(el);
-    });
-  }, { threshold:.15, rootMargin:'0px 0px -60px 0px' });
-  document.querySelectorAll('.reveal').forEach(function(el){ io.observe(el); });
-})();
-
-(function(){
-  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  var el = document.getElementById('statArc');
-  if(!el) return;
-  var mixOk = false;
-  try {
-    mixOk = CSS.supports('color', 'color-mix(in oklab, red, blue)');
-  } catch (err) { mixOk = false; }
-
-  var io = new IntersectionObserver(function(entries){
-    if(!entries[0].isIntersecting) return;
-    io.disconnect();
-    var start = null, dur = 1400;
-    function frame(ts){
-      if(!start) start = ts;
-      var p = Math.min((ts - start) / dur, 1);
-      var eased = 1 - Math.pow(1 - p, 3);
-      var val = Math.round(40 + (80 - 40) * eased);
-      el.textContent = val + '%';
-      if(mixOk){
-        el.style.color = 'color-mix(in oklab, var(--loss) ' +
-          Math.round((1 - eased) * 100) + '%, var(--win))';
-      } else {
-        el.style.color = 'var(--win)';
-      }
-      if(p < 1) requestAnimationFrame(frame);
-    }
-    requestAnimationFrame(frame);
-  }, { threshold:.5 });
-  io.observe(el);
-})();
-</script>
 
 </body>
 </html>
