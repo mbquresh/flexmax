@@ -53,27 +53,25 @@ header{position:sticky;top:0;z-index:50;background:rgba(236,234,230,.9);
   letter-spacing:-.01em;white-space:nowrap}
 .nav a:hover{color:var(--text)}
 .nav-engine{display:inline-flex;align-items:center;gap:7px}
-.nav-mil{position:relative;display:inline-block;width:22px;height:14px;flex:none}
-.nav-mil::before,.nav-mil::after{
-  content:"";position:absolute;inset:0;
+.nav-mil{display:inline-block;width:22px;height:14px;flex:none;
   background:#CE7358;
   -webkit-mask:url(check-engine.png) center / contain no-repeat;
   mask:url(check-engine.png) center / contain no-repeat;
-}
-/* Soft neon bloom behind the glyph — opacity only, paints reliably on desktop */
-.nav-mil::before{
-  inset:-6px;transform:scale(1.15);
-  filter:blur(5px);
-  animation:cel-bloom 3.2s ease-in-out infinite;
-}
-.nav-mil::after{animation:cel-core 3.2s ease-in-out infinite}
-@keyframes cel-bloom{
-  0%,100%{opacity:.18}
-  50%{opacity:.72}
-}
-@keyframes cel-core{
-  0%,100%{opacity:.55}
-  50%{opacity:1}
+  animation:cel-glow 2.8s ease-in-out infinite;
+  filter:drop-shadow(0 0 2px rgba(206,115,88,.55))
+         drop-shadow(0 0 7px rgba(206,115,88,.4))}
+@keyframes cel-glow{
+  0%,100%{
+    opacity:.42;
+    filter:drop-shadow(0 0 1px rgba(206,115,88,.2))
+           drop-shadow(0 0 3px rgba(206,115,88,.12));
+  }
+  50%{
+    opacity:1;
+    filter:drop-shadow(0 0 3px rgba(206,115,88,.85))
+           drop-shadow(0 0 10px rgba(206,115,88,.55))
+           drop-shadow(0 0 18px rgba(206,115,88,.28));
+  }
 }
 .cta-sm{justify-self:end;background:var(--primary);color:var(--on-primary);
   border:0;border-radius:9px;padding:9px 15px;font:inherit;font-size:14px;
@@ -89,7 +87,6 @@ header{position:sticky;top:0;z-index:50;background:rgba(236,234,230,.9);
   .nav a{font-size:12.5px}
   .nav-engine{justify-content:center;width:100%;gap:6px}
   .nav-mil{width:20px;height:13px}
-  .nav-mil::before{inset:-5px;filter:blur(4px)}
   .cta-sm{grid-area:cta;padding:8px 12px;font-size:13px}
   .wordmark{font-size:15.5px}
 }
