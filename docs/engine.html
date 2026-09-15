@@ -279,7 +279,7 @@
 
   <div style="display:flex; justify-content:space-between; align-items:flex-end;">
     <p class="small" style="margin:0;">FlexMax · Behavioral Engine<br>Technical &amp; product overview</p>
-    <p class="small" style="margin:0; text-align:right;">August 2026</p>
+    <p class="small" style="margin:0; text-align:right;">September 2026</p>
   </div>
 </div>
 
@@ -324,7 +324,7 @@
       <div class="label">What a planner stores</div>
       <p style="font-size:0.833rem; margin:0; color:var(--muted);">Gym, 7:00 AM — not done.</p>
       <div class="rule" style="margin:1.200rem 0;"></div>
-      <p class="small" style="margin:0;">A record of intent, and a record of its absence. Nothing about cause. Miss it forty times and the app schedules it a forty-first time, identical.</p>
+      <p class="small" style="margin:0;">A record of intent, and a record of its absence. Nothing about why. Miss it forty times and the app schedules it a forty-first time, identical.</p>
     </div>
 
     <div class="card">
@@ -350,7 +350,7 @@
   <div class="eyebrow">Architecture</div>
   <h2>SQL computes.<br>The model narrates.<br>Nothing learns in the dark.</h2>
 
-  <p style="margin-bottom:1.320rem;">Every number — counts, rates, trends, correlations — is computed in the database, where arithmetic is exact and auditable. The language model receives only finished figures and the user's own words. Its single job is to name the causal story and cite the evidence. It never calculates, never invents a statistic, and never decides strategy.</p>
+  <p style="margin-bottom:1.320rem;">Every number — counts, rates, trends, correlations — is computed in the database, where arithmetic is exact and auditable. The language model receives only finished figures and the user's own words. Its single job is to name what's left and cite the evidence. It never calculates, never invents a statistic, and never decides strategy.</p>
 
   <div class="layer">
     <div class="n">Layer 01 · Capture</div>
@@ -362,14 +362,14 @@
   <div class="layer">
     <div class="n">Layer 02 · Compute</div>
     <h3>One SQL function turns raw rows into finished facts</h3>
-    <p>Per-block records, day shapes, weekly trends, reschedule drift, quality trajectories — plus the integrity filters that decide what may be concluded at all.</p>
+    <p>Per-block records, day shapes, weekly trends, reschedule drift, quality trajectories, ordered within-day pairs — plus the integrity filters that decide what may be concluded at all.</p>
   </div>
   <div class="arrow">↓</div>
 
   <div class="layer">
     <div class="n">Layer 03 · Narrate</div>
-    <h3>One AI call per user, per week</h3>
-    <p>The model reads the finished numbers and the user's verbatim reflections, then writes two or three beliefs with the evidence attached. Results are stored, not regenerated.</p>
+    <h3>One AI call per user, twice a week</h3>
+    <p>The model reads the finished numbers and the user's verbatim reflections, then writes up to five ranked insights with the evidence attached — kinds <code>structural</code>, <code>causal</code>, <code>pattern</code>, and <code>strength</code>. Results are stored, not regenerated.</p>
   </div>
   <div class="arrow">↓</div>
 
@@ -399,9 +399,9 @@
       <p class="small" style="margin:0;">Crushed it, partial, pulled away. A block still completing but degrading is an earlier warning than a miss.</p>
     </div>
     <div class="card">
-      <div class="label">Cause</div>
+      <div class="label">Reflection</div>
       <h3 style="margin-bottom:0.480rem;">In the user's own words</h3>
-      <p class="small" style="margin:0;">Free text on why, and what they'd change. The highest-signal column in the system — people narrate their own causality better than any model infers it.</p>
+      <p class="small" style="margin:0;">Free text on why, and what they'd change. The highest-signal column in the system — people narrate their own patterns better than any model invents them.</p>
     </div>
     <div class="card">
       <div class="label">Movement</div>
@@ -426,7 +426,7 @@
   <div class="eyebrow">Layer 02 · Compute</div>
   <h2>Behavioral data lies.<br>Every filter was earned.</h2>
 
-  <p style="margin-bottom:1.560rem;">Each of these exists because a simpler version produced a confident, false conclusion. They ship inside the data payload so the narrator cannot drift beyond what the evidence supports.</p>
+  <p style="margin-bottom:1.560rem;">Each of these exists for a reason: a simpler version produced a confident, false conclusion. They ship inside the data payload so the narrator cannot drift beyond what the evidence supports.</p>
 
   <div class="card accent" style="margin-bottom:0.900rem;">
     <h3>Scheduled times are not behavioral records</h3>
@@ -447,6 +447,64 @@
     <h3>Never trend from a partial period</h3>
     <p class="small" style="margin:0;">An early draft claimed a four-day winning streak from morning blocks alone. Whole-day data showed two of those four were near-total collapses, and the most recent complete week was the worst of the month. Today is excluded; partial weeks are omitted.</p>
   </div>
+
+  <div class="rule"></div>
+
+  <h2 style="margin-top:2.400rem;">One block at a time isn't enough.<br>The day is a sequence.</h2>
+
+  <p>Per-block rates answer <em>how often</em>. They cannot answer <em>when</em>. A block that fails 40% of the time might fail at random — or it might fail on exactly the days something earlier went wrong, which is a different problem with a different fix.</p>
+  <p>So the engine looks at ordered pairs within a day: for every block that ends before another starts, does the first one's outcome predict the second's?</p>
+  <p style="margin-bottom:1.560rem;">Both directions are kept. An earlier block <strong>failing</strong> and taking a later one with it is one relationship. An earlier block <strong>succeeding</strong> and consuming the later one's time is the opposite. Both are real. An engine that only looks for one will find it whether or not it's there — and on this dataset, every pattern that survived pointed the way the original hypothesis didn't.</p>
+
+  <div class="card accent" style="margin-bottom:0.900rem;">
+    <h3>Persistence across two windows</h3>
+    <p class="small" style="margin:0;">With nine blocks there are up to 72 ordered pairs. Report the largest gap from 72 comparisons and you will find something in pure noise. A pattern is only reported if it holds in the last thirty days <em>and</em> the thirty before — same direction, both times. A real dependency survives that. A coincidence does not.</p>
+  </div>
+
+  <div class="card accent" style="margin-bottom:0.900rem;">
+    <h3>The day-level control</h3>
+    <p class="small" style="margin:0;">Two blocks failing together might mean they are linked, or it might just mean it was a bad day. So the engine measures what the rest of that day did. If the whole day moves as much as the pair does, the pair is not the finding. One candidate here had a 41-point gap and was dropped — 39 of those points were explained by the day going badly overall.</p>
+  </div>
+
+  <div class="card accent" style="margin-bottom:1.560rem;">
+    <h3>Silence is not refusal</h3>
+    <p class="small" style="margin:0;">A later block failing mostly as <em>unaccounted</em> may mean the user stopped logging, not that they gave up. Pairs where the failures are mostly silence are excluded. The distinction between missed and unaccounted runs through the whole system; it matters most here.</p>
+  </div>
+
+  <p class="lead" style="margin:0;">Across one month of real use, the engine found <strong>five candidate patterns and reported one.</strong> Two failed persistence. One was explained by the day. One was too thin on one side to mean anything. Every other system in this category is built to find you more.</p>
+
+</div>
+
+<!-- ============ 7a · DISCRIMINATING TESTS ============ -->
+<div class="section">
+  <div class="eyebrow">Layer 03 · Narrate — what it tests</div>
+  <h2>It can't tell you why.<br>It can tell you what it isn't.</h2>
+
+  <p>A correlation is not an explanation. When the engine finds that two blocks move together, there are three candidate reasons, and they are fixed — the model cannot invent a fourth:</p>
+  <p><strong>Carry</strong> — the earlier block's outcome carries into the later one.</p>
+  <p><strong>Upstream</strong> — something before both wrecked them independently. The earlier block is the first casualty, not what took the later one.</p>
+  <p style="margin-bottom:1.560rem;"><strong>Cascade</strong> — the earlier block's disruption consumed the later one's time.</p>
+  <p style="margin-bottom:1.560rem;">Each gets a test. Every test is arithmetic in the database, never inference by the model.</p>
+
+  <div class="card accent" style="margin-bottom:0.900rem;">
+    <h3>Anchor control → tests upstream</h3>
+    <p class="small" style="margin:0;">Restrict to days the user's most reliable early block completed — the mornings that weren't lost. If the pattern weakens, something upstream was carrying it. If it holds or strengthens, it wasn't.</p>
+    <p class="small" style="margin:0.720rem 0 0;"><em>On this dataset it strengthened.</em> Lift went from −53 to −55, and the afternoon still failed 0 of 11 days when the morning held against 6 of 11 when it didn't. Upstream ruled out.</p>
+  </div>
+
+  <div class="card accent" style="margin-bottom:0.900rem;">
+    <h3>Domain spread → tests bad-day effects</h3>
+    <p class="small" style="margin:0;">Compare the trigger against every later block, split by category. A bad day drags everything. A specific relationship doesn't.</p>
+    <p class="small" style="margin:0.720rem 0 0;"><em>Same-category lift −53. Everything else, −10. Breakfast and dinner did not move at all.</em> The effect is specific to one kind of work.</p>
+  </div>
+
+  <div class="card accent" style="margin-bottom:1.560rem;">
+    <h3>Gap sensitivity → separates cascade from carry</h3>
+    <p class="small" style="margin:0;">If the effect weakens as the time between blocks grows, disruption is consuming the later block mechanically. If it holds across a gap, something is being carried rather than consumed.</p>
+    <p class="small" style="margin:0.720rem 0 0;"><em>Not enough pairs across enough gap ranges to say.</em> Reported as untested — never as ruled out.</p>
+  </div>
+
+  <p class="lead" style="margin:0;">The engine eliminates. It does not diagnose. What survives is reported as what's left, never as what's true — and a test with insufficient data means untested, which is not the same as cleared.</p>
 </div>
 
 <!-- ============ 7 · REAL OUTPUT ============ -->
@@ -456,21 +514,21 @@
   <p style="margin-bottom:1.440rem;">Unedited, from one month of real use. Every figure traced back to the database and verified.</p>
 
   <div class="insight">
-    <div class="kind">Causal</div>
-    <div class="belief">Late sleep is the upstream cause collapsing both morning blocks in sequence — when one falls, the other follows the same day.</div>
-    <div class="evidence">Fajr+Quran failed 11 of 25. Morning deep work failed 13 of 25. From the user's own reflections: "sleeping late which is caused by dopamine speedrun," "waking up on time is crucial for schedule adherence."</div>
+    <div class="kind">Structural</div>
+    <div class="belief">When Deep work morning holds, Deep work afternoon holds with it every time. That's not a lost start to the day — the same split is there on days the early routine landed. Breakfast and Dinner barely moved with it, so this stays with this kind of work.</div>
+    <div class="evidence">Afternoon failed 0 of 11 days morning completed, and 8 of 15 days it didn't. On days the early routine landed, afternoon still failed 0 of 11 when morning held and 6 of 11 when it didn't.</div>
   </div>
 
   <div class="insight">
-    <div class="kind">Causal · quality</div>
-    <div class="belief">Morning deep work is completing at an adequate rate overall, but the sessions that do happen have been landing at declining quality — 4 of the last 5 rated sessions were poor.</div>
-    <div class="evidence">A block degrading before it starts being missed. The earliest warning the system can produce, and one the user had not noticed.</div>
+    <div class="kind">Pattern · day</div>
+    <div class="belief">Sunday is the one day the schedule consistently comes apart — fail rate of 51% against a best of 19% on Tuesday and Saturday. Every other day sits between 19% and 31%.</div>
+    <div class="evidence">Sunday: 20 failed of 39 relevant instances. Tuesday and Saturday: 6 of 31 each.</div>
   </div>
 
   <div class="insight" style="border-left-color: var(--success);">
     <div class="kind">Strength</div>
-    <div class="belief">Fajr+Quran is the most completed block with sufficient data, landing 15 of 23 — and when it happens, quality holds.</div>
-    <div class="evidence">Only 1 of the last 5 rated sessions was poor. No other block with ten or more occurrences matches this.</div>
+    <div class="belief">The early routine block is the steadiest one in the schedule — completed 26 of 29 tracked days. The reflections show it surviving disrupted nights and interrupted weeks.</div>
+    <div class="evidence">26 completed against 3 missed across 29 days. Only 1 miss in the last 7 against 6 completions.</div>
   </div>
 
   <div class="rule"></div>
@@ -495,7 +553,7 @@
   <div class="grid2">
     <div>
       <div class="label">The engine must</div>
-      <p class="small">Name structural causes — a mechanism, a slot, a missing boundary. State counts with their denominators. Include a real strength. Offer at most one small structural change. Be truthful about a bad week.</p>
+      <p class="small">Name structural findings — a mechanism, a slot, a missing boundary. State counts with their denominators. Include a real strength. Offer at most one small structural change. Be truthful about a bad week.</p>
     </div>
     <div>
       <div class="label">The engine must never</div>
@@ -517,7 +575,7 @@
   <div class="card" style="margin-bottom:1.020rem;">
     <div class="label">Morning</div>
     <h3>A single card, once</h3>
-    <p class="small" style="margin:0;">The top finding, dismissed permanently once read. It returns when there is genuinely something new — roughly weekly, because that is how often the app actually learns something.</p>
+    <p class="small" style="margin:0;">The top finding, dismissed permanently once read. It returns when there is genuinely something new — roughly weekly, which is how often the app actually learns something.</p>
   </div>
 
   <div class="card" style="margin-bottom:1.020rem;">
@@ -581,12 +639,12 @@
   <div class="eyebrow">Where it stands</div>
   <h2>Built today</h2>
 
-  <p style="margin-bottom:1.200rem;">The engine runs end to end. It captures, computes, narrates weekly, and surfaces findings in three places.</p>
+  <p style="margin-bottom:1.200rem;">The engine runs end to end. It captures, computes, narrates twice a week, and surfaces findings in three places.</p>
 
   <table>
     <tr><td class="mark"><span class="dot on"></span></td><td><strong>Capture layer</strong> — outcomes, quality, reasons, reschedule history, sleep and wake boundaries, nudge telemetry</td></tr>
-    <tr><td class="mark"><span class="dot on"></span></td><td><strong>Evidence engine</strong> — one SQL function, four integrity filters, caveats travelling inside the payload</td></tr>
-    <tr><td class="mark"><span class="dot on"></span></td><td><strong>Weekly narrator</strong> — one AI call per user per week, stored atomically, never regenerated on read</td></tr>
+    <tr><td class="mark"><span class="dot on"></span></td><td><strong>Evidence engine</strong> — one SQL function, integrity filters, block coupling with both signs, discriminating tests, caveats travelling inside the payload</td></tr>
+    <tr><td class="mark"><span class="dot on"></span></td><td><strong>Weekly narrator</strong> — one AI call per user twice a week (Mon/Fri), up to five ranked insights including <code>structural</code>, stored atomically, never regenerated on read</td></tr>
     <tr><td class="mark"><span class="dot on"></span></td><td><strong>Morning card, recovery injection, weekly review</strong></td></tr>
     <tr><td class="mark"><span class="dot on"></span></td><td><strong>Cutoff nudges</strong> — fires mid-block, cites the downstream cost, answerable from the lock screen</td></tr>
     <tr><td class="mark"><span class="dot on"></span></td><td><strong>Accountability streak</strong> and the two-tone weekly shape</td></tr>
@@ -597,8 +655,7 @@
 
   <h3 style="font-size:1.167rem; margin-bottom:0.780rem;">Not yet built</h3>
   <table>
-    <tr><td class="mark"><span class="dot off"></span></td><td><strong>Cross-block cannibalization</strong> — detecting that one block is sacrificed to subsidize another, and naming the pair</td></tr>
-    <tr><td class="mark"><span class="dot off"></span></td><td><strong>Intervention effectiveness</strong> — reading back which nudges actually changed outcomes for this specific person</td></tr>
+        <tr><td class="mark"><span class="dot off"></span></td><td><strong>Intervention effectiveness</strong> — reading back which nudges actually changed outcomes for this specific person</td></tr>
     <tr><td class="mark"><span class="dot off"></span></td><td><strong>Intention reliability</strong> — whether the user's plans are becoming more accurate over time</td></tr>
     <tr><td class="mark"><span class="dot off"></span></td><td><strong>Drift detection</strong> — noticing attention has left, without ever seeing where it went</td></tr>
   </table>
@@ -652,7 +709,7 @@
     </div>
   </div>
 
-  <p>A competitor can ship a weekly "why your plans fail" card next quarter. What they cannot ship is six months of a specific person's interventions, responses, and outcomes — because that requires that person's six months.</p>
+  <p>A competitor can ship a weekly "why your plans fail" card next quarter. What they cannot ship is six months of a specific person's interventions, responses, and outcomes — that requires that person's six months.</p>
 
   <p>The switching cost compounds with every week of use. On day one the app knows nothing. On day ninety it knows that this person's evenings overrun, that they protect deep work above everything, and that their mornings are downstream of their nights.</p>
 
@@ -674,7 +731,7 @@
   </svg>
 
   <div>
-    <h1 style="font-size:2.667rem;">Your schedule keeps failing<br>because it doesn't know you.</h1>
+    <h1 style="font-size:2.667rem;">Your schedule keeps failing.<br>It doesn't know you.</h1>
     <p class="sub" style="max-width:33.600rem;">FlexMax learns from what actually happens — including the parts you'd rather not report to a person.</p>
   </div>
 
