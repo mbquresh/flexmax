@@ -129,7 +129,7 @@ p{margin-top:1.1em}
 /* ---------- founder ---------- */
 .letter{background:var(--surface);border-left:2px solid var(--primary);
   border-radius:0 14px 14px 0;padding:30px 28px;margin-top:30px}
-.letter p{font-size:16.5px;line-height:1.7}
+.letter p{font-size:16.5px;line-height:1.75;margin-top:1.35em}
 .letter p:first-child{margin-top:0}
 .sig{margin-top:24px;font-size:14.5px;color:var(--muted);font-style:italic}
 
@@ -283,6 +283,37 @@ p{margin-top:1.1em}
 .lock{margin-top:20px;padding-top:20px;border-top:1px solid var(--border-light);
   font-size:14.5px;color:var(--text-2);line-height:1.55}
 
+
+/* ---------- proof band ---------- */
+.statband{padding:28px 0 8px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+.stat-n{font-size:34px;font-weight:650;letter-spacing:-.02em;line-height:1.05;
+  color:var(--text);font-variant-numeric:tabular-nums}
+.stat-of{font-size:18px;font-weight:500;color:var(--muted)}
+.stat-l{font-size:13px;line-height:1.35;color:var(--muted);margin-top:6px;max-width:22ch}
+.statband-note{font-size:13px;color:var(--faint);margin-top:22px;max-width:62ch;line-height:1.5}
+
+.trend{padding-top:36px;padding-bottom:8px}
+.trend .lede{max-width:36ch}
+.chart{margin-top:28px;width:100%;height:140px;display:block;color:var(--primary)}
+
+.insightcard{margin-top:28px;background:var(--surface);border:1px solid var(--border);
+  border-radius:14px;padding:22px 22px 18px;border-left:3px solid var(--danger)}
+.ic-kind{font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;
+  color:var(--danger);margin-bottom:12px}
+.ic-belief{font-size:17px;line-height:1.45;color:var(--text);margin:0;font-weight:500;
+  letter-spacing:-.015em}
+.ic-ev{font-size:14px;line-height:1.5;color:var(--muted);margin-top:14px}
+.ic-foot{margin-top:16px;padding-top:14px;border-top:1px solid var(--border-light);
+  font-size:13px;color:var(--faint)}
+.ic-check{font-size:15px;color:var(--text-2);margin-top:16px}
+
+@media (max-width:760px){
+  .stats{grid-template-columns:repeat(2,1fr);gap:22px}
+  .stat-n{font-size:28px}
+  .stat-of{font-size:16px}
+}
+
 /* ---------- faq ---------- */
 details{border-bottom:1px solid var(--border);padding:17px 0}
 details:first-of-type{border-top:1px solid var(--border)}
@@ -341,11 +372,53 @@ footer{padding:44px 0 62px;border-top:1px solid var(--border)}
 
 <hr class="rule">
 
+<!-- ================= PROOF: STATS ================= -->
+<section class="statband">
+  <div class="wrap wide">
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-n tab">0<span class="stat-of"> of 11</span></div>
+        <div class="stat-l">afternoon sessions failed on days my morning held</div>
+      </div>
+      <div class="stat">
+        <div class="stat-n tab">8<span class="stat-of"> of 15</span></div>
+        <div class="stat-l">failed on the days it didn't</div>
+      </div>
+      <div class="stat">
+        <div class="stat-n tab">1<span class="stat-of"> of 5</span></div>
+        <div class="stat-l">patterns it found were good enough to report</div>
+      </div>
+      <div class="stat">
+        <div class="stat-n tab">40<span class="stat-of">→80%</span></div>
+        <div class="stat-l">my own completion rate over twelve weeks</div>
+      </div>
+    </div>
+    <p class="statband-note">One person, my own data, and I built the thing — so
+      take it for what it's worth. It's also the only completion data that
+      exists right now, and I'd rather show you mine than make up someone
+      else's.</p>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- ================= PROOF: TWELVE WEEKS ================= -->
+<section class="trend">
+  <div class="wrap">
+    <h2>11 weeks. 42% to 79%.</h2>
+    <p class="lede">Nothing was added. The schedule got less wrong about me.</p>
+    <svg class="chart" viewBox="0 0 640 140" width="100%" height="140" role="img" aria-label="Weekly completion from 42 percent to 79 percent over 11 weeks" xmlns="http://www.w3.org/2000/svg"><rect x="0.0" y="62.5" width="52.7" height="49.5" rx="3" fill="currentColor" opacity="0.85"><title>42%</title></rect><rect x="58.7" y="81.7" width="52.7" height="30.3" rx="3" fill="currentColor" opacity="0.85"><title>26%</title></rect><rect x="117.5" y="58.6" width="52.7" height="53.4" rx="3" fill="currentColor" opacity="0.85"><title>45%</title></rect><rect x="176.2" y="102.3" width="52.7" height="9.7" rx="3" fill="currentColor" opacity="0.85"><title>8%</title></rect><rect x="234.9" y="49.0" width="52.7" height="63.0" rx="3" fill="currentColor" opacity="0.85"><title>53%</title></rect><rect x="293.6" y="26.7" width="52.7" height="85.3" rx="3" fill="currentColor" opacity="0.85"><title>72%</title></rect><rect x="352.4" y="63.6" width="52.7" height="48.4" rx="3" fill="currentColor" opacity="0.85"><title>41%</title></rect><rect x="411.1" y="37.6" width="52.7" height="74.4" rx="3" fill="currentColor" opacity="0.85"><title>63%</title></rect><rect x="469.8" y="39.5" width="52.7" height="72.5" rx="3" fill="currentColor" opacity="0.85"><title>61%</title></rect><rect x="528.5" y="25.1" width="52.7" height="86.9" rx="3" fill="currentColor" opacity="0.85"><title>73%</title></rect><rect x="587.3" y="18.0" width="52.7" height="94.0" rx="3" fill="currentColor" opacity="0.85"><title>79%</title></rect><text x="0" y="134" font-size="13" fill="#6B655B" font-variant-numeric="tabular-nums">42%</text><text x="640" y="134" font-size="13" fill="#6B655B" text-anchor="end" font-variant-numeric="tabular-nums">79%</text></svg>
+  </div>
+</section>
+
+<hr class="rule">
+
 <!-- ================= THE STAKES ================= -->
 <section>
   <div class="wrap">
-    <h2>There was never a moment you decided to skip it.</h2>
-    <p class="lede">Hours you can find again. What you don't get back is the
+    <h2>Nothing is trying to stop you.</h2>
+    <p class="lede">That's why it's working.</p>
+    <p>Hours you can find again. What you don't get back is the
       evidence.</p>
     <p>Six months of real effort goes by and nothing keeps score of it. Then someone
       asks what you've been working on — or worse, you ask yourself — and there's
@@ -356,51 +429,6 @@ footer{padding:44px 0 62px;border-top:1px solid var(--border)}
       because you have no proof they were ever real.</p>
     <p class="pull">Drift doesn't take your time. It takes your argument for
       yourself.</p>
-  </div>
-</section>
-
-<hr class="rule">
-
-<!-- ================= FOUNDER ================= -->
-<section>
-  <div class="wrap">
-    <h2>I built this because it happened to me.</h2>
-    <div class="letter">
-      <p>For a while I had real accountability — someone who asked what my plan was
-        in the morning and what I'd actually done by evening. It worked. My execution
-        was better than it had ever been.</p>
-      <p>It also came with something I didn't expect. I spent energy managing how my
-        week looked. If a block didn't happen, I'd lead with what did. I wasn't
-        lying, exactly. I was presenting. And the parts I smoothed over were the parts
-        that would have actually helped — the afternoon that vanished, the rest I
-        didn't want to admit I needed.</p>
-      <p>That's when it landed. The problem wasn't accountability. It was the
-        audience. There is no version of a person you can be completely honest with
-        about a wasted Tuesday, because a person forms an opinion.</p>
-      <p>Software doesn't. Nothing to perform for, no status to protect, no reason to
-        round anything up. So it gets told the truth — which means it can see the
-        pattern a mentor structurally can't, because I never showed him the pattern.</p>
-      <p>The shape of it isn't original to me. There's a practice in Islam called
-        <i>muhasaba</i> — daily self-accounting. You go through the day honestly at
-        the end of it, without an external judge. The whole value is in the
-        accounting. There's no verdict and nobody to perform for.</p>
-      <p>The other thing I took from it is the structure. The standard is absolute
-        and the amount is flexible. You're expected to do the accounting; almost
-        nothing is demanded about how much you got done. That's why the streak here
-        counts days you were honest about rather than days you were perfect. Miss
-        everything and account for all of it, and the day holds. Leave one block
-        unanswered and it doesn't.</p>
-      <p>You don't need any of that to use this. But it's why the app behaves the
-        way it does, and I'd rather say where it came from than pretend I invented
-        it.</p>
-      <p>I was the only user of this for months. Every block and every note in it
-        is mine. I built the recovery flow because I needed it on one specific bad
-        Thursday. I rebuilt the streak because the old one made me want to close the
-        app. <strong>It's the first one I haven't quit.</strong></p>
-      <p>This isn't a company entering a category. It's one person solving one
-        problem in painful detail, then finding out whether anyone else has it too.</p>
-      <p class="sig">— Belal, Houston</p>
-    </div>
   </div>
 </section>
 
@@ -516,6 +544,21 @@ footer{padding:44px 0 62px;border-top:1px solid var(--border)}
       across two separate months, or turned out to be explained by the day going
       badly overall rather than by anything specific. Every app in this category
       is built to find you more. This one is built to find you less, and be right.</p>
+
+    <div class="insightcard">
+      <div class="ic-kind">STRUCTURAL</div>
+      <p class="ic-belief">When Deep work morning holds, Deep work afternoon holds
+        with it every time. That's not a lost start to the day — the same split is
+        there on days my early routine landed. Breakfast and Dinner barely moved
+        with it, so this stays with this kind of work.</p>
+      <p class="ic-ev">Deep work afternoon failed 0 of 11 days Deep work morning
+        completed, and 8 of 15 days it didn't. On days the early routine landed,
+        afternoon still failed 0 of 11 when morning held and 6 of 11 when it
+        didn't — Breakfast and Dinner didn't move with the pair.</p>
+      <div class="ic-foot">Disagree? Tell it why.</div>
+    </div>
+    <p class="ic-check">Four claims. Every one checkable. It never says why.</p>
+
     <p class="lede">This is a check engine light for your day. It doesn't
       motivate you and it doesn't congratulate you. It tells you which system
       is reporting a fault, with the counts attached, and a button to tell it
@@ -530,6 +573,51 @@ footer{padding:44px 0 62px;border-top:1px solid var(--border)}
       make the looking cheap: one screen, three ways forward, the cost of each
       named before you pick. And if you can't face it today, you have until
       tomorrow night to come back and account for it.</p>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- ================= FOUNDER ================= -->
+<section>
+  <div class="wrap">
+    <h2>I built this because it happened to me.</h2>
+    <div class="letter">
+      <p>For a while I had real accountability — someone who asked what my plan was
+        in the morning and what I'd actually done by evening. It worked. My execution
+        was better than it had ever been.</p>
+      <p>It also came with something I didn't expect. I spent energy managing how my
+        week looked. If a block didn't happen, I'd lead with what did. I wasn't
+        lying, exactly. I was presenting. And the parts I smoothed over were the parts
+        that would have actually helped — the afternoon that vanished, the rest I
+        didn't want to admit I needed.</p>
+      <p>That's when it landed. The problem wasn't accountability. It was the
+        audience. There is no version of a person you can be completely honest with
+        about a wasted Tuesday, because a person forms an opinion.</p>
+      <p>Software doesn't. Nothing to perform for, no status to protect, no reason to
+        round anything up. So it gets told the truth — which means it can see the
+        pattern a mentor structurally can't, because I never showed him the pattern.</p>
+      <p>The shape of it isn't original to me. There's a practice in Islam called
+        <i>muhasaba</i> — daily self-accounting. You go through the day honestly at
+        the end of it, without an external judge. The whole value is in the
+        accounting. There's no verdict and nobody to perform for.</p>
+      <p>The other thing I took from it is the structure. The standard is absolute
+        and the amount is flexible. You're expected to do the accounting; almost
+        nothing is demanded about how much you got done. That's why the streak here
+        counts days you were honest about rather than days you were perfect. Miss
+        everything and account for all of it, and the day holds. Leave one block
+        unanswered and it doesn't.</p>
+      <p>You don't need any of that to use this. But it's why the app behaves the
+        way it does, and I'd rather say where it came from than pretend I invented
+        it.</p>
+      <p>I was the only user of this for months. Every block and every note in it
+        is mine. I built the recovery flow because I needed it on one specific bad
+        Thursday. I rebuilt the streak because the old one made me want to close the
+        app. <strong>It's the first one I haven't quit.</strong></p>
+      <p>This isn't a company entering a category. It's one person solving one
+        problem in painful detail, then finding out whether anyone else has it too.</p>
+      <p class="sig">— Belal, Houston</p>
+    </div>
   </div>
 </section>
 
