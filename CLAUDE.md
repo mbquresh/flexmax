@@ -613,7 +613,7 @@ marker at all.
 | Presence-aware nudges (block-start + mid-block) | The "smart notification suite". User requested this in their OWN reflections 3x: "harder cutoffs", "need enforcements", "maybe you can do something to help" |
 | Shareable weekly recap card                     | The weekly scorecard. Growth primitive                                                                                                                       |
 | Day-3 first observation                         | Still worth building — weekly-insight gates at engaged_days < 5 — but Stream 1 is the week-one value and does not require the engine to speak. No longer framed as plugging a gap. |
-| Paywall + RevenueCat                            | Unbuilt. No RevenueCat in either package.json; `handleStart` still `router.replace("/schedule-builder")`. Placement OPEN — recommend after step 3 of 5 (the contract), not after the tone question. Flat $14.99/mo or $149/yr. See Pricing & paywall. |
+| Paywall + RevenueCat                            | Unbuilt. No RevenueCat in either package.json; `handleStart` still `router.replace("/schedule-builder")`. Placement OPEN — recommend after step 3 of 5 (the contract), not after the tone question. Flat $14.99/mo or $119/yr. See Pricing & paywall. |
 | "Ask me about yourself" conversational surface  | Reads get_behavior_evidence with the narrator's tone rules                                                                                                   |
 | External TestFlight                             | Needs Beta App Review (~1 day) + a demo account or auto-rejection                                                                                            |
 | Device activity detection (Screen Time) | Policy-verified design: user self-selects distraction apps via FamilyActivityPicker → OPAQUE TOKENS, so FlexMax structurally cannot know which apps were chosen. Each focus block registers a DeviceActivitySchedule with a threshold event (e.g. 5 cumulative minutes); eventDidReachThreshold fires a local notification reusing the existing **Notification action buttons** (018 nudge_response) infrastructure. The extension records to an App Group store; the app syncs a minimal derived record only — drift occurred, duration bucket, response, block outcome. Never raw usage. NOTE: DeviceActivityReport data is render-only and not readable programmatically, so the threshold event IS the data model — and it happens to be exactly the intervention→response→outcome shape. CONSTRAINTS: entitlement is per bundle ID, main app AND every extension; unrequested extension IDs fail signing at distribution. Requires native Swift extensions — config plugin (react-native-device-activity) or prebuild. Approval takes days to weeks. See UNBLOCKED ACTION above. |
@@ -2181,7 +2181,7 @@ will not fix it.
 One flat price. No founding ladder, no later public increase to honour. No
 weekly plan. Annual always shown as monthly-equivalent, never as a lump sum.
 
-**Price.** $14.99/mo or $149/yr ($12.42/mo billed yearly, ~17% off). One
+**Price.** $14.99/mo or $119/yr ($9.99/mo billed yearly, ~33% off). One
 subscription covers iPhone and desktop — no platform surcharge, no second SKU.
 
 **No trial.** A trial recruits people who are browsing, and users without
@@ -2268,7 +2268,7 @@ replacement describes the engine — architecture, integrity rules, real
 generated output, honest build status — and contains no UI replica, so it has
 no drift surface. A print-formatted PDF of the same content is published
 alongside it at docs/flexmax-behavioral-engine.pdf for handouts. Flat
-$14.99 / $149 pricing and iPhone+desktop framing are on the page. Remaining
+$14.99 / $119 pricing and iPhone+desktop framing are on the page. Remaining
 copy fixes (disqualification placement, no thirty-day outcome) sit in the Not
 built table. Screen recordings of the shipped WeekDemo belong on this page.
 
