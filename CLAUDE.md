@@ -613,13 +613,12 @@ marker at all.
 | Presence-aware nudges (block-start + mid-block) | The "smart notification suite". User requested this in their OWN reflections 3x: "harder cutoffs", "need enforcements", "maybe you can do something to help" |
 | Shareable weekly recap card                     | The weekly scorecard. Growth primitive                                                                                                                       |
 | Day-3 first observation                         | Still worth building — weekly-insight gates at engaged_days < 5 — but Stream 1 is the week-one value and does not require the engine to speak. No longer framed as plugging a gap. |
-| Paywall + RevenueCat                            | Unbuilt. No RevenueCat in either package.json; `handleStart` still `router.replace("/schedule-builder")`. Placement OPEN — recommend after step 3 of 5 (the contract), not after the tone question. Founding $14.99/mo or $192/yr locked; public $20/mo. See Pricing & paywall. |
+| Paywall + RevenueCat                            | Unbuilt. No RevenueCat in either package.json; `handleStart` still `router.replace("/schedule-builder")`. Placement OPEN — recommend after step 3 of 5 (the contract), not after the tone question. Flat $14.99/mo or $149/yr. See Pricing & paywall. |
 | "Ask me about yourself" conversational surface  | Reads get_behavior_evidence with the narrator's tone rules                                                                                                   |
 | External TestFlight                             | Needs Beta App Review (~1 day) + a demo account or auto-rejection                                                                                            |
 | Device activity detection (Screen Time) | Policy-verified design: user self-selects distraction apps via FamilyActivityPicker → OPAQUE TOKENS, so FlexMax structurally cannot know which apps were chosen. Each focus block registers a DeviceActivitySchedule with a threshold event (e.g. 5 cumulative minutes); eventDidReachThreshold fires a local notification reusing the existing **Notification action buttons** (018 nudge_response) infrastructure. The extension records to an App Group store; the app syncs a minimal derived record only — drift occurred, duration bucket, response, block outcome. Never raw usage. NOTE: DeviceActivityReport data is render-only and not readable programmatically, so the threshold event IS the data model — and it happens to be exactly the intervention→response→outcome shape. CONSTRAINTS: entitlement is per bundle ID, main app AND every extension; unrequested extension IDs fail signing at distribution. Requires native Swift extensions — config plugin (react-native-device-activity) or prebuild. Approval takes days to weeks. See UNBLOCKED ACTION above. |
 | Night routine block is hard to answer           | Wind-down is excluded from the evening sweep (hasn't happened yet) and from bedtime notifications (by design). Drifts to unaccounted unless answered from Today. DayBoundaryCard is gone — it suppressed InsightCard. Do not bring it back as the fix. |
 | User instructions page                          | The streak rises on a day where everything was missed. The label qualifier was removed for width, so there is no in-app explanation. Owed |
-| Showcase copy: cohort cap, not "half" | FAQ no longer says "roughly half." Remaining work is the published 100–200 founding cap and a visible remaining count. Unverifiable scarcity reads as a marketing device. |
 | Showcase + listing: disqualify up front | Move "Who is this genuinely not for?" up `docs/index.html`. Mirror it in the App Store listing. Highest-leverage paragraph on the page; it is the mitigation for no-trial bad-review risk. Still FAQ-only. Night-shift exclusion is now in that FAQ answer. |
 | Showcase: no thirty-day outcome | The page shows the founder's result but never says what a reader should expect. The honest version — after a week an explanation instead of a scoreboard, after a month the schedule is less wrong about you — is defensible and currently unsaid. |
 
@@ -640,8 +639,15 @@ User-written bullets on the template: what "done" means for this block, shown at
 **4. Do not replace `weekly-insight` with a bigger card.**
 The complaint was right: restating "you miss Workout" is a slap, and the morning note is not the product. The fix is more *writes* (shorten shipped; earlier/later and restore above), not a smarter paragraph. Keep the weekly call as a small stored belief after `engaged_days >= 5`. If a line cannot attach to a confirmed structural option, it stays nudge-sized. Impressive means a change the user could not have computed in two seconds and can take. Text-only impressiveness rots into the same repetition.
 
-**5. Mentor / founder story — listing and showcase only.**
-Mentor-without-an-audience, the $200/mo contrast, "I built this for myself," and "solve my problem first" are App Store / `docs/index.html` voice. Not in-app copy. The $200/mo contrast is load-bearing positioning at the public price, not optional flavor — at $20 the justification is capability, not undercutting Sunsama. n=1 still does not prove adoption; the story may say it worked for the person who built it. It may not treat founder fill rate as evidence. Bundle with the pricing / founding-member pass on the showcase page, not with the remedy loop.
+**5. Accountability-partner / founder story — listing and showcase only.**
+Audience-free accountability, the $200/mo coach contrast, "I built this for
+myself," and "solve my problem first" are App Store / `docs/index.html` voice.
+Not in-app copy. At $14.99 the product undercuts planner-tier peers on price
+while the justification stays capability — an accountability partner who sees
+the whole ledger and has no face to perform for. n=1 still does not prove
+adoption; the story may say it worked for the person who built it. It may not
+treat founder fill rate as evidence. Bundle with the pricing pass on the
+showcase page, not with the remedy loop.
 
 **6. Standing theory lines.** Argue shipped. The page still reprints the
 current `behavioral_insights` set, which is replaced weekly. Durable claims
@@ -982,11 +988,11 @@ makes it a one-line swap in theme.ts if ever revisited.
   the finding reaches the user through Theory of You. Do not rebuild the
   notification without: cohort-validated coupling, copy that fits a lock screen,
   the qualification test applied at the read, and analytics on open rate.
-- **054 is written, not pasted.** Remote `get_behavior_evidence` is still
-  050+053 until the SQL Editor run. A deployed narrator with rule 10 and no
-  `hypothesis_tests` key must treat every hypothesis as untested and say
-  nothing about it. Paste 054, wait for the schema cache, then redeploy
-  weekly-insight.
+- **054 is live.** Remote `get_behavior_evidence` includes `qualified` and
+  `hypothesis_tests`. Domain spread gates on ≥1 same-category pair with
+  ≥15 days and ≥3 other-category pairs; carry may residual-survive when
+  upstream is ruled out and gap has not killed it. Dump with
+  `pg_get_functiondef` before the next edit; do not reconstruct from 026–041.
 - **`block_coupling` stores unqualified rows.** Persistence, day-baseline
   and unaccounted tests are applied by the consumer (weekly-insight rule 9),
   not the table. Any future reader must apply them. Do not treat a persisted
@@ -2119,7 +2125,7 @@ within 30 seconds of the previous edit to the same instance — interaction
 signals are contaminated by the author testing the app, not merely thin.
 **App Store, showcase page, and in-app copy do not get this number until a
 non-founder tester produces it.** Pricing consequence in both directions: if
-it generalizes, $20 is underpriced and a single cohort will show it; if it
+it generalizes, $14.99 is underpriced and a single cohort will show it; if it
 does not, no price on the page saves the product.
 
 **Surface coverage is thin and that is a real cost.** No widgets, no Apple
@@ -2155,9 +2161,9 @@ can be answered without real testers.
    can someone who has never heard of it tell FlexMax apart from a planner from
    the App Store listing and the showcase page alone.
 4. **Will they pay before using it?** The hard paywall is deliberate and filters
-   for the decided cohort, but the conversion floor is unknown. A 100–200
-   founding cohort cannot produce a significant price read — the ladder is a
-   choice of a number to live with, not a price test.
+   for the decided cohort, but the conversion floor is unknown. Early paid
+   cohorts cannot produce a significant price read — the number is a choice to
+   live with, not a price test.
 5. **Will they reopen after a bad week?** A supporting signal, not the north
    star. Capture is 028; the query sits under the migrations table. Reopening
    measures whether the user came back, not whether the product changed what
@@ -2170,24 +2176,13 @@ will not fix it.
 
 
 
-## Pricing & paywall (current decision — 2026-09-10)
+## Pricing & paywall (current decision — 2026-09-14)
 
-One founding lock, then a public price. No weekly plan. Annual always shown as
-monthly-equivalent, never as a lump sum. Yearly is 20% off the public monthly
-($20 → $16.00/mo, $192 billed yearly), deliberately — a larger gap signals an
-inflated monthly or a need for cash, and on a product whose pitch is
-commitment the monthly subscriber is the more committed one. "Locked for life"
-must be explicit copy on the paywall and account screen, not implied. Before
-that copy ships, confirm the App Store Connect mechanics for preserving
-existing subscribers through a price increase — founding lock means carrying
-that SKU indefinitely.
+One flat price. No founding ladder, no later public increase to honour. No
+weekly plan. Annual always shown as monthly-equivalent, never as a lump sum.
 
-**Founding.** $14.99/mo or $192/yr. Capped at 100–200 members, locked for
-life. The cap is published in the copy with a visible remaining count;
-unverifiable scarcity reads as a marketing device.
-
-**Public.** $20/mo. Cohort two is not grandfathered. Grow into the public
-price with new users, not by re-pricing founding ones.
+**Price.** $14.99/mo or $149/yr ($12.42/mo billed yearly, ~17% off). One
+subscription covers iPhone and desktop — no platform surcharge, no second SKU.
 
 **No trial.** A trial recruits people who are browsing, and users without
 existing motivation will not succeed with this product and will tank early App
@@ -2196,8 +2191,8 @@ quality is the point, not a side effect.
 
 The three supporting reasons that still hold: payment is the first commitment
 device in an accountability product; direct buyers outperform trial-converted
-users on LTV in productivity; 200 paying users produce cleaner retention data
-than 5,000 free installs.
+users on LTV in productivity; a small paid cohort produces cleaner retention
+data than thousands of free installs.
 
 The reason that does not: "every free user costs real Anthropic spend." There
 is exactly one Claude call in the product (`claude-sonnet-4-6`, `max_tokens:
@@ -2244,24 +2239,27 @@ pricing freedom, not pricing immunity, because a stranger's comparison set is
 set by what occupies the same slot in their budget, not by how the product
 defines its category. When you are genuinely first there is no reference
 price, so users borrow one from whatever the product resembles. The category
-has to be taught before category-defining prices can be charged — which is an
-argument for a founding lock under the public price, not for skipping to it.
+has to be taught before category-defining prices can be charged — which at
+$14.99 means teaching the comparison class (accountability partner, not
+planner) harder, not inventing a temporary discount ladder.
 
 Comparable band as of September 2026 (re-check the date): Sunsama $22/mo
 month-to-month or $17/mo billed annually ($204/yr); Motion Pro AI individual
 $19/mo or ~$12.73/mo billed annually. Both have trials — Sunsama 14 days no
-card, Motion 7 days card required. At $20 FlexMax sits in that band with no
-trial, no widgets, no Watch, no Android, and one-way ICS export in place of
-calendar integration. This is the predicted review narrative and it is already
-consistent with the existing "surface coverage is thin" risk.
+card, Motion 7 days card required. At $14.99 FlexMax sits *under* that band
+with no trial, no widgets, no Watch, no Android, and one-way ICS export in
+place of calendar integration. Price alone will not carry the review: peers
+still look fuller on surface coverage. The predicted narrative is "cheaper
+planner missing features" unless the page forces the accountability-partner
+comparison instead.
 
-The **$200/mo mentor contrast** is load-bearing positioning, not optional
-listing flavor. At $20 the product sits in the same tier as Sunsama rather
-than undercutting it, so the justification is capability — a mentor who sees
-the whole ledger and has no face to perform for — not a cheaper price. If
-the comparison class is a coach at $200/mo, $20 is the tool that does that
-job; if it is a planner at $5, it is absurd. The landing page decides which
-comparison a stranger makes.
+The **$200/mo coach contrast** is load-bearing positioning, not optional
+listing flavor. At $14.99 the product is cheap next to Sunsama — so the
+justification cannot be "we're the mid-tier planner." It has to be capability:
+an accountability partner who sees the whole ledger and has no face to perform
+for. If the comparison class is a coach at $200/mo, $14.99 is the tool that
+does that job; if it is a $5 habit tracker, it is absurd. The landing page
+decides which comparison a stranger makes.
 
 **docs/index.html — rebuilt 2026-08-11 as an engine overview.** The previous
 version was a hand-built replica of the app's UI and had drifted twice
@@ -2269,13 +2267,10 @@ version was a hand-built replica of the app's UI and had drifted twice
 replacement describes the engine — architecture, integrity rules, real
 generated output, honest build status — and contains no UI replica, so it has
 no drift surface. A print-formatted PDF of the same content is published
-alongside it at docs/flexmax-behavioral-engine.pdf for handouts. Founding
-pricing and founding-member framing are now on the page. Struck-through
-reference prices and "half" urgency are gone; public prices are forward
-tense. A positioning section ("Most of your day answers to nobody") sits
-after the founder letter. Remaining copy fixes (disqualification placement,
-no thirty-day outcome) sit in the Not built table. Screen recordings of the
-shipped WeekDemo belong on this page.
+alongside it at docs/flexmax-behavioral-engine.pdf for handouts. Flat
+$14.99 / $149 pricing and iPhone+desktop framing are on the page. Remaining
+copy fixes (disqualification placement, no thirty-day outcome) sit in the Not
+built table. Screen recordings of the shipped WeekDemo belong on this page.
 
 ### Rejected: generating an "insight" from onboarding answers
 
