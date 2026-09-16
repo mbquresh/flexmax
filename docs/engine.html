@@ -71,7 +71,46 @@
     padding-bottom: 5rem;
   }
 
-  .hero svg { margin-bottom: 2.5rem; flex-shrink: 0; }
+  .hero svg { margin-bottom: 0; flex-shrink: 0; }
+
+  .hero-mark {
+    display: flex;
+    align-items: flex-end;
+    gap: 14px;
+    margin-bottom: 2.5rem;
+  }
+
+  .hero-mil {
+    display: inline-block;
+    width: 36px;
+    height: 22px;
+    flex: none;
+    margin-bottom: 6px;
+    background: var(--markCoral);
+    -webkit-mask: url(check-engine.png) center / contain no-repeat;
+    mask: url(check-engine.png) center / contain no-repeat;
+    animation: cel-glow 2.8s ease-in-out infinite;
+    filter: drop-shadow(0 0 2px rgba(206,115,88,.55))
+            drop-shadow(0 0 7px rgba(206,115,88,.4));
+  }
+
+  @keyframes cel-glow {
+    0%, 100% {
+      opacity: .42;
+      filter: drop-shadow(0 0 1px rgba(206,115,88,.2))
+              drop-shadow(0 0 3px rgba(206,115,88,.12));
+    }
+    50% {
+      opacity: 1;
+      filter: drop-shadow(0 0 3px rgba(206,115,88,.85))
+              drop-shadow(0 0 10px rgba(206,115,88,.55))
+              drop-shadow(0 0 18px rgba(206,115,88,.28));
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero-mil { animation: none; opacity: 1; }
+  }
 
   .hero h1 { font-size: 3.667rem; }
 
@@ -264,12 +303,15 @@
 
 <!-- ============ 1 · COVER ============ -->
 <div class="section hero">
-  <svg width="70" height="86" viewBox="0 0 442 545">
-    <rect x="0" y="0" width="128" height="545" rx="64" fill="#4E7599"/>
-    <rect x="0" y="0" width="442" height="128" rx="64" fill="#4E7599"/>
-    <rect x="0" y="209" width="340" height="128" rx="64" fill="#CE7358"/>
-    <path d="M127,209 H64 A64,64 0 0,0 64,337 H127 Z" fill="#2B2822"/>
-  </svg>
+  <div class="hero-mark">
+    <svg width="70" height="86" viewBox="0 0 442 545" aria-hidden="true">
+      <rect x="0" y="0" width="128" height="545" rx="64" fill="#4E7599"/>
+      <rect x="0" y="0" width="442" height="128" rx="64" fill="#4E7599"/>
+      <rect x="0" y="209" width="340" height="128" rx="64" fill="#CE7358"/>
+      <path d="M127,209 H64 A64,64 0 0,0 64,337 H127 Z" fill="#2B2822"/>
+    </svg>
+    <span class="hero-mil" aria-hidden="true"></span>
+  </div>
 
   <div>
     <h1>Habit trackers watch&nbsp;you&nbsp;fail.<br>FlexMax figures out&nbsp;why.</h1>
