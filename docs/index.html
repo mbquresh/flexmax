@@ -376,14 +376,6 @@ section[id],.hero,#top{scroll-margin-top:72px}
   transition:opacity .7s ease,transform .7s ease}
 .reveal-once.will-reveal.in,.reveal-once.in{opacity:1;transform:none}
 
-.rig-a11y{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px;
-  padding-top:12px;border-top:1px solid var(--border-light)}
-.rig-a11y label{font-size:12.5px;color:var(--muted);font-weight:600}
-.rig-a11y select{font:inherit;font-size:13px;border:1px solid var(--border);
-  border-radius:8px;padding:7px 10px;background:var(--surface);color:var(--text);
-  max-width:42%}
-.rig-live{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
-
 @media (prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
   .chart rect,.chart.revealed rect{transform:none!important;opacity:.85!important;transition:none!important}
@@ -614,14 +606,6 @@ section[id],.hero,#top{scroll-margin-top:72px}
           <i class="pip now"></i><i class="pip"></i><i class="pip"></i>
         </div>
       </div>
-      <div class="rig-a11y">
-        <label for="swap-a">Move</label>
-        <select id="swap-a" aria-label="Block to move"></select>
-        <label for="swap-b">onto</label>
-        <select id="swap-b" aria-label="Swap target"></select>
-        <button class="rbtn solid" id="swap-go" type="button">Swap</button>
-      </div>
-      <div class="rig-live" id="rig-live" aria-live="polite"></div>
     </div>
 
   </div>
@@ -974,10 +958,7 @@ section[id],.hero,#top{scroll-margin-top:72px}
   var track=document.getElementById('track'), hint=document.getElementById('hint'),
       toastEl=document.getElementById('toast'), coach=document.getElementById('coach'),
       coachT=document.getElementById('coach-text'), statusEl=document.getElementById('rig-status'),
-      skipBtn=document.getElementById('skip'), pips=document.querySelectorAll('#steps .pip'),
-      liveEl=document.getElementById('rig-live'),
-      selA=document.getElementById('swap-a'), selB=document.getElementById('swap-b'),
-      swapGo=document.getElementById('swap-go');
+      skipBtn=document.getElementById('skip'), pips=document.querySelectorAll('#steps .pip');
 
   function clearAnims(){
     animTimers.forEach(function(t){ clearTimeout(t); });
@@ -1017,7 +998,6 @@ section[id],.hero,#top{scroll-margin-top:72px}
     coachT.style.opacity = '0';
     coachTimer = setTimeout(apply, 150);
   }
-  function announce(m){ if(liveEl) liveEl.textContent = m; }
   function setPips(n){ pips.forEach(function(p,i){
     p.className='pip'+(i<n?' done':(i===n?' now':'')); }); }
 
@@ -1079,21 +1059,6 @@ section[id],.hero,#top{scroll-margin-top:72px}
     return found;
   }
 
-  function fillSelects(){
-    if(!selA||!selB) return;
-    var m = movable(blocks);
-    var opts = m.map(function(b){ return '<option value="'+b.id+'">'+b.name+'</option>'; }).join('');
-    var aVal = selA.value, bVal = selB.value;
-    selA.innerHTML = opts;
-    selB.innerHTML = opts;
-    if(m.some(function(b){ return b.id===aVal; })) selA.value = aVal;
-    else if(m[0]) selA.value = m[0].id;
-    if(m.some(function(b){ return b.id===bVal && b.id!==selA.value; })) selB.value = bVal;
-    else {
-      var other = m.filter(function(b){ return b.id!==selA.value; })[0];
-      if(other) selB.value = other.id;
-    }
-  }
 
   function build(){
     clearAnims();
@@ -1109,7 +1074,6 @@ section[id],.hero,#top{scroll-margin-top:72px}
       el.querySelector('.cname').textContent=b.name;
     });
     layout(true);
-    fillSelects();
   }
   function layout(instant){
     var ord=blocks.slice().sort(function(a,b){return a.s-b.s;});
@@ -1129,7 +1093,6 @@ section[id],.hero,#top{scroll-margin-top:72px}
       blocks.forEach(function(b){ if(b.id===c.id){ b.s=c.s; b.e=c.e; } });
     });
     layout(!!instant || reduce);
-    fillSelects();
   }
   function byId(id){ var r=null; blocks.forEach(function(b){ if(b.id===id)r=b; }); return r; }
 
@@ -1175,7 +1138,6 @@ section[id],.hero,#top{scroll-margin-top:72px}
     var st=snap(), r=computeSwap(st,aId,bId);
     if(!r.ok){
       buzz([18,40,18]); toast(r.why);
-      announce(r.why);
       var unlock=findUnlock(st,aId,bId);
       if(r.conflict && unlock){
         say('Refused — <b>'+r.conflict+'</b> is in the way, and nothing moved. '+
@@ -1222,7 +1184,6 @@ section[id],.hero,#top{scroll-margin-top:72px}
     var msg = 'Swapped. Both kept their length and the gap travelled with them — <b>'+
         (a?a.name:'')+'</b> is '+dur+' minutes either way, now at '+(a?hhmm(a.s):'')+'.';
     say(msg,'win');
-    announce('Swapped '+ (a?a.name:'') +' with '+ (b?b.name:'') +'.');
     if(stage===0){ stage=1; setPips(1); }
     later(nextHint, 2200);
     return true;
@@ -1291,18 +1252,6 @@ section[id],.hero,#top{scroll-margin-top:72px}
   track.addEventListener('pointerup',endDrag);
   track.addEventListener('pointercancel',endDrag);
 
-  if(swapGo){
-    swapGo.addEventListener('click',function(){
-      markTouched();
-      var aId = selA.value, bId = selB.value;
-      if(!aId || !bId || aId===bId){
-        say('Pick two different movable blocks.','stop');
-        announce('Pick two different movable blocks.');
-        return;
-      }
-      performSwap(aId, bId, false);
-    });
-  }
 
   /* ---- miss the gym: actual computed result ---------- */
   skipBtn.addEventListener('click',function(){
@@ -1322,20 +1271,17 @@ section[id],.hero,#top{scroll-margin-top:72px}
              .sort(function(x,y){ return (y.e-y.s)-(x.e-x.s); });
     if(!gaps.length){
       say('No room left today. It goes to the Removed pile and returns tomorrow.','stop');
-      announce('No room left today for Gym.');
     } else {
       var g=gaps[0], len=Math.min(g.e-g.s,dur), lost=dur-len;
-      gym.s=g.s; gym.e=g.s+len; layout(false); fillSelects();
+      gym.s=g.s; gym.e=g.s+len; layout(false);
       gym.el.classList.add('flash');
       later(function(){ gym.el.classList.remove('flash'); },500);
       if(lost>0){
         say('Gym couldn\u2019t fit at full length, so it took the largest gap left and '+
             'says what that cost: <b>'+lost+' minutes shorter</b>, at '+hhmm(gym.s)+
             '. Shortened beats skipped.','win');
-        announce('Gym shortened by '+lost+' minutes, now at '+hhmm(gym.s)+'.');
       } else {
         say('Gym found a full-length slot at '+hhmm(gym.s)+'.','win');
-        announce('Gym moved full length to '+hhmm(gym.s)+'.');
       }
       recovered=true;
     }
