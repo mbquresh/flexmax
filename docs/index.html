@@ -58,7 +58,8 @@ header{position:sticky;top:0;z-index:50;background:rgba(236,234,230,.9);
   letter-spacing:-.01em;white-space:nowrap}
 .nav a:hover{color:var(--text)}
 .nav-engine{display:inline-flex;align-items:center;gap:7px;color:var(--text)}
-.nav-mil-wrap{display:inline-flex;line-height:0;flex:none}
+.nav-mil-wrap{display:inline-flex;line-height:0;flex:none;
+  animation:cel-pulse 2.8s ease-in-out infinite}
 .nav-mil{display:block;width:22px;height:14px;
   background:#CE7358;
   -webkit-mask-image:url(check-engine.png);
@@ -68,15 +69,13 @@ header{position:sticky;top:0;z-index:50;background:rgba(236,234,230,.9);
   mask-image:url(check-engine.png);
   mask-position:center;
   mask-size:contain;
-  mask-repeat:no-repeat;
-  filter:none!important;
-  animation:cel-flash 1s steps(1,end) infinite}
-@keyframes cel-flash{
-  0%,49%{opacity:1}
-  50%,100%{opacity:.12}
+  mask-repeat:no-repeat}
+@keyframes cel-pulse{
+  0%,100%{opacity:.42}
+  50%{opacity:1}
 }
 @media (prefers-reduced-motion:reduce){
-  .nav-mil{animation:none;opacity:1}
+  .nav-mil-wrap{animation:none;opacity:1}
 }
 @media (max-width:720px){
   .nav{gap:14px}
