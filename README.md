@@ -100,9 +100,9 @@ call per user per week.
 The full write-up — architecture, the six data-integrity rules that were each
 learned by building the wrong thing first, tone constraints, and what is
 deliberately deferred — is in
-**[docs/behavioral-engine.md](docs/behavioral-engine.md)**.
+**[notes/behavioral-engine.md](notes/behavioral-engine.md)**.
 What each of those decisions rests on, labelled Established / Supported / Bet /
-Arbitrary, is in **[docs/science.md](docs/science.md)**.
+Arbitrary, is in **[notes/science.md](notes/science.md)**.
 
 ## Stack
 

@@ -1659,7 +1659,7 @@ Things that corrupt the ledger or lose data permanently.
 
 ### Tier 3 — do not build yet
 - **Offline write queue.** Designed and deferred 2026-08-20. Full spec,
-  failure history, and build order in `docs/offline-mode.md`. Scope line:
+  failure history, and build order in `notes/offline-mode.md`. Scope line:
   recording works offline, planning requires a connection.
 - **DeviceActivity extension**, autonomous intervention, voice input, email,
   third-party integrations, richer AI.
