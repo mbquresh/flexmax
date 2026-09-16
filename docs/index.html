@@ -314,10 +314,11 @@ p{margin-top:1.1em}
   flex-wrap:wrap}
 .legend span{display:inline-flex;align-items:center;gap:6px}
 .dot{width:9px;height:9px;border-radius:2px;display:inline-block}
-.finding{margin-top:20px;padding:15px 16px;background:var(--primary-tint);
+.finding{margin-top:0;padding:0;background:transparent;
   border-radius:11px;font-size:15px;line-height:1.5;color:var(--primary-deep);
-  min-height:4.2em;opacity:0;transition:opacity .16s}
-.finding.show{opacity:1}
+  opacity:0;transition:opacity .16s;min-height:0}
+.finding.show{opacity:1;padding:15px 16px;background:var(--primary-tint);
+  min-height:4.2em}
 .readout .big,.readout-label,#counts{transition:opacity .14s}
 .finding-slot{min-height:4.2em;margin-top:20px}
 
@@ -1413,9 +1414,16 @@ section[id],.hero,#top{scroll-margin-top:72px}
       pct.textContent=pctText;
       label.textContent=v.label;
       counts.textContent=countsText;
-      if(findText){ finding.textContent=findText; finding.classList.add('show'); }
-      else { finding.textContent=''; finding.classList.remove('show'); }
-      pct.style.opacity = label.style.opacity = counts.style.opacity = finding.style.opacity = '1';
+      if(findText){
+        finding.textContent=findText;
+        finding.classList.add('show');
+        finding.style.opacity = '1';
+      } else {
+        finding.textContent='';
+        finding.classList.remove('show');
+        finding.style.opacity = '0';
+      }
+      pct.style.opacity = label.style.opacity = counts.style.opacity = '1';
     }
     if(reduce){ paint(); return; }
     pct.style.opacity = label.style.opacity = counts.style.opacity = '0';
