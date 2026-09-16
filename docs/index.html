@@ -59,7 +59,7 @@ header{position:sticky;top:0;z-index:50;background:rgba(236,234,230,.9);
 .nav a:hover{color:var(--text)}
 .nav-engine{display:inline-flex;align-items:center;gap:7px;color:var(--text)}
 .nav-mil-wrap{display:inline-flex;line-height:0;flex:none;
-  animation:cel-glow 2.8s ease-in-out infinite}
+  animation:nav-cel-glow 2.8s ease-in-out infinite}
 .nav-mil{display:block;width:22px;height:14px;
   background:#CE7358;
   -webkit-mask-image:url(check-engine.png);
@@ -70,18 +70,23 @@ header{position:sticky;top:0;z-index:50;background:rgba(236,234,230,.9);
   mask-position:center;
   mask-size:contain;
   mask-repeat:no-repeat}
-@keyframes cel-glow{
+/* Same soft pulse as the hero, but blur radii scaled to the tiny nav glyph —
+   the hero's 10–18px shadows read as fire at 22×14. */
+@keyframes nav-cel-glow{
   0%,100%{
     opacity:.42;
-    filter:drop-shadow(0 0 1px rgba(206,115,88,.2))
-           drop-shadow(0 0 3px rgba(206,115,88,.12));
+    filter:drop-shadow(0 0 0.5px rgba(206,115,88,.25))
+           drop-shadow(0 0 1.5px rgba(206,115,88,.15));
   }
   50%{
     opacity:1;
-    filter:drop-shadow(0 0 3px rgba(206,115,88,.85))
-           drop-shadow(0 0 10px rgba(206,115,88,.55))
-           drop-shadow(0 0 18px rgba(206,115,88,.28));
+    filter:drop-shadow(0 0 1px rgba(206,115,88,.7))
+           drop-shadow(0 0 3px rgba(206,115,88,.4))
+           drop-shadow(0 0 5px rgba(206,115,88,.22));
   }
+}
+@media (prefers-reduced-motion:reduce){
+  .nav-mil-wrap{animation:none;opacity:1;filter:none}
 }
 @media (max-width:720px){
   .nav{gap:14px}
