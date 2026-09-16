@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { View, Text, StyleSheet } from "react-native";
-import { Colors, numeric, radii, typography } from "../theme";
+import { Colors, numeric, radii, fonts, typography } from "../theme";
 import { useTheme } from "../providers/ThemeProvider";
 
 export function segmentHeightPct(ratio: number): number {
@@ -175,7 +175,7 @@ const makeStyles = (c: Colors) =>
     date: {
       color: c.text,
       fontSize: 15,
-      fontWeight: "700",
+      fontFamily: fonts.bold,
       letterSpacing: -0.3,
       lineHeight: 18,
       ...numeric,

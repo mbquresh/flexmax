@@ -48,7 +48,7 @@ import { BlockFormSheet, BlockFormData } from "../src/components/BlockFormSheet"
 import { DayStrip } from "../src/components/DayStrip";
 import { DayBoundariesSheet } from "../src/components/DayBoundariesSheet";
 import { AwaySheet } from "../src/components/AwaySheet";
-import { Colors, spacing, radii, typography, iconSizes } from "../src/theme";
+import { Colors, spacing, radii, fonts, typography, iconSizes } from "../src/theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { hapticSelect, hapticCommit, hapticReject } from "../src/lib/haptics";
 import {
@@ -1042,11 +1042,11 @@ const makeStyles = (c: Colors) =>
     },
     header: { paddingTop: 60, paddingBottom: spacing.md },
     headerMark: { alignItems: "center", marginBottom: spacing.md },
-    title: { fontSize: 24, fontWeight: "600", color: c.text, textAlign: "left" },
+    title: { fontSize: 24, fontFamily: fonts.semiBold, color: c.text, textAlign: "left" },
     boundaryLabel: {
       color: c.textMuted,
       fontSize: 11,
-      fontWeight: "600",
+      fontFamily: fonts.semiBold,
       textTransform: "uppercase",
       letterSpacing: 0.5,
       marginTop: spacing.xxl,
@@ -1106,7 +1106,7 @@ const makeStyles = (c: Colors) =>
       alignItems: "center",
       backgroundColor: c.surface,
     },
-    addToggleText: { color: c.primary, fontSize: 15, fontWeight: "500" },
+    addToggleText: { color: c.primary, fontSize: 15, fontFamily: fonts.medium },
     overrideLink: {
       marginTop: spacing.sm,
       alignSelf: "flex-start",
@@ -1141,7 +1141,7 @@ const makeStyles = (c: Colors) =>
       alignItems: "center",
       gap: spacing.xs,
     },
-    primaryBtnText: { color: c.onPrimary, fontSize: 16, fontWeight: "600" },
+    primaryBtnText: { color: c.onPrimary, fontSize: 16, fontFamily: fonts.semiBold },
     bottomBar: {
       position: "absolute",
       left: 0,

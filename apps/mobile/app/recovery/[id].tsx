@@ -24,7 +24,7 @@ import {
   MIN_BLOCK_MINUTES,
 } from "../../src/lib/schedule";
 import { hapticSelect } from "../../src/lib/haptics";
-import { Colors, spacing, radii, typography } from "../../src/theme";
+import { Colors, spacing, radii, fonts, typography } from "../../src/theme";
 import { useTheme } from "../../src/providers/ThemeProvider";
 import { useAuth } from "../../src/providers/AuthProvider";
 import { useStore } from "../../src/store";
@@ -912,7 +912,7 @@ const makeStyles = (c: Colors) =>
     lastIntentionLabel: {
       color: c.textMuted,
       fontSize: 11,
-      fontWeight: "600",
+      fontFamily: fonts.semiBold,
       textTransform: "uppercase",
       letterSpacing: 0.5,
       marginBottom: spacing.sm,
@@ -947,7 +947,7 @@ const makeStyles = (c: Colors) =>
       gap: 6,
       marginBottom: spacing.lg,
     },
-    rescheduleLabel: { color: c.success, fontSize: 12, fontWeight: "600" },
+    rescheduleLabel: { color: c.success, fontSize: 12, fontFamily: fonts.semiBold },
     rescheduleTimeRow: {
       flexDirection: "row",
       alignItems: "center",
@@ -978,7 +978,7 @@ const makeStyles = (c: Colors) =>
       alignItems: "center",
       marginTop: spacing.xs,
     },
-    rescheduleBtnText: { color: c.text, fontSize: 14, fontWeight: "600" },
+    rescheduleBtnText: { color: c.text, fontSize: 14, fontFamily: fonts.semiBold },
     rescheduleBtnBlocked: {
       backgroundColor: c.surfaceNested,
     },
@@ -1005,7 +1005,7 @@ const makeStyles = (c: Colors) =>
       alignItems: "center",
       marginTop: spacing.xs,
     },
-    shrinkBtnText: { color: c.text, fontSize: 14, fontWeight: "600" },
+    shrinkBtnText: { color: c.text, fontSize: 14, fontFamily: fonts.semiBold },
     footer: {
       flexDirection: "row",
       alignItems: "center",
@@ -1041,6 +1041,6 @@ const makeStyles = (c: Colors) =>
       paddingVertical: 10,
       alignItems: "center",
     },
-    remedyBtnText: { color: c.text, fontSize: 14, fontWeight: "600" },
-    remedyUndo: { color: c.text, fontSize: 14, fontWeight: "600" },
+    remedyBtnText: { color: c.text, fontSize: 14, fontFamily: fonts.semiBold },
+    remedyUndo: { color: c.text, fontSize: 14, fontFamily: fonts.semiBold },
   });

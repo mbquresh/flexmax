@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { BlockCategory, ScheduleBlock } from "../types/database";
-import { Colors, spacing, radii, typography, iconSizes } from "../theme";
+import { Colors, spacing, radii, fonts, typography, iconSizes } from "../theme";
 import { useTheme } from "../providers/ThemeProvider";
 import { PressableScale } from "./PressableScale";
 import { BrandLoader } from "./BrandLoader";
@@ -605,7 +605,7 @@ const makeStyles = (c: Colors) =>
       ...c.shadowRest,
     },
     segmentText: { ...typography.body, color: c.textMuted },
-    segmentTextActive: { color: c.text, fontWeight: "600" },
+    segmentTextActive: { color: c.text, fontFamily: fonts.semiBold },
     fieldHelper: { color: c.textFaint, fontSize: 12, lineHeight: 18 },
     overrideReset: { color: c.textSecondary, ...typography.small },
     errorLine: {

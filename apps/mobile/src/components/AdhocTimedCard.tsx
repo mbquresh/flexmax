@@ -15,7 +15,7 @@ import Animated, {
 import { AdhocTask } from "../types/database";
 import { minutesToTime } from "../lib/time";
 import { hapticCommit, hapticDetent, hapticSelect } from "../lib/haptics";
-import { Colors, spacing, radii, iconSizes, typography } from "../theme";
+import { Colors, spacing, radii, iconSizes, fonts, typography } from "../theme";
 import { useTheme } from "../providers/ThemeProvider";
 import { PressableScale } from "./PressableScale";
 
@@ -275,7 +275,7 @@ const makeStyles = (c: Colors) =>
     name: {
       color: c.text,
       fontSize: 16,
-      fontWeight: "600",
+      fontFamily: fonts.semiBold,
     },
     nameDone: {
       textDecorationLine: "line-through",
@@ -301,7 +301,7 @@ const makeStyles = (c: Colors) =>
       alignSelf: "flex-start",
       color: c.textMuted,
       fontSize: 11,
-      fontWeight: "600",
+      fontFamily: fonts.semiBold,
       textTransform: "uppercase",
       letterSpacing: 0.4,
     },

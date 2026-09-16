@@ -21,7 +21,7 @@ import { RequireAuth } from "../src/components/RequireAuth";
 import { BrandMark } from "../src/components/BrandMark";
 import { BrandLoader } from "../src/components/BrandLoader";
 import { PressableScale } from "../src/components/PressableScale";
-import { Colors, spacing, radii, typography, iconSizes } from "../src/theme";
+import { Colors, spacing, radii, fonts, typography, iconSizes } from "../src/theme";
 import { getInitials } from "../src/lib/format";
 import { handleError } from "../src/lib/errors";
 import { hapticSelect, hapticCommit, hapticReject } from "../src/lib/haptics";
@@ -493,7 +493,7 @@ const makeStyles = (c: Colors) =>
       justifyContent: "center",
       marginBottom: spacing.md,
     },
-    avatarText: { color: c.primary, fontSize: 26, fontWeight: "600" },
+    avatarText: { color: c.primary, fontSize: 26, fontFamily: fonts.semiBold },
     name: { color: c.text, ...typography.title, textAlign: "center" },
     editHint: { color: c.textPlaceholder, fontSize: 12, textAlign: "center", marginTop: spacing.xs },
     nameEditRow: { flexDirection: "row", alignItems: "center", gap: spacing.md },
@@ -545,7 +545,7 @@ const makeStyles = (c: Colors) =>
     toneLabelSelected: {
       ...typography.body,
       color: c.text,
-      fontWeight: "600",
+      fontFamily: fonts.semiBold,
     },
     toneCaption: {
       ...typography.caption,
@@ -580,7 +580,7 @@ const makeStyles = (c: Colors) =>
     profileLabel: {
       color: c.textFaint,
       fontSize: 12,
-      fontWeight: "600",
+      fontFamily: fonts.semiBold,
       marginBottom: spacing.sm,
       textTransform: "uppercase",
     },
@@ -603,7 +603,7 @@ const makeStyles = (c: Colors) =>
       paddingVertical: spacing.md,
       alignItems: "center",
     },
-    redoBtnText: { color: c.primary, fontSize: 14, fontWeight: "600" },
+    redoBtnText: { color: c.primary, fontSize: 14, fontFamily: fonts.semiBold },
     emptyProfile: { color: c.textFaint, fontSize: 14, lineHeight: 22 },
     settingRow: {
       flexDirection: "row",

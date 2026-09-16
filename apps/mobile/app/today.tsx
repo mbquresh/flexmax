@@ -1436,7 +1436,8 @@ function TodayScreenContent() {
 
           {canEdit ? (
             <PressableScale style={styles.addAdhocPill} onPress={openAddTask}>
-              <Text style={styles.addAdhocPlus}>+</Text>
+              <Feather name="plus" size={22} color={colors.onPrimary} />
+              <Text style={styles.addAdhocLabel}>Ad-hoc Task</Text>
             </PressableScale>
           ) : null}
 
@@ -1740,7 +1741,10 @@ function TodayScreenContent() {
                   { transform: [{ translateY: addTaskSlideAnim }] },
                 ]}
               >
-            <Text style={styles.addTaskTitle}>Add task</Text>
+            <View>
+              <Text style={styles.addTaskTitle}>Add ad-hoc task</Text>
+              <Text style={styles.addTaskSubtitle}>(Today only)</Text>
+            </View>
             <TextInput
               style={styles.addTaskInput}
               value={addTaskName}
@@ -1934,13 +1938,17 @@ const makeStyles = (c: Colors) =>
       marginBottom: spacing.lg,
       alignItems: "center",
       justifyContent: "center",
+      overflow: "hidden",
     },
-    addAdhocPlus: {
-      color: "#FFFFFF",
-      fontSize: 26,
-      fontWeight: "600",
-      lineHeight: 28,
-      marginTop: -2,
+    addAdhocLabel: {
+      position: "absolute",
+      right: spacing.md,
+      bottom: 6,
+      color: c.onPrimary,
+      opacity: 0.55,
+      ...typography.caption,
+      fontSize: 11,
+      letterSpacing: 0.2,
     },
     anytimeTray: {
       marginTop: spacing.lg,
@@ -1985,6 +1993,11 @@ const makeStyles = (c: Colors) =>
       gap: spacing.md,
     },
     addTaskTitle: { color: c.text, ...typography.heading },
+    addTaskSubtitle: {
+      color: c.textMuted,
+      ...typography.small,
+      marginTop: 2,
+    },
     addTaskInput: {
       backgroundColor: c.surface,
       borderWidth: 0.5,

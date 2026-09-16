@@ -2,7 +2,7 @@ import React, { useMemo, useState } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { DailyInstance } from "../types/database";
 import { minutesToTime } from "../lib/time";
-import { Colors, spacing, radii } from "../theme";
+import { Colors, spacing, radii, fonts } from "../theme";
 import { useTheme } from "../providers/ThemeProvider";
 import { PressableScale } from "./PressableScale";
 import { MISS_REASON_PRESETS } from "../lib/missReasons";
@@ -123,7 +123,7 @@ const makeStyles = (c: Colors) =>
     blockName: {
       color: c.text,
       fontSize: 16,
-      fontWeight: "600",
+      fontFamily: fonts.semiBold,
     },
     blockTime: {
       color: c.textMuted,
@@ -147,7 +147,7 @@ const makeStyles = (c: Colors) =>
     doneBtnText: {
       color: c.text,
       fontSize: 13,
-      fontWeight: "600",
+      fontFamily: fonts.semiBold,
     },
     neutralBtn: {
       borderColor: c.border,
@@ -155,7 +155,7 @@ const makeStyles = (c: Colors) =>
     neutralBtnText: {
       color: c.textSecondary,
       fontSize: 13,
-      fontWeight: "600",
+      fontFamily: fonts.semiBold,
     },
     presetHeader: {
       flexDirection: "row",
@@ -166,7 +166,7 @@ const makeStyles = (c: Colors) =>
     missedBadge: {
       color: c.textMuted,
       fontSize: 13,
-      fontWeight: "600",
+      fontFamily: fonts.semiBold,
     },
     presetWrap: {
       flexDirection: "row",

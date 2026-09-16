@@ -34,7 +34,7 @@ import {
   HistoryFacts,
   WeekBar,
 } from "../src/lib/stats";
-import { Colors, spacing, radii, iconSizes, typography, numeric } from "../src/theme";
+import { Colors, spacing, radii, iconSizes, fonts, typography, numeric } from "../src/theme";
 import { useTheme } from "../src/providers/ThemeProvider";
 
 type TheoryInsight = Pick<
@@ -396,7 +396,7 @@ const makeStyles = (c: Colors) =>
     belief: {
       color: c.text,
       fontSize: 17,
-      fontWeight: "400",
+      fontFamily: fonts.regular,
       letterSpacing: -0.2,
       lineHeight: 24,
     },

@@ -10,7 +10,7 @@ import {
   resolveBlockTimes,
 } from "../lib/recurrence";
 import { WEEKDAYS } from "../lib/schedule";
-import { Colors, spacing, radii, iconSizes } from "../theme";
+import { Colors, spacing, radii, iconSizes, fonts } from "../theme";
 import { useTheme } from "../providers/ThemeProvider";
 import { PressableScale } from "./PressableScale";
 import { hapticSelect } from "../lib/haptics";
@@ -154,7 +154,7 @@ const makeStyles = (c: Colors) =>
       marginRight: spacing.md,
       color: c.text,
       fontSize: 16,
-      fontWeight: "600",
+      fontFamily: fonts.semiBold,
     },
     blockActions: {
       flexDirection: "row",
@@ -162,8 +162,8 @@ const makeStyles = (c: Colors) =>
       gap: 12,
       flexShrink: 0,
     },
-    editText: { color: c.primary, fontSize: 13, fontWeight: "600" },
-    archiveText: { color: c.textSecondary, fontSize: 13, fontWeight: "600" },
+    editText: { color: c.primary, fontSize: 13, fontFamily: fonts.semiBold },
+    archiveText: { color: c.textSecondary, fontSize: 13, fontFamily: fonts.semiBold },
     blockMeta: { color: c.textMuted, fontSize: 13, marginTop: spacing.xs },
     differentTag: {
       alignSelf: "flex-start",
@@ -176,7 +176,7 @@ const makeStyles = (c: Colors) =>
     differentTagText: {
       color: c.text,
       fontSize: 11,
-      fontWeight: "600",
+      fontFamily: fonts.semiBold,
     },
     blockRepeats: { color: c.textFaint, fontSize: 12, marginTop: 4, marginBottom: 10 },
   });

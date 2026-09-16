@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { WEEKDAYS } from "../lib/schedule";
-import { Colors, spacing, radii } from "../theme";
+import { Colors, spacing, radii, fonts } from "../theme";
 import { useTheme } from "../providers/ThemeProvider";
 
 export { WEEKDAYS, ALL_DAYS } from "../lib/schedule";
@@ -58,6 +58,6 @@ const makeStyles = (c: Colors) =>
       borderColor: c.border,
     },
     dayChipActive: { backgroundColor: c.primary, borderColor: c.primary },
-    dayChipText: { color: c.textFaint, fontSize: 12, fontWeight: "600" },
+    dayChipText: { color: c.textFaint, fontSize: 12, fontFamily: fonts.semiBold },
     dayChipTextActive: { color: c.onPrimary },
   });

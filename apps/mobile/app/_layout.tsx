@@ -1,16 +1,24 @@
 import { useEffect, useRef } from "react";
+import { View, StyleSheet } from "react-native";
 import { Stack, router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import * as Notifications from "expo-notifications";
 import { AuthProvider } from "../src/providers/AuthProvider";
 import { ThemeProvider, useTheme } from "../src/providers/ThemeProvider";
+import { BrandLoader } from "../src/components/BrandLoader";
+import {
+  applyInstrumentSansDefaults,
+  useInstrumentSans,
+} from "../src/lib/fonts";
 import { supabase } from "../src/lib/supabase";
 import {
   registerNotificationCategories,
   scheduleFollowUpNudge,
 } from "../src/lib/blockNotifications";
 import { notificationTypeFromData, track } from "../src/lib/analytics";
+
+let instrumentSansDefaultsApplied = false;
 
 function handleNotificationResponse(response: Notifications.NotificationResponse) {
   const action = response.actionIdentifier;
@@ -80,9 +88,18 @@ function ThemedStack() {
 }
 
 export default function RootLayout() {
+  const [fontsLoaded] = useInstrumentSans();
   const responseListener = useRef<Notifications.Subscription | null>(null);
 
   useEffect(() => {
+    if (!fontsLoaded || instrumentSansDefaultsApplied) return;
+    applyInstrumentSansDefaults();
+    instrumentSansDefaultsApplied = true;
+  }, [fontsLoaded]);
+
+  useEffect(() => {
+    if (!fontsLoaded) return;
+
     (async () => {
       await registerNotificationCategories();
 
@@ -103,7 +120,17 @@ export default function RootLayout() {
         responseListener.current.remove();
       }
     };
-  }, []);
+  }, [fontsLoaded]);
+
+  if (!fontsLoaded) {
+    return (
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <ThemeProvider>
+          <FontBootScreen />
+        </ThemeProvider>
+      </GestureHandlerRootView>
+    );
+  }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -115,3 +142,20 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
+
+function FontBootScreen() {
+  const { colors } = useTheme();
+  return (
+    <View style={[bootStyles.boot, { backgroundColor: colors.background }]}>
+      <BrandLoader size={56} />
+    </View>
+  );
+}
+
+const bootStyles = StyleSheet.create({
+  boot: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+});

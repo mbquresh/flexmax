@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { View, Text, StyleSheet, ScrollView, Animated } from "react-native";
 import { useTheme } from "../providers/ThemeProvider";
 import { PressableScale } from "./PressableScale";
-import { Colors, spacing, radii, typography } from "../theme";
+import { Colors, spacing, radii, fonts, typography } from "../theme";
 import { hapticSelect } from "../lib/haptics";
 // Cell counts live in weekDemoData.ts — measured coupling pair.
 import {
@@ -123,7 +123,7 @@ const makeStyles = (c: Colors) =>
       color: c.textMuted,
       fontSize: 10,
       lineHeight: ROW,
-      fontWeight: "500",
+      fontFamily: fonts.medium,
     },
     gridScroll: {
       flex: 1,

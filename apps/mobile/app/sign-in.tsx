@@ -16,7 +16,7 @@ import { handleError, getErrorMessage } from "../src/lib/errors";
 import { BrandMark } from "../src/components/BrandMark";
 import { BrandLoader } from "../src/components/BrandLoader";
 import { PressableScale } from "../src/components/PressableScale";
-import { Colors, spacing, radii, typography } from "../src/theme";
+import { Colors, spacing, radii, fonts, typography } from "../src/theme";
 
 export default function SignInScreen() {
   const { colors } = useTheme();
@@ -200,7 +200,7 @@ const makeStyles = (c: Colors) =>
       alignItems: "center",
       marginTop: spacing.sm,
     },
-    buttonText: { color: c.onPrimary, fontSize: 16, fontWeight: "600" },
+    buttonText: { color: c.onPrimary, fontSize: 16, fontFamily: fonts.semiBold },
     toggle: { color: c.textMuted, textAlign: "center", marginTop: spacing.lg, fontSize: 14 },
     footerMark: { marginTop: spacing.xxxl, opacity: 0.4, alignItems: "center" },
   });

@@ -133,6 +133,17 @@ export function DisputeSheet({
                 <Text style={styles.submitText}>Correct this</Text>
               )}
             </PressableScale>
+            <Pressable
+              onPress={() => {
+                if (saving) return;
+                hapticSelect();
+                close();
+              }}
+              disabled={saving}
+              style={styles.dismissBtn}
+            >
+              <Text style={styles.dismissText}>Dismiss</Text>
+            </Pressable>
           </RNAnimated.View>
         </KeyboardAvoidingView>
       </View>
@@ -215,6 +226,15 @@ const makeStyles = (c: Colors) =>
     },
     submitText: {
       color: c.onPrimary,
+      ...typography.bodyBold,
+    },
+    dismissBtn: {
+      alignItems: "center",
+      paddingTop: spacing.md,
+      paddingBottom: spacing.xs,
+    },
+    dismissText: {
+      color: c.textMuted,
       ...typography.bodyBold,
     },
   });

@@ -237,24 +237,36 @@ export const iconSizes = {
   lg: 18,   // prominent dismiss
 } as const;
 
+/**
+ * Instrument Sans — same face as the showcase. React Native needs a distinct
+ * family name per weight; do not pair these with fontWeight or Android will
+ * fall back to system and iOS will faux-bold.
+ */
+export const fonts = {
+  regular: "InstrumentSans_400Regular",
+  medium: "InstrumentSans_500Medium",
+  semiBold: "InstrumentSans_600SemiBold",
+  bold: "InstrumentSans_700Bold",
+} as const;
+
 export const typography = {
   // Negative tracking is what separates a designed headline from a default
-  // bold one — SF sets loose at display sizes.
-  display:   { fontSize: 28, fontWeight: "700" as const, letterSpacing: -0.6 },
-  title:     { fontSize: 22, fontWeight: "600" as const, letterSpacing: -0.4 },
-  heading:   { fontSize: 17, fontWeight: "600" as const, letterSpacing: -0.2 },
+  // bold one — Instrument Sans still wants it at display sizes.
+  display:   { fontSize: 28, fontFamily: fonts.bold, letterSpacing: -0.6 },
+  title:     { fontSize: 22, fontFamily: fonts.semiBold, letterSpacing: -0.4 },
+  heading:   { fontSize: 17, fontFamily: fonts.semiBold, letterSpacing: -0.2 },
 
-  body:      { fontSize: 15, fontWeight: "400" as const, lineHeight: 22 },
-  bodyBold:  { fontSize: 15, fontWeight: "600" as const, lineHeight: 22 },
+  body:      { fontSize: 15, fontFamily: fonts.regular, lineHeight: 22 },
+  bodyBold:  { fontSize: 15, fontFamily: fonts.semiBold, lineHeight: 22 },
 
-  small:     { fontSize: 13, fontWeight: "400" as const, lineHeight: 19 },
-  smallBold: { fontSize: 13, fontWeight: "600" as const, lineHeight: 19 },
+  small:     { fontSize: 13, fontFamily: fonts.regular, lineHeight: 19 },
+  smallBold: { fontSize: 13, fontFamily: fonts.semiBold, lineHeight: 19 },
 
   // For paragraphs of body copy inside sheets and modals, where 19 is tight.
-  smallRelaxed: { fontSize: 13, fontWeight: "400" as const, lineHeight: 20 },
+  smallRelaxed: { fontSize: 13, fontFamily: fonts.regular, lineHeight: 20 },
 
-  caption:   { fontSize: 12, fontWeight: "500" as const, letterSpacing: 0.1 },
-  label:     { fontSize: 11, fontWeight: "600" as const, letterSpacing: 0.5 },
+  caption:   { fontSize: 12, fontFamily: fonts.medium, letterSpacing: 0.1 },
+  label:     { fontSize: 11, fontFamily: fonts.semiBold, letterSpacing: 0.5 },
 } as const;
 
 /**

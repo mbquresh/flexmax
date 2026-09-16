@@ -25,7 +25,7 @@ import { CloseTodayRow } from "../src/components/CloseTodayRow";
 import { BlockTaskRow } from "../src/components/BlockTaskRow";
 import { TaskMovePicker } from "../src/components/TaskMovePicker";
 import { DailyInstance, BlockTask, ScheduleBlock } from "../src/types/database";
-import { Colors, spacing, radii, typography, iconSizes } from "../src/theme";
+import { Colors, spacing, radii, fonts, typography, iconSizes } from "../src/theme";
 import {
   listBlockTasks,
   groupBlockTasks,
@@ -602,7 +602,7 @@ const makeStyles = (c: Colors) =>
     },
     headerText: { flex: 1 },
     skipBtn: { color: c.primary, ...typography.body },
-    title: { fontSize: 24, fontWeight: "600", color: c.text },
+    title: { fontSize: 24, fontFamily: fonts.semiBold, color: c.text },
     subtitle: { fontSize: 14, color: c.textMuted, marginTop: spacing.xs },
     scroll: { flex: 1 },
     scrollContent: {
@@ -633,7 +633,7 @@ const makeStyles = (c: Colors) =>
       alignItems: "center",
       gap: spacing.xs,
     },
-    blockName: { color: c.text, fontSize: 16, fontWeight: "600" },
+    blockName: { color: c.text, fontSize: 16, fontFamily: fonts.semiBold },
     blockTime: { color: c.textMuted, fontSize: 13 },
     taskInput: {
       backgroundColor: c.surfaceNested,
@@ -675,5 +675,5 @@ const makeStyles = (c: Colors) =>
       paddingVertical: spacing.lg,
       alignItems: "center",
     },
-    saveBtnText: { color: c.onPrimary, fontSize: 16, fontWeight: "600" },
+    saveBtnText: { color: c.onPrimary, fontSize: 16, fontFamily: fonts.semiBold },
   });
