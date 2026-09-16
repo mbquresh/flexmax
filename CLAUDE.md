@@ -204,7 +204,7 @@ because it requires that person's six months.
 - **Gestures:** react-native-reanimated + react-native-gesture-handler
 - **Notifications:** expo-notifications (local scheduling for block check-ins)
 - **Time:** minutes-since-midnight integers throughout
-- **Repo:** github.com/mbquresh/flexmax (monorepo: apps/mobile, supabase)
+- **Repo:** monorepo — apps/mobile, supabase
 - **Supabase project ref:** njsoqgaorebtwwcxgagf
 
 ---
@@ -676,7 +676,7 @@ counts if every instance has a real user-set status, regardless of outcome.
 `missed` (engaged, admitted) keeps it alive; only `unaccounted` (silence)
 breaks it.
 
-Supported by real data: the sole user's Fajr+Quran block shows 14 missed and 1
+Supported by real data: one early block shows 14 missed and 1
 unaccounted — they show up to admit failure. That is the behavior worth
 protecting. Weights shows 6 missed and 15 unaccounted — silent abandonment is
 the real drift, not the miss.
@@ -1192,9 +1192,9 @@ New components:
 **Completion quality is a traffic light, not a saturation ramp (2026-08-09).**
 The block card status bar shows crushed/partial/pulled_away as teal / #FFD600 /
 #FF1744, matching the check-in sheet exactly. Claude argued for a single-hue
-saturation ramp on bad-week grounds; Belal overruled on the grounds that a
+saturation ramp on bad-week grounds; product overruled on the grounds that a
 three-step ramp on a 4px stripe is illegible and the point is instant
-interpretation. Belal was right.
+interpretation. The traffic light won.
 
 **Back navigation pops, it does not replace (2026-08-09).** `router.replace()`
 swaps the top route but leaves the entry beneath, so every round trip added a

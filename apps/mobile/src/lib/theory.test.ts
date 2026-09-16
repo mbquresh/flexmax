@@ -113,7 +113,7 @@ describe("theoryReportSynopsis", () => {
           kind: "strength",
           rank: 1,
           disputed_at: null,
-          belief: "Fajr is still holding. The rest of the morning follows.",
+          belief: "Morning block is still holding. The rest of the morning follows.",
         },
         {
           kind: "structural",
@@ -135,7 +135,7 @@ describe("theoryReportSynopsis", () => {
         },
       ])
     ).toBe(
-      "Fajr is still holding. The day hangs on the morning session landing. Sunday is the weak weekday."
+      "Morning block is still holding. The day hangs on the morning session landing. Sunday is the weak weekday."
     );
   });
 

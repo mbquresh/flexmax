@@ -168,7 +168,7 @@ are measuring what you think they are.
 ## Engagement asymmetry is a signal in its own right
 
 The ratio of `missed` to `unaccounted` per block reveals which commitments the
-user still treats as real. Real example: Fajr+Quran shows 14 missed and 1
+user still treats as real. Real example: one early block shows 14 missed and 1
 unaccounted — the user reports on it almost every time, including failures.
 Weights workout shows 6 missed and 15 unaccounted — silent abandonment.
 Confronting a miss repeatedly is accountability, not avoidance, and is
@@ -208,7 +208,19 @@ pair and reports which explanations the data rules out.
 Every test is SQL. The pack emits `surviving` / `ruled_out` / `untested` —
 the narrator reads those lists, it does not derive them. `insufficient_data`
 means untested, not ruled out, and it is the common result on gap
-sensitivity. That is correct. Do not lower the floor to mint a verdict.
+sensitivity. That is correct. Do not lower the gap floor to mint a verdict.
+
+`domain_spread` gates on depth and breadth, not on owning two blocks in
+the same category: ≥1 same-category pair with ≥15 days, and ≥3
+other-category pairs. A single deep-work pair against flat meals is
+enough to call `domain_specific`.
+
+`surviving` is not "still untested after something died." Positive
+confirmation (`domain_specific`, `carry_favoured`, `cascade_favoured`)
+still wins. Carry may residual-survive when upstream is ruled out and
+gap has not returned `cascade_favoured`. Cascade does not get the same
+residual — without a gap signal it stays untested. Untested must not
+quietly become surviving for every remaining name.
 
 User-facing copy is spoken English: the pair, then the one thing the
 data ruled out. Never test names, never lift, never "anchor control".

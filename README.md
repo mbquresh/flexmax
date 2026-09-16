@@ -7,8 +7,8 @@
 <p align="center"><strong>There was never a moment you decided to skip it.</strong></p>
 
 <p align="center">
-  <a href="https://mbquresh.github.io/flexmax"><strong>Try the schedule →</strong></a><br>
-  <sub>The real drag-to-swap engine, running in the browser. No signup.</sub>
+  <a href="docs/index.html"><strong>Product philosophy →</strong></a><br>
+  <sub>Why the product works the way it does. Interactive demos included.</sub>
 </p>
 
 ---
@@ -49,7 +49,7 @@ alive and only silence breaks it. No history required, nothing to type.
 Claude narrates once a week, and the resulting beliefs are injected free into the
 morning card, the recovery sheet and the weekly recap.
 
-The [interactive demo](https://mbquresh.github.io/flexmax) runs the first half in
+The [interactive demos](docs/index.html) run the first half in
 the browser: the same anchor arithmetic, the same collision refusals by name, the
 same shrink planner.
 
@@ -143,4 +143,3 @@ yarn mobile
 
 All rights reserved. Readable, not reusable — see [LICENSE](LICENSE).
 
-Built by [Belal Qureshi](https://github.com/mbquresh) in Houston, TX.

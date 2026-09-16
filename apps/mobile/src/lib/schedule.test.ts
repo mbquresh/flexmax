@@ -140,7 +140,7 @@ describe("planDisplacement", () => {
       start_minutes: 630,
       end_minutes: 690,
       is_fixed: true,
-      block: block({ name: "Fajr" }),
+      block: block({ name: "Morning block" }),
     });
     const plan = planDisplacement(
       { start_minutes: 600, end_minutes: 660 },
@@ -151,7 +151,7 @@ describe("planDisplacement", () => {
     expect(plan).toEqual({
       kind: "blocked",
       reason: "fixed",
-      names: ["Fajr"],
+      names: ["Morning block"],
     });
   });
 
@@ -161,7 +161,7 @@ describe("planDisplacement", () => {
       start_minutes: 630,
       end_minutes: 690,
       is_fixed: false,
-      block: block({ name: "Fajr", is_fixed: true }),
+      block: block({ name: "Morning block", is_fixed: true }),
     });
     const plan = planDisplacement(
       { start_minutes: 600, end_minutes: 660 },
@@ -172,7 +172,7 @@ describe("planDisplacement", () => {
     expect(plan).toEqual({
       kind: "blocked",
       reason: "fixed",
-      names: ["Fajr"],
+      names: ["Morning block"],
     });
   });
 

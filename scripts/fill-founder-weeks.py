@@ -8,7 +8,7 @@ values (oldest → newest, last 12 weeks) as a JSON array:
          round(100.0 * count(*) filter (where i.status = 'completed')
                / nullif(count(*), 0), 1) as completion_pct
   from daily_schedule_instances i
-  where i.user_id = 'd8c23a37-229f-4204-bf45-1c58684d385d'
+  where i.user_id = '<YOUR_USER_ID>'
     and i.date < current_date
     and i.status not in ('removed','rescheduled')
   group by 1 order by 1;

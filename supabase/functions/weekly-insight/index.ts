@@ -145,12 +145,12 @@ ABSOLUTE RULES
       are in the payload, cite those counts in evidence — never the
       percents, never lift_anchored.
       If those count fields are missing, write no third number.
-      "The same split is there on days Fajr landed" is a complete
+      "The same split is there on days the early routine landed" is a complete
       sentence.
 
       Never write "bad-day effect". Never write "the rest of the
-      day barely shifted". Those belong to a different test
-      (domain_spread), and that test is usually untested.
+      day barely shifted" unless domain_spread.verdict is
+      domain_specific and flat_blocks names a quiet block.
 
       Belief shape, copy this cadence:
       "When [earlier] holds, [later] usually holds with it. That's
@@ -165,18 +165,24 @@ ABSOLUTE RULES
       about the rest of the day.
 
     surviving has exactly one name:
-      Say the shape in English, never the name.
-      carry only → "it stays with this kind of work."
-      cascade only → "it tends to go when the two sit close in the day."
-      upstream only → "something earlier in the day still lines up
+      You MUST say the shape in English in the belief — never the
+      name, and never skip it for restraint. That sentence is the
+      payoff of the eliminations. Prefer "what's left is" or "what
+      the data is consistent with" when closing after an elimination.
+      Never "because", "causes", or "the reason is". Never name a
+      surviving shape when surviving is empty or has more than one.
+      carry only → "This stays with this kind of work."
+      cascade only → "It tends to go when the two sit close in the day."
+      upstream only → "Something earlier in the day still lines up
       with both."
 
     If nothing is in surviving, state the pair and the one
     elimination. Do not invent what is left.
 
-    Belief: two sentences. No fractions in the belief — those live
-    in evidence. First sentence is the pair in speech. Second is
-    the one thing ruled out, if any.
+    Belief: two or three short sentences. No fractions in the belief —
+    those live in evidence. First is the pair in speech. Second is
+    the one thing ruled out, if any. Third is the surviving shape
+    when surviving has exactly one name — required, not optional.
     Evidence: the two arm counts for the pair, then the anchored
     counts only if they exist as counts. No percent. No lift.
 
@@ -190,23 +196,37 @@ ABSOLUTE RULES
     month", "lately", "recently", or a bare present tense about a pattern that
     does not appear in the last 7 days. Reporting a habit the user has already
     fixed proves you are not watching, and costs more trust than saying nothing.
-12. A DIVERGENCE between the recent window and the prior one is the strongest
-    thing in the payload. A block whose ratio has clearly moved — in either
-    direction — outranks any flat 30-day total, because the user cannot see it
-    themselves: a month of averages hides it, and living through it feels like
-    noise.     When any block shows a clear divergence, emit a kind "pattern"
-    insight for it. Do not fold a turnaround into the strength.
-    Do not pick a single winner and rotate. Include every distinct
-    observation the pack supports, up to 3 pattern objects, each
-    about a different block (or a different pair). A week-shape on
-    the structural pair can be one of them. Speak the four counts
-    in English: "completed 5 and missed 2 in the last 7, against
-    8 and 13 before that." Never write the key names
-    (completed_7d, failed_7d, completed_prior, failed_prior).
-    Do not divide them. Do not write "worse", "tipped", or "the
-    ratio" unless the raw counts already make the direction obvious
-    without arithmetic — 1 and 3 against 11 and 10 is obvious;
-    3 and 4 against 9 and 13 is not.
+12. block_recency can show a real turn, or noise that looks like one.
+    Before describing a block as improving, deteriorating, turning
+    around, or slipping, compare the two rates already present in
+    block_recency — do not invent a third number. Prefer failure rate
+    (missed / (completed + missed)) in each window, or the completion
+    rate; either is fine if used consistently. If the recent rate and
+    the prior rate are within 15 percentage points of each other, the
+    block is roughly unchanged. Say so plainly and do not characterise
+    a direction. Example: 3 completed and 4 missed in the last 7 is
+    43% complete; 10 and 12 before that is 45% — that is NOT a
+    divergence. Cite the four counts and "roughly unchanged", or omit
+    the block from a pattern card.
+
+    Only claim a direction when the gap exceeds 15 points AND the
+    recent window has at least 5 tracked days (completed_7d +
+    failed_7d >= 5). Below that, describe the level, not the trend.
+    1 and 3 against 11 and 10 is a real move. Do not invent direction
+    when the gap is under 15 points, in either direction — earlier
+    runs have called the same flat data both a turnaround and a decline.
+
+    When the gap clears 15 points with enough recent days, a
+    divergence outranks a flat 30-day total. Emit a kind "pattern"
+    for it. Do not fold a turnaround into the strength. Do not pick
+    a single winner and rotate. Include every distinct observation
+    the pack supports, up to 3 pattern objects, each about a different
+    block (or a different pair). A week-shape on the structural pair
+    can be one of them. Speak the four counts in English: "completed
+    5 and missed 2 in the last 7, against 8 and 13 before that."
+    Never write the key names (completed_7d, failed_7d,
+    completed_prior, failed_prior). Do not write "worse", "tipped",
+    or "the ratio" unless the 15-point floor already cleared.
 13. RESPECT block age. days_tracked and first_seen say how long a block has
     existed, not how it is going. For a block with few days_tracked relative to
     the 30-day window: you may state its record, but you may NOT diagnose it,
@@ -225,10 +245,14 @@ ABSOLUTE RULES
     exceeds 15 points and each of those two days has at least 8 relevant
     instances. Describe the day, never the person. Cite each day's
     fail_pct and relevant from the payload; do not invent a third number
-    for the gap. kind is "structural". This is a second check-engine
-    card only when it independently clears those floors AND a
-    qualifying pair already occupies the first. A near-miss weekday
-    is omit, not a third light.
+    for the gap. Do NOT claim the weekday pattern is durable,
+    "structural" in the sense of settled, "not just a bad week", a
+    persistent outlier, or stable across months — day_of_week is one
+    window with no persistence test. A single window shows a level,
+    not a settled pattern. State the spread only. kind is "structural".
+    This is a second check-engine card only when it independently clears
+    those floors AND a qualifying pair already occupies the first.
+    A near-miss weekday is omit, not a third light.
 16. reflections is the user's own writing, keyed by block and date.
     When an insight names a block that appears in that list, the evidence
     MUST say what they wrote — short, faithful, no extra interpretation.
@@ -240,16 +264,18 @@ ABSOLUTE RULES
     and take the next.
 
 WHAT TO LOOK FOR, in priority order
-- Direction of travel: block_recency divergence between the last 7 days and
-  prior. A block that has clearly improved or clearly deteriorated is the
-  highest-value thing you can report, because it is the one thing a 30-day
-  average actively conceals.
+- Direction of travel: block_recency only when the two window rates
+  differ by more than 15 points AND the recent window has at least
+  5 tracked days. Below that, the windows are roughly unchanged —
+  cite counts or omit, never invent a turn.
 - Structural dependency with eliminations: a qualifying keystone whose
-  hypothesis_tests lists at least one ruled_out. Strictly more informative
-  than the pair alone. kind "structural".
+  hypothesis_tests lists at least one ruled_out. When surviving has
+  exactly one name, the belief must say that shape in English.
+  Strictly more informative than the pair alone. kind "structural".
 - Structural dependency: a qualifying keystone in block_coupling (rule 9),
   or a weekday spread that clears rule 15. These are discoveries — they do
-  not need a matching reflection. kind "structural".
+  not need a matching reflection. kind "structural". State the weekday
+  spread only; do not claim it is settled or "not just a bad week".
 - Causal chains ACROSS days or blocks (one thing displacing another).
 - Quality drift: recent_poor vs recent_rated shows whether the sessions that
   DO happen are getting worse. Raise it when recent_poor is a majority of

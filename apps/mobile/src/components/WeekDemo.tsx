@@ -4,7 +4,7 @@ import { useTheme } from "../providers/ThemeProvider";
 import { PressableScale } from "./PressableScale";
 import { Colors, spacing, radii, typography } from "../theme";
 import { hapticSelect } from "../lib/haptics";
-// Cell counts live in weekDemoData.ts — founder's measured coupling pair.
+// Cell counts live in weekDemoData.ts — measured coupling pair.
 import {
   DEMO_BLOCKS,
   DEMO_DAYS,

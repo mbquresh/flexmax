@@ -6,7 +6,9 @@
 -- a trigger whose pairs were all rejected cannot appear as a keystone.
 -- Discriminating tests (anchor, domain, gap) run only on qualified pairs
 -- and emit surviving / ruled_out / untested in SQL. The narrator reports
--- those lists; it never invents an explanation. Do not lower floors.
+-- those lists; it never invents an explanation. Coupling and gap floors
+-- stay; domain_spread gates on pair days (≥15) and other-category breadth
+-- (≥3), not on owning two same-category pairs.
 
 CREATE OR REPLACE FUNCTION public.get_behavior_evidence(p_user_id uuid)
  RETURNS jsonb
@@ -246,9 +248,10 @@ begin
   ),
   -- Lift of this trigger against every later block in the recent window,
   -- grouped by whether the later block shares the stored category.
-  -- Never infer a category from a name.
+  -- Never infer a category from a name. days is the pair sample — the
+  -- domain gate keys on that, not on how many same-category blocks exist.
   later_lifts as (
-    select a.trigger_id, a.later_id, a.later_name,
+    select a.trigger_id, a.later_id, a.later_name, a.days,
            (a.pct_when_won - a.pct_when_lost) as lift,
            tb.category as trigger_category,
            lb.category as later_category
@@ -276,8 +279,19 @@ begin
              '[]'::jsonb
            ) as flat_blocks,
            case
-             when count(*) filter (where ll.trigger_category = ll.later_category) < 2
-               or count(*) filter (where ll.trigger_category <> ll.later_category) < 2
+             -- One same-category pair with real depth is enough; requiring
+             -- two same-category pairs made the test unreachable for anyone
+             -- with a single deep-work (or similar) pair. Other-category
+             -- still needs breadth so "flat" is not one quiet block.
+             when coalesce(
+                    max(ll.days) filter (
+                      where ll.trigger_category = ll.later_category
+                    ),
+                    0
+                  ) < 15
+               or count(*) filter (
+                    where ll.trigger_category <> ll.later_category
+                  ) < 3
                then 'insufficient_data'
              when abs(avg(ll.lift) filter (where ll.trigger_category = ll.later_category))
                   >= abs(avg(ll.lift) filter (where ll.trigger_category <> ll.later_category)) * 2
@@ -377,6 +391,13 @@ begin
   ),
   -- surviving / ruled_out / untested are derived here. The narrator
   -- reads the lists; it does not assign a hypothesis to a verdict.
+  --
+  -- Positive confirmation still wins (domain_specific, *_favoured).
+  -- Residual survival: when a rival is ruled out and no conclusive test
+  -- eliminated this candidate, it may move to surviving. Untested does
+  -- NOT become surviving by default — cascade stays untested unless gap
+  -- favours it. Carry is the residual when upstream dies and gap has not
+  -- killed carry (the "morning carries the afternoon" sentence).
   hypothesis_rows as (
     select q.trigger_id, q.later_id, q.trigger_name, q.later_name, q.lift,
            ac.anchor_name, ac.anchor_days,
@@ -392,6 +413,13 @@ begin
              when gs.verdict = 'cascade_favoured' then 'ruled_out'
              when ds.verdict = 'domain_specific'
                or gs.verdict = 'carry_favoured' then 'surviving'
+             when (ac.verdict = 'upstream_ruled_out'
+                   or ds.verdict = 'domain_specific')
+              and coalesce(gs.verdict, 'insufficient_data')
+                    is distinct from 'cascade_favoured'
+              and coalesce(ds.verdict, 'insufficient_data')
+                    is distinct from 'global'
+               then 'surviving'
              else 'untested'
            end as carry_status,
            case
@@ -720,7 +748,7 @@ begin
       'window_days', 30,
       'excludes_today', true,
       'coupling_note', 'lift is associational, never causal. day_baseline_shift approaching abs(lift) means whole-day collapse, not a pair-specific relationship. persistence = single_window means fewer than 60 days exist or the prior window lacked enough arms.',
-      'hypothesis_note', 'hypothesis_tests eliminate explanations; they do not establish causation. insufficient_data means untested, not ruled out. All results are observational. The three candidates are fixed: carry, upstream, cascade. Never invent a fourth, and never mention willpower depletion.',
+      'hypothesis_note', 'hypothesis_tests eliminate explanations; they do not establish causation. insufficient_data means untested, not ruled out. surviving requires positive confirmation or a residual after a rival is ruled out — never promote every untested name. All results are observational. The three candidates are fixed: carry, upstream, cascade. Never invent a fourth, and never mention willpower depletion.',
       'caveats', jsonb_build_array(
         'start_minutes and end_minutes are SCHEDULED template times, not records of when anything happened. Never claim a block "ran until" a time.',
         'unaccounted = no user acknowledgement at all. Disengagement signal, weaker than a confirmed miss. Describe as "never checked in", never as "you failed this".',
@@ -759,16 +787,19 @@ grant execute on function public.get_behavior_evidence(uuid) to service_role;
 -- day_baseline, or the unaccounted guard. block_coupling is unchanged.
 --
 -- select jsonb_pretty(
---   (public.get_behavior_evidence('d8c23a37-229f-4204-bf45-1c58684d385d'))
+--   (public.get_behavior_evidence('<YOUR_USER_ID>'))
 --     -> 'hypothesis_tests'
 -- );
 --
 -- Expected on that account, one pair (Deep work morning → Deep work afternoon):
---   anchor_control.verdict = upstream_ruled_out (anchor Fajr / Quran;
+--   anchor_control.verdict = upstream_ruled_out (anchor early routine;
 --     anchored lift larger than unanchored). If inconclusive, leave the
 --     0.5 multiplier alone and read the raw anchored lift.
 --   domain_spread.verdict = domain_specific; flat_blocks includes Dinner.
---     If same_category_pairs < 2 the floor returns insufficient_data —
---     do not lower it.
+--     Gate is ≥1 same-category pair with ≥15 days and ≥3 other-category
+--     pairs — not ≥2 same-category pairs (unreachable with one deep-work
+--     counterpart).
 --   gap_sensitivity.verdict is usually insufficient_data.
 --   surviving: [carry], ruled_out: [upstream], untested: [cascade].
+--     Carry may also residual-survive when upstream is ruled out and gap
+--     has not returned cascade_favoured; cascade does not residual-survive.

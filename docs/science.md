@@ -217,7 +217,7 @@ The one-nudge-per-day cap is also a receptivity decision. See §10.
 The founder data shows Deep work morning failing predicts Deep work afternoon
 failing (10 of 15 vs 1 of 11, p ≈ 0.0002, survives Bonferroni at 72
 comparisons, day-level control non-significant at p = 0.14, and the effect
-*strengthens* when restricted to days Fajr completed — ruling out the obvious
+*strengthens* when restricted to days an early routine completed — ruling out the obvious
 sleep confounder).
 
 The tempting explanation is ego depletion: willpower is a finite resource, the
@@ -334,7 +334,7 @@ in Al-Ghazali and Ibn Qayyim.
 
 The structural match is exact: nightly, honest, self-administered, no
 audience, and the value residing in the accounting itself rather than in a
-verdict. FlexMax is a muhasaba instrument with a pattern-detection layer.
+verdict. FlexMax is a self-accounting instrument with a pattern-detection layer.
 
 This is not a marketing frame — it narrows the audience and the product's
 public positioning is deliberately secular. It is recorded here because it is
