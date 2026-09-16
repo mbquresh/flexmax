@@ -58,13 +58,18 @@ header{position:sticky;top:0;z-index:50;background:rgba(236,234,230,.9);
   letter-spacing:-.01em;white-space:nowrap}
 .nav a:hover{color:var(--text)}
 .nav-engine{display:inline-flex;align-items:center;gap:7px;color:var(--text)}
-.nav-mil{display:inline-block;width:22px;height:14px;flex:none;
+.nav-mil-wrap{display:inline-flex;line-height:0;flex:none;
+  animation:cel-glow 2.8s ease-in-out infinite}
+.nav-mil{display:block;width:22px;height:14px;
   background:#CE7358;
-  -webkit-mask:url(check-engine.png) center / contain no-repeat;
-  mask:url(check-engine.png) center / contain no-repeat;
-  animation:cel-glow 2.8s ease-in-out infinite;
-  filter:drop-shadow(0 0 2px rgba(206,115,88,.55))
-         drop-shadow(0 0 7px rgba(206,115,88,.4))}
+  -webkit-mask-image:url(check-engine.png);
+  -webkit-mask-position:center;
+  -webkit-mask-size:contain;
+  -webkit-mask-repeat:no-repeat;
+  mask-image:url(check-engine.png);
+  mask-position:center;
+  mask-size:contain;
+  mask-repeat:no-repeat}
 @keyframes cel-glow{
   0%,100%{
     opacity:.42;
@@ -175,6 +180,33 @@ p{margin-top:1.1em}
 .beat .lede{max-width:42ch}
 .beat .edge{margin-top:18px;font-size:18px;font-weight:600;color:var(--text);
   max-width:40ch;line-height:1.4}
+
+/* ---------- pricing ---------- */
+.pricing-panel{display:grid;grid-template-columns:1fr 1fr;gap:0;overflow:hidden;
+  margin-top:34px;border:1px solid var(--border);border-radius:14px;background:var(--surface)}
+.price-tier{padding:26px}
+.price-tier + .price-tier{border-left:1px solid var(--border)}
+.price-tier h3{color:var(--muted);font-size:13px;font-weight:600;margin:0}
+.price-value{margin-top:11px;font-size:39px;font-weight:700;line-height:1.06;
+  letter-spacing:-.045em;color:var(--text)}
+.price-value small{color:var(--muted);font-size:14px;font-weight:500;letter-spacing:0}
+.price-tier p{margin-top:8px;color:var(--muted);font-size:13px}
+.pricing-bottom{display:flex;align-items:center;justify-content:space-between;
+  gap:22px;margin-top:25px;flex-wrap:wrap}
+.pricing-bottom p{max-width:41ch;color:var(--text-2);font-size:14px;line-height:1.5}
+.pricing-note{margin-top:13px;color:var(--muted);font-size:12.5px}
+.button{display:inline-flex;align-items:center;justify-content:center;min-height:46px;
+  border:1px solid var(--primary);border-radius:10px;padding:11px 19px;
+  background:var(--primary);color:var(--on-primary);font-size:15px;font-weight:600;
+  line-height:1.25;text-decoration:none;transition:transform .16s,background .16s,border-color .16s}
+.button:hover{background:var(--primary-deep);border-color:var(--primary-deep)}
+.button:active{transform:scale(.97)}
+.button.arrow::after{content:"→";margin-left:12px;font-size:19px;font-weight:400;line-height:1}
+@media (max-width:560px){
+  .pricing-panel{grid-template-columns:1fr}
+  .price-tier + .price-tier{border-left:0;border-top:1px solid var(--border)}
+  .pricing-bottom{flex-direction:column;align-items:flex-start}
+}
 
 /* ---------- the rig: real drag-to-swap ---------- */
 .rig{background:var(--surface);border:1px solid var(--border);border-radius:16px;
@@ -361,9 +393,9 @@ p{margin-top:1.1em}
       <a href="#evidence">What it learns</a>
       <a href="#why">Why</a>
       <a href="#payoff">Payoff</a>
-      <a href="#state">Built</a>
+      <a href="#pricing">Pricing</a>
       <a class="nav-engine" href="engine.html">
-        <span class="nav-mil" aria-hidden="true"></span>
+        <span class="nav-mil-wrap" aria-hidden="true"><span class="nav-mil"></span></span>
         <span>Engine</span>
       </a>
     </nav>
@@ -721,54 +753,36 @@ p{margin-top:1.1em}
 
 <hr class="rule">
 
-<!-- ================= HONEST STATE ================= -->
-<section id="state">
-  <div class="wrap wide">
-    <p class="label">07 / Where it stands</p>
-    <h2>Where it actually stands.</h2>
-    <p class="lede" style="max-width:42ch">What exists, what doesn't — without the
-      pitch.</p>
-    <div class="state">
-      <div class="built">
-        <h3>Working the hour you install it</h3>
-        <ul>
-          <li>Time-block schedule with one-tap swapping and fixed anchors</li>
-          <li>Rebuild a broken day — shrink, move, or drop with the cost named</li>
-          <li>The Removed pile, so nothing dropped is gone for good</li>
-          <li>Check-ins, miss reasons, and the recovery flow</li>
-          <li>Tasks inside blocks, filled in the night before</li>
-          <li>The accounted-for streak</li>
-          <li>Evening close-out and next-day planning</li>
-          <li>Light and dark, notifications in your timezone</li>
-          <li>Desktop and iPhone, synced</li>
-        </ul>
-        <h3 style="margin-top:22px">Working from about week two</h3>
-        <ul>
-          <li>Weekly behavioral insights drawn from your own days</li>
-          <li>A written profile of how you work, that you can argue with when
-            it gets you wrong</li>
-          <li>Nudges timed from your own patterns</li>
-        </ul>
+<!-- ================= PRICING ================= -->
+<section id="pricing">
+  <div class="wrap">
+    <p class="label">One product, one price</p>
+    <h2>The recovery tool works the hour you install it.</h2>
+    <p class="lede">The understanding layer takes real days. That delay is
+      deliberate: a profound answer on day two would be a guess.</p>
+    <div class="pricing-panel">
+      <div class="price-tier">
+        <h3>Monthly</h3>
+        <div class="price-value tab">$14.99<small>/mo</small></div>
+        <p>One flat subscription. No trial.</p>
       </div>
-      <div class="not">
-        <h3>Not built yet</h3>
-        <ul>
-          <li>Daily predictions the app scores itself against — and tells you
-            when you proved it wrong</li>
-          <li>Twelve-week chapters, each ending in a real review</li>
-          <li>Blocks that retire themselves once they've gone automatic</li>
-          <li>Rest you declare in advance, which never counts against you</li>
-          <li>Voice reflections</li>
-          <li>Widgets, Apple Watch, Android</li>
-        </ul>
+      <div class="price-tier">
+        <h3>Yearly</h3>
+        <div class="price-value tab">$9.99<small>/mo</small></div>
+        <p class="tab">$119 billed yearly.</p>
       </div>
     </div>
-    <p style="margin-top:26px" class="dim">It gets about a week of your days before
-      it says anything worth reading. That's deliberate — an app that tells you
-      something profound on day two is guessing.</p>
+    <div class="pricing-bottom">
+      <p>One subscription is planned to cover iPhone and desktop. Checkout
+        is not available during internal TestFlight.</p>
+      <a class="button arrow" href="#recovery">Back to the recovery model</a>
+    </div>
+    <p class="pricing-note">Paid access is planned after the current internal
+      testing period.</p>
   </div>
 </section>
 
+<hr class="rule">
 
 <!-- ================= CLOSE ================= -->
 <section style="padding-top:14px">

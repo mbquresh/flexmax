@@ -71,45 +71,76 @@
     padding-bottom: 5rem;
   }
 
-  .hero svg { margin-bottom: 0; flex-shrink: 0; }
-
   .hero-mark {
     display: flex;
-    align-items: flex-end;
-    gap: 14px;
+    align-items: center;
+    gap: 22px;
     margin-bottom: 2.5rem;
   }
 
-  .hero-mil {
-    display: inline-block;
-    width: 36px;
-    height: 22px;
+  /* filter on the WRAPPER — filter on a masked element blanks the mask in WebKit */
+  .hero-mil-wrap {
+    display: block;
     flex: none;
-    margin-bottom: 6px;
-    background: var(--markCoral);
-    -webkit-mask: url(check-engine.png) center / contain no-repeat;
-    mask: url(check-engine.png) center / contain no-repeat;
+    line-height: 0;
     animation: cel-glow 2.8s ease-in-out infinite;
-    filter: drop-shadow(0 0 2px rgba(206,115,88,.55))
-            drop-shadow(0 0 7px rgba(206,115,88,.4));
+  }
+
+  .hero-mil {
+    display: block;
+    /* Match former F-mark height (86px); aspect 238×154 */
+    width: 133px;
+    height: 86px;
+    background: #CE7358;
+    -webkit-mask-image: url(check-engine.png);
+    -webkit-mask-position: center;
+    -webkit-mask-size: contain;
+    -webkit-mask-repeat: no-repeat;
+    mask-image: url(check-engine.png);
+    mask-position: center;
+    mask-size: contain;
+    mask-repeat: no-repeat;
+  }
+
+  .hero-badge {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  .hero-badge-title {
+    font-size: 1.35rem;
+    font-weight: 600;
+    letter-spacing: -.02em;
+    line-height: 1.2;
+    color: var(--text);
+  }
+
+  .hero-badge-ver {
+    font-size: 0.85rem;
+    font-weight: 500;
+    letter-spacing: .04em;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
   }
 
   @keyframes cel-glow {
     0%, 100% {
-      opacity: .42;
-      filter: drop-shadow(0 0 1px rgba(206,115,88,.2))
-              drop-shadow(0 0 3px rgba(206,115,88,.12));
+      opacity: .72;
+      filter: drop-shadow(0 0 4px rgba(206,115,88,.55))
+              drop-shadow(0 0 14px rgba(206,115,88,.35));
     }
     50% {
       opacity: 1;
-      filter: drop-shadow(0 0 3px rgba(206,115,88,.85))
-              drop-shadow(0 0 10px rgba(206,115,88,.55))
-              drop-shadow(0 0 18px rgba(206,115,88,.28));
+      filter: drop-shadow(0 0 6px rgba(206,115,88,1))
+              drop-shadow(0 0 20px rgba(206,115,88,.75))
+              drop-shadow(0 0 40px rgba(206,115,88,.4));
     }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .hero-mil { animation: none; opacity: 1; }
+    .hero-mil-wrap { animation: none; opacity: 1; filter: none; }
   }
 
   .hero h1 { font-size: 3.667rem; }
@@ -294,6 +325,9 @@
     h2 { font-size: 1.5rem; }
     .section, .hero, .section-close { padding-top: 3rem; padding-bottom: 3rem; }
     .hero { min-height: auto; padding-top: 4rem; padding-bottom: 4rem; }
+    .hero-mil { width: 100px; height: 65px; }
+    .hero-badge-title { font-size: 1.15rem; }
+    .hero-mark { gap: 16px; }
   }
 
 </style>
@@ -304,13 +338,13 @@
 <!-- ============ 1 · COVER ============ -->
 <div class="section hero">
   <div class="hero-mark">
-    <svg width="70" height="86" viewBox="0 0 442 545" aria-hidden="true">
-      <rect x="0" y="0" width="128" height="545" rx="64" fill="#4E7599"/>
-      <rect x="0" y="0" width="442" height="128" rx="64" fill="#4E7599"/>
-      <rect x="0" y="209" width="340" height="128" rx="64" fill="#CE7358"/>
-      <path d="M127,209 H64 A64,64 0 0,0 64,337 H127 Z" fill="#2B2822"/>
-    </svg>
-    <span class="hero-mil" aria-hidden="true"></span>
+    <span class="hero-mil-wrap">
+      <span class="hero-mil" role="img" aria-label="Check engine"></span>
+    </span>
+    <div class="hero-badge">
+      <span class="hero-badge-title">Behavior Learning Engine</span>
+      <span class="hero-badge-ver">3.0 V6</span>
+    </div>
   </div>
 
   <div>
