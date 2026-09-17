@@ -36,3 +36,47 @@ main{overflow-x:clip}
 #scene-heading{min-height:2.24em}
 #scene-body{min-height:4.8em}
 @media(max-width:700px){.hero{padding-block:44px 48px}.hero-copy{padding-top:0}}
+/* Keep the hero eyebrow balanced if it wraps on narrow phones. */
+.hero .eyebrow{text-wrap:balance}
+/* Clock times match the app's 12-hour format; a fixed column keeps rows aligned. */
+.schedule-row .time{flex:0 0 auto;min-width:4.3em}
+/* From 1024px the preview is at least 404px wide: every stage fits one-line titles and a two-line body, so reserve exactly that. */
+@media(min-width:1024px){#scene-title{min-height:1.12em}#scene-subtitle{min-height:1.6em}#scene-heading{min-height:1.12em}#scene-body{min-height:3.2em}.recovery-preview{min-height:0}}
+/* Who it isn't for: visible before the FAQ, not folded inside it. */
+.fit{display:grid;grid-template-columns:.85fr 1.15fr;gap:70px;align-items:start;border-bottom:1px solid var(--line)}
+.fit-card h3{font-size:21px}
+.fit-list{list-style:none;margin:8px 0 0;padding:0}
+.fit-list li{position:relative;padding:17px 0 17px 30px;border-top:1px solid var(--line);font-size:14px;line-height:1.6;color:var(--muted)}
+.fit-list li:first-child{border-top:0}
+.fit-list li::before{content:"×";position:absolute;left:3px;top:16px;font-size:17px;color:#9d968b}
+.fit-list strong{display:block;margin-bottom:3px;font-size:16px;font-weight:600;line-height:1.35;color:var(--ink)}
+@media(max-width:950px){.fit{gap:35px}}
+@media(max-width:700px){.fit{grid-template-columns:1fr;gap:29px}.fit-list li{padding-left:26px}.fit-list li::before{left:1px}}
+/* Header: this page's sections, a hairline, then the story and engine pages. Engine sits last with the story page's check-engine light. */
+.nav-bar .nav-links{margin-left:auto;margin-right:8px;gap:28px}
+.nav-links a{display:inline-flex;align-items:center;white-space:nowrap;transition:color .2s}
+.nav-links a:hover{color:var(--ink)}
+.nav-split{position:relative}
+.nav-split::before{content:"";position:absolute;left:-14px;top:50%;width:1px;height:14px;margin-top:-7px;background:var(--line)}
+.nav-engine{gap:7px}
+.nav-mil-wrap{display:inline-flex;line-height:0;flex:none;animation:cel-pulse 2.8s ease-in-out infinite}
+.nav-mil{display:block;width:22px;height:14px;background:#ce7358;-webkit-mask-image:url(check-engine.png);-webkit-mask-position:center;-webkit-mask-size:contain;-webkit-mask-repeat:no-repeat;mask-image:url(check-engine.png);mask-position:center;mask-size:contain;mask-repeat:no-repeat}
+@keyframes cel-pulse{0%,100%{opacity:.42}50%{opacity:1}}
+body.motion-paused .nav-mil-wrap{animation:none}
+/* Too narrow for one row: brand and button on top, the four links in a second row that scrolls sideways if it has to. */
+@media(max-width:860px){html{scroll-padding-top:108px}.nav-bar{flex-wrap:wrap;min-height:0;column-gap:12px;row-gap:0;padding-top:8px}.nav-bar .button.small{margin-left:auto}.nav-bar .nav-links{order:3;flex:1 0 100%;margin:8px 0 0;padding:0 0 2px;gap:24px;border-top:1px solid var(--line);overflow-x:auto;scrollbar-width:none}.nav-bar .nav-links::-webkit-scrollbar{display:none}.nav-links a{font-size:13px;padding-block:8px}}
+@media(max-width:380px){.nav-bar{column-gap:8px}.nav-bar .button.small{padding:9px 10px;gap:6px}.nav-bar .nav-links{gap:16px}.nav-split::before{left:-8px}}
+@media(max-width:340px){.nav-bar .brand{font-size:16px;gap:8px}.nav-bar .brand img{width:28px;height:28px}.nav-bar .nav-links{gap:12px}.nav-links a{font-size:12px}.nav-engine{gap:5px}.nav-mil{width:19px;height:12px}.nav-split::before{left:-6px}}
+/* Pause motion floats bottom-center while you scroll, then parks at the end of the page content, so it never covers the footer links. */
+.motion-dock{position:sticky;bottom:0;z-index:20;display:flex;justify-content:center;align-items:flex-end;height:0;pointer-events:none}
+.motion-dock .motion-toggle{position:static;margin-bottom:16px;pointer-events:auto}
+@media(max-width:700px){.motion-dock .motion-toggle{margin-bottom:10px}.footer{padding-bottom:27px}}
+
+/* Section 02 recover mark — same icon box as ✓ / ≋ so the three cards align */
+.benefit-icon.swoosh{
+  width:48px;height:1.6em; /* 26px × body 1.6 — matches sibling text icons */
+  background:var(--blue);
+  -webkit-mask:url(swoosh.png) center/contain no-repeat;
+  mask:url(swoosh.png) center/contain no-repeat;
+  color:transparent;
+}

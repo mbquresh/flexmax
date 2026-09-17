@@ -13,9 +13,9 @@
     animation.oncancel = clear;
   }
   const options = {
-    shrink: {tag:"Gym protected", title:"A smaller session. A day still moving.", description:"Start at 3:00 and keep 30 minutes of deep work. Your gym session stays at 3:30.", note:"The tradeoff: 30 fewer minutes of deep work.", blocks:[["15:00–15:30","Deep work","Shortened to 30 minutes","work"],["15:30–16:30","Gym","Unchanged","gym"]]},
-    move: {tag:"Both kept", title:"A full session, a little later.", description:"Keep the gym at 3:30 and move deep work into an open hour at 5:00. Fixed commitments stay in place.", note:"The tradeoff: your free hour at 5:00 becomes work time.", blocks:[["15:30–16:30","Gym","Unchanged","gym"],["17:00–18:00","Deep work","Moved to an available hour","work"]]},
-    trade: {tag:"Tradeoff shown", title:"Keep the work. Name what gives.", description:"A full hour of deep work at 3:00 overlaps the gym. In this example, choosing it means giving up today’s gym session.", note:"The tradeoff: today’s gym session is dropped. In the app, you choose before any change is saved.", blocks:[["15:00–16:00","Deep work","Full 60-minute session","work"],["15:30–16:30","Gym","Given up for this example","dropped"]]}
+    shrink: {tag:"Gym protected", title:"A smaller session. A day still moving.", description:"Start at 3:00 and keep 30 minutes of deep work. Your gym session stays at 3:30.", note:"The tradeoff: 30 fewer minutes of deep work.", blocks:[["3:00 PM – 3:30 PM","Deep work","Shortened to 30 minutes","work"],["3:30 PM – 4:30 PM","Gym","Unchanged","gym"]]},
+    move: {tag:"Both kept", title:"A full session, a little later.", description:"Keep the gym at 3:30 and move deep work into an open hour at 5:00. Fixed commitments stay in place.", note:"The tradeoff: your free hour at 5:00 becomes work time.", blocks:[["3:30 PM – 4:30 PM","Gym","Unchanged","gym"],["5:00 PM – 6:00 PM","Deep work","Moved to an available hour","work"]]},
+    trade: {tag:"Tradeoff shown", title:"Keep the work. Name what gives.", description:"A full hour of deep work at 3:00 overlaps the gym. In this example, choosing it means giving up today’s gym session.", note:"The tradeoff: today’s gym session is dropped. In the app, you choose before any change is saved.", blocks:[["3:00 PM – 4:00 PM","Deep work","Full 60-minute session","work"],["3:30 PM – 4:30 PM","Gym","Given up for this example","dropped"]]}
   };
   document.querySelectorAll('[data-option]').forEach(button => {
     button.addEventListener('click', () => {
@@ -38,7 +38,7 @@
       blocks.querySelectorAll('.result-block').forEach((block,index) => animate(block,[{opacity:0,transform:'translateX(18px)'},{opacity:1,transform:'translateX(0)'}],{duration:420,delay:index*80,easing:'cubic-bezier(.2,.7,.3,1)'}));
     });
   });
-  // Run the three-stage illustration once. Visitors can pause, replay or select a stage.
+  // Loop while visible; restart the story when visitors scroll back to it.
   const scenes = [
     {title:'A day full of good intentions.', subtitle:'The plan is set. Then real life happens.', time:'8:00 AM', label:'The plan', heading:'Work first. Gym after.', body:'An hour of deep work at 1:00. A gym session at 3:30. It all fits on paper.', status:'Planned · 60 minutes', mark:'○'},
     {title:'The afternoon got away.', subtitle:'One missed block. The rest is still possible.', time:'2:47 PM', label:'The interruption', heading:'Deep work didn’t happen.', body:'There isn’t room for the full hour before the gym. Something needs to change.', status:'Missed · needs a decision', mark:'—'},
@@ -47,9 +47,8 @@
   const sceneFields = {title:'scene-title',subtitle:'scene-subtitle',time:'scene-time',label:'scene-label',heading:'scene-heading',body:'scene-body',status:'scene-work-status',mark:'scene-work-mark'};
   let sceneIndex = 2;
   let timer;
-  let playing = false;
+  let playing = true;
   let inView = false;
-  let hasStarted = false;
   const steps = [...document.querySelectorAll('[data-scene]')];
   const preview = document.querySelector('.preview');
   function stopTimer() {
@@ -69,13 +68,12 @@
   function scheduleScene() {
     stopTimer();
     if (!playing || !moving() || !inView || document.hidden) return;
-    if (sceneIndex>=2) {playing=false;return;}
     steps[sceneIndex].classList.add('is-running');
-    timer = window.setTimeout(() => {renderScene(sceneIndex+1);scheduleScene();},4000);
+    timer = window.setTimeout(() => {renderScene((sceneIndex+1)%scenes.length);scheduleScene();},4000);
   }
-  steps.forEach((step,index)=>step.addEventListener('click',()=>{playing=false;stopTimer();renderScene(index);}));
+  steps.forEach((step,index)=>step.addEventListener('click',()=>{playing=true;renderScene(index);scheduleScene();}));
   document.getElementById('replay-story').addEventListener('click',()=>{
-    if(!moving()){playing=false;stopTimer();renderScene((sceneIndex+1)%3);return;}
+    if(!moving()){stopTimer();renderScene((sceneIndex+1)%scenes.length);return;}
     playing=true;renderScene(0);scheduleScene();
   });
   const toggle=document.getElementById('motion-toggle');
@@ -93,22 +91,29 @@
   document.addEventListener('visibilitychange',scheduleScene);
   if ('IntersectionObserver' in window) {
     const storyObserver=new IntersectionObserver(entries=>{
-      inView=entries[0].isIntersecting;
-      if(inView&&!hasStarted&&moving()){hasStarted=true;playing=true;renderScene(0);}
+      const latest = entries[entries.length - 1]; // several queued states can arrive at once; only the newest is current
+      const visible = latest.isIntersecting && latest.intersectionRatio >= .2;
+      const returning = visible && !inView;
+      inView = visible;
+      if (returning && moving()) { playing=true; renderScene(0); }
       scheduleScene();
-    },{threshold:.4});
+    },{threshold:.2});
     storyObserver.observe(preview);
     // No hidden CSS state: content remains readable if JS fails or motion is disabled.
+    const revealedInView = new WeakSet();
     const revealObserver=new IntersectionObserver(entries=>{
       entries.forEach(entry=>{
-        if(!entry.isIntersecting)return;
-        revealObserver.unobserve(entry.target);
+        if (!entry.isIntersecting) { revealedInView.delete(entry.target); return; }
+        if (entry.intersectionRatio < .15 || revealedInView.has(entry.target)) return;
+        revealedInView.add(entry.target);
         animate(entry.target,[{opacity:.25,transform:'translateY(22px)'},{opacity:1,transform:'translateY(0)'}],{duration:650,easing:'cubic-bezier(.2,.7,.3,1)'});
         entry.target.querySelectorAll('.meter span').forEach((bar,index)=>animate(bar,[{transform:'scaleX(0)'},{transform:'scaleX(1)'}],{duration:1000,delay:150+index*120,easing:'cubic-bezier(.2,.7,.3,1)'}));
       });
-    },{threshold:.15});
-    document.querySelectorAll('.section-heading,.demo-grid,.benefits article,.evidence,.faq,.access-inner').forEach(element=>revealObserver.observe(element));
+    },{threshold:[0,.15]});
+    document.querySelectorAll('.hero-copy,.section-heading,.demo-grid,.benefits article,.evidence,.faq,.access-inner').forEach(element=>revealObserver.observe(element));
+  } else {
+    inView=true;
+    if(moving()) renderScene(0);
   }
   syncMotion();
-  animate(document.querySelector('.hero-copy'),[{opacity:0,transform:'translateY(18px)'},{opacity:1,transform:'translateY(0)'}],{duration:800,easing:'ease-out'});
 })();
