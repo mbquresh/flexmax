@@ -300,8 +300,12 @@ export type DisplacementPlan =
   | { kind: "sacrifice"; targets: DailyInstance[]; names: string[] }
   | { kind: "blocked"; reason: "fixed"; names: string[] };
 
-function isFixedInstance(i: DailyInstance): boolean {
-  return i.is_fixed || !!i.block?.is_fixed;
+/** Template flexibility wins when the block is joined — instance.is_fixed is
+ *  only the generation snapshot, and generation never overwrites an existing
+ *  row. Preferring the OR left stale "locked" cards after a Fixed→Flexible edit. */
+export function isFixedInstance(i: DailyInstance): boolean {
+  if (i.block) return !!i.block.is_fixed;
+  return !!i.is_fixed;
 }
 
 export function planDisplacement(

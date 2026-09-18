@@ -81,9 +81,17 @@ async function syncTodayInstance(block: ScheduleBlock) {
     return;
   }
   const times = resolveBlockTimes(block, dow);
+  // is_fixed is denormalized onto the instance at generation. Generation is
+  // on conflict do nothing, so a Fixed→Flexible edit would leave Today locked
+  // forever without writing it here — same as start/end minutes.
+  const patch = {
+    start_minutes: times.start,
+    end_minutes: times.end,
+    is_fixed: block.is_fixed,
+  };
   const { data, error } = await supabase
     .from("daily_schedule_instances")
-    .update({ start_minutes: times.start, end_minutes: times.end })
+    .update(patch)
     .eq("block_id", block.id)
     .eq("date", today)
     .eq("status", "pending")
@@ -93,7 +101,7 @@ async function syncTodayInstance(block: ScheduleBlock) {
   await generateDailyInstances(today);
   const { error: retryError } = await supabase
     .from("daily_schedule_instances")
-    .update({ start_minutes: times.start, end_minutes: times.end })
+    .update(patch)
     .eq("block_id", block.id)
     .eq("date", today)
     .eq("status", "pending");

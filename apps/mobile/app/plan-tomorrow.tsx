@@ -12,7 +12,7 @@ import {
 import { router, useLocalSearchParams } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { generateDailyInstances, supabase } from "../src/lib/supabase";
-import { WEEKDAYS } from "../src/lib/schedule";
+import { WEEKDAYS, isFixedInstance } from "../src/lib/schedule";
 import { getLocalDateString, getTomorrowLocalDateString, minutesToTime } from "../src/lib/time";
 import { handleError, isConnectivityError } from "../src/lib/errors";
 import { useAuth } from "../src/providers/AuthProvider";
@@ -38,10 +38,6 @@ import {
 import { addDays } from "../src/lib/stats";
 import { track } from "../src/lib/analytics";
 import { runsOn, upcomingRunDates } from "../src/lib/recurrence";
-
-function isInstanceFixed(instance: DailyInstance): boolean {
-  return instance.is_fixed || !!instance.block?.is_fixed;
-}
 
 // The nightly notification replace()s onto this screen, so cold launch has
 // no stack to pop. From Today it is a push and back() is correct.
@@ -493,7 +489,7 @@ function PlanTomorrowScreenContent() {
           </View>
         ) : (
           instances.map((instance) => {
-            const fixed = isInstanceFixed(instance);
+            const fixed = isFixedInstance(instance);
             return (
               <View
                 key={instance.id}

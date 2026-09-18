@@ -22,6 +22,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { DailyInstance, BlockTask } from "../types/database";
 import { minutesToTime } from "../lib/time";
+import { isFixedInstance } from "../lib/schedule";
 import { hapticPickUp, hapticDetent, hapticSelect } from "../lib/haptics";
 import { DragHandle } from "./DragHandle";
 import { PressableScale } from "./PressableScale";
@@ -32,10 +33,6 @@ import { useTheme } from "../providers/ThemeProvider";
 const ACTION_BUTTON_WIDTH = 80;
 const REVEAL_WIDTH_PENDING = 160;
 const REVEAL_WIDTH_SINGLE = 80;
-
-function isInstanceFixed(instance: DailyInstance): boolean {
-  return instance.is_fixed || !!instance.block?.is_fixed;
-}
 
 interface BlockCardProps {
   instance: DailyInstance;
@@ -103,7 +100,7 @@ export function BlockCard({
   const flashOpacity = useSharedValue(0);
   const isDone = instance.status === "completed";
   const isMissed = instance.status === "missed";
-  const isFixed = isInstanceFixed(instance);
+  const isFixed = isFixedInstance(instance);
   // Unanswered = still awaiting a decision. Blocks become "active" once
   // their start time passes, and must remain swipeable.
   const isUnanswered =
@@ -165,7 +162,7 @@ export function BlockCard({
 
       for (const inst of instances) {
         if (inst.id === draggedId) continue;
-        if (isInstanceFixed(inst)) continue;
+        if (isFixedInstance(inst)) continue;
         if (inst.status === "removed") continue;
         const pos = cardPositions.current[inst.id];
         if (!pos) continue;
@@ -184,7 +181,7 @@ export function BlockCard({
       if (!swapTarget) return;
 
       const dragged = useStore.getState().todayInstances.find((i) => i.id === draggedId);
-      if (!dragged || isInstanceFixed(dragged)) return;
+      if (!dragged || isFixedInstance(dragged)) return;
 
       onSwap(dragged, swapTarget);
     },

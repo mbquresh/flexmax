@@ -17,6 +17,7 @@ import { minutesToTime, getLocalDateString, formatDuration } from "../../src/lib
 import {
   findRescheduleSlot,
   getFallbackSlot,
+  isFixedInstance,
   placeShrunkBlock,
   planDisplacement,
   planShrinkToFit,
@@ -181,7 +182,7 @@ function RecoveryScreenContent() {
         instance.block != null
           ? instance.block.end_minutes - instance.block.start_minutes
           : instance.end_minutes - instance.start_minutes;
-      const fixed = instance.is_fixed || !!instance.block?.is_fixed;
+      const fixed = isFixedInstance(instance);
       setRemedy(
         fixed ? null : planShortenTemplate(templateDuration, recent)
       );

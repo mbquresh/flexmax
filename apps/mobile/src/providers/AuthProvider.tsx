@@ -73,6 +73,11 @@ async function syncDeviceTimezone(
 }
 
 function identifySession(userId: string, createdAt: string | undefined) {
+  // Identify FIRST, with nothing but the id. Everything captured before this
+  // point has no person to attach to under personProfiles: "identified_only",
+  // and onboarding runs entirely inside that window.
+  identifyUser(userId);
+
   void (async () => {
     try {
       const created = createdAt ? Date.parse(createdAt) : Date.now();
@@ -91,13 +96,14 @@ function identifySession(userId: string, createdAt: string | undefined) {
           .eq("user_id", userId)
           .eq("superseded", false),
       ]);
+      // Enrich once the counts land. Safe to call again with the same id.
       identifyUser(userId, {
         days_since_signup: days,
         block_count: blocks.count ?? 0,
         has_insights: (insights.count ?? 0) > 0,
       });
     } catch {
-      identifyUser(userId);
+      // Already identified above; nothing more to do.
     }
   })();
 }
@@ -220,6 +226,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .then(({ data: { session: current } }) => {
         setSession(current);
         if (current?.user.id) {
+          // Before loadUserData — onboarding mounts and tracks as soon as
+          // the session exists, while profile queries are still in flight.
+          identifyUser(current.user.id);
           return loadUserData(current.user.id).catch((err) => {
             handleError(err, "loadUserData");
             setProfileError(true);
@@ -244,6 +253,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession);
       if (nextSession?.user.id) {
+        // Same race as cold start: identify before loadUserData awaits.
+        identifyUser(nextSession.user.id);
         setLoading(true);
         loadUserData(nextSession.user.id)
           .catch((err) => {

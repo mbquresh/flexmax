@@ -83,6 +83,12 @@ function ensureClient(): void {
       host: host(),
       personProfiles: "identified_only",
       captureAppLifecycleEvents: false,
+      // Event volume is tiny and the first-session funnel is the most
+      // valuable data this app collects. Batching buys nothing and loses
+      // exactly the events that matter most (onboarding finishes in under
+      // the default 30s flush window).
+      flushAt: 1,
+      flushInterval: 5000,
     });
     capture = (name, props) => {
       client.capture(name, props);

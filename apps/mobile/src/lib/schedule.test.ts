@@ -140,7 +140,7 @@ describe("planDisplacement", () => {
       start_minutes: 630,
       end_minutes: 690,
       is_fixed: true,
-      block: block({ name: "Morning block" }),
+      block: block({ name: "Morning block", is_fixed: true }),
     });
     const plan = planDisplacement(
       { start_minutes: 600, end_minutes: 660 },
@@ -153,6 +153,23 @@ describe("planDisplacement", () => {
       reason: "fixed",
       names: ["Morning block"],
     });
+  });
+
+  it("follows the template when instance.is_fixed is stale", () => {
+    const unlocked = instance({
+      id: "stale-fixed",
+      start_minutes: 630,
+      end_minutes: 690,
+      is_fixed: true,
+      block: block({ name: "Morning block", is_fixed: false }),
+    });
+    const plan = planDisplacement(
+      { start_minutes: 600, end_minutes: 660 },
+      [missed, unlocked],
+      missed.id
+    );
+
+    expect(plan.kind).not.toBe("blocked");
   });
 
   it("blocks a collider whose block.is_fixed is true", () => {
@@ -648,6 +665,7 @@ describe("planShrinkToFit", () => {
       ...cardio,
       id: "fixed-cardio",
       is_fixed: true,
+      block: block({ name: "Cardio", is_fixed: true }),
     });
     expect(
       planShrinkToFit(slot, fixed, [missed, fixed], missed.id)

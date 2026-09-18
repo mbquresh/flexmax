@@ -32,6 +32,7 @@ import {
   planRestore,
   resolveDayBoundaries,
   MIN_BLOCK_MINUTES,
+  isFixedInstance,
 } from "../src/lib/schedule";
 import { handleError } from "../src/lib/errors";
 import { track, trackCheckin, trackReflection } from "../src/lib/analytics";
@@ -137,10 +138,6 @@ function closeBottomSheet(
       useNativeDriver: true,
     }),
   ]).start(() => onClosed?.());
-}
-
-function isInstanceFixed(instance: DailyInstance): boolean {
-  return instance.is_fixed || !!instance.block?.is_fixed;
 }
 
 function checkInTaskHint(tasks: BlockTask[] | undefined): string | null {
@@ -631,8 +628,7 @@ function TodayScreenContent() {
     // Gestures are already disabled on a past day; this is the backstop.
     // Rearranging a day that has happened would rewrite the record.
     if (isPastDay) return;
-    if (instanceA.is_fixed || instanceA.block?.is_fixed) return;
-    if (instanceB.is_fixed || instanceB.block?.is_fixed) return;
+    if (isFixedInstance(instanceA) || isFixedInstance(instanceB)) return;
 
     // A resolved block's times are a record of what happened. Swapping into
     // one would rewrite history.
@@ -1601,7 +1597,7 @@ function TodayScreenContent() {
         onClose={closeCheckIn}
         onMarkMissed={
           checkInInstance &&
-          (isInstanceFixed(checkInInstance) || isPastDay)
+          (isFixedInstance(checkInInstance) || isPastDay)
             ? handleMarkMissedFromSheet
             : undefined
         }
