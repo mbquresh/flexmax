@@ -36,6 +36,7 @@ import { scheduleTodayBlockNotifications } from "../../src/lib/blockNotification
 import { TimePicker } from "../../src/components/TimePicker";
 import { DurationSlider } from "../../src/components/DurationSlider";
 import { PressableScale } from "../../src/components/PressableScale";
+import { RecoveryMark } from "../../src/components/RecoveryMark";
 import { RequireAuth } from "../../src/components/RequireAuth";
 
 // Retained ONLY to filter tapped chip labels out of the "Last time you
@@ -678,166 +679,175 @@ function RecoveryScreenContent() {
           multiline
         />
 
-        {rescheduleSlot ? (
-          <View style={styles.rescheduleBox}>
-            <Text style={styles.rescheduleLabel}>
-              {slotIsFallback ? "Pick a time" : "Available slot today"}
-            </Text>
-            <View style={styles.rescheduleTimeRow}>
-              <Text style={styles.rescheduleTime}>
-                {minutesToTime(rescheduleSlot.start_minutes)} —{" "}
-                {minutesToTime(rescheduleSlot.end_minutes)}
-              </Text>
-              <TouchableOpacity
-                onPress={() => setAdjustOpen((open) => !open)}
-                hitSlop={8}
-              >
-                <Text style={styles.adjustLink}>Adjust</Text>
-              </TouchableOpacity>
-            </View>
-            {adjustOpen ? (
-              <>
-                <TimePicker
-                  label="Starts"
-                  valueMinutes={rescheduleSlot.start_minutes}
-                  onChange={handleStartAdjust}
-                />
-                <TimePicker
-                  label="Ends"
-                  valueMinutes={rescheduleSlot.end_minutes}
-                  onChange={handleEndAdjust}
-                  endOfDay
-                />
-              </>
-            ) : null}
-            {pastBedtime && plan.kind !== "blocked" ? (
-              <View style={styles.bedtimeNote}>
-                <Text style={styles.bedtimeNoteText}>
-                  This runs past your usual bedtime.
-                </Text>
-              </View>
-            ) : null}
-            {plan.kind === "push" ? (
-              <View style={styles.collisionNote}>
-                <Text style={styles.bedtimeNoteText}>
-                  This overlaps {plan.target.block?.name ?? "another block"}. Moving it to{" "}
-                  {minutesToTime(plan.newStart)} makes room.
-                </Text>
-              </View>
-            ) : sacrificeWarning ? (
-              <View style={styles.collisionNote}>
-                <Text style={styles.bedtimeNoteText}>{sacrificeWarning}</Text>
-              </View>
-            ) : blockedMessage ? (
-              <View style={styles.collisionNote}>
-                <Text style={styles.bedtimeNoteText}>{blockedMessage}</Text>
-              </View>
-            ) : null}
+        <View style={styles.recoverMark} accessibilityRole="header">
+          <RecoveryMark size={28} color={colors.primaryDeep} />
+          <Text style={styles.recoverMarkLabel}>Recover</Text>
+        </View>
 
-            {/* A blocked plan disables the commit rather than offering a second
-                button. The affordance to choose another time is the picker directly
-                above — the refusal message explains why this time will not work, and
-                the button re-enables the moment the picker produces a slot that does. */}
-            <PressableScale
-              style={[
-                styles.rescheduleBtn,
-                plan.kind === "blocked" && styles.rescheduleBtnBlocked,
-              ]}
-              onPress={handleReschedule}
-              disabled={saving || plan.kind === "blocked"}
-            >
-              <Text
-                style={[
-                  styles.rescheduleBtnText,
-                  plan.kind === "blocked" && styles.rescheduleBtnTextBlocked,
-                ]}
-              >
-                {plan.kind === "push"
-                  ? `Reschedule and move ${plan.target.block?.name ?? "another block"}`
-                  : plan.kind === "sacrifice"
-                    ? "Reschedule and remove"
-                    : slotIsFallback
-                      ? "Reschedule to this time"
-                      : "Reschedule to this slot"}
-              </Text>
-            </PressableScale>
+        {rescheduleSlot || remedy ? (
+          <View style={styles.recoverCard}>
+            {rescheduleSlot ? (
+              <View style={styles.rescheduleBox}>
+                <Text style={styles.rescheduleLabel}>
+                  {slotIsFallback ? "Pick a time" : "Available slot today"}
+                </Text>
+                <View style={styles.rescheduleTimeRow}>
+                  <Text style={styles.rescheduleTime}>
+                    {minutesToTime(rescheduleSlot.start_minutes)} —{" "}
+                    {minutesToTime(rescheduleSlot.end_minutes)}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => setAdjustOpen((open) => !open)}
+                    hitSlop={8}
+                  >
+                    <Text style={styles.adjustLink}>Adjust</Text>
+                  </TouchableOpacity>
+                </View>
+                {adjustOpen ? (
+                  <>
+                    <TimePicker
+                      label="Starts"
+                      valueMinutes={rescheduleSlot.start_minutes}
+                      onChange={handleStartAdjust}
+                    />
+                    <TimePicker
+                      label="Ends"
+                      valueMinutes={rescheduleSlot.end_minutes}
+                      onChange={handleEndAdjust}
+                      endOfDay
+                    />
+                  </>
+                ) : null}
+                {pastBedtime && plan.kind !== "blocked" ? (
+                  <View style={styles.bedtimeNote}>
+                    <Text style={styles.bedtimeNoteText}>
+                      This runs past your usual bedtime.
+                    </Text>
+                  </View>
+                ) : null}
+                {plan.kind === "push" ? (
+                  <View style={styles.collisionNote}>
+                    <Text style={styles.bedtimeNoteText}>
+                      This overlaps {plan.target.block?.name ?? "another block"}. Moving it to{" "}
+                      {minutesToTime(plan.newStart)} makes room.
+                    </Text>
+                  </View>
+                ) : sacrificeWarning ? (
+                  <View style={styles.collisionNote}>
+                    <Text style={styles.bedtimeNoteText}>{sacrificeWarning}</Text>
+                  </View>
+                ) : blockedMessage ? (
+                  <View style={styles.collisionNote}>
+                    <Text style={styles.bedtimeNoteText}>{blockedMessage}</Text>
+                  </View>
+                ) : null}
 
-            {/* Only under a sacrifice. Push already keeps the collider whole,
-                and offering to shorten a block that does not need shortening
-                would turn a resolved decision back into a question. */}
-            {shrinkPlan && shrinkPlacement ? (
-              <View style={styles.shrinkBox}>
-                <Text style={styles.shrinkLabel}>
-                  Or keep {shrinkPlan.name}, shorter
-                </Text>
-                <DurationSlider
-                  min={shrinkPlan.minMinutes}
-                  max={shrinkPlan.maxMinutes}
-                  value={shrinkValue}
-                  onChange={setShrinkMinutes}
-                  formatValue={formatDuration}
-                />
-                <Text style={styles.shrinkSentence}>
-                  {shrinkIsFullLength
-                    ? `${shrinkPlan.name} keeps its full ${formatDuration(
-                        shrinkPlan.originalMinutes
-                      )} and moves to ${minutesToTime(shrinkPlacement.start)}.`
-                    : `${shrinkPlan.name} drops from ${formatDuration(
-                        shrinkPlan.originalMinutes
-                      )} to ${formatDuration(shrinkValue)} and moves to ${minutesToTime(
-                        shrinkPlacement.start
-                      )}.`}
-                </Text>
+                {/* A blocked plan disables the commit rather than offering a second
+                    button. The affordance to choose another time is the picker directly
+                    above — the refusal message explains why this time will not work, and
+                    the button re-enables the moment the picker produces a slot that does. */}
                 <PressableScale
-                  style={styles.shrinkBtn}
-                  onPress={handleShrinkAndMove}
-                  disabled={saving}
+                  style={[
+                    styles.rescheduleBtn,
+                    plan.kind === "blocked" && styles.rescheduleBtnBlocked,
+                  ]}
+                  onPress={handleReschedule}
+                  disabled={saving || plan.kind === "blocked"}
                 >
-                  <Text style={styles.shrinkBtnText}>
-                    {shrinkIsFullLength
-                      ? "Reschedule and move"
-                      : "Reschedule and shorten"}
+                  <Text
+                    style={[
+                      styles.rescheduleBtnText,
+                      plan.kind === "blocked" && styles.rescheduleBtnTextBlocked,
+                    ]}
+                  >
+                    {plan.kind === "push"
+                      ? `Reschedule and move ${plan.target.block?.name ?? "another block"}`
+                      : plan.kind === "sacrifice"
+                        ? "Reschedule and remove"
+                        : slotIsFallback
+                          ? "Reschedule to this time"
+                          : "Reschedule to this slot"}
                   </Text>
                 </PressableScale>
+
+                {/* Only under a sacrifice. Push already keeps the collider whole,
+                    and offering to shorten a block that does not need shortening
+                    would turn a resolved decision back into a question. */}
+                {shrinkPlan && shrinkPlacement ? (
+                  <View style={styles.shrinkBox}>
+                    <Text style={styles.shrinkLabel}>
+                      Or keep {shrinkPlan.name}, shorter
+                    </Text>
+                    <DurationSlider
+                      min={shrinkPlan.minMinutes}
+                      max={shrinkPlan.maxMinutes}
+                      value={shrinkValue}
+                      onChange={setShrinkMinutes}
+                      formatValue={formatDuration}
+                    />
+                    <Text style={styles.shrinkSentence}>
+                      {shrinkIsFullLength
+                        ? `${shrinkPlan.name} keeps its full ${formatDuration(
+                            shrinkPlan.originalMinutes
+                          )} and moves to ${minutesToTime(shrinkPlacement.start)}.`
+                        : `${shrinkPlan.name} drops from ${formatDuration(
+                            shrinkPlan.originalMinutes
+                          )} to ${formatDuration(shrinkValue)} and moves to ${minutesToTime(
+                            shrinkPlacement.start
+                          )}.`}
+                    </Text>
+                    <PressableScale
+                      style={styles.shrinkBtn}
+                      onPress={handleShrinkAndMove}
+                      disabled={saving}
+                    >
+                      <Text style={styles.shrinkBtnText}>
+                        {shrinkIsFullLength
+                          ? "Reschedule and move"
+                          : "Reschedule and shorten"}
+                      </Text>
+                    </PressableScale>
+                  </View>
+                ) : null}
               </View>
             ) : null}
-          </View>
-        ) : null}
 
-        {remedy ? (
-          <View style={styles.remedyBox}>
-            {remedyAccepted ? (
-              <>
-                <Text style={styles.remedyBody}>
-                  {instance.block?.name ?? "This block"} is{" "}
-                  {formatDuration(remedy.toMinutes)} from tomorrow on.
-                </Text>
-                <PressableScale
-                  onPress={handleUndoShorten}
-                  disabled={saving}
-                >
-                  <Text style={styles.remedyUndo}>Undo</Text>
-                </PressableScale>
-              </>
-            ) : (
-              <>
-                <Text style={styles.remedyBody}>
-                  Initiation can feel daunting. Try{" "}
-                  {formatDuration(remedy.toMinutes)} instead of{" "}
-                  {formatDuration(remedy.fromMinutes)} — this changes the
-                  repeating block from tomorrow on, not today's miss.
-                </Text>
-                <PressableScale
-                  style={styles.remedyBtn}
-                  onPress={handleShortenTemplate}
-                  disabled={saving}
-                >
-                  <Text style={styles.remedyBtnText}>
-                    Make it {formatDuration(remedy.toMinutes)} going forward
-                  </Text>
-                </PressableScale>
-              </>
-            )}
+            {remedy ? (
+              <View style={styles.remedyBox}>
+                {remedyAccepted ? (
+                  <>
+                    <Text style={styles.remedyBody}>
+                      {instance.block?.name ?? "This block"} is{" "}
+                      {formatDuration(remedy.toMinutes)} from tomorrow on.
+                    </Text>
+                    <PressableScale
+                      onPress={handleUndoShorten}
+                      disabled={saving}
+                    >
+                      <Text style={styles.remedyUndo}>Undo</Text>
+                    </PressableScale>
+                  </>
+                ) : (
+                  <>
+                    <Text style={styles.remedyBody}>
+                      Initiation can feel daunting. Try{" "}
+                      {formatDuration(remedy.toMinutes)} instead of{" "}
+                      {formatDuration(remedy.fromMinutes)} — this changes the
+                      repeating block from tomorrow on, not today's miss.
+                    </Text>
+                    <PressableScale
+                      style={styles.remedyBtn}
+                      onPress={handleShortenTemplate}
+                      disabled={saving}
+                    >
+                      <Text style={styles.remedyBtnText}>
+                        Make it {formatDuration(remedy.toMinutes)} going forward
+                      </Text>
+                    </PressableScale>
+                  </>
+                )}
+              </View>
+            ) : null}
           </View>
         ) : null}
       </ScrollView>
@@ -939,14 +949,36 @@ const makeStyles = (c: Colors) =>
       fontSize: 14,
       minHeight: 80,
       lineHeight: 20,
-      marginBottom: spacing.xl,
+      marginBottom: spacing.xxl,
+    },
+    recoverMark: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      alignSelf: "center",
+      gap: spacing.sm,
+      marginBottom: spacing.lg,
+    },
+    recoverMarkLabel: {
+      color: c.primaryDeep,
+      fontSize: 12,
+      fontFamily: fonts.semiBold,
+      letterSpacing: 0.8,
+      textTransform: "uppercase",
+    },
+    recoverCard: {
+      backgroundColor: c.surface,
+      borderRadius: radii.md,
+      padding: spacing.lg,
+      gap: spacing.md,
+      marginBottom: spacing.lg,
+      ...c.shadowRest,
     },
     rescheduleBox: {
       backgroundColor: c.successTint,
       borderRadius: radii.md,
       padding: 14,
       gap: 6,
-      marginBottom: spacing.lg,
     },
     rescheduleLabel: { color: c.success, fontSize: 12, fontFamily: fonts.semiBold },
     rescheduleTimeRow: {
@@ -1028,7 +1060,6 @@ const makeStyles = (c: Colors) =>
       borderRadius: radii.md,
       padding: spacing.lg,
       gap: spacing.md,
-      marginBottom: spacing.lg,
     },
     remedyBody: {
       color: c.text,
